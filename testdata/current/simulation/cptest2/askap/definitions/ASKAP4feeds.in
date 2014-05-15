@@ -1,0 +1,9 @@
+feeds.spacing        =       0.5deg
+
+feeds.names     = [feed0, feed1, feed2, feed3]
+
+feeds.feed0          =       [-1, -1]
+feeds.feed1          =       [-1, 1]
+feeds.feed2          =       [1, -1]
+feeds.feed3          =       [1, 1]
+

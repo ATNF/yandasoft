@@ -1,0 +1,41 @@
+# @file
+# SConstruct build script for this module.
+# This is currently a test case, please edit this comment when deemed stable
+#
+# @author Malte Marquarding <Malte.Marquarding@csiro.au>
+#
+
+# Always import this
+from askapenv import env
+import os
+
+if 'AIPSPATH' not in os.environ:
+   os.environ['AIPSPATH']=os.environ['ASKAP_ROOT']+'/Code/Base/accessors/current'
+env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
+
+#env.AppendUnique(CCFLAGS='-DASKAP_GRID_WITH_BLAS')
+env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
+env.AppendUnique(CCFLAGS=['-DASKAP_DEBUG'])
+env.AppendUnique(CCFLAGS=['-g'])
+env.AppendUnique(CCFLAGS=['-O2'])
+
+# Optimization for complex arithmetic. The functionality this flag enables
+# was default behaviour prior to GCC 4.3.
+env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
+
+env.Append(universal=0)
+
+# create build object with library name
+pkg = env.AskapPackage("synthesis")
+env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
+
+# add sub packages 
+pkg.AddSubPackage("measurementequation")
+pkg.AddSubPackage("gridding")
+pkg.AddSubPackage("parallel")
+pkg.AddSubPackage("simulation")
+pkg.AddSubPackage("deconvolution")
+
+# run the build process
+pkg()
+

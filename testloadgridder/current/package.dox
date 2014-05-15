@@ -1,0 +1,14 @@
+/// @defgroup testloadgridder Test code for loading a gridder dynamically
+
+/// The package namespace
+namespace askap::testloadgridder {};
+
+/// @mainpage ASKAP testloadgridder package
+///
+/// @section testloadgridder_intro Introduction
+/// The synthesis package supports the dynamic loading of gridders.
+/// To test this, it is needed to build a separate shared library
+/// which is done in this package.
+///
+///
+/// @copyright 2009 CSIRO, All Rights Reserved.

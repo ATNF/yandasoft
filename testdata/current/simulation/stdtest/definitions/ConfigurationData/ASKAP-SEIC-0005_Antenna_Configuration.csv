@@ -1,0 +1,63 @@
+ASKAP Antenna Configuration,,,,,,,,,,,,
+,,,,,,,,,,,,
+Antenna Designator,,,,,,Installed ***,,,,,,
+Antenna # (Pad #),CETC54 Serial #,Name,Description,IP Address,Antenna (Pad) #,Easting,Northing,Latitude **,Longitude **,Elevation,Height Measured with hand held GPS,Date Installed
+1,6,Biyarli,Galah,192.168.1.106,1,463334.040,7047071.010,-26.6970007220,116.6314242859,370.14,390,May-10
+2,7,Birliya,Flat-leaf Mineritchie tree,192.168.1.107,2,463361.018,7047057.999,-26.6971188993,116.6316950935,not measured,378,2011
+3,2,Bundara,Stars,192.168.1.102,3,463369.990,7047078.500,-26.6969340339,116.6317858760,369.58,380,May-10
+4,8,Bimba,Edible gum,192.168.1.108,4,463325.061,7047106.018,-26.6966844076,116.6313350455,not measured,379,2011
+5,9,Gagurla,Bush pear,192.168.1.109,5,463260.048,7047102.513,-26.6967143551,116.6306814286,not measured,381,2011
+6,4,Wilara,Moon,192.168.1.104,6,463469.700,7047183.010,-26.6959930302,116.6327911944,367.89,375,May-10
+7,19,Irra bardi,Good mouth and lips,192.168.1.119,7,463576.900,7046961.030,-26.6980000253,116.6338623632,not measured,381,2011
+8,5,Jirdilungu,The Milky Way,192.168.1.105,8,463296.230,7046832.500,-26.6991531922,116.6310372796,370.81,378,May-10
+9,3,Balayi,Lookout,192.168.1.103,9,463089.830,7047181.560,-26.6959961951,116.6289726981,370.11,382,May-10
+10,10,Bardi,Wajarri name of Bertie Mitchell (Wajarri Elder and Lore Man); also a witchetty grub,192.168.1.110,10,463237.724,7047350.506,-26.6944746931,116.6304642494,not measured,375,2011
+11,23,Manggawarla,Hat - this represents both races on the Mirchison: it is the stockman's hat that both the Wajarri traditional owner and the Station owner wear.,192.168.1.123,11,463601.991,7047411.549,-26.6939330301,116.6341275746,not measured,376,2011
+12,21,Yalibirri,Emu,192.168.1.121,12,463729.965,7047340.486,-26.6945779527,116.6354119050,not measured,375,2011
+13,25,Jabi,Small lizard,192.168.1.125,13,463772.760,7046707.005,-26.7002986290,116.6358238913,not measured,381,2011
+14,20,Gagu,Crow,192.168.1.120,14,463309.180,7046611.001,-26.7011533985,116.6311610162,not measured,379,2011
+15,11,Birri-birri,Butterfly,192.168.1.111,15,462594.340,7046913.017,-26.6984077102,116.6239840749,not measured,374,2011
+16,12,Jindi-Jindi,Willy Wagtail,192.168.1.112,16,462697.925,7047436.450,-26.6936844977,116.6250408025,not measured,373,2011
+17,29,Marlu,Kangaroo,192.168.1.129,17,462837.222,7047593.529,-26.6922699542,116.6264456116,not measured,370,2011
+18,27,Ilgarijirri,Things belonging to the sky,192.168.1.127,18,463227.255,7047446.519,-26.6936075373,116.6303618135,not measured,374,2011
+19,24,Biji-biji,Caterpillar,192.168.1.124,19,463551.854,7047552.530,-26.6926588412,116.6336276769,not measured,374,2011
+20,22,Wana,Female digging stick,192.168.1.122,20,463840.360,7047386.037,-26.6941695266,116.6365228877,not measured,381,2011
+21,15,Minda,Shade or shadow,192.168.1.115,21,464020.208,7047393.016,-26.6941111307,116.6383308917,not measured,375,2011
+22,16,Nyingari,Small messenger bird,192.168.1.116,22,464179.880,7047406.992,-26.6939890232,116.6399362868,not measured,377,2011
+23,33,Nyambi,Traditional Wajarri dance with knee shaking,192.168.1.133,23,463333.332,7046414.003,-26.7029326824,116.6313980783,not measured,380,2011
+24,34,Janimaarnu,Chinaman (in recognition of CETC54's construction of the ASKAP antennas),192.168.1.134,24,463412.512,7046092.487,-26.7058376461,116.6321847199,not measured,377,2011
+25,30,Magamarra,Ned Ryan (Wajarri Elder and Lore Man),192.168.1.130,25,462720.423,7047724.517,-26.6910841970,116.6252754547,not measured,370,2011
+26,28,Yamatji nyarlu,Yamatji femails,192.168.1.128,26,462940.704,7047738.513,-26.6909636555,116.6274900348,not measured,369,2011
+27,31,Yamaljingga,Ross Boddington (Wajarri Elder and songman),192.168.1.131,27,462263.537,7048011.985,-26.6884765151,116.6206916288,not measured,370,2011
+28,13,Ngurlubarndi,"Old Top Shed road: the Wajarri name of Fred Simpson father of Wajarri Namatji Elder Ike Simpson.",192.168.1.113,28,463583.805,7048269.521,-26.6861860961,116.6339695192,not measured,376,2011
+29,1,Diggidumble,Table-top hill,192.168.1.101,29,463899.970,7047824.220,-26.6902147896,116.6371346089,347.62,372,Nov-09
+30,18,Nyarluwarri,The Seven Sisters (the Pleiades),192.168.1.118,30,464563.096,7047869.478,-26.6898230389,116.6438012947,not measured,376,2011
+31,17,Mungal,Morning,192.168.1.117,31,465554.989,7048063.995,-26.6880914362,116.6537765959,not measured,379,2011
+32,26,Woodarudda,A hill on Yallalong Country,192.168.1.126,32,466358.965,7044563.964,-26.7197120419,116.6617643037,not measured,380,2011
+33,35,Budara,A hill on Wooleen Station (Mt Welcome),192.168.1.135,33,463359.066,7044260.045,-26.7223809561,116.6315941870,not measured,383,2011
+34,36,Jinna Wirri,Joe Dann (Wajarri Elder). He was given this name by his grandfather because he had a black spot on the sole of his foot.,192.168.1.136,34,460359.031,7045064.032,-26.7150404471,116.6014562186,not measured,371,2011
+35,32,Ngubanu,Dingo,192.168.1.132,35,461163.042,7048064.001,-26.6879768988,116.6096317976,not measured,373,2011
+36,14,Birli,Lightning,192.168.1.114,36,463357.272,7050261.078,-26.6681987994,116.6317503657,not measured,370,2011
+,,,,,*** Information from the ASKAP As-Built Surveyors Reports,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,

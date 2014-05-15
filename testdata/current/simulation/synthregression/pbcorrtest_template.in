@@ -1,0 +1,137 @@
+Csimulator.dataset                              =       field1.ms
+
+#
+# The name of the model source is field1. Specify direction and model file
+#
+Csimulator.sources.names                        =       [field1]
+Csimulator.sources.field1.direction              =       [12h30m00.000, -45.00.00.000, J2000]
+Csimulator.sources.field1.components             =       [src1,src2]
+Csimulator.sources.src1.flux.i                  = 1.0
+Csimulator.sources.src1.direction.ra           = 0.006
+Csimulator.sources.src1.direction.dec           = 0.006
+Csimulator.sources.src2.flux.i                  = 2.0
+Csimulator.sources.src2.direction.ra           = -0.01
+Csimulator.sources.src2.direction.dec          = -0.01
+
+#
+# Define the antenna locations, feed locations, and spectral window definitions
+#
+Csimulator.antennas.definition                  =       A27CR3P6B.in
+Csimulator.feeds.definition                     =       ASKAP1OffFeed.in
+
+Csimulator.spws.names                      =       [Wide0]
+Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "XX XY YX YY"]
+#
+# Standard settings for the simulaton step
+#
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+#
+Csimulator.simulation.integrationtime           =       10s
+#
+# Observe field1 for 5 minutes with a single channel spectral window
+#
+Csimulator.observe.number                       =       9
+Csimulator.observe.scan0                        =       [field1, Wide0, -4.0416667h, -3.9583333h]
+Csimulator.observe.scan1                        =       [field1, Wide0, -3.0416667h, -2.9583333h]
+Csimulator.observe.scan2                        =       [field1, Wide0, -2.0416667h, -1.9583333h]
+Csimulator.observe.scan3                        =       [field1, Wide0, -1.0416667h, -0.9583333h]
+Csimulator.observe.scan4                        =       [field1, Wide0, -0.0416667h, 0.0416667h]
+Csimulator.observe.scan5                        =       [field1, Wide0, 0.9583333h, 1.0416667h]
+Csimulator.observe.scan6                        =       [field1, Wide0, 1.9583333h, 2.0416667h]
+Csimulator.observe.scan7                        =       [field1, Wide0, 2.9583333h, 3.0416667h]
+Csimulator.observe.scan8                        =       [field1, Wide0, 3.9583333h, 4.0416667h]
+
+#
+# Use a gridder to apply primary beam during the W projection step.
+#
+Csimulator.gridder                              = SphFunc
+
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = false
+
+# optional noise addition
+Csimulator.noise                                = false
+
+Cimager.dataset                                 = field1.ms
+Cimager.nUVWMachines                            = 1
+Cimager.uvwMachineDirTolerance                  = 1arcsec
+Cimager.imagetype                               = casa
+Cimager.memorybuffers                           = true
+
+Cimager.Images.Names                            = [image.field1]
+Cimager.Images.writeAtMajorCycle                = false
+Cimager.Images.reuse                            = false
+Cimager.Images.shape	                        = [2048,2048]
+Cimager.Images.cellsize	                        = [4.0arcsec, 4.0arcsec]
+Cimager.Images.image.field1.frequency	        = [1.164e9,1.420e9]
+Cimager.Images.image.field1.nchan		= 1
+Cimager.Images.image.field1.polarisation       = ["I"]
+Cimager.Images.image.field1.direction          = [12h30m00.00, -45.00.00.00, J2000]
+
+#
+Cimager.sphfuncforpsf                           = true
+Cimager.gridder                                 = AWProject
+Cimager.gridder.AProjectWStack.freqtolerance   = infinite
+Cimager.gridder.AProjectWStack.wmax             = 30000
+Cimager.gridder.AProjectWStack.nwplanes         = 7
+Cimager.gridder.AProjectWStack.oversample       = 4
+Cimager.gridder.AProjectWStack.diameter         = 12m
+Cimager.gridder.AProjectWStack.blockage         = 2m
+Cimager.gridder.AProjectWStack.maxfeeds         = 1
+Cimager.gridder.AProjectWStack.maxsupport       = 1024
+Cimager.gridder.AProjectWStack.frequencydependent     = true
+Cimager.gridder.AProjectWStack.illumination     = disk
+Cimager.gridder.AProjectWStack.illumination.tapering         = true
+Cimager.gridder.AProjectWStack.illumination.tapering.defocusing = 0deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs         = true
+Cimager.gridder.AProjectWStack.illumination.feedlegs.width   = 1.8m
+Cimager.gridder.AProjectWStack.illumination.feedlegs.rotation = 45deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs.shadowing = 0.75
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges = true
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.shadowing = [0.6,0.5]
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.angle = 15deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.startradius = 3.5m
+Cimager.gridder.AWProject.variablesupport = true
+Cimager.gridder.AWProject.offsetsupport = true
+Cimager.gridder.AWProject.wmax                  = 30000
+Cimager.gridder.AWProject.nwplanes              = 33
+Cimager.gridder.AWProject.oversample            = 4
+Cimager.gridder.AWProject.diameter              = 12m
+Cimager.gridder.AWProject.blockage              = 2m
+Cimager.gridder.AWProject.maxfeeds              = 1
+Cimager.gridder.AWProject.maxsupport       = 1024
+Cimager.gridder.AWProject.frequencydependent     = false
+
+#
+# Use a multiscale Clean solver
+#
+Cimager.solver                           	= Clean
+#Cimager.solver                           	= Dirty
+Cimager.solver.Clean.algorithm                 	= Hogbom
+Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.gain                      	= 0.1
+Cimager.solver.Clean.tolerance                  = 0.1
+Cimager.solver.Clean.verbose                   	= True
+Cimager.solver.Clean.weightcutoff               = truncate
+Cimager.solver.Clean.weightcutoff.clean         = false
+Cimager.threshold.minorcycle                    = [15%]
+#Cimager.threshold.majorcycle                    = 10mJy
+
+#
+#Cimager.preconditioner.Names                    = [GaussianTaper]
+#Cimager.preconditioner.Wiener.noisepower        = 30.
+#Cimager.preconditioner.GaussianTaper            = [20arcsec,20arcsec,0deg]
+#
+
+#
+Cimager.ncycles                                 = 3
+#
+# Restore the image at the end
+#
+Cimager.restore                                 = True
+Cimager.restore.beam                            = [20arcsec, 20arcsec, 0deg]
+

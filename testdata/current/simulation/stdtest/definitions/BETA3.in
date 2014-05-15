@@ -1,0 +1,10 @@
+antennas.telescope            =       BETA3
+antennas.BETA3.coordinates    =       local
+antennas.BETA3.location       =       [+116.6356824deg, -26.7013006deg, 377m, WGS84]
+antennas.BETA3.names          =       [A0, A2, A5]
+antennas.BETA3.diameter       =       12m
+antennas.BETA3.scale          =        1.0
+antennas.BETA3.mount          =       equatorial
+antennas.BETA3.A0             =       [-289.355286,  +586.936035,   0.0000] 
+antennas.BETA3.A2             =       [-686.248901,  +590.285278,   0.0000] 
+antennas.BETA3.A5             =       [-425.000000,  +475.000000,   0.0000] 

@@ -1,0 +1,68 @@
+Csimulator.dataset                              =       /work2/cor203/Projects/CONRAD/cptest3/askap/10uJy_AWProject_%w.ms
+
+Csimulator.sources.names                        =       [10uJy]
+
+Csimulator.sources.10uJy.direction              =       [12h30m00.000, -45.00.00.000, J2000]
+Csimulator.sources.10uJy.model                  =       /work2/cor203/Projects/CONRAD/cptest3/cptest3.10uJy.model
+
+Csimulator.antennas.definition                  =       definitions/ASKAP45.in
+Csimulator.feeds.definition                     =       definitions/ASKAP128feeds.in
+Csimulator.spws.definition                      =       definitions/ASKAPspws.in
+
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.integrationtime           =       15s
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+
+Csimulator.observe.number                       =       1
+Csimulator.observe.scan0                        =       [10uJy, Cont16_%w, -6h, 6h]
+
+Csimulator.gridder                              = AWProject
+Csimulator.gridder.AWProject.wmax            	= 12000
+Csimulator.gridder.AWProject.nwplanes        	= 33
+Csimulator.gridder.AWProject.oversample     	= 2
+Csimulator.gridder.AWProject.diameter		= 12m
+Csimulator.gridder.AWProject.blockage		= 2m
+Csimulator.gridder.AWProject.maxfeeds		= 128
+Csimulator.gridder.AWProject.maxsupport		= 1024
+Csimulator.gridder.AWProject.frequencydependent = false
+Csimulator.gridder.AWProject.cutoff		= 0.001
+
+Cimager.dataset                                 = /work2/cor203/Projects/CONRAD/cptest3/askap/10uJy_AWProject_%w.ms
+
+Cimager.Images.Names                            = [image.i.10uJy_AWProject_Dirty]
+Cimager.Images.image.i.10uJy_AWProject_Dirty.shape		= [4096,4096]
+Cimager.Images.image.i.10uJy_AWProject_Dirty.cellsize	= [8.0arcsec, 8.0arcsec]
+Cimager.Images.image.i.10uJy_AWProject_Dirty.frequency	= [1.245e9,1.420e9]
+Cimager.Images.image.i.10uJy_AWProject_Dirty.nchan		= 1
+Cimager.Images.image.i.10uJy_AWProject_Dirty.direction	= [12h30m00.00, -45.00.00.00, J2000]
+
+Cimager.gridder                          	= AWProject
+Cimager.gridder.AWProject.wmax            	= 12000
+Cimager.gridder.AWProject.nwplanes        	= 33
+Cimager.gridder.AWProject.oversample     	= 2
+Cimager.gridder.AWProject.diameter		= 12m
+Cimager.gridder.AWProject.blockage		= 2m
+Cimager.gridder.AWProject.maxfeeds		= 128
+Cimager.gridder.AWProject.maxsupport       	= 1024
+Cimager.gridder.AWProject.frequencydependent 	= false
+Cimager.gridder.AWProject.cutoff		= 0.001
+
+Cimager.solver.Dirty.threshold			= 10%
+Cimager.solver.Dirty.verbose                   	= True
+
+Cimager.solver                           	= Dirty
+Cimager.solver.Clean.algorithm                 	= MultiScale
+Cimager.solver.Clean.niter                     	= 1000
+Cimager.solver.Clean.gain                      	= 0.9
+Cimager.solver.Clean.cycles                    	= 3
+Cimager.solver.Clean.threshold                	= 0.1mJy
+Cimager.solver.Clean.tolerance			= 0.1
+Cimager.solver.Clean.verbose                   	= True
+Cimager.solver.Clean.scales			= [0., 3.0, 10.0]
+
+Cimager.ncycles                                         = 0
+Cimager.restore                          	= False
+Cimager.restore.beam                     	= [30arcsec, 30arcsec, 0deg]

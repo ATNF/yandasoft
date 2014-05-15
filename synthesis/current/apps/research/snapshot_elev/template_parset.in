@@ -1,0 +1,59 @@
+dataset = field1.ms
+#wtolerance = 30000
+wtolerance = 0
+#tangent = [12h00m00.000, +15.00.00.000, J2000]
+
+Csimulator.dataset                              =       field1.ms
+
+#
+# The name of the model source is 10uJy. Specify direction and model file
+#
+Csimulator.sources.names                        =       [field1]
+#Csimulator.sources.field1.direction              =       [12h00m00.000, +15.00.00.000, J2000]
+Csimulator.sources.field1.components             =       [src1,src2]
+Csimulator.sources.src1.flux.i                  = 1.0
+Csimulator.sources.src1.direction.ra           = 0.00798972946469
+Csimulator.sources.src1.direction.dec           = 0.002
+Csimulator.sources.src2.flux.i                  = 1.0
+Csimulator.sources.src2.direction.ra           = -0.0211171
+Csimulator.sources.src2.direction.dec           = 0.00
+
+#
+# Define the antenna locations, feed locations, and spectral window definitions
+#
+Csimulator.antennas.definition                  =       ../../definitions/A27CR3P6BXYZ.in
+Csimulator.feeds.definition                     =       ../../definitions/ASKAP36feeds.in
+#Csimulator.feeds.definition                     =       tmpfeeds.in
+
+Csimulator.spws.names                      =       [Wide0]
+Csimulator.spws.Wide0  =[ 8, 1.420GHz, -16MHz, "XX XY YX YY"]
+#
+# Standard settings for the simulaton step
+#
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+#
+Csimulator.simulation.integrationtime           =       300s
+
+# optional noise addition
+Csimulator.noise                                = true
+Csimulator.noise.efficiency                  = 0.8
+Csimulator.noise.Tsys                        = 50
+
+#
+# Observe field1 for 5 minutes with a single channel spectral window
+#
+Csimulator.observe.number                       =       1
+#Csimulator.observe.scan0                        =       [field1, Wide0, -4.0416667h, -3.9583333h]
+
+#
+# Use a gridder to apply primary beam during the W projection step.
+#
+Csimulator.gridder                              = SphFunc
+
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = false
+

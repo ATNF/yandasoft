@@ -1,0 +1,10 @@
+/// @defgroup calweightsolver Eigenbeams experiments/calibration
+
+/// The package namespace
+namespace askap::synthutil {};
+
+/// @mainpage ASKAP synthesis utility package
+/// This package contains a collection of utilities for various experiments. They are taken out of the main synthesis package to provide a better structure of the code.
+/// Strictly speaking, the code here is of an experimental nature. It is not required for the synthesis pipeline.
+///
+/// @copyright 2007 CSIRO, All Rights Reserved.

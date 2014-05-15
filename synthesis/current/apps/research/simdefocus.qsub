@@ -1,0 +1,180 @@
+#!/bin/bash -l
+#PBS -l nodes=1:ppn=2
+#PBS -M maxim.voronkov@csiro.au
+#PBS -N simdefocus
+#PBS -l walltime=48:00:00
+#PBS -m bea
+#PBS -j oe
+#PBS -r n
+
+export ASKAP_ROOT=/work0/vor010/ASKAPsoft
+export AIPSPATH=$ASKAP_ROOT/Code/Components/Synthesis/testdata/current
+
+simulator=$ASKAP_ROOT/Code/Components/Synthesis/synthesis/current/install/bin/csimulator.sh
+imager=$ASKAP_ROOT/Code/Components/Synthesis/synthesis/current/install/bin/cimager.sh
+
+npix=4096
+maxsupport=4096
+cell=6arcsec
+os=4
+rob=0.0
+snwplanes=1
+inwplanes=1
+noise=1.53e-2
+ctol=0.00
+nfeeds=32
+dosim=true
+donoise=true
+doclean=true
+freqdep=true
+gridder=AProjectWStack
+illum=ATCA
+
+modelimage=/work0/cor203/Projects/ASKAP/simulations/models/empty_5arcsec
+
+resultdir=${PBS_O_WORKDIR}/sim2
+mkdir ${resultdir}
+cp $0 ${resultdir}
+cd ${resultdir}
+touch `date +%F.%H.%M.%S`
+
+mssub=defocus.ms
+configdir=/work0/cor203/Projects/ASKAP/simulations/configs
+
+csimparset=csimulator.in
+csimlog=csimulator.log
+
+cat > $csimparset <<EOF
+Csimulator.dataset                              =       $mssub
+#
+
+Csimulator.sources.names                        =       [Empty]
+Csimulator.sources.Empty.direction        =       [12h30m00.000, -45.00.00.000, J2000]
+Csimulator.sources.Empty.model            =       $modelimage
+
+# Define the antenna locations, feed locations, and spectral window definitions
+Csimulator.antennas.definition                  =       $configdir/A27CR3.in
+Csimulator.feeds.definition                     =       $configdir/ASKAP${nfeeds}feeds.in
+
+Csimulator.spws.names=[Spectral0]
+Csimulator.spws.Spectral0  =[ 1, 1250.000000MHz, -2.533333MHz, "XX XY YX YY"]
+
+# Standard settings for the simulation step
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+Csimulator.simulation.integrationtime           =       200s
+#
+# Observe source SKADS_S3SEX for 8 hrs with a single channel spectral window, rotating between fields
+Csimulator.observe.number                       =       1
+Csimulator.observe.scan0                        =       [Empty, Spectral0, -4h, +4h]
+#
+# Use a gridder to apply primary beam during the W projection step.
+Csimulator.gridder                                      = ${gridder}
+Csimulator.gridder.${gridder}.wmax               = 10000
+Csimulator.gridder.${gridder}.nwplanes           = $snwplanes
+Csimulator.gridder.${gridder}.oversample         = ${os}
+Csimulator.gridder.${gridder}.diameter           = 12m
+Csimulator.gridder.${gridder}.blockage           = 2m
+Csimulator.gridder.${gridder}.maxfeeds           = ${nfeeds}
+Csimulator.gridder.${gridder}.maxsupport         = ${maxsupport}
+Csimulator.gridder.${gridder}.frequencydependent    = ${freqdep}
+Csimulator.gridder.${gridder}.variablesupport = true 
+Csimulator.gridder.${gridder}.offsetsupport = true 
+Csimulator.gridder.${gridder}.illumination.tapering.defocusing = 0rad
+Csimulator.gridder.${gridder}.illumination	      = ${illum}
+Csimulator.gridder.${gridder}.patolerance	= 10.0
+#
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = false
+Csimulator.corrupt.gainsfile                    = rndgains.in
+# optional noise addition
+Csimulator.noise                                = ${donoise}
+Csimulator.noise.variance                       = ${noise}
+Csimulator.noise.seed1                       = time
+Csimulator.noise.seed2                       = 1
+#
+EOF
+
+if ${dosim}
+then
+    echo BEGIN SIMULATOR `date` from job $PBS_JOBID | tee $csimlog
+    echo COMMAND = "mpirun -mca mpi_paffinity_alone 1  $simulator -inputs $csimparset | tee -a $csimlog"
+    mpirun -mca mpi_paffinity_alone 1  $simulator -inputs $csimparset | tee -a $csimlog
+    echo END SIMULATOR `date` | tee -a $csimlog
+fi
+
+#for df in 0rad 1rad 2rad 4rad 8rad
+#for df in 3rad 5rad 7rad 9rad
+for df in 0.0rad 0.5rad 1.0rad 1.5rad 2.0rad 2.5rad 3.0rad 3.5rad 4.0rad
+#for df in 4.5rad 5.0rad 5.5rad 6.0rad 6.5rad 7.0rad 7.5rad 8.0rad 8.5rad
+do
+
+image=image.i.simdefocus${df}
+cleanim=${image}
+
+cimparsetC=cimager-clean-${df}.in
+cimlogC=cimager-clean-${df}.log
+
+cat > $cimparsetC <<EOF
+Cimager.dataset  = ${mssub}
+#
+Cimager.Images.Names                            = [${cleanim}]
+Cimager.Images.${cleanim}.frequency    = [1.121e9,1.421e9]
+Cimager.Images.${cleanim}.nchan        = 1
+Cimager.Images.${cleanim}.direction    = [12h30m00.000, -45.00.00.000, J2000]
+Cimager.Images.shape                            = [${npix}, ${npix}]
+Cimager.Images.cellsize                         = [${cell}, ${cell}]
+Cimager.Images.reuse                            = false
+Cimager.Images.writeAtMajorCycle                = true
+#
+Cimager.gridder                              = ${gridder}
+Cimager.gridder.${gridder}.wmax               = 10000
+Cimager.gridder.${gridder}.nwplanes           = $inwplanes
+Cimager.gridder.${gridder}.oversample         = ${os}
+Cimager.gridder.${gridder}.diameter           = 12m
+Cimager.gridder.${gridder}.illumination.tapering.defocusing = ${df}
+Cimager.gridder.${gridder}.illumination	      = ${illum}
+Cimager.gridder.${gridder}.blockage           = 2m
+Cimager.gridder.${gridder}.maxfeeds           = ${nfeeds}
+Cimager.gridder.${gridder}.maxsupport         = ${maxsupport}
+Cimager.gridder.${gridder}.frequencydependent = ${freqdep}
+Cimager.gridder.${gridder}.variablesupport = true 
+Cimager.gridder.${gridder}.offsetsupport = true 
+#
+#For the clean image
+Cimager.solver                                  = Clean
+Cimager.solver.Clean.algorithm                  = MultiScale
+Cimager.solver.Clean.niter                      = 1
+Cimager.solver.Clean.gain                       = 0.9
+Cimager.solver.Clean.scales			= [0]
+Cimager.solver.Clean.tolerance                  = ${ctol}
+Cimager.solver.Clean.verbose                    = True
+Cimager.threshold.minorcycle                    = [10%]
+#Cimager.threshold.majorcycle                    = 1.0mJy
+Cimager.restore.equalise = True
+Cimager.ncycles                                 = 1
+
+Cimager.solver.Clean.weightcutoff               = zero
+Cimager.solver.Clean.weightcutoff.clean         = false
+
+#
+Cimager.preconditioner.Names                    = [Robust, GaussianTaper]
+Cimager.preconditioner.Robust.robustness	= ${rob}
+Cimager.preconditioner.GaussianTaper            = [10arcsec,10arcsec,0deg]
+#
+Cimager.restore                                 = true
+Cimager.restore.beam                            = [30arcsec, 30arcsec, 0deg]
+EOF
+
+if ${doclean}
+then
+    echo BEGIN CLEAN IMAGER `date` from job $PBS_JOBID  | tee $cimlogC
+    echo COMMAND = "mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC"
+    mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC
+    echo END CLEAN IMAGER `date` | tee -a $cimlogC
+fi
+
+done

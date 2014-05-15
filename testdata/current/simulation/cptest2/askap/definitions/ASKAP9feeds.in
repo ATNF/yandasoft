@@ -1,0 +1,14 @@
+feeds.spacing        =       1deg
+
+feeds.names     = [feed0, feed1, feed2, feed3, feed4, feed5, feed6, feed7, feed8]
+
+feeds.feed0          =       [-1, -1]
+feeds.feed1          =       [-1, 0]
+feeds.feed2          =       [-1, 1]
+feeds.feed3          =       [0, -1]
+feeds.feed4          =       [0, 0]
+feeds.feed5          =       [0, 1]
+feeds.feed6          =       [1, -1]
+feeds.feed7          =       [1, 0]
+feeds.feed8          =       [1, 1]
+

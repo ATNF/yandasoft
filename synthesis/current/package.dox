@@ -1,0 +1,81 @@
+/// @defgroup measurementequation Measurement equations
+/// @defgroup gridding Gridding algorithms
+/// @defgroup parallel Parallel application support
+/// @defgroup simulation Data simulation
+/// @defgroup imageaccess Image access subpackage
+
+/// The package namespace
+namespace askap::synthesis {};
+
+/// @mainpage ASKAP synthesis package
+///
+/// @section synth_intro Introduction
+/// The synthesis package supports processing of radio synthesis observations,
+/// including calibration, editing, and imaging. The emphasis is on the
+/// processing of ASKAP and KAT scale data sets i.e. TBs per hour.
+///
+/// @section synth_assumptions Assumptions and goals
+///
+/// The large data volumes to be processed require that I/O of data be
+/// minimized. Hence the goal is to write algorithms that require only
+/// a minimal number of reads and writes. For spectral line processing,
+/// our goal is to read the visibility data only once.
+///
+/// The synthesis package itself is designed to run in one process. 
+/// We envisage that OpenMP-type multi-threading may be supported by
+/// specialised versions of some of the classes in this package. 
+/// Message passing parallel execution is supported in the 
+/// @ref parallel classes and in the calim package.
+///
+/// We assume that the problem can be (and is) partitioned such that the
+/// image data always fits in memory during the processing.
+///
+/// @section synth_dependencies Dependencies
+/// The synthesis package makes extensive use of the ASKAP @ref fitting 
+/// framework. 
+///
+/// Data access is via a set of classes that make use of the casa measures
+/// package. Numerical data are held in casa Arrays (including Vector,
+/// Matrix, and Cube). Non-numerical data are usually held in standard
+/// containers such as vectors, and maps.
+///
+/// @section synth_status Current status of the code
+///
+/// @subsection synth_measurementequation 1. Measurement Equation
+/// @li The subpackage contains calibration and imaging framework (equations which can be solved with the solver from the fitting package)
+/// @li Class diagram could still be a bit untidy mainly because of an early decision to apply the equation to the
+///whole iterator, rather than a single iteration (accessor). Imaging code requires conversion to
+///use MultiChunkEquation instead of doing this iteration within each class. Then the code using measurementequation can be
+///converted to call calcEquations and predict methods for an accessor, rather than iterator.
+/// @li It may be tricky to implement situations where domain and range are different for calibration equation.
+///For example, the case with the beamformer where one tries to calibrate LNA gains, which are
+///contributing to the measured visibilities indirectly after some transform. Probably a specialization of the
+///CalibrationME template is the way to go. 
+///
+/// @subsection synth_gridding 2. Gridding
+/// @li The subpackage contains classes performing gridding and degridding operations using various kernels
+/// @li It currently works only for MFS and polarization I. The addition of both should be straightforward.
+/// @li The class GridKernel is a bare bones gridder/degridder. This should be adapted for various
+/// architectures such as Cell or multicore.
+/// @li There is some duplicated code in the VisGridder classes, especially in dealing with the 
+/// calculation of convolution functions for W projection and antenna primary beam. Fairly straightforward
+/// refactoring will be helpful.
+/// @li Different primary beams per feed are yet to be included.
+/// 
+/// @subsection synth_parallel 3. Parallel application support
+/// @li The subpackage is intended to parallelise measurement equation
+/// @li It uses a simpler version of Ger's Master/Worker framework. It is largely complete and
+/// has not been changed much recently. 
+///
+/// @subsection synth_simulate 4. Data simulation
+/// @li The Simulator class is a port of the CASA simulator code to askap. It has similar but not
+/// identical functionality. It is used by the csimulator app.
+///
+/// @section synth_subpackages Subpackages
+///
+/// @li @ref measurementequation
+/// @li @ref gridding
+/// @li @ref parallel
+/// @li @ref simulation
+///
+/// @copyright 2007 CSIRO, All Rights Reserved.

@@ -1,0 +1,117 @@
+Csimulator.dataset                              =       10uJy_simtest.ms
+
+#
+# The name of the model source is 10uJy. Specify direction and model file
+#
+Csimulator.sources.names                        =       [10uJy]
+Csimulator.sources.10uJy.direction              =       [12h30m00.000, -45.00.00.000, J2000]
+Csimulator.sources.10uJy.model                  =       10uJy.model.small
+
+#
+# Define the antenna locations, feed locations, and spectral window definitions
+#
+Csimulator.antennas.definition                  =       definitions/ASKAP45.in
+Csimulator.feeds.definition                     =       definitions/ASKAP1feeds.in
+
+Csimulator.spws.names                      =       [Wide0]
+Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "XX XY YX YY"]
+#
+# Standard settings for the simulaton step
+#
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+#
+Csimulator.simulation.integrationtime           =       10s
+#
+# Observe source 10uJy for 5 minutes with a single channel spectral window
+#
+Csimulator.observe.number                       =       1
+Csimulator.observe.scan0                        =       [10uJy, Wide0, -0.0416667h, 0.0416667h]
+
+#
+# Use a gridder to apply primary beam during the W projection step.
+#
+Csimulator.gridder                              = AProjectWStack
+#Csimulator.gridder                              = SphFunc
+Csimulator.gridder.AProjectWStack.wmax            	= 15000
+Csimulator.gridder.AProjectWStack.nwplanes        	= 1
+Csimulator.gridder.AProjectWStack.oversample     	= 4
+Csimulator.gridder.AProjectWStack.diameter		= 12m
+Csimulator.gridder.AProjectWStack.blockage		= 2m
+Csimulator.gridder.AProjectWStack.maxfeeds		= 1
+Csimulator.gridder.AProjectWStack.maxsupport		= 1024
+Csimulator.gridder.AProjectWStack.frequencydependent = false
+
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = true
+Csimulator.corrupt.gainsfile                    = rndgains.in
+
+# optional noise addition
+Csimulator.noise                                = true
+Csimulator.noise.variance                       = 3.18
+
+Cimager.dataset                                 = 10uJy_simtest.ms
+Cimager.gainsfile                               = result.dat
+
+Cimager.Images.Names                            = [image.i.10uJy_simtest]
+Cimager.Images.image.i.10uJy_simtest.shape		= [2048,2048]
+Cimager.Images.image.i.10uJy_simtest.cellsize	        = [8.0arcsec, 8.0arcsec]
+Cimager.Images.image.i.10uJy_simtest.frequency	        = [1.420e9,1.420e9]
+Cimager.Images.image.i.10uJy_simtest.nchan		= 1
+Cimager.Images.image.i.10uJy_simtest.direction	        = [12h30m00.00, -45.00.00.00, J2000]
+
+#
+Cimager.gridder                          	= AProjectWStack
+Cimager.gridder.AProjectWStack.wmax            	= 15000
+Cimager.gridder.AProjectWStack.nwplanes        	= 1
+Cimager.gridder.AProjectWStack.oversample     	= 4
+Cimager.gridder.AProjectWStack.diameter		= 12m
+Cimager.gridder.AProjectWStack.blockage		= 2m
+Cimager.gridder.AProjectWStack.maxfeeds		= 1
+Cimager.gridder.AProjectWStack.maxsupport       = 1024
+Cimager.gridder.AProjectWStack.frequencydependent     = true
+
+#
+# Use a multiscale Clean solver
+#
+Cimager.solver                           	= Clean
+Cimager.solver.Clean.algorithm                 	= MultiScale
+Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.gain                      	= 0.9
+Cimager.solver.Clean.threshold                	= 0.1mJy
+Cimager.solver.Clean.tolerance                  = 0.1
+Cimager.solver.Clean.verbose                   	= True
+
+# 
+# There will be 5 major cycles
+#
+Cimager.ncycles                                 = 5
+#
+# Restore the image at the end
+#
+Cimager.restore                          	= True
+Cimager.restore.beam                     	= [30arcsec, 30arcsec, 0deg]
+
+# parameters for calibrator
+Ccalibrator.dataset                              =       10uJy_simtest.ms
+Ccalibrator.refgain                            = gain.g22.0
+
+#
+# The name of the model source is 10uJy. Specify direction and model file
+#
+Ccalibrator.sources.names                        =       [10uJy]
+Ccalibrator.sources.10uJy.direction              =       [12h30m00.000, -45.00.00.000, J2000]
+Ccalibrator.sources.10uJy.model                  =       10uJy.model.small
+Ccalibrator.gridder                              = AProjectWStack
+Ccalibrator.gridder.AProjectWStack.wmax            	= 15000
+Ccalibrator.gridder.AProjectWStack.nwplanes        	= 1
+Ccalibrator.gridder.AProjectWStack.oversample     	= 4
+Ccalibrator.gridder.AProjectWStack.diameter		= 12m
+Ccalibrator.gridder.AProjectWStack.blockage		= 2m
+Ccalibrator.gridder.AProjectWStack.maxfeeds		= 1
+Ccalibrator.gridder.AProjectWStack.maxsupport		= 1024
+Ccalibrator.gridder.AProjectWStack.frequencydependent = false
+Ccalibrator.ncycles                                 = 5

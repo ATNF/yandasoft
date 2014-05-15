@@ -1,0 +1,5 @@
+feeds.names     =       [feed0]
+
+feeds.spacing        =       0.4deg
+
+feeds.feed0          =       [-1.0, 1.0]

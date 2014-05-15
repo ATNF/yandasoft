@@ -1,0 +1,15 @@
+antennas.telescope = BETA1
+antennas.BETA1.coordinates = global
+antennas.BETA1.names = [Pad01,Pad03,Pad06]
+antennas.BETA1.diameter = 12m
+antennas.BETA1.scale = 1.0
+antennas.BETA1.mount = equatorial
+# easting: 463334.040000; northing: 7047071.010000; el: 370.140000; Zone: 50 south
+# lat: -26.697000721961; long: 116.631424285887; el: 370.140000
+antennas.BETA1.Pad01 = [-2556088.333184, 5097405.644248, -2848428.243729]
+# easting: 463369.990000; northing: 7047078.500000; el: 369.580000; Zone: 50 south
+# lat: -26.696934033924; long: 116.631785875968; el: 369.580000
+antennas.BETA1.Pad03 = [-2556121.766414, 5097392.033236, -2848421.390498]
+# easting: 463469.700000; northing: 7047183.010000; el: 367.890000; Zone: 50 south
+# lat: -26.695993030157; long: 116.632791194436; el: 367.890000
+antennas.BETA1.Pad06 = [-2556231.527388, 5097387.706446, -2848327.478204]

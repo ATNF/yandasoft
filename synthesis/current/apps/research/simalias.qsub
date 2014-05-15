@@ -1,0 +1,222 @@
+#!/bin/bash -l
+#PBS -l nodes=1:ppn=1
+#PBS -M maxim.voronkov@csiro.au
+#PBS -N simalias
+#PBS -l walltime=96:00:00
+#PBS -m bea
+#PBS -j oe
+#PBS -r n
+
+export ASKAP_ROOT=/work0/vor010/ASKAPsoft
+export AIPSPATH=$ASKAP_ROOT/Code/Components/Synthesis/testdata/current
+
+simulator=$ASKAP_ROOT/Code/Components/Synthesis/synthesis/current/install/bin/csimulator.sh
+imager=$ASKAP_ROOT/Code/Components/Synthesis/synthesis/current/install/bin/cimager.sh
+imgstat=$ASKAP_ROOT/Code/Components/Synthesis/synthesis/current/install/bin/imgstat.sh
+
+npix=2048
+maxsupport=4096
+cell=2arcsec
+os=128
+support=3
+rob=0.0
+snwplanes=1
+inwplanes=1
+noise=1.53e-2
+ctol=0.00
+nfeeds=1
+dosim=true
+donoise=true
+freqdep=true
+gridder=SphFunc
+#gridder=Box
+illum=ATCA
+
+modelimage=/work0/cor203/Projects/ASKAP/simulations/models/empty_5arcsec
+
+resultdir=${PBS_O_WORKDIR}/simalias
+mkdir ${resultdir}
+cp $0 ${resultdir}
+cd ${resultdir}
+touch `date +%F.%H.%M.%S`
+
+mssub=simalias.ms
+configdir=/work0/cor203/Projects/ASKAP/simulations/configs
+
+csimparset=csimulator.in
+csimlog=csimulator.log
+
+rm -f stats.log
+
+#for df in 0.015
+for df in 0.006 0.007 0.008 0.00900 0.00925 0.00950 0.00975 0.01000 0.01025 0.01050 0.01075 0.011 0.012 0.013 0.014 0.015 0.016 0.017 0.018 0.019 0.020
+do
+
+
+cat > $csimparset <<EOF
+Csimulator.dataset                              =       $mssub
+#
+
+Csimulator.sources.names                        =       [src]
+Csimulator.sources.src.direction        =       [12h30m00.000, -45.00.00.000, J2000]
+#Csimulator.sources.src.model            =       $modelimage
+Csimulator.sources.src.components             =       [src1]
+Csimulator.sources.src1.flux.i                  = 0.5
+Csimulator.sources.src1.direction.dec          = $df
+#Csimulator.sources.src1.direction.dec          = 0.0
+Csimulator.sources.src1.direction.ra           = 0.0
+
+
+# Define the antenna locations, feed locations, and spectral window definitions
+Csimulator.antennas.definition                  =       $configdir/A27CR3.in
+Csimulator.feeds.definition                     =       $configdir/ASKAP${nfeeds}feeds.in
+
+Csimulator.spws.names=[Spectral0]
+#Csimulator.spws.Spectral0  =[ 1, 1250.000000MHz, -2.533333MHz, "XX XY YX YY"]
+Csimulator.spws.Spectral0  =[ 32, 1250.000000MHz, -9.375MHz, "XX YY"]
+#Csimulator.spws.Spectral0  =[ 300, 1250.000000MHz, -1MHz, "XX YY"]
+
+# Standard settings for the simulation step
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+Csimulator.simulation.integrationtime           =       5s
+#
+# Observe source SKADS_S3SEX for 8 hrs with a single channel spectral window, rotating between fields
+Csimulator.observe.number                       =       1
+Csimulator.observe.scan0                        =       [src, Spectral0, -5h, +5h]
+#
+# Use a gridder to apply primary beam during the W projection step.
+Csimulator.gridder                                      = ${gridder}
+Csimulator.gridder.${gridder}.wmax               = 10000
+Csimulator.gridder.${gridder}.nwplanes           = $snwplanes
+Csimulator.gridder.${gridder}.oversample         = ${os}
+Csimulator.gridder.${gridder}.diameter           = 12m
+Csimulator.gridder.${gridder}.blockage           = 2m
+Csimulator.gridder.${gridder}.maxfeeds           = ${nfeeds}
+Csimulator.gridder.${gridder}.maxsupport         = ${maxsupport}
+Csimulator.gridder.${gridder}.frequencydependent    = ${freqdep}
+Csimulator.gridder.${gridder}.variablesupport = true 
+Csimulator.gridder.${gridder}.offsetsupport = true 
+Csimulator.gridder.${gridder}.illumination.tapering.defocusing = 0rad
+Csimulator.gridder.${gridder}.illumination	      = ${illum}
+Csimulator.gridder.${gridder}.patolerance	= 10.0
+#
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = false
+Csimulator.corrupt.gainsfile                    = rndgains.in
+# optional noise addition
+Csimulator.noise                                = ${donoise}
+Csimulator.noise.variance                       = ${noise}
+Csimulator.noise.seed1                       = time
+Csimulator.noise.seed2                       = 1
+#
+EOF
+
+rm -rf ${mssub}
+
+if ${dosim}
+then
+    echo BEGIN SIMULATOR `date` from job $PBS_JOBID | tee $csimlog
+    echo COMMAND = "mpirun -mca mpi_paffinity_alone 1  $simulator -inputs $csimparset | tee -a $csimlog"
+    mpirun -mca mpi_paffinity_alone 1  $simulator -inputs $csimparset | tee -a $csimlog
+    echo END SIMULATOR `date` | tee -a $csimlog
+fi
+
+image=image.src.${df}
+cleanim=${image}
+
+cimparsetC=cimager-clean-${df}.in
+cimlogC=cimager-clean-${df}.log
+
+cat > $cimparsetC <<EOF
+Cimager.dataset  = ${mssub}
+#
+Cimager.Images.Names                            = [${cleanim}]
+Cimager.Images.${cleanim}.frequency    = [1.121e9,1.421e9]
+Cimager.Images.${cleanim}.nchan        = 1
+Cimager.Images.${cleanim}.direction    = [12h30m00.000, -45.00.00.000, J2000]
+Cimager.Images.shape                            = [${npix}, ${npix}]
+Cimager.Images.cellsize                         = [${cell}, ${cell}]
+Cimager.Images.reuse                            = false
+Cimager.Images.writeAtMajorCycle                = false
+#
+Cimager.gridder                              = ${gridder}
+Cimager.gridder.${gridder}.wmax               = 10000
+Cimager.gridder.${gridder}.nwplanes           = $inwplanes
+Cimager.gridder.${gridder}.oversample         = ${os}
+Cimager.gridder.${gridder}.support            = ${support}
+Cimager.gridder.${gridder}.diameter           = 12m
+Cimager.gridder.${gridder}.illumination.tapering.defocusing = 0
+Cimager.gridder.${gridder}.illumination	      = ${illum}
+Cimager.gridder.${gridder}.blockage           = 2m
+Cimager.gridder.${gridder}.maxfeeds           = ${nfeeds}
+Cimager.gridder.${gridder}.maxsupport         = ${maxsupport}
+Cimager.gridder.${gridder}.frequencydependent = ${freqdep}
+Cimager.gridder.${gridder}.variablesupport = true 
+Cimager.gridder.${gridder}.offsetsupport = true 
+#
+#For the clean image
+Cimager.solver                                  = Clean
+Cimager.solver.Clean.algorithm                  = MultiScale
+Cimager.solver.Clean.niter                      = 100
+Cimager.solver.Clean.gain                       = 0.1
+Cimager.solver.Clean.scales			= [0]
+Cimager.solver.Clean.tolerance                  = ${ctol}
+Cimager.solver.Clean.verbose                    = True
+Cimager.threshold.minorcycle                    = [10%]
+Cimager.ncycles                                 = 1
+
+Cimager.restore                                 = true
+Cimager.restore.beam                            = fit
+EOF
+
+rm -rf ${cleanim}.restored
+rm -rf ${cleanim}
+
+echo BEGIN CLEAN IMAGER `date` from job $PBS_JOBID  | tee $cimlogC
+echo COMMAND = "mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC"
+mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC
+echo END CLEAN IMAGER `date` | tee -a $cimlogC
+
+
+echo PREPARING FOR IMAGING TWICE AS LARGER FIELD
+rm -rf ${cleanim}.s
+mv ${cleanim}.restored ${cleanim}.s
+
+#cat ${cimparsetC} | grep -v "Cimager.Images.shape" > ${cimparsetC}.tmp
+#mv ${cimparsetC}.tmp $cimparsetC
+
+cat >> $cimparsetC <<EOF
+Cimager.gridder.padding                          = 2
+EOF
+
+rm -rf ${cleanim}.restored
+rm -rf ${cleanim}
+
+echo BEGIN CLEAN IMAGER `date` from job $PBS_JOBID  | tee $cimlogC
+echo COMMAND = "mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC"
+mpirun -mca mpi_paffinity_alone 1  $imager -inputs $cimparsetC | tee -a $cimlogC
+echo END CLEAN IMAGER `date` | tee -a $cimlogC
+
+rm -rf ${cleanim}.l
+mv ${cleanim}.restored ${cleanim}.l
+
+echo CALCULATING THE DIFFERENCE AND ANALYSE IT
+
+casascriptC=casa-tmpscript.py
+casalogC=casa-tmpscript.log
+diffimg=${cleanim}.diff
+cat > $casascriptC <<EOF
+ia.imagecalc("${diffimg}","'${cleanim}.s'-'${cleanim}.l'",True)
+ia.done()
+EOF
+
+/usr/local/bin/casapy --nologger <${casascriptC} > ${casalogC}
+
+echo ${df} >> stats.log
+$imgstat ${diffimg} | grep -v DEC >> stats.log
+
+done

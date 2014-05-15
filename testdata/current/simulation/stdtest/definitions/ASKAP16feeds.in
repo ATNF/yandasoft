@@ -1,0 +1,23 @@
+feeds.names     =       [feed0, feed1, feed2, feed3, feed4, feed5, feed6, feed7, feed8, feed9, feed10, feed11, feed12, feed13, feed14, feed15]
+
+feeds.spacing        =       1deg
+
+feeds.feed0          =       [-1.5, -1.5]
+feeds.feed1          =       [-1.5, -0.5]
+feeds.feed2          =       [-1.5,  0.5]
+feeds.feed3          =       [-1.5,  1.5]
+
+feeds.feed4         =       [-0.5, -1.5]
+feeds.feed5         =       [-0.5, -0.5]
+feeds.feed6         =       [-0.5,  0.5]
+feeds.feed7         =       [-0.5,  1.5]
+
+feeds.feed8         =       [0.5, -1.5]
+feeds.feed9         =       [0.5, -0.5]
+feeds.feed10         =       [0.5,  0.5]
+feeds.feed11         =       [0.5,  1.5]
+
+feeds.feed12         =       [1.5, -1.5]
+feeds.feed13         =       [1.5, -0.5]
+feeds.feed14         =       [1.5,  0.5]
+feeds.feed15         =       [1.5,  1.5]

@@ -1,0 +1,18 @@
+# The tests to be run should return 0 for success and
+# > 0 for fail, accompanied by stderr detail about the failure.
+# Anything else is not supported
+
+Import("functestenv")
+myenv = functestenv.Clone()
+
+### EDIT this to add tests
+tests = []
+
+# build a test implicitly
+#a = myenv.Program(source="a.cc")
+
+# example of tests to be built and run and just run
+#tests = [a, "b", "c"]
+
+ftest = myenv.FuncTest(source=tests)
+myenv.Alias("functest", ftest)

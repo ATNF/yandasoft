@@ -1,0 +1,686 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+<Style id="whitecirc">
+<IconStyle>
+<Icon>
+<href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href>
+</Icon>
+</IconStyle>
+</Style>
+
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>1</name>
+<Point>
+<coordinates>116.631424285887, -26.697000721961</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>2</name>
+<Point>
+<coordinates>116.631695314961, -26.697118800589</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>3</name>
+<Point>
+<coordinates>116.631786378863, -26.696933944939</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>4</name>
+<Point>
+<coordinates>116.631334834126, -26.696684479261</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>5</name>
+<Point>
+<coordinates>116.630681348138, -26.696714382000</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>6</name>
+<Point>
+<coordinates>116.632791596517, -26.695993031197</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>7</name>
+<Point>
+<coordinates>116.633862764662, -26.698000206955</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>8</name>
+<Point>
+<coordinates>116.631037380405, -26.699153102210</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>9</name>
+<Point>
+<coordinates>116.628972797113, -26.695996646842</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>10</name>
+<Point>
+<coordinates>116.630464410372, -26.694474657448</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>11</name>
+<Point>
+<coordinates>116.634128066000, -26.693933383528</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>12</name>
+<Point>
+<coordinates>116.635411654441, -26.694577735328</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>13</name>
+<Point>
+<coordinates>116.635823690396, -26.700298583301</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>14</name>
+<Point>
+<coordinates>116.631160614367, -26.701153316242</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>15</name>
+<Point>
+<coordinates>116.623984074643, -26.698407773372</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>16</name>
+<Point>
+<coordinates>116.625040952144, -26.693684859274</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>17</name>
+<Point>
+<coordinates>116.626445792006, -26.692270126210</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>18</name>
+<Point>
+<coordinates>116.630361662436, -26.693607618172</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>19</name>
+<Point>
+<coordinates>116.633627535600, -26.692659021393</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>20</name>
+<Point>
+<coordinates>116.636522685875, -26.694169769876</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>21</name>
+<Point>
+<coordinates>116.638331213212, -26.694111185742</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>22</name>
+<Point>
+<coordinates>116.639935885229, -26.693988859616</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>23</name>
+<Point>
+<coordinates>116.631398158936, -26.702932619363</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>24</name>
+<Point>
+<coordinates>116.632185002035, -26.705837439133</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>25</name>
+<Point>
+<coordinates>116.625275625394, -26.691084260679</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>26</name>
+<Point>
+<coordinates>116.627490396524, -26.690963683566</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>27</name>
+<Point>
+<coordinates>116.620691659741, -26.688476289465</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>28</name>
+<Point>
+<coordinates>116.633969870624, -26.686186196340</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>29</name>
+<Point>
+<coordinates>116.637134307052, -26.690214879115</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>30</name>
+<Point>
+<coordinates>116.643801737906, -26.689822751089</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>31</name>
+<Point>
+<coordinates>116.653776103816, -26.688091299574</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>32</name>
+<Point>
+<coordinates>116.661764053552, -26.719711625999</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>33</name>
+<Point>
+<coordinates>116.631593924617, -26.722381271392</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>34</name>
+<Point>
+<coordinates>116.601456308359, -26.715040646032</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>35</name>
+<Point>
+<coordinates>116.609631777794, -26.687976817445</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>36</name>
+<Point>
+<coordinates>116.631750045028, -26.668198509670</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>37</name>
+<Point>
+<coordinates>116.648862201675, -26.688016032527</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>38</name>
+<Point>
+<coordinates>116.651532999898, -26.702178999055</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>39</name>
+<Point>
+<coordinates>116.651532999898, -26.702178999055</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>40</name>
+<Point>
+<coordinates>116.648919413105, -26.709687287501</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>41</name>
+<Point>
+<coordinates>116.643307196647, -26.716934301138</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>42</name>
+<Point>
+<coordinates>116.634103843382, -26.723218419234</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>43</name>
+<Point>
+<coordinates>116.620675670865, -26.727287660312</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>44</name>
+<Point>
+<coordinates>116.602686190672, -26.727112920311</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>45</name>
+<Point>
+<coordinates>116.580639006089, -26.719718075019</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>46</name>
+<Point>
+<coordinates>116.556744831864, -26.701165292990</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>47</name>
+<Point>
+<coordinates>116.536139210587, -26.666908218827</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>48</name>
+<Point>
+<coordinates>116.528457371525, -26.612844238665</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>49</name>
+<Point>
+<coordinates>116.549474276908, -26.537563788018</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>50</name>
+<Point>
+<coordinates>116.622202147714, -26.446377758628</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>51</name>
+<Point>
+<coordinates>116.627875405774, -26.714774701225</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>52</name>
+<Point>
+<coordinates>116.614080056071, -26.707505755494</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>53</name>
+<Point>
+<coordinates>116.614080056071, -26.707505755494</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>54</name>
+<Point>
+<coordinates>116.609358609283, -26.700880112439</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>55</name>
+<Point>
+<coordinates>116.606787277075, -26.692359706283</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>56</name>
+<Point>
+<coordinates>116.607345504883, -26.681988888032</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>57</name>
+<Point>
+<coordinates>116.612504457489, -26.670137295545</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>58</name>
+<Point>
+<coordinates>116.624210453518, -26.657874075678</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>59</name>
+<Point>
+<coordinates>116.644672820846, -26.647454948526</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>60</name>
+<Point>
+<coordinates>116.675835972392, -26.642921040646</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>61</name>
+<Point>
+<coordinates>116.718291544580, -26.650716829671</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>62</name>
+<Point>
+<coordinates>116.769381737684, -26.680104319048</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>63</name>
+<Point>
+<coordinates>116.820208460463, -26.742879199997</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>64</name>
+<Point>
+<coordinates>116.851405384350, -26.851568338461</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>65</name>
+<Point>
+<coordinates>116.611320130908, -26.696947109627</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>66</name>
+<Point>
+<coordinates>116.616895846012, -26.683483967072</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>67</name>
+<Point>
+<coordinates>116.616895846012, -26.683483967072</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>68</name>
+<Point>
+<coordinates>116.623338943337, -26.678157002573</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>69</name>
+<Point>
+<coordinates>116.632231629045, -26.674401710595</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>70</name>
+<Point>
+<coordinates>116.643696944432, -26.673091941657</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>71</name>
+<Point>
+<coordinates>116.657585731672, -26.675594600155</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>72</name>
+<Point>
+<coordinates>116.673064901172, -26.683816682030</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>73</name>
+<Point>
+<coordinates>116.688049875024, -26.700110545908</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>74</name>
+<Point>
+<coordinates>116.698443949835, -26.726898234675</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>75</name>
+<Point>
+<coordinates>116.697271039492, -26.765822694946</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>76</name>
+<Point>
+<coordinates>116.673879629078, -26.816119767422</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>77</name>
+<Point>
+<coordinates>116.613724876926, -26.871907339083</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>78</name>
+<Point>
+<coordinates>116.499657418607, -26.918125037572</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>79</name>
+<Point>
+<coordinates>116.639046536884, -26.699014782349</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>80</name>
+<Point>
+<coordinates>116.618079575781, -26.708289442557</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>81</name>
+<Point>
+<coordinates>116.618456842275, -26.697647243383</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>82</name>
+<Point>
+<coordinates>116.655868624040, -26.684470380097</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>83</name>
+<Point>
+<coordinates>116.629691322263, -26.705074337361</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>84</name>
+<Point>
+<coordinates>116.613262642504, -26.697413788693</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>85</name>
+<Point>
+<coordinates>116.640684498296, -26.692788109104</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>86</name>
+<Point>
+<coordinates>116.650747446067, -26.697049568640</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>87</name>
+<Point>
+<coordinates>116.643105581461, -26.686784588122</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>88</name>
+<Point>
+<coordinates>116.634897694068, -26.679214669631</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>89</name>
+<Point>
+<coordinates>116.621719722666, -26.711971222747</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>90</name>
+<Point>
+<coordinates>116.625835513018, -26.683692890965</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>91</name>
+<Point>
+<coordinates>116.620125863782, -26.686020728761</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>92</name>
+<Point>
+<coordinates>116.629699565705, -26.684799124488</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>93</name>
+<Point>
+<coordinates>116.645645336150, -26.703748991829</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>94</name>
+<Point>
+<coordinates>116.641412921349, -26.710552446921</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>95</name>
+<Point>
+<coordinates>116.654876115216, -26.710981286977</coordinates>
+</Point>
+</Placemark>
+<Placemark>
+<styleUrl>#whitecirc</styleUrl>
+<name>96</name>
+<Point>
+<coordinates>116.636415915801, -26.688854194778</coordinates>
+</Point>
+</Placemark>
+</Document>
+</kml>
+

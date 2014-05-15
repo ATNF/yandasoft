@@ -1,0 +1,42 @@
+#Cimager.dataset                                 = 1934pt1.ms
+Cimager.nUVWMachines                            = 1
+Cimager.uvwMachineDirTolerance                  = 1arcsec
+Cimager.imagetype                               = casa
+Cimager.memorybuffers                           = true
+
+Cimager.Images.Names                            = [image.1934]
+Cimager.Images.writeAtMajorCycle                = false
+Cimager.Images.reuse                            = false
+Cimager.Images.shape	                        = [1024,1024]
+Cimager.Images.cellsize	                        = [1.0arcsec, 1.0arcsec]
+Cimager.Images.image.1934.frequency	        = [1.896e9,1.717e9]
+Cimager.Images.image.1934.nchan		= 1
+Cimager.Images.image.1934.polarisation       = ["I"]
+Cimager.Images.image.1934.direction	        = [19h39m25.026, -63.42.45.63, J2000]
+Cimager.Images.image.1934.ewprojection          = true
+Cimager.Images.image.1934.nterms                = 2
+
+#
+Cimager.gridder                          	= SphFunc
+Cimager.visweights          = "MFS"
+Cimager.MFS.reffreq         = 1806.5e6
+
+
+#
+# Use a multiscale Clean solver
+#
+Cimager.solver                           	= Clean
+Cimager.solver.Clean.algorithm                 	= MultiScale
+Cimager.solver.Clean.niter                     	= 500
+Cimager.solver.Clean.gain                      	= 0.1
+Cimager.solver.Clean.tolerance                  = 0.01
+Cimager.solver.Clean.verbose                   	= True
+Cimager.threshold.minorcycle                    = [1%]
+
+#
+Cimager.ncycles                                 = 0
+#
+# Restore the image at the end
+#
+Cimager.restore                                 = True
+Cimager.restore.beam                            = fit

@@ -1,0 +1,139 @@
+Csimulator.dataset                              =       field1.ms
+
+#
+# The name of the model source is field1. Specify direction and model file
+#
+Csimulator.sources.names                        =       [field1]
+Csimulator.sources.field1.direction              =       [12h30m00.000, -45.00.00.000, J2000]
+Csimulator.sources.field1.components             =       [src1]
+Csimulator.sources.src1.flux.i                  = 1.0
+Csimulator.sources.src1.direction.ra           = 0.004
+Csimulator.sources.src1.direction.dec           = 0.004
+
+#
+# Define the antenna locations, feed locations, and spectral window definitions
+#
+Csimulator.antennas.definition                  =       A27CR3P6B.in
+Csimulator.feeds.definition                     =       ASKAP1feed.in
+
+Csimulator.spws.names                      =       [Wide0]
+Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "XX YY"]
+#
+# Standard settings for the simulaton step
+#
+Csimulator.simulation.blockage                  =       0.01
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2007Mar07, UTC]
+#
+Csimulator.simulation.integrationtime           =       10s
+#
+# Observe field1 for 5 minutes with a single channel spectral window
+#
+Csimulator.observe.number                       =       11
+Csimulator.observe.scan0                        =       [field1, Wide0, -5.0416667h, -4.9583333h]
+Csimulator.observe.scan1                        =       [field1, Wide0, -4.0416667h, -3.9583333h]
+Csimulator.observe.scan2                        =       [field1, Wide0, -3.0416667h, -2.9583333h]
+Csimulator.observe.scan3                        =       [field1, Wide0, -2.0416667h, -1.9583333h]
+Csimulator.observe.scan4                        =       [field1, Wide0, -1.0416667h, -0.9583333h]
+Csimulator.observe.scan5                        =       [field1, Wide0, -0.0416667h, 0.0416667h]
+Csimulator.observe.scan6                        =       [field1, Wide0, 0.9583333h, 1.0416667h]
+Csimulator.observe.scan7                        =       [field1, Wide0, 1.9583333h, 2.0416667h]
+Csimulator.observe.scan8                        =       [field1, Wide0, 2.9583333h, 3.0416667h]
+Csimulator.observe.scan9                        =       [field1, Wide0, 3.9583333h, 4.0416667h]
+Csimulator.observe.scan10                       =       [field1, Wide0, 4.9583333h, 5.0416667h]
+
+#
+# Use a gridder to apply primary beam during the W projection step.
+#
+Csimulator.gridder                              = SphFunc
+
+# optional corruption due to calibration effect
+#Csimulator.corrupt                              = true
+Csimulator.calibaccess                          = parset
+Csimulator.calibaccess.parset                   = rndgains.in
+
+# optional noise addition
+Csimulator.noise                                = false
+
+Cimager.dataset                                 = field1.ms
+Cimager.nUVWMachines                            = 1
+Cimager.uvwMachineDirTolerance                  = 1arcsec
+Cimager.imagetype                               = casa
+Cimager.memorybuffers                           = true
+Cimager.calibrate.scalenoise                    = true
+Cimager.calibrate.allowflag                     = false
+
+Cimager.Images.Names                            = [image.field1]
+Cimager.Images.writeAtMajorCycle                = false
+Cimager.Images.reuse                            = false
+Cimager.Images.shape	                        = [2048,2048]
+Cimager.Images.cellsize	                        = [1.0arcsec, 1.0arcsec]
+Cimager.Images.image.field1.frequency	        = [1.164e9,1.420e9]
+Cimager.Images.image.field1.nchan		= 1
+Cimager.Images.image.field1.polarisation       = ["I"]
+#Cimager.Images.image.field1.direction	        = [12h40m50.00, -43.00.00.00, J2000]
+Cimager.Images.image.field1.direction	        = [12h30m00.00, -45.00.00.00, J2000]
+
+#
+Cimager.gridder                          	= WProject
+Cimager.gridder.WProject.wmax                   = 30000
+Cimager.gridder.WProject.nwplanes               = 33
+Cimager.gridder.WProject.oversample             = 8
+Cimager.gridder.WProject.maxsupport       = 1024
+Cimager.gridder.WProject.cutoff           = 0.001
+
+#
+# Use a multiscale Clean solver
+#
+Cimager.solver                           	= Clean
+Cimager.solver.Clean.algorithm                 	= Hogbom
+Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.gain                      	= 0.1
+Cimager.solver.Clean.tolerance                  = 0.1
+Cimager.solver.Clean.verbose                   	= True
+Cimager.threshold.minorcycle                    = [15%]
+#Cimager.threshold.majorcycle                    = 10mJy
+
+#
+#Cimager.preconditioner.Names                    = [GaussianTaper]
+#Cimager.preconditioner.Wiener.noisepower        = 30.
+#Cimager.preconditioner.GaussianTaper            = [20arcsec,20arcsec,0deg]
+#
+
+#
+Cimager.ncycles                                 = 5
+#
+# Restore the image at the end
+#
+Cimager.restore                                 = True
+Cimager.restore.beam                            = fit
+
+# parameters for calibrator
+Ccalibrator.dataset                              = field1.ms
+Ccalibrator.nAnt                                 = 36
+Ccalibrator.nBeam                                = 1
+#Ccalibrator.refgain                              = gain.g11.0.0
+#Ccalibrator.calibaccess                         = parset
+Ccalibrator.calibaccess.parset                  = result.dat
+Ccalibrator.calibaccess.table                   = "caldata.tab"
+Ccalibrator.calibaccess.table.maxant            = 36
+Ccalibrator.calibaccess.table.maxbeam           = 1
+Ccalibrator.calibaccess.table.maxchan           = 1
+Ccalibrator.calibaccess.table.reuse           = false
+
+
+#
+# The name of the model source is 10uJy. Specify direction and model file
+#
+Ccalibrator.sources.names                        =       [field1]
+Ccalibrator.sources.field1.direction	        = [12h30m00.00, -45.00.00.00, J2000]
+Ccalibrator.sources.field1.model                =   image.field1
+Ccalibrator.gridder                              = WProject
+Ccalibrator.gridder.WProject.wmax                   = 30000
+Ccalibrator.gridder.WProject.nwplanes               = 33
+Ccalibrator.gridder.WProject.oversample             = 8
+Ccalibrator.gridder.WProject.maxsupport       = 1024
+Ccalibrator.gridder.WProject.cutoff           = 0.001
+Ccalibrator.ncycles                                 = 5

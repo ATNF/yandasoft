@@ -1,0 +1,13 @@
+antennas.telescope            =       BETA6
+antennas.BETA6.coordinates    =       local
+antennas.BETA6.location       =       [+116.6356824deg, -26.7013006deg, 377m, WGS84]
+antennas.BETA6.names          =       [A0, A1, A2, A3, A4, A5]
+antennas.BETA6.diameter       =       12m
+antennas.BETA6.scale          =        1.0
+antennas.BETA6.mount          =       equatorial
+antennas.BETA6.A0             =       [-289.355286,  +586.936035,   0.0000] 
+antennas.BETA6.A1             =       [+131.126358,  +1208.831909,  0.0000] 
+antennas.BETA6.A2             =       [-686.248901,  +590.285278,   0.0000] 
+antennas.BETA6.A3             =       [-462.810394,  +236.353790,   0.0000] 
+antennas.BETA6.A4             =       [-389.051880,  +482.405670,   0.0000] 
+antennas.BETA6.A5             =       [-425.000000,  +475.000000,   0.0000] 

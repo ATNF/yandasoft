@@ -1,0 +1,163 @@
+#Cimager.dataset = [/Users/vor010/ASKAP/MS/Sep2013/subset/s1chunk0.ms,/Users/vor010/ASKAP/MS/Sep2013/subset/s1chunk1.ms,/Users/vor010/ASKAP/MS/Sep2013/subset/s1chunk2.ms]
+#Cimager.dataset = [/Users/vor010/ASKAP/MS/Nov2013/2013-11-17_114658.ms,/Users/vor010/ASKAP/MS/Nov2013/2013-11-17_150246.ms,/Users/vor010/ASKAP/MS/Nov2013/2013-11-18_010322.ms]
+#Cimager.dataset = [/Users/vor010/ASKAP/MS/Nov2013/subset/chunk0.ms,/Users/vor010/ASKAP/MS/Nov2013/subset/chunk1.ms,/Users/vor010/ASKAP/MS/Nov2013/subset/chunk2.ms]
+
+#Cimager.dataset = [/Users/vor010/ASKAP/MS/Jan2014/process/s1chunk0.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s1chunk1.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s1chunk2.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s1chunk3.ms]
+
+Cimager.dataset = [/Users/vor010/ASKAP/MS/Jan2014/process/s2chunk0.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s2chunk1.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s2chunk2.ms,/Users/vor010/ASKAP/MS/Jan2014/process/s2chunk3.ms]
+
+# first multibeam
+#Cimager.dataset = [/Users/vor010/ASKAP/MS/Apr2013/2013-04-04_132422.ms]
+
+Cimager.Feed = 4
+Cimager.CorrelationType = cross
+#Cimager.Baseline = [0,1]
+Cimager.nUVWMachines                            = 8
+Cimager.uvwMachineDirTolerance                  = 1arcsec
+Cimager.imagetype                               = casa
+Cimager.memorybuffers                           = false
+
+Cimager.calibrate = true
+Cimager.calibrate.allowflag = true
+Cimager.calibaccess = table
+Cimager.calibaccess.table = mbcaldata.tab
+
+
+#####Cimager.calibaccess.parset = roughmbcalib.in
+#Cimager.calibaccess.parset = mbcal25sep13.in
+##Cimager.calibaccess.parset = multibeam9cal.in
+#Cimager.calibaccess.parset = squarebeamscal.in
+#Cimager.calibaccess.parset = gainsHI1934.in
+#Cimager.calibaccess.parset = roughcalibOct1934.in
+Cimager.Images.Names                            = [image.test]
+Cimager.Images.writeAtMajorCycle                = false
+Cimager.Images.reuse                            = false
+Cimager.freqframe                               = topo
+#Cimager.Images.shape	                        = [768,768]
+#Cimager.Images.shape	                        = [4096,4096]
+#Cimager.Images.cellsize	                        = [10arcsec, 10arcsec]
+Cimager.Images.shape	                        = [1024,1024]
+Cimager.Images.cellsize	                        = [40arcsec, 40arcsec]
+#Cimager.Images.image.test.frequency	        = [0.940935e9,0.867935e9]
+#Cimager.Images.image.test.frequency	        = [0.942009e9,0.868009e9]
+#Cimager.Images.image.test.frequency	        = [0.935009e9,0.920009e9]
+Cimager.Images.image.test.frequency	        = [1.015e9,0.711e9]
+Cimager.Images.image.test.nchan		= 1
+#Cimager.Images.image.test.nterms	= 2
+Cimager.Images.image.test.polarisation       = ["YY"]
+#Cimager.Images.image.test.polarisation       = ["I"]
+#Cimager.Images.image.test.ewprojection = true
+#Cimager.Images.image.test.direction	        = [12h30m49.43, +12.23.28.01, J2000]
+#Cimager.Images.image.test.direction	        = [19h39m25.026, -63.42.45.63, J2000]
+
+#first multibeam
+Cimager.Images.image.test.direction	        = [15h56m58.871, -79.14.04.28, J2000]
+
+#Cimager.Images.image.test.direction	        = [13h25m29.98, -43.00.40.72, J2000]
+#Cimager.Images.image.test.direction	        = [16h09m52.37, -51.54.57.6, J2000]
+
+# 1934 satellite
+#Cimager.Images.image.test.direction	        = [19h41m21.77, -62.11.21.06, J2000]
+
+#Cimager.Images.image.test.direction	        = [18h19m35.0, -63.45.48.0, J2000]
+#Cimager.Images.image.test.direction	        = [17h45m40.04, -29.00.28.1, J2000]
+#Cimager.Images.image.test.direction	        = [04h08m20.38, -65.45.09.1, J2000]
+#Cimager.Images.image.test.direction             = [00h47m47.27, -25.17.56.13, J2000]
+#Cimager.Images.image.test.direction             = [19h44m57.80, -14.48.11.00, J2000]
+
+
+#
+#Cimager.gridder                          	= AProjectWStack
+#Cimager.gridder                          	= AWProject
+#Cimager.gridder                          	= SphFunc
+Cimager.gridder                          	= WProject
+Cimager.gridder.snapshotimaging                 = false
+#Cimager.gridder.snapshotimaging.wtolerance      = 200
+#Cimager.gridder.snapshotimaging.clipping        = 0.1
+#Cimager.gridder.padding                         = 2
+Cimager.gridder.alldatapsf                      = false
+Cimager.gridder.WProject.wmax                   = 1500
+Cimager.gridder.WProject.nwplanes               = 33
+Cimager.gridder.WProject.oversample             = 4
+Cimager.gridder.WProject.maxsupport       = 1024
+Cimager.gridder.WProject.cutoff           = 0.01
+#Cimager.gridder.WProject.tablename = image:cfs.img
+Cimager.gridder.AProjectWStack.freqtolerance   = infinite
+Cimager.gridder.AProjectWStack.wmax            	= 15000
+Cimager.gridder.AProjectWStack.nwplanes        	= 1
+Cimager.gridder.AProjectWStack.oversample     	= 4
+Cimager.gridder.AProjectWStack.diameter		= 12m
+Cimager.gridder.AProjectWStack.blockage		= 2m
+Cimager.gridder.AProjectWStack.maxfeeds		= 4
+Cimager.gridder.AProjectWStack.maxsupport       = 1024
+Cimager.gridder.AProjectWStack.frequencydependent     = true
+Cimager.gridder.AProjectWStack.illumination     = disk
+Cimager.gridder.AProjectWStack.illumination.tapering         = true
+Cimager.gridder.AProjectWStack.illumination.tapering.defocusing = 0deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs         = true
+Cimager.gridder.AProjectWStack.illumination.feedlegs.width   = 1.8m
+Cimager.gridder.AProjectWStack.illumination.feedlegs.rotation = 45deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs.shadowing = 0.75
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges = true
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.shadowing = [0.6,0.5]
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.angle = 15deg
+Cimager.gridder.AProjectWStack.illumination.feedlegs.wedges.startradius = 3.5m
+Cimager.gridder.AProjectWStack.tablename = image:cfs.img
+Cimager.gridder.AWProject.tablename = image:cfs.img
+Cimager.gridder.AWProject.variablesupport = false
+Cimager.gridder.AWProject.offetsupport = false
+
+Cimager.gridder.AWProject.wmax            	= 20000
+Cimager.gridder.AWProject.nwplanes        	= 1
+Cimager.gridder.AWProject.oversample     	= 4
+Cimager.gridder.AWProject.diameter		= 12m
+Cimager.gridder.AWProject.blockage		= 2m
+Cimager.gridder.AWProject.maxfeeds		= 2
+Cimager.gridder.AWProject.maxsupport       = 1024
+Cimager.gridder.AWProject.frequencydependent     = false
+#Cimager.gridder.AWProject.illumination     = disk
+#Cimager.gridder.AWProject.illumination.tapering         = true
+#Cimager.gridder.AWProject.illumination.tapering.defocusing = 0deg
+#Cimager.gridder.AWProject.illumination.feedlegs         = true
+#Cimager.gridder.AWProject.illumination.feedlegs.width   = 1.8m
+#Cimager.gridder.AWProject.illumination.feedlegs.rotation = 45deg
+#Cimager.gridder.AWProject.illumination.feedlegs.shadowing = 0.75
+#Cimager.gridder.AWProject.illumination.feedlegs.wedges = true
+#Cimager.gridder.AWProject.illumination.feedlegs.wedges.shadowing = [0.6,0.5]
+#Cimager.gridder.AWProject.illumination.feedlegs.wedges.angle = 15deg
+#Cimager.gridder.AWProject.illumination.feedlegs.wedges.startradius = 3.5m
+
+
+#
+# Use a multiscale Clean solver
+#
+Cimager.solver                           	= Clean
+#Cimager.solver.Clean.algorithm                	= MultiScale
+#Cimager.solver.Clean.algorithm                 	= Hogbom
+Cimager.solver.Clean.algorithm                  = BasisfunctionMFS
+Cimager.solver.Clean.scales                     = [0, 3, 10]
+#Cimager.solver.Clean.speedup                 	= 2
+Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.gain                      	= 0.1
+Cimager.solver.Clean.tolerance                  = 0.1
+Cimager.solver.Clean.verbose                   	= True
+Cimager.threshold.minorcycle                    = [80%]
+#Cimager.threshold.majorcycle                    = 10mJy
+
+#
+#Cimager.preconditioner.Names                    = [GaussianTaper]
+#Cimager.preconditioner.GaussianTaper       = [30arcsec, 8arcsec, 10deg]
+#Cimager.preconditioner.Names                    = [Wiener]
+#Cimager.preconditioner.Wiener.robustness        = 1
+
+Cimager.ncycles                                 = 5
+#
+# Restore the image at the end
+#
+Cimager.restore                          	= true
+Cimager.restore.beam                     	= [130arcsec, 130arcsec, 0deg]
+#Cimager.restore.beam                     	= [13arcsec, 13arcsec, 0deg]
+#Cimager.restore.beam                     	= [1200arcsec, 170arcsec, 80.3deg]
+#Cimager.restore.beam                     	= fit
+#Cimager.restore.equalise                        = true
+
