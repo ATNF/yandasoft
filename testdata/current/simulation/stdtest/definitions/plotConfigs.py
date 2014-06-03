@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-fin=open('ASKAP-SEIC-0005_Antenna_Configuration.csv','r')
+fin=open('ConfigurationData/ASKAP-SEIC-0005_Antenna_Configuration.csv','r')
 lines=fin.readlines()
 x=[]
 y=[]
@@ -37,6 +37,10 @@ for i in range(1,37):
 # plot BETA antennas in red
 for i in [0,2,5,7,8,14]:
     plt.plot(x[i]-xav,y[i]-yav,'r.')
+
+# plt ASKAP-12 antennas in green
+for i in [1,3,4,13,9,11,23,26,29,12,15,27]:
+    plt.plot(x[i]-xav,y[i]-yav,'go')
 
 theta=np.arange(0,1000)*2*np.pi/1000.
 
