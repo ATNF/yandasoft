@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import math
-import numpy
 import csv
 import sys
 import os
@@ -21,8 +20,8 @@ askapRefZone = 50
 
 def usage():
 	print "Usage:\n%s array [format]\n" %(sys.argv[0])
-	print "  array = low | survey | mid | lowCore | lowArms | surveyASKAP | surveyCore | surveyArms | midMeerkat | midCore | midArms"
-	print "         This specifies the array or subset of the array to use.\n"
+	print "  array = surveyV2 | lowV2 | midV2 | low | survey | mid | lowCore | lowArms | surveyASKAP | surveyCore | surveyArms | midMeerkat | midCore | midArms"
+	print "         This specifies the array or subset of the array to use (those without 'V2' are the 2013 versions).\n"
 	print "  format = parset | calc | csv | kml"
 
 config={}
@@ -37,6 +36,9 @@ config['MIDMEERKAT'] = AntennaConfig('SKA1MIDMEERKAT', range(1,65), 'Configurati
 config['MIDCORE'] = AntennaConfig('SKA1MIDCORE', range(1,134), 'ConfigurationData/SKA-mid_config_baseline_design_core_antennas_2013apr30.csv')
 config['MIDARMS'] = AntennaConfig('SKA1MIDARMS', range(1,58), 'ConfigurationData/SKA-mid_config_baseline_design_arm_antennas_2013apr30.csv')
 config['MID'] = AntennaConfig('SKA1MID', range(1,255), 'ConfigurationData/SKA-mid_config_baseline_design_ALL_antennas_2013apr30.csv')
+config['SURVEYV2'] = AntennaConfig('SKA1SURVEYv2', range(1,97), 'ConfigurationData/ska1s96v4b.enu.96x3.csv')
+config['LOWV2'] = AntennaConfig('SKA1LOWv2', range(1,753), 'ConfigurationData/ska1low.enu.752x3.csv')
+config['MIDV2'] = AntennaConfig('SKA1MIDv2', range(1,255), 'ConfigurationData/ska1midv2s.enu.254x4.csv')
 
 
 class SKAconfig:
@@ -62,7 +64,10 @@ class SKAconfig:
             num += 1
             name='pad%0d'%num
             cols=line.split(',')
-            ant = Antenna(num,name,self.refEasting+float(cols[0]),self.refNorthing+float(cols[1]),self.elevation,self.zone,"south")
+            if len(cols)==2:
+                ant = Antenna(num,name,self.refEasting+float(cols[0]),self.refNorthing+float(cols[1]),self.elevation,self.zone,"south")
+            else:
+                ant = Antenna(num,name,self.refEasting+float(cols[0]),self.refNorthing+float(cols[1]),self.elevation+float(cols[2]),self.zone,"south")
             self.antlist.antennas[num]=ant
 
     def dump(self,outtype):
@@ -75,7 +80,7 @@ class SKAconfig:
         if outtype == "kml":
             self.antlist.dumpKML()
 
-arrayType = ("LOW", "SURVEY", "MID", "LOWCORE", "LOWARMS", "SURVEYASKAP", "SURVEYCORE", "SURVEYARMS", "MIDMEERKAT", "MIDCORE", "MIDARMS")
+arrayType = ("LOW", "SURVEY", "MID", "LOWCORE", "LOWARMS", "SURVEYASKAP", "SURVEYCORE", "SURVEYARMS", "MIDMEERKAT", "MIDCORE", "MIDARMS", 'SURVEYV2', 'LOWV2', 'MIDV2')
 outputType = ("parset", "calc", "csv", "kml")
 if len(sys.argv) < 2:
 	usage()
