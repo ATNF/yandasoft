@@ -6,6 +6,8 @@
 /// PO Box 76, Epping NSW 1710, Australia
 /// atnf-enquiries@csiro.au
 ///
+/// Copyright (C) 1995-2009 Associated Universities, Inc. Washington DC, USA.
+///
 /// This file is part of the ASKAP software distribution.
 ///
 /// The ASKAP software distribution is free software: you can redistribute it
@@ -21,6 +23,10 @@
 /// You should have received a copy of the GNU General Public License
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+///
+/// This file is derived from the casacore NewMSSimulator class, which is
+/// licensed under the LGPL and is copyright Associated Universities, Inc.
+/// Washington DC, USA.
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
