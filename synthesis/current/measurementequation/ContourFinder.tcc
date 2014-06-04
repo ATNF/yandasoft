@@ -1,5 +1,5 @@
-/// @file
-/// 
+/// @file ContourFinder.tcc
+///
 /// @brief Generic template to iterate inner contour of a 2D image
 /// @details Several applications across the synthesis require estimation of
 /// some statistics along the inner contour around the peak in a 2D image.
@@ -14,6 +14,28 @@
 /// to casacore). If it is ever going to become a part of casacore, it would be good to
 /// generalize the class to be able to get several contours at once. In this case
 /// iterator can return IPosition and the contour index.
+///
+/// @copyright (c) 2014 CSIRO
+/// Australia Telescope National Facility (ATNF)
+/// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+/// PO Box 76, Epping NSW 1710, Australia
+/// atnf-enquiries@csiro.au
+///
+/// This file is part of the ASKAP software distribution.
+///
+/// The ASKAP software distribution is free software: you can redistribute it
+/// and/or modify it under the terms of the GNU General Public License as
+/// published by the Free Software Foundation; either version 2 of the License,
+/// or (at your option) any later version.
+///
+/// This program is distributed in the hope that it will be useful,
+/// but WITHOUT ANY WARRANTY; without even the implied warranty of
+/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+/// GNU General Public License for more details.
+///
+/// You should have received a copy of the GNU General Public License
+/// along with this program; if not, write to the Free Software
+/// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
 #include <casa/Arrays/ArrayMath.h>
 
