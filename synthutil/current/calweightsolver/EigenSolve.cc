@@ -36,8 +36,6 @@
 #include <vector>
 #include <algorithm>
 
-#include <fitting/GSLSVDReplacement.h>
-
 #include <askap/AskapError.h>
 
 #include <gsl/gsl_matrix.h>
@@ -85,7 +83,10 @@ void EigenSolver::solveEigen(const casa::Matrix<casa::Complex> &in)
        }
   }
   try {
-    scimath::SVDecomp(A,V,S);
+    ASKAPTHROW(AskapError, "scimath::SVDecomp not implemented");
+    // NOTE: The GSLSVDReplacement class was removed in this same changeset. If this
+    // code is ever to be used an alternative should be found.
+    //scimath::SVDecomp(A,V,S);
   
     vec.resize(in.nrow(),in.ncolumn());
     vecV.resize(in.nrow(),in.ncolumn());
