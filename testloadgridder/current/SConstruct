@@ -7,9 +7,8 @@
 
 # Always import this
 from askapenv import env
-import os
 
-env.Append(CCFLAGS=['-O2', '-DASKAP_DEBUG', '-DASKAP_GRID_WITH_POINTERS', '-g'])
+env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
 env.Append(universal=0)
 
 # create build object with library name

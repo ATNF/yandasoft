@@ -15,9 +15,6 @@ env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
 
 #env.AppendUnique(CCFLAGS='-DASKAP_GRID_WITH_BLAS')
 env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
-env.AppendUnique(CCFLAGS=['-DASKAP_DEBUG'])
-env.AppendUnique(CCFLAGS=['-g'])
-env.AppendUnique(CCFLAGS=['-O2'])
 
 # Optimization for complex arithmetic. The functionality this flag enables
 # was default behaviour prior to GCC 4.3.
