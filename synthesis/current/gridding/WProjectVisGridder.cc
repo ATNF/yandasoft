@@ -325,22 +325,24 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
             } // for fracv
         } // for fracu
 
-        // force normalization for all fractional offsets (or planes)
-        for (size_t plane = 0; plane < itsConvFunc.size(); ++plane) {
-            if (itsConvFunc[plane].nelements() == 0) {
-                // this plane of the cache is unused
-                continue;
-            }
-
-            const double norm = sum(casa::real(itsConvFunc[plane]));
-            // ASKAPLOG_INFO_STR(logger, "Sum of convolution function = " << norm);
-            ASKAPDEBUGASSERT(norm > 0.);
-
-            if (norm > 0.) {
-                itsConvFunc[plane] /= casa::Complex(norm);
-            }
-        } // for plane
     } // for iw
+
+    // force normalization for all fractional offsets (or planes)
+    for (size_t plane = 0; plane < itsConvFunc.size(); ++plane) {
+        if (itsConvFunc[plane].nelements() == 0) {
+            // this plane of the cache is unused
+            continue;
+        }
+
+        const double norm = sum(casa::real(itsConvFunc[plane]));
+        // ASKAPLOG_INFO_STR(logger, "Sum of convolution function = " << norm);
+        ASKAPDEBUGASSERT(norm > 0.);
+
+        if (norm > 0.) {
+            const casa::Complex invNorm = casa::Complex(1.0/norm);
+            itsConvFunc[plane] *= invNorm;
+        }
+    } // for plane
 
     if (isSupportPlaneDependent()) {
         ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
