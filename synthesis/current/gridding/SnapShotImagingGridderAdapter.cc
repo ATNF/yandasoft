@@ -532,7 +532,7 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
           boost::unique_lock<boost::mutex> lock(theirMutex);
         #endif
           regridder.regrid(itsTempOutImg, itsInterpolationMethod,
-                  casa::IPosition(2,0,1), itsTempInImg, false, 3);
+                  casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
         #ifdef _OPENMP
         }
         #endif
