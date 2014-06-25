@@ -8,6 +8,7 @@
 # Always import this
 from askapenv import env
 import os
+import sys
 
 if 'AIPSPATH' not in os.environ:
    os.environ['AIPSPATH']=os.environ['ASKAP_ROOT']+'/Code/Base/accessors/current'
@@ -17,8 +18,10 @@ env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
 env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
 
 # Optimization for complex arithmetic. The functionality this flag enables
-# was default behaviour prior to GCC 4.3.
-env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
+# was default behaviour prior to GCC 4.3. However this option is not supported
+# by clang, so don't use it on Mac
+if sys.platform != 'darwin':
+    env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
 
 env.Append(universal=0)
 
