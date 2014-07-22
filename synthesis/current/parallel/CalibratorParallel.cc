@@ -4,7 +4,7 @@
 /// equation classes. This code applies to calibration. I expect that this part
 /// will be redesigned in the future for a better separation of the algorithm
 /// from the parallel framework middleware. Current version is basically an
-/// adapted ImagerParallel clas
+/// adapted ImagerParallel class
 ///
 /// Performs calibration on a data source. Can run in serial or 
 /// parallel (MPI) mode.
