@@ -40,6 +40,7 @@ ASKAP_LOGGER(logger, ".parallel");
 
 
 #include <fitting/INormalEquations.h>
+#include <fitting/Solver.h>
 
 #include <casa/aips.h>
 #include <casa/OS/Timer.h>
@@ -279,6 +280,9 @@ void AdviseParallel::calcNE()
 {
    ASKAPDEBUGASSERT(itsEstimator);
    itsNe.reset(new EstimatorAdapter(itsEstimator));
+   // the following call avoids merging of normal equations inside the solver (which we don't use)
+   // this is an artefact of reusing Master/Worker framework
+   itsSolver.reset(new scimath::Solver);
    if (itsComms.isWorker()) {
        ASKAPCHECK(itsNe, "Statistics estimator (stored as NormalEquations) is not defined");
        if (itsComms.isParallel()) {
