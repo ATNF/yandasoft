@@ -107,7 +107,15 @@ protected:
    /// @param parset ParameterSet for inputs
    /// @return new parset 
    static LOFAR::ParameterSet addMissingFields(const LOFAR::ParameterSet& parset);
-   
+
+
+   /// @brief helper method to broadcast statistics to all workers
+   /// @details It seems better conceptually, if all ranks hold the same statistics at the end of
+   /// the estimate() call. This allows workers to update their own parsets in the parallel way.
+   /// This helper method encapsulates all actions required to broadcast statistics estimator from
+   /// the master to all workers.
+   void broadcastStatistics();
+        
 private:
    
    /// @brief optional tangent point

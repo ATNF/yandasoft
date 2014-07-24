@@ -1,6 +1,6 @@
 /// @file
 ///
-/// Support for parallel statistics accululation to advise on imaging parameters
+/// Support for parallel statistics accumulation to advise on imaging parameters
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -36,11 +36,19 @@
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
+#include <profile/AskapProfiler.h>
+
 
 #include <fitting/INormalEquations.h>
 
 #include <casa/aips.h>
 #include <casa/OS/Timer.h>
+
+#include <Blob/BlobString.h>
+#include <Blob/BlobIBufString.h>
+#include <Blob/BlobOBufString.h>
+#include <Blob/BlobIStream.h>
+#include <Blob/BlobOStream.h>
 
 
 #include <vector>
@@ -194,7 +202,46 @@ void AdviseParallel::estimate()
        itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance));
        calcNE();        
    }
+   // to synchronise stats held by all workers (wouldn't be necessary if the only thing we wanted was to print summary)
+   broadcastStatistics();
 }
+
+/// @brief helper method to broadcast statistics to all workers
+/// @details It seems better conceptually, if all ranks hold the same statistics at the end of
+/// the estimate() call. This allows workers to update their own parsets in the parallel way.
+/// This helper method encapsulates all actions required to broadcast statistics estimator from
+/// the master to all workers.
+void AdviseParallel::broadcastStatistics()
+{
+  ASKAPDEBUGTRACE("AdviseParallel::broadcastStatistics");
+  // only need to do something in the parallel case
+  if (itsComms.isParallel()) {
+      LOFAR::BlobString bs;
+      bs.resize(0);
+      ASKAPASSERT(itsEstimator);
+      const int currentVersion = 1;
+      if (itsComms.isMaster()) {
+          // master has up to date stats, it sends them to all workers
+          LOFAR::BlobOBufString bob(bs);
+          LOFAR::BlobOStream out(bob);
+          out.putStart("statistics", currentVersion);
+          itsEstimator->writeToBlob(out);
+          out.putEnd();
+          itsComms.broadcastBlob(bs ,0);       
+      }
+      if (itsComms.isWorker()) {
+          // workers receive stats from the master
+          itsComms.broadcastBlob(bs, 0);
+          LOFAR::BlobIBufString bib(bs);
+          LOFAR::BlobIStream in(bib);
+          const int version=in.getStart("statistics");
+          ASKAPASSERT(version == currentVersion);
+          itsEstimator->readFromBlob(in);
+          in.getEnd();          
+      }
+  }
+}
+
    
 /// @brief perform the accumulation for the given dataset
 /// @details This method iterates over the given dataset, predicts visibilities according to the
