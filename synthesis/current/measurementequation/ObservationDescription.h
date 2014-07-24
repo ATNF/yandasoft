@@ -57,7 +57,9 @@ struct ObservationDescription {
   /// @param[in] time current time (in accessor units)
   /// @param[in] beam beam ID
   /// @param[in] dir current direction (in accessor frame)
-  ObservationDescription(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, const casa::MVDirection &dir);
+  /// @param[in] freq centre frequency (in accessor units)
+  ObservationDescription(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, 
+                         const casa::MVDirection &dir, double freq);
   
   /// @brief check whether the structure has been initialised
   /// @return true, if the structure has data, false otherwise
@@ -70,7 +72,8 @@ struct ObservationDescription {
   /// @param[in] time current time (in accessor units)
   /// @param[in] beam beam ID
   /// @param[in] dir current direction (in accessor frame)
-  void set(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, const casa::MVDirection &dir);
+  /// @param[in] freq centre frequency (in accessor units)
+  void set(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, const casa::MVDirection &dir, double freq);
   
   /// @brief extend existing observation for additional cycle(s)  
   /// @param[in] cycle current cycle (i.e. iteration number)
@@ -115,6 +118,11 @@ struct ObservationDescription {
   /// @note an exception is thrown if the structure is uninitialised 
   const casa::MVDirection& direction() const;
   
+  /// @brief centre frequency
+  /// @return frequency corresponding to the centre of the band (in units used in the accessor)
+  /// @note an exception is thrown if the structure is uninitialised 
+  double frequency() const;
+  
 private:  
   /// @brief file name or other string key defined by the user
   std::string itsName;
@@ -137,6 +145,12 @@ private:
   
   /// @brief phase centre direction (same coordinate system as the accessor is set up with)
   casa::MVDirection itsDirection;
+  
+  /// @brief centre frequency (in accessor units). 
+  /// @note At this stage we assume that all observations are taken in a standard mode, so no
+  /// catering for different bandwidth/resolution, etc. It can be changed in the future if there is
+  /// a different use case on the horizon
+  double itsFreq;  
 };
 
 } // namespace synthesis

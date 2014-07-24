@@ -54,15 +54,16 @@ namespace askap
          ObservationDescription obs;
          CPPUNIT_ASSERT(!obs.isValid());
          const casa::MVDirection dir(casa::Quantity(1.01,"rad"), casa::Quantity(-1.1,"rad"));
-         ObservationDescription obs1("test",5,3600.5, 3, dir);
+         ObservationDescription obs1("test",5,3600.5, 3, dir, 1e9);
          CPPUNIT_ASSERT(obs1.name() == "test");
          CPPUNIT_ASSERT(obs1.isValid());
-         obs.set("another",3, 1800.1, 0, dir);
+         obs.set("another",3, 1800.1, 0, dir, 8.5e8);
          CPPUNIT_ASSERT(obs.isValid());
          CPPUNIT_ASSERT(obs.name() == "another");
          CPPUNIT_ASSERT_DOUBLES_EQUAL(3600.5, obs1.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(3600.5, obs1.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs1.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(1e9, obs1.frequency(), 1);
          CPPUNIT_ASSERT_EQUAL(5u, obs1.startCycle());
          CPPUNIT_ASSERT_EQUAL(5u, obs1.endCycle());         
          CPPUNIT_ASSERT_EQUAL(3u, obs1.beam());
@@ -70,6 +71,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1800.1, obs.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1800.1, obs.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(8.5e8, obs.frequency(), 1);
          CPPUNIT_ASSERT_EQUAL(3u, obs.startCycle());
          CPPUNIT_ASSERT_EQUAL(3u, obs.endCycle());
          CPPUNIT_ASSERT_EQUAL(0u, obs.beam());
@@ -79,6 +81,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1800.1, obs.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1900.1, obs.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(8.5e8, obs.frequency(), 1);         
          CPPUNIT_ASSERT_EQUAL(3u, obs.startCycle());
          CPPUNIT_ASSERT_EQUAL(6u, obs.endCycle());
          CPPUNIT_ASSERT_EQUAL(0u, obs.beam());
@@ -88,6 +91,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1800.1, obs1.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1900.1, obs1.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs1.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(8.5e8, obs1.frequency(), 1);         
          CPPUNIT_ASSERT_EQUAL(3u, obs1.startCycle());
          CPPUNIT_ASSERT_EQUAL(6u, obs1.endCycle());
          CPPUNIT_ASSERT_EQUAL(0u, obs1.beam());
@@ -100,6 +104,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1800.1, obs2.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1900.1, obs2.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs2.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(8.5e8, obs2.frequency(), 1);                  
          CPPUNIT_ASSERT_EQUAL(3u, obs2.startCycle());
          CPPUNIT_ASSERT_EQUAL(6u, obs2.endCycle());
          CPPUNIT_ASSERT_EQUAL(0u, obs2.beam());
@@ -113,11 +118,12 @@ namespace askap
       
       void testIllegalUpdate() {
          const casa::MVDirection dir(casa::Quantity(1.01,"rad"), casa::Quantity(-1.1,"rad"));
-         ObservationDescription obs("test",5,3600.5, 3, dir);
+         ObservationDescription obs("test",5,3600.5, 3, dir, 1e9);
          CPPUNIT_ASSERT(obs.isValid());
          CPPUNIT_ASSERT_DOUBLES_EQUAL(3600.5, obs.startTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(3600.5, obs.endTime(), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., obs.direction().separation(dir), 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(1e9, obs.frequency(), 1);         
          CPPUNIT_ASSERT_EQUAL(5u, obs.startCycle());
          CPPUNIT_ASSERT_EQUAL(5u, obs.endCycle());         
          CPPUNIT_ASSERT_EQUAL(3u, obs.beam());

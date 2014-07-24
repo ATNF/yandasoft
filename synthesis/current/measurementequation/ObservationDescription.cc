@@ -48,9 +48,10 @@ ObservationDescription::ObservationDescription() : itsBeam(-1) {}
 /// @param[in] time current time (in accessor units)
 /// @param[in] beam beam ID
 /// @param[in] dir current direction (in accessor frame)
+/// @param[in] freq centre frequency (in accessor units)
 ObservationDescription::ObservationDescription(const std::string &name, casa::uInt cycle, double time, 
-       casa::uInt beam, const casa::MVDirection &dir) : itsName(name), itsStartCycle(cycle), itsEndCycle(cycle),
-       itsStartTime(time), itsEndTime(time), itsBeam(static_cast<int>(beam)), itsDirection(dir) {}
+       casa::uInt beam, const casa::MVDirection &dir, double freq) : itsName(name), itsStartCycle(cycle), itsEndCycle(cycle),
+       itsStartTime(time), itsEndTime(time), itsBeam(static_cast<int>(beam)), itsDirection(dir), itsFreq(freq) {}
           
   
 /// @brief check whether the structure has been initialised
@@ -67,14 +68,16 @@ bool ObservationDescription::isValid() const
 /// @param[in] time current time (in accessor units)
 /// @param[in] beam beam ID
 /// @param[in] dir current direction (in accessor frame)
+/// @param[in] freq centre frequency (in accessor units)
 void ObservationDescription::set(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, 
-                                 const casa::MVDirection &dir)
+                                 const casa::MVDirection &dir, double freq)
 {
   itsName = name;
   itsStartCycle = itsEndCycle = cycle;
   itsStartTime = itsEndTime = time;
   itsBeam = static_cast<int>(beam);
   itsDirection = dir;
+  itsFreq = freq;
 }
   
 // getter methods
@@ -154,6 +157,16 @@ const casa::MVDirection& ObservationDescription::direction() const
 {
   ASKAPCHECK(isValid(), "An attempt to get direction for an undefined observation structure");
   return itsDirection;
+}
+
+
+/// @brief centre frequency
+/// @return frequency corresponding to the centre of the band (in units used in the accessor)
+/// @note an exception is thrown if the structure is uninitialised 
+double ObservationDescription::frequency() const
+{
+  ASKAPCHECK(isValid(), "An attempt to get frequency for an undefined observation structure");
+  return itsFreq;
 }
 
 } // namespace synthesis
