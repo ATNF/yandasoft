@@ -434,7 +434,7 @@ void VisMetaDataStats::readFromBlob(LOFAR::BlobIStream& is)
   double wtolerance = -1;
   LOFAR::TYPES::uint64 nVisBuf = 0;
   is >> itsTangent >> itsTangentSet >> wtolerance >> nVisBuf;
-  itsAccessorAdapter = accessors::BestWPlaneDataAccessor(wtolerance);
+  itsAccessorAdapter = accessors::BestWPlaneDataAccessor(wtolerance, false);
   itsNVis = (unsigned long)nVisBuf;
   is >> itsMaxU >> itsMaxV >> itsMaxW >> itsMaxResidualW >> itsMinFreq >> itsMaxFreq >> itsMaxAntennaIndex >> itsMaxBeamIndex >>
         itsReferenceDir >> itsRefDirValid >> itsFieldBLC.first >> itsFieldBLC.second >> itsFieldTRC.first >> itsFieldTRC.second;     
