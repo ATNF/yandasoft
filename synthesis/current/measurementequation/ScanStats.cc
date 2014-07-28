@@ -85,7 +85,6 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
        const casa::uInt centreChan = it->nChannel() / 2;
        ASKAPDEBUGASSERT(it->frequency().nelements() > centreChan);
        const double freq = it->frequency()[centreChan];
-       
        // go through all rows and aggregate baselines
        for (casa::uInt row=0; row<it->nRow(); ++row) {
             const casa::uInt beam = beam1[row];
@@ -93,6 +92,9 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
             
             // either existing or a brand new element in the map
             ObservationDescription& obs = currentObs[beam];
+            
+            ASKAPDEBUGASSERT(it->pointingDir1().nelements() > row);
+            ASKAPDEBUGASSERT(it->pointingDir2().nelements() > row);
             
             if (obs.isValid()) {
                 // existing element - just check for consistency
@@ -105,31 +107,37 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                 obs.set(name, cycle, it->time(), beam, it->pointingDir1()[row],freq);
                 ASKAPCHECK(obs.direction().separation(it->pointingDir2()[row]) < dirTolerance, 
                           "Pointing direction is different for two antennas, unsupported scenario");
-            } 
-       }
+            }        
+       } // loop over row
        // aggregate the map into the final buffer
        for (std::map<casa::uInt, ObservationDescription>::const_iterator ci = currentObs.begin(); ci != currentObs.end(); ++ci) {
             std::vector<ObservationDescription>::reverse_iterator lastObsThisBeam = 
                   std::find_if(itsObs.rbegin(), itsObs.rend(), BeamCheckHelper(ci->first));
-            bool sameScan = (lastObsThisBeam->endCycle() + 1 == ci->second.startCycle());
-            if (sameScan && (itsCycleLimit >= 0)) {
-                sameScan = (ci->second.endCycle() - lastObsThisBeam->startCycle() < static_cast<casa::uInt>(itsCycleLimit));
-            } 
-            if (sameScan && (itsTimeLimit >= 0.)) {
-                sameScan = (ci->second.endTime() - lastObsThisBeam->startTime() < itsTimeLimit);
-            } 
-            if (sameScan) {
-                sameScan = (fabs(ci->second.frequency() - freq) < freqTolerance);
-            } 
-            sameScan &= (lastObsThisBeam->direction().separation(ci->second.direction()) < dirTolerance);
+            bool sameScan = (lastObsThisBeam != itsObs.rend());
+            if (sameScan) {            
+                sameScan = (lastObsThisBeam->endCycle() + 1 == ci->second.startCycle());
+                sameScan &= (lastObsThisBeam->name() == name);
+                if (sameScan && (itsCycleLimit >= 0)) {
+                    sameScan = (ci->second.endCycle() - lastObsThisBeam->startCycle() < static_cast<casa::uInt>(itsCycleLimit));
+                } 
+                if (sameScan && (itsTimeLimit >= 0.)) {
+                    sameScan = (ci->second.endTime() - lastObsThisBeam->startTime() < itsTimeLimit);
+                } 
+                if (sameScan) {
+                    sameScan = (fabs(ci->second.frequency() - freq) < freqTolerance);
+                } 
+                sameScan &= (lastObsThisBeam->direction().separation(ci->second.direction()) < dirTolerance);
+            }
             if (sameScan) {
                 // continuing the same scan
+                ASKAPDEBUGASSERT(lastObsThisBeam != itsObs.rend());
                 lastObsThisBeam->update(ci->second.endCycle(), ci->second.endTime());
             } else {
                 // start a new scan
                 itsObs.push_back(ci->second);
             }
-       }
+       } // loop over existing scans
+       
   }
 }
 
