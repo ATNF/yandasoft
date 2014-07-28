@@ -91,14 +91,14 @@ public:
    /// Write the model (runs only in the master)
    /// @param[in] postfix a string to be added to the file name
    virtual void writeModel(const std::string &postfix = std::string()) {}
-   
-protected:
 
    /// @brief helper method to get statistics estimator
    /// @return const reference to the statistics estimator
    /// @note An exception is thrown if the estimator is not defined or the method is called from
    /// worker process.
    const VisMetaDataStats& estimator() const;
+   
+protected:
    
    /// @brief a hopefully temporary method to define missing fields in parset
    /// @details We reuse some code for general synthesis application, but it requires some

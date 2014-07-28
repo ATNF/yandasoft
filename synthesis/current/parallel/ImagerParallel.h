@@ -36,6 +36,7 @@
 #include <Common/ParameterSet.h>
 
 // Local package includes
+#include <parallel/AdviseParallel.h>
 #include <parallel/MEParallelApp.h>
 #include <measurementequation/IMeasurementEquation.h>
 #include <calibaccess/ICalSolutionConstSource.h>
@@ -106,6 +107,14 @@ namespace askap
       ImagerParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset);
 
+      /// @brief Estimate any appropriate parameters that were not specified in the parset.
+      /// @details The Cadvise application is used to fill in missing parameters.
+      /// @param comms communication object 
+      /// @param parset initial ParameterSet
+      /// @return updated ParameterSet
+      static LOFAR::ParameterSet autoSetParameters(askap::askapparallel::AskapParallel& comms,
+          const LOFAR::ParameterSet &parset);
+
       /// @brief Calculate the normalequations (runs in the prediffers)
       /// @details ImageFFTEquation and the specified gridder (set in the parset
       /// file) are used to calculate the normal equations. The image parameters
@@ -162,9 +171,32 @@ namespace askap
       
   private:
 
+      /// @brief check whether any preProcess advice is needed.
+      /// @param parset initial ParameterSet
+      /// @return true if there are parameters that need to be set.
+      static bool checkForMissingParameters(const LOFAR::ParameterSet &parset);
+
+      /// @brief copy any required Cimager parameters to AdviseParallel parameters.
+      /// @param parset ParameterSet to be updated
+      static void addAdviseParameters(LOFAR::ParameterSet &parset);
+
+      /// @brief add missing parameters based on advice from AdviseParallel.
+      /// @param advice AdviseParallel statistics
+      /// @param parset ParameterSet to be updated
+      static void addMissingParameters(const VisMetaDataStats &advice, LOFAR::ParameterSet &parset);
+
+      /// @brief remove any added AdviseParallel parameters.
+      /// @param parset updated ParameterSet
+      static void cleanUpAdviseParameters(LOFAR::ParameterSet &parset);
+
+      /// @brief test whether to advise on wmax, which can require an extra pass over the data.
+      /// @param parset ParameterSet to be updated
+      /// @return if advice is needed, returns the name of the gridder. Otherwise, returns an empty string.
+      static string wMaxAdviceNeeded(LOFAR::ParameterSet &parset);
+
       /// Calculate normal equations for one data set
       /// @param ms Name of data set
-    /// @param discard Discard old equation?
+      /// @param discard Discard old equation?
       void calcOne(const string& dataset, bool discard=false);
 
       /// Do we want a restored image?

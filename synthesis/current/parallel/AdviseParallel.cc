@@ -312,7 +312,8 @@ void AdviseParallel::calcNE()
 /// worker process.
 const VisMetaDataStats& AdviseParallel::estimator() const
 {
-   ASKAPCHECK(itsComms.isMaster(), "AdviseParallel::estimator() is supposed to be called from the master process only");
+   //broadcastStatistics() at the end of estimate() means that this can be called on workers as well. Needed for advise in Cimager.
+   //ASKAPCHECK(itsComms.isMaster(), "AdviseParallel::estimator() is supposed to be called from the master process only");
    ASKAPCHECK(itsEstimator, "estimator is not defined!");
    return *itsEstimator;
 }

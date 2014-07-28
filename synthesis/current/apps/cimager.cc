@@ -106,19 +106,26 @@ class CimagerApp : public askap::Application
                         it->second = LOFAR::ParameterValue(comms.substitute(it->second));
                     }
 
-                    ImagerParallel imager(comms, subset);
+                    // new parset that includes any missing parameters that can be advised using metadata
+                    // NOTE: This MUST happen after the %w substitutions. (Move both to act on makeSubset output above?)
+                    LOFAR::ParameterSet fullset(ImagerParallel::autoSetParameters(comms, subset));
+
+                    ImagerParallel imager(comms, fullset);
                     ASKAPLOG_INFO_STR(logger, "ASKAP synthesis imager " << ASKAP_PACKAGE_VERSION);
 
                     if (comms.isMaster()) {
-                        ASKAPLOG_INFO_STR(logger, "Parset file contents:\n" << config());
+                        LOFAR::ParameterSet tmpset = config();
+                        tmpset.subtractSubset("Cimager."); // replace the original Cimager param set with the updated set.
+                        tmpset.adoptCollection(fullset.makeSubset("","Cimager."));
+                        ASKAPLOG_INFO_STR(logger, "Parset parameters:\n" << tmpset);
                     }
 
                     const double targetPeakResidual = SynthesisParamsHelper::convertQuantity(
-                            subset.getString("threshold.majorcycle", "-1Jy"), "Jy");
-                    const bool writeAtMajorCycle = subset.getBool("Images.writeAtMajorCycle", false);
+                            fullset.getString("threshold.majorcycle", "-1Jy"), "Jy");
+                    const bool writeAtMajorCycle = fullset.getBool("Images.writeAtMajorCycle", false);
 
 
-                    const int nCycles = subset.getInt32("ncycles", 0);
+                    const int nCycles = fullset.getInt32("ncycles", 0);
                     if (nCycles == 0) {
                         /// No cycling - just make a dirty image
                         imager.broadcastModel();

@@ -63,7 +63,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <measurementequation/CalibrationApplicatorME.h>
 #include <profile/AskapProfiler.h>
 #include <parallel/GroupVisAggregator.h>
-
+#include <parallel/AdviseParallel.h>
 
 #include <casa/aips.h>
 #include <casa/OS/Timer.h>
@@ -159,6 +159,267 @@ namespace askap
       }
     }
 
+    /// Estimate any appropriate parameters that were not specified in the parset
+    LOFAR::ParameterSet ImagerParallel::autoSetParameters(askap::askapparallel::AskapParallel& comms,
+        const LOFAR::ParameterSet &parset) {
+
+      // make a copy of the initial parset to fill with extra parameters and return.
+      LOFAR::ParameterSet fullset = parset;
+
+      // if advice is needed, use the AdviseParallel class to estimate missing parameters.
+      if ( checkForMissingParameters(fullset) ) {
+          ASKAPLOG_INFO_STR(logger, "Using the advise application to fill unset parameters.");
+
+          addAdviseParameters(fullset); // copy any required Cimager parameters to AdviseParallel parameters.
+
+          AdviseParallel cadvise(comms, fullset);
+          cadvise.estimate(); // generate the statistics
+
+          const VisMetaDataStats &advice = cadvise.estimator();
+          addMissingParameters(advice, fullset); /// add missing parameters based on advice from AdviseParallel.
+
+          cleanUpAdviseParameters(fullset); // remove any added AdviseParallel parameters.
+
+      }
+
+      return fullset;
+    }
+
+    /// check whether any preProcess advice is needed.
+    bool ImagerParallel::checkForMissingParameters(const LOFAR::ParameterSet &parset) {
+
+      // set to true if any parameters are missing
+      bool paramTest = false;
+
+      // these parameters can be set globally or individually
+      bool cellsizeNeeded = false;
+      bool shapeNeeded = false;
+
+      // test for missing image-specific parameters:
+      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      for (size_t img = 0; img < imageNames.size(); ++img) {
+          if ( !parset.isDefined("Images."+imageNames[img]+".cellsize") ) cellsizeNeeded = true;
+          if ( !parset.isDefined("Images."+imageNames[img]+".shape") ) shapeNeeded = true;
+          if ( !parset.isDefined("Images."+imageNames[img]+".nchan") ) {
+              paramTest = true;
+              break;
+          } else if ( !parset.isDefined("Images."+imageNames[img]+".frequency") ) {
+              paramTest = true;
+              break;
+          } else if ( !parset.isDefined("Images."+imageNames[img]+".direction") ) {
+              paramTest = true;
+              break;
+          }
+      }
+      if (paramTest) return paramTest;
+
+      // test for general missing parameters:
+      if ( cellsizeNeeded && !parset.isDefined("nUVWMachines") ) {
+          paramTest = true;
+      } else if ( cellsizeNeeded && !parset.isDefined("Images.cellsize") ) {
+          paramTest = true;
+      } else if ( shapeNeeded && !parset.isDefined("Images.shape") ) {
+          paramTest = true;
+      }
+
+      return paramTest;
+    }
+
+    /// copy any required Cimager parameters to AdviseParallel parameters.
+    void ImagerParallel::addAdviseParameters(LOFAR::ParameterSet &parset) {
+
+      // Add Cimager parameters in a form that AdviseParallel is expecting.
+      // In case any of these parameters ever become 'Cimager.' parameters, add an extra parameter
+      // for each with suffix ".advised" so they can be correctly identified during clean up.
+      // Also, use variable 'tangentDefined' to avoid such a problem here.
+
+      string param;
+
+      // Use the tangent of the first image as the advise tangent (defaults to direction if no tangent is given).
+      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      if (imageNames.size() > 1) {
+          ASKAPLOG_WARN_STR(logger, "  Multiple images. Only the first will be inspected for tangent information.");
+      }
+      bool tangentDefined = parset.isDefined("tangent");
+      if (parset.isDefined("Images."+imageNames[0]+".tangent") && !tangentDefined) {
+          param = "Images."+imageNames[0]+".tangent";
+          string tangent = parset.getString(param);
+          if (tangent.find("J2000")==string::npos) { // Advise will exit if epoch is not J2000
+              ASKAPLOG_WARN_STR(logger, "  AdviseParallel only accepts J2000 at the moment. Not using " <<
+                    param<<" in Advise.");
+          } else {
+              ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << tangent);
+              parset.add("tangent", tangent);
+              parset.add("tangent.advised", tangent);
+              tangentDefined = true;
+          }
+      }
+      else if ( parset.isDefined("Images."+imageNames[0]+".direction") && !tangentDefined) {
+          param = "Images."+imageNames[0]+".direction";
+          string tangent = parset.getString(param);
+          if (tangent.find("J2000")==string::npos) { // Advise will exit if epoch is not J2000
+              ASKAPLOG_WARN_STR(logger, "  AdviseParallel only accepts J2000 at the moment. Not using " <<
+                    param<<" in Advise.");
+          } else {
+              ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << tangent);
+              parset.add("tangent", tangent);
+              parset.add("tangent.advised", tangent);
+              tangentDefined = true;
+          }
+      }
+
+      // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
+      param = "gridder.snapshotimaging.wtolerance";
+      if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxAdviceNeeded(parset)!="")) {
+          string wtolerance = parset.getString(param);
+          ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
+          parset.add("wtolerance", wtolerance);
+          parset.add("wtolerance.advised", wtolerance);
+      }
+
+    }
+
+    /// test whether to advise on wmax, which can require an extra pass over the data.
+    string ImagerParallel::wMaxAdviceNeeded(LOFAR::ParameterSet &parset) {
+
+      // make a vector containing all gridders that require the wmax parameter
+      vector<string> wGridders;
+      wGridders.push_back("WProject"); 
+      wGridders.push_back("WStack"); 
+      wGridders.push_back("AWProject"); 
+      wGridders.push_back("AProjectWStack"); 
+      for(vector<string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
+          if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax") ) {
+              return *i;
+          }
+      }
+
+      return "";
+
+    }
+
+    /// remove any added AdviseParallel parameters.
+    void ImagerParallel::cleanUpAdviseParameters(LOFAR::ParameterSet &parset) {
+
+      if (parset.isDefined("tangent.advised")) {
+          parset.remove("tangent");
+          parset.remove("tangent.advised");
+      }
+
+      if (parset.isDefined("wtolerance.advised")) {
+          parset.remove("wtolerance");
+          parset.remove("wtolerance.advised");
+      }
+
+    }
+
+    /// add missing parameters based on advice from AdviseParallel.
+    /// if adding any more parameters here, also add them to checkforMissingParameters(). Parameters are:
+    /// - advice.nAntennas()
+    /// - advice.nVis()
+    /// - advice.maxU() // [wavelengths]
+    /// - advice.maxV() // [wavelengths]
+    /// - advice.maxW() // [wavelengths]
+    /// - if (wTolerance >= 0.) advice.maxResidualW() // [wavelengths]
+    /// - advice.nBeams()
+    /// - advice.maxOffsets() // Largest beam offset: maxOffsets().first, maxOffsets().second [rad]
+    /// - advice.squareCellSize(); // [arcsec]
+    /// - advice.squareFieldSize(0); // side length out to about the first sidelobe (about the 'average' pointing) [deg]
+    /// - advice.squareFieldSize(1); // side length out to about the first sidelobe (about the tangent point) [deg]
+    /// - advice.minFreq() // [Hz]
+    /// - advice.maxFreq() // [Hz]
+    void ImagerParallel::addMissingParameters(const VisMetaDataStats &advice, LOFAR::ParameterSet &parset) {
+
+      string param;
+      // these parameters can be set globally or individually
+      bool cellsizeNeeded = false;
+      bool shapeNeeded = false;
+
+      // for image specific parameters, cycle through the images and check whether any advised parameters are undefined.
+      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      for (size_t img = 0; img < imageNames.size(); ++img) {
+          // could set this up to add shape if it's missing but cellsize is set, like below for the global parameters.
+          if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) cellsizeNeeded = true;
+          if (!parset.isDefined("Images."+imageNames[img]+".shape")) shapeNeeded = true;
+          int nChan = 1;
+          param = "Images."+imageNames[img]+".nchan"; // if the number of image frequency channels undefined, set to 1.
+          if (parset.isDefined(param)) {
+              nChan = parset.getInt(param);
+          } else {
+              std::ostringstream pstr;
+              pstr<<nChan;
+              ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr.str().c_str());
+              parset.add(param, pstr.str().c_str());
+          }
+          param = "Images."+imageNames[img]+".frequency"; // if freq is undefined, use the info from the ms.
+          if (!parset.isDefined(param)) {
+              std::ostringstream pstr;
+              if (nChan==1) {
+                  const double aveFreq = 0.5*(advice.minFreq()+advice.maxFreq());
+                  pstr<<"["<<aveFreq<<","<<aveFreq<<"]";
+              } else {
+                  pstr<<"["<<advice.minFreq()<<","<<advice.maxFreq()<<"]";
+              }
+              ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr.str().c_str());
+              parset.add(param, pstr.str().c_str());
+          }
+          param = "Images."+imageNames[img]+".direction"; // if the image centre is undefined, use the ms phase centre.
+          if (!parset.isDefined(param)) {
+              std::ostringstream pstr;
+              // Only J2000 is implemented at the moment.
+              pstr<<"["<<printLon(advice.centre())<<", "<<printLat(advice.centre())<<", J2000]";
+              ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr.str().c_str());
+              parset.add(param, pstr.str().c_str());
+          }
+      }
+
+      param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
+      if (!parset.isDefined(param)) {
+          std::ostringstream pstr;
+          pstr<<advice.nBeams();
+          ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+          parset.add(param, pstr.str().c_str());
+      }
+      std::vector<double> cellSize(2, advice.squareCellSize());
+      param = "Images.cellsize"; // if cellsize is undefined, use the advice. Otherwise update cellSize for later.
+      if (parset.isDefined(param)) {
+          cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector(param),"arcsec");
+      } else if (cellsizeNeeded) {
+          std::ostringstream pstr;
+          pstr<<"["<<cellSize[0]<<"arcsec,"<<cellSize[1]<<"arcsec]";
+          ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+          parset.add(param, pstr.str().c_str());
+      }
+      param = "Images.shape"; // if image shape is undefined, use the advice.
+      if (shapeNeeded && !parset.isDefined(param)) {
+          std::ostringstream pstr;
+          const double fieldSize = advice.squareFieldSize(1); // in deg
+          const long lSize = long(fieldSize * 3600 / cellSize[0]) + 1;
+          const long mSize = long(fieldSize * 3600 / cellSize[1]) + 1;
+          pstr<<"["<<lSize<<","<<mSize<<"]";
+          ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+          parset.add(param, pstr.str().c_str());
+      }
+      string gridder = wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
+      if (gridder!="") {
+          param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
+          if (!parset.isDefined(param)) {
+              std::ostringstream pstr;
+              // both should be set if either is, but include the latter to be sure that maxResidualW() has been generated.
+              if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
+                  pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+                  parset.add(param, pstr.str().c_str());
+              } else {
+                  pstr<<advice.maxW();
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+                  parset.add(param, pstr.str().c_str());
+              }
+          }
+      }
+
+    }
+
     void ImagerParallel::calcOne(const string& ms, bool discard)
     {
       ASKAPDEBUGTRACE("ImagerParallel::calcOne");
@@ -218,7 +479,7 @@ namespace askap
       }
       else {
         ASKAPLOG_INFO_STR(logger, "Reusing measurement equation and updating with latest model images" );
-	itsEquation->setParameters(*itsModel);
+        itsEquation->setParameters(*itsModel);
       }
       ASKAPCHECK(itsEquation, "Equation not defined");
       ASKAPCHECK(itsNe, "NormalEquations not defined");
