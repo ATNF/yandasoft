@@ -33,6 +33,7 @@ pkg.AddSubPackage("gridding")
 pkg.AddSubPackage("parallel")
 pkg.AddSubPackage("simulation")
 pkg.AddSubPackage("deconvolution")
+pkg.AddSubPackage("opcal")
 
 # run the build process
 pkg()

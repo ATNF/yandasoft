@@ -30,7 +30,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au
 
-#include <measurementequation/ObservationDescription.h>
+#include <opcal/ObservationDescription.h>
 #include <askap/AskapError.h>
 
 namespace askap {

@@ -36,7 +36,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au
 
 // own includes
-#include <measurementequation/ScanStats.h>
+#include <opcal/ScanStats.h>
 #include <dataaccess/IConstDataIterator.h>
 
 // std includes

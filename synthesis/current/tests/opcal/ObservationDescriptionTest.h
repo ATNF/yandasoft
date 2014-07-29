@@ -34,7 +34,8 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <measurementequation/ObservationDescription.h>
+#include <opcal/ObservationDescription.h>
+#include <askap/AskapError.h>
 
 namespace askap
 {

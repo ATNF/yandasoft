@@ -39,7 +39,7 @@
 #define SYNTHESIS_SCAN_STATS_H
 
 #include <dataaccess/SharedIter.h>
-#include <measurementequation/ObservationDescription.h>
+#include <opcal/ObservationDescription.h>
 
 #include <string>
 #include <vector>

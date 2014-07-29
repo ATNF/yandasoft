@@ -3,6 +3,7 @@
 /// @defgroup parallel Parallel application support
 /// @defgroup simulation Data simulation
 /// @defgroup imageaccess Image access subpackage
+/// @defgroup opcal Operations-specific calibration subpackage
 
 /// The package namespace
 namespace askap::synthesis {};
@@ -71,11 +72,17 @@ namespace askap::synthesis {};
 /// @li The Simulator class is a port of the CASA simulator code to askap. It has similar but not
 /// identical functionality. It is used by the csimulator app.
 ///
+/// @subsection synth_opcal 5. Operations-specific calibration
+/// @li This code is used for various non-real time calibration tasks which are related to 
+/// synthesis imaging and usually encountered in telescope operations. Another use case is
+/// experimentation with calibration which is not supported by the general parallel framework.
+///
 /// @section synth_subpackages Subpackages
 ///
 /// @li @ref measurementequation
 /// @li @ref gridding
 /// @li @ref parallel
 /// @li @ref simulation
+/// @li @ref opcal
 ///
 /// @copyright 2007 CSIRO, All Rights Reserved.

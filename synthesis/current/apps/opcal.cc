@@ -40,11 +40,7 @@
 #include <askap/StatReporter.h>
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
-
-// local include
-#include <measurementequation/ScanStats.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <opcal/OpCalImpl.h>
 
 
 
@@ -71,23 +67,9 @@ class OpCalApp : public askap::Application
                  if (comms.isMaster()) {
                    ASKAPLOG_INFO_STR(logger, "Parset file contents:\n" << config());
                  }
-                 ASKAPCHECK(!comms.isParallel(), "This application is not intended to be used in parallel mode (at this stage)");
                  
-                 ScanStats ss(3600.);
-                 
-                 const std::string ms = config().getString("dataset");
-                 accessors::TableDataSource ds(ms, accessors::TableDataSource::MEMORY_BUFFERS/*, dataColumn()*/);
-                 accessors::IDataSelectorPtr sel=ds.createSelector();
-                 sel << config();
-                 accessors::IDataConverterPtr conv=ds.createConverter();
-                 conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO)/*getFreqRefFrame()*/, "Hz");
-                 conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
-                 conv->setEpochFrame(); // time in seconds since 0 MJD
-                 accessors::IDataSharedIter it=ds.createIterator(sel, conv);
-                 ASKAPLOG_INFO_STR(logger, "Inspecting "<<ms);
-                 ss.inspect(ms, it);
-                 
-                 ASKAPLOG_INFO_STR(logger, "Found "<<ss.size()<<" chunks in the supplied data");                 
+                 OpCalImpl impl(comms,config());
+                 impl.run();                 
                  
             } catch (const askap::AskapError& e) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << e.what());
