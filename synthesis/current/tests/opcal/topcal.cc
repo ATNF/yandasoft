@@ -29,12 +29,14 @@
 
 // Test includes
 #include <ObservationDescriptionTest.h>
+#include <GenericCalInfoTest.h>
 
 int main( int argc, char **argv)
 {
     askapdev::testutils::AskapTestRunner runner(argv[0]);
     
     runner.addTest(askap::synthesis::ObservationDescriptionTest::suite());
+    runner.addTest(askap::synthesis::GenericCalInfoTest::suite());
     
     const bool wasSucessful = runner.run();
 

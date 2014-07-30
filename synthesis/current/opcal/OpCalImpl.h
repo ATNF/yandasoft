@@ -34,11 +34,15 @@
 #ifndef SYNTHESIS_OP_CAL_IMPL_H
 #define SYNTHESIS_OP_CAL_IMPL_H
 
+// casa includes
+#include <casa/Arrays/Matrix.h>
 
 // ASKAPsoft includes
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <opcal/ScanStats.h>
+#include <opcal/GenericCalInfo.h>
+
 
 namespace askap {
 
@@ -72,6 +76,11 @@ protected:
    /// Optional parameters describing how to break long observations are taken from the parset.
    void inspectData();
    
+   /// @brief perform calibration for every scan
+   /// @details This method runs calibration procedure for each scan in itsScanStats, initialises and
+   /// fills itsCalData
+   void runCalibration(); 
+     
    /// @brief obtain configuration parset
    /// @return parset with configuration
    inline const LOFAR::ParameterSet& config() const {return itsConfig;}
@@ -81,7 +90,11 @@ private:
    LOFAR::ParameterSet itsConfig;
    
    /// @brief details for every scan
-   ScanStats  itsScanStats;    
+   ScanStats  itsScanStats;
+   
+   /// @brief calibration data
+   /// @details rows are scans (matching itsScanStats.size()), columns are antennas
+   casa::Matrix<GenericCalInfo> itsCalData;    
 };
 
 } // namespace synthesis

@@ -94,6 +94,15 @@ public:
    /// @param[in] iter iterator to work with (note, it is changed in process)
    void inspect(const std::string &name, const accessors::IConstDataSharedIter &iter);
    
+   /// @brief time limit
+   /// @return time limit on the scan duration, a negative value means no limit is imposed (accessor units)
+   inline double timeLimit() const { return itsTimeLimit; }
+   
+   /// @brief cycle number limit
+   /// @return limit on the scan duration in cycles, a negative value means no limit is imposed
+   inline int cycleLimit() const { return itsCycleLimit; }
+   
+   
 private:
    /// collection of individual observations
    std::vector<ObservationDescription> itsObs;    
@@ -101,7 +110,7 @@ private:
    /// @brief time limit on the scan duration, a negative value means no limit is imposed (accessor units)
    double itsTimeLimit;
    
-   /// @brief limit on the scan duration in cycles, a negative value means no limit is imposed (accessor units)
+   /// @brief limit on the scan duration in cycles, a negative value means no limit is imposed
    int itsCycleLimit;
    
 };
