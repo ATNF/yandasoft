@@ -83,6 +83,13 @@ public:
    /// @return iterator pointing to the element after last
    inline const_iterator end() const  {return itsObs.end();}
    
+   //
+   
+   /// @brief access to the selected scan
+   /// @param[in] index scan index (from 0 to size()-1)
+   /// @return description of the selected scan
+   const ObservationDescription& operator[](size_t index) const;
+   
    /// @brief number of observations
    /// @return total number of observations
    /// @note each beam is present as a separate observation as beams can have different phase centres

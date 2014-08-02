@@ -43,6 +43,17 @@
 #include <opcal/ScanStats.h>
 #include <opcal/GenericCalInfo.h>
 
+#include <fitting/Params.h>
+#include <measurementequation/PreAvgCalMEBase.h>
+#include <measurementequation/IMeasurementEquation.h>
+#include <parallel/MEParallelApp.h>
+
+// std includes
+#include <set>
+#include <map>
+
+// boost
+#include <boost/shared_ptr.hpp>
 
 namespace askap {
 
@@ -55,7 +66,7 @@ namespace synthesis {
 /// for experimentation with calibration as well as some operation-specific
 /// tasks like baseline and pointing refinements.  
 /// @ingroup opcal
-class OpCalImpl {
+class OpCalImpl : public MEParallelApp {
 public:
    /// @brief Constructor from ParameterSet
    /// @details The parset is used to construct the internal state. We could
@@ -79,22 +90,65 @@ protected:
    /// @brief perform calibration for every scan
    /// @details This method runs calibration procedure for each scan in itsScanStats, initialises and
    /// fills itsCalData
-   void runCalibration(); 
-     
-   /// @brief obtain configuration parset
-   /// @return parset with configuration
-   inline const LOFAR::ParameterSet& config() const {return itsConfig;}
+   void runCalibration();
    
+   /// @brief process one dataset
+   /// @details The method obtains calibration solutions for a given set of beams in one dataset. Note, 
+   /// it would fail if the dataset contains beams not present in the given set (it has to define parameters
+   /// to solve up front). The calibration solution is stored in itsCalData. 
+   /// @param[in] ms name of the dataset
+   /// @param[in] beams set of beams to process
+   void processOne(const std::string &ms, const std::set<casa::uInt> &beams);
+   
+   /// @brief solve ME for one interval
+   /// @details This method is called from processOne when data corresponding to the given solution 
+   /// interval has been accumulated. It solves the measurement equation and stores the result in
+   /// itsCalData
+   /// @param[in] beammap map of beam IDs to scan indices (into itsScanStats)
+   void solveOne(const std::map<casa::uInt, size_t>& beammap);
+        
+   /// @brief helper method to search for the scans corresponding to a cycle
+   /// @details This method searches for a matching scan to the given cycle, beam and name and
+   /// returns its index. itsScanStats.size() is returned if no match is found.
+   /// @param[in] name name key of the dataset to match
+   /// @param[in] beam beam ID to match
+   /// @param[in] cycle cycle to match
+   /// @return index of the matching scan or itsScanStats.size() if no match is found
+   size_t matchScan(const std::string &name, casa::uInt beam, casa::uInt cycle) const; 
+   
+   /// @brief helper method to search for scans for a number of beams at once
+   /// @details This method matches cycle in the given dataset to scans. We treat individual beams as
+   /// separate observations (or scans) here, therefore the same cycle can match a number of beams.
+   /// The method returns a map between beams and scan indices. The result is the same as calling
+   /// matchScan for every available beam but is obtained in a more optimal fashion.
+   /// @param[in] name name key of the dataset 
+   /// @param[in] cycle cycle to match
+   /// @return a map of beam IDs to scan indices
+   std::map<casa::uInt, size_t> matchScansForAllBeams(const std::string &name, casa::uInt cycle) const;  
+    
+   /// @brief make uncorrupted measurement equation
+   /// @details This method uses parset parameters and makes uncorrupted (i.e. ideal) measurement equation
+   /// @return shared pointer to the measurement equation
+   boost::shared_ptr<IMeasurementEquation> makePerfectME() const;
+     
+   // these methods are the legacy of the design
+   virtual void calcNE() {};
+   
+   virtual void solveNE() {};  
+     
+   virtual void writeModel(const std::string&) {}  
 private:
-   /// @brief configuration
-   LOFAR::ParameterSet itsConfig;
    
    /// @brief details for every scan
    ScanStats  itsScanStats;
    
    /// @brief calibration data
    /// @details rows are scans (matching itsScanStats.size()), columns are antennas
-   casa::Matrix<GenericCalInfo> itsCalData;    
+   casa::Matrix<GenericCalInfo> itsCalData;
+      
+   /// @brief measurement equation
+   boost::shared_ptr<PreAvgCalMEBase> itsME;
+   
 };
 
 } // namespace synthesis

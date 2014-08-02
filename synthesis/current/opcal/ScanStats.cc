@@ -141,6 +141,15 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
   }
 }
 
+/// @brief access to the selected scan
+/// @param[in] index scan index (from 0 to size()-1)
+/// @return description of the selected scan
+const ObservationDescription& ScanStats::operator[](size_t index) const
+{
+   ASKAPCHECK(index < size(), "Index "<<index<<" is outside the range of available scans, size="<<size());
+   return itsObs[index];
+}
+
 
 } // namespace synthesis
 
