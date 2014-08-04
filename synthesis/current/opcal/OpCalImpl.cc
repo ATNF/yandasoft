@@ -58,7 +58,7 @@ ASKAP_LOGGER(logger, ".OpCalImpl");
 #include <measurementequation/MEParsetInterface.h>
 #include <measurementequation/ImagingEquationAdapter.h>
 
-
+#include <casa/BasicSL.h>
 
 // std includes
 
@@ -66,6 +66,7 @@ ASKAP_LOGGER(logger, ".OpCalImpl");
 #include <vector>
 #include <map>
 #include <utility>
+#include <complex>
 
 
 namespace askap {
@@ -97,6 +98,23 @@ void OpCalImpl::run()
   inspectData();
   ASKAPLOG_INFO_STR(logger, "Found "<<itsScanStats.size()<<" chunks in the supplied data");
   runCalibration();                   
+  // process results - in the future we call a polymorphic function here, for now just print what we have
+  float firstTime = 0;
+  for (casa::uInt row=0; row<itsCalData.nrow(); ++row) {
+       std::string result;
+       ASKAPDEBUGASSERT(itsScanStats.size() > row);
+       const float timeCentroid = 0.5*(itsScanStats[row].startTime() + itsScanStats[row].endTime());
+       if (row == 0) {
+           firstTime = timeCentroid;
+       }
+       result += utility::toString<casa::uInt>(row)+" "+
+              utility::toString<float>((timeCentroid - firstTime)/60.);
+       
+       for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
+            result += " " + utility::toString<float>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
+       }
+       ASKAPLOG_INFO_STR(logger, "result: "<<result);
+  }
 }
    
    
@@ -168,10 +186,7 @@ void OpCalImpl::runCalibration()
 /// @param[in] ms name of the dataset
 /// @param[in] beams set of beams to process
 void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &beams)
-{
-  const casa::uInt refAnt = parset().getUint("refant",0);
-  ASKAPCHECK(refAnt < itsCalData.ncolumn(), "Reference antenna index exceeds the number of antennas");
-  
+{  
   accessors::TableDataSource ds(ms, accessors::TableDataSource::DEFAULT,dataColumn());
   accessors::IDataSelectorPtr sel=ds.createSelector();
   sel << parset();
@@ -276,26 +291,40 @@ boost::shared_ptr<IMeasurementEquation> OpCalImpl::makePerfectME() const
 /// @param[in] beammap map of beam IDs to scan indices (into itsScanStats)
 void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
 {
-   ASKAPASSERT(itsME);
-   const casa::uInt nIter = parset().getUint("niter",20);
-   scimath::LinearSolver solver;
-   for (casa::uInt iter = 0; iter < nIter; ++iter) {
-        ASKAPLOG_INFO_STR(logger, "Calibration iteration "<<(iter+1));
-        itsME->setParameters(*itsModel);
-        scimath::GenericNormalEquations gne;
-        itsME->calcEquations(gne);
-        solver.init();
-        solver.addNormalEquations(gne);
-        solver.setAlgorithm("SVD");
-        scimath::Quality q;
-        solver.solveNormalEquations(*itsModel,q);
-        ASKAPLOG_INFO_STR(logger, "Solved normal equations, quality: "<<q);
-        // phase rotation comes here
-   }
+  const casa::uInt refAnt = parset().getUint("refant",0);
+  ASKAPCHECK(refAnt < itsCalData.ncolumn(), "Reference antenna index exceeds the number of antennas");
+  // at this stage, deal with just XX polarisation
+  
+  ASKAPASSERT(itsME);
+  ASKAPASSERT(itsModel);
+  const casa::uInt nIter = parset().getUint("niter",20);
+  scimath::LinearSolver solver;
+  for (casa::uInt iter = 0; iter < nIter; ++iter) {
+       ASKAPLOG_INFO_STR(logger, "Calibration iteration "<<(iter+1));
+       itsME->setParameters(*itsModel);
+       scimath::GenericNormalEquations gne;
+       itsME->calcEquations(gne);
+       solver.init();
+       solver.addNormalEquations(gne);
+       solver.setAlgorithm("SVD");
+       scimath::Quality q;
+       solver.solveNormalEquations(*itsModel,q);
+       ASKAPLOG_INFO_STR(logger, "Solved normal equations, quality: "<<q);
+       // phase rotation
+       for (std::map<casa::uInt, size_t>::const_iterator beamIt = beammap.begin(); beamIt != beammap.end(); ++beamIt) {
+            const std::string refGain = accessors::CalParamNameHelper::paramName(refAnt, beamIt->first, casa::Stokes::XX);
+            const casa::Complex refPhaseTerm = casa::polar(1.f, -std::arg(itsModel->complexValue(refGain)));
+            
+            for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
+                 const std::string parname = accessors::CalParamNameHelper::paramName(ant, beamIt->first, casa::Stokes::XX);
+                 itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
+            }
+       }
+  }
    
-   // store the solution
-   const std::vector<std::string> parlist = itsModel->freeNames();
-   for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
+  // store the solution
+  const std::vector<std::string> parlist = itsModel->freeNames();
+  for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
        const casa::Complex val = itsModel->complexValue(*it);           
        const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
              accessors::CalParamNameHelper::parseParam(*it);
@@ -306,7 +335,7 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
            ASKAPASSERT(thisBeamIt->second < itsCalData.nrow());
            itsCalData(thisBeamIt->second, paramType.first.antenna()).setGain(val);
        }
-   }   
+  }   
 }
 
 

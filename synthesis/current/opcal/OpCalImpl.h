@@ -106,6 +106,7 @@ protected:
    /// itsCalData
    /// @param[in] beammap map of beam IDs to scan indices (into itsScanStats)
    void solveOne(const std::map<casa::uInt, size_t>& beammap);
+   
         
    /// @brief helper method to search for the scans corresponding to a cycle
    /// @details This method searches for a matching scan to the given cycle, beam and name and
