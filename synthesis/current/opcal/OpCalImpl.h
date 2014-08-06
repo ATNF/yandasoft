@@ -42,6 +42,7 @@
 #include <Common/ParameterSet.h>
 #include <opcal/ScanStats.h>
 #include <opcal/GenericCalInfo.h>
+#include <opcal/IGenericCalSolver.h>
 
 #include <fitting/Params.h>
 #include <measurementequation/PreAvgCalMEBase.h>
@@ -79,6 +80,13 @@ public:
 
    /// @brief main entry point
    void run();
+   
+   /// @brief set high-level solver
+   /// @details A high-level solver is intended to solve concrete calibration problem. It is 
+   /// responsible for processing of the actual calibration data obtained by this class.
+   /// Unless a concrete solver is set, only a summary is printed in the log
+   /// @param[in] solver shared pointer to the solver class
+   void setHighLevelSolver(const boost::shared_ptr<IGenericCalSolver> &solver); 
    
 protected:
    
@@ -150,6 +158,10 @@ private:
    /// @brief measurement equation
    boost::shared_ptr<PreAvgCalMEBase> itsME;
    
+   /// @brief high-level solver
+   /// @details The process method of this class is called when the results are ready. By default, 
+   /// the summary is printed to the log.
+   boost::shared_ptr<IGenericCalSolver> itsHighLevelSolver;   
 };
 
 } // namespace synthesis

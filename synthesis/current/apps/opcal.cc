@@ -41,7 +41,7 @@
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <opcal/OpCalImpl.h>
-
+#include <opcal/BaselineSolver.h>
 
 
 ASKAP_LOGGER(logger, ".opcal");
@@ -69,6 +69,7 @@ class OpCalApp : public askap::Application
                  }
                  
                  OpCalImpl impl(comms,config());
+                 impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
                  impl.run();                 
                  
             } catch (const askap::AskapError& e) {

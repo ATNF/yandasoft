@@ -98,22 +98,32 @@ void OpCalImpl::run()
   inspectData();
   ASKAPLOG_INFO_STR(logger, "Found "<<itsScanStats.size()<<" chunks in the supplied data");
   runCalibration();                   
-  // process results - in the future we call a polymorphic function here, for now just print what we have
-  float firstTime = 0;
-  for (casa::uInt row=0; row<itsCalData.nrow(); ++row) {
-       std::string result;
-       ASKAPDEBUGASSERT(itsScanStats.size() > row);
-       const float timeCentroid = 0.5*(itsScanStats[row].startTime() + itsScanStats[row].endTime());
-       if (row == 0) {
-           firstTime = timeCentroid;
-       }
-       result += utility::toString<casa::uInt>(row)+" "+
-              utility::toString<float>((timeCentroid - firstTime)/60.);
+  // process results
+  if (itsHighLevelSolver) {
+      ASKAPLOG_INFO_STR(logger, "Calibration completed for all scans, calling user-defined solver");
+      ASKAPDEBUGASSERT(itsScanStats.size() == itsCalData.nrow());      
+      itsHighLevelSolver->process(itsScanStats,itsCalData);
+  } else {
+      ASKAPLOG_INFO_STR(logger, "High-level solver is not defined, just printing the summary below");
+      ASKAPLOG_INFO_STR(logger, "#no time_since_start(min) beamID phase1 phase2 ... phaseN (in degrees)");
+      
+      float firstTime = 0;
+      for (casa::uInt row=0; row<itsCalData.nrow(); ++row) {
+           std::string result;
+           ASKAPDEBUGASSERT(itsScanStats.size() > row);
+           const float timeCentroid = 0.5*(itsScanStats[row].startTime() + itsScanStats[row].endTime());
+           if (row == 0) {
+               firstTime = timeCentroid;
+           }
+           result += utility::toString<casa::uInt>(row)+" "+
+                  utility::toString<float>((timeCentroid - firstTime)/60.)+" "+
+                  utility::toString<casa::uInt>(itsScanStats[row].beam());
        
-       for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
-            result += " " + utility::toString<float>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
-       }
-       ASKAPLOG_INFO_STR(logger, "result: "<<result);
+           for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
+                result += " " + utility::toString<float>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
+           }
+           ASKAPLOG_INFO_STR(logger, "result: "<<result);
+      }
   }
 }
    
@@ -381,6 +391,18 @@ std::map<casa::uInt, size_t> OpCalImpl::matchScansForAllBeams(const std::string 
   }
   return result;
 }  
+
+/// @brief set high-level solver
+/// @details A high-level solver is intended to solve concrete calibration problem. It is 
+/// responsible for processing of the actual calibration data obtained by this class.
+/// Unless a concrete solver is set, only a summary is printed in the log
+/// @param[in] solver shared pointer to the solver class
+void OpCalImpl::setHighLevelSolver(const boost::shared_ptr<IGenericCalSolver> &solver)
+{
+   ASKAPCHECK(solver, "An attempt to call setHighLevelSolver with an uninitialised shared pointer");
+   itsHighLevelSolver = solver;
+} 
+
 
 
 } // namespace synthesis
