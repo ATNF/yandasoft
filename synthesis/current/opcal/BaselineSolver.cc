@@ -44,7 +44,7 @@
 #include <measures/Measures/MEpoch.h>
 #include <measures/Measures/MeasConvert.h>
 #include <measures/Measures/MCDirection.h>
-#include <scimath/Functionals/Function.h>
+#include <scimath/Functionals/Function1D.h>
 #include <scimath/Fitting/NonLinearFitLM.h>
 
 // std
@@ -110,19 +110,23 @@ bool LesserHourAngle::operator()(const ObservationDescription &scan1, const Obse
 
 // helper functional fitting sinusoid due to errors in X and Y component of the baseline
 // to be used with the casa fitter. We could've used our own, but it doesn't solve for errors
-class SinusoidDueToXY : public casa::Function<double> {
+template<typename T>
+class SinusoidDueToXY : public casa::Function1D<T> {
 public:
    
-   /// @brief dimensionality
-   /// @return dimensionality
-   virtual casa::uInt ndim() const { return 3u; };
-   
    /// @brief evaluate - main method
-   virtual double eval(casa::Function<double>::FunctionArg x) const {
-       return param_p[0]*cos(x[0]+param_p[1])+param_p[2]; 
+   virtual T eval(casa::Function<double>::FunctionArg x) const {
+       return this->param_p[0]*cos(x[0]+this->param_p[1])+this->param_p[2]; 
    };
-   // Copy it
-   virtual casa::Function<double>* clone() const { ASKAPTHROW(AskapError,"Not yet implemented"); };   
+   SinusoidDueToXY() : casa::Function1D<T>(3u) {}  
+
+   template<typename W>
+   SinusoidDueToXY(const SinusoidDueToXY<W> &other) : casa::Function1D<T>(other) {}
+
+   // Copy it - compulsory methods required by casacore, we never use them explicitly
+   virtual casa::Function1D<T>* clone() const { return new SinusoidDueToXY<T>(*this); };   
+   virtual casa::Function1D<typename casa::FunctionTraits<T>::DiffType>* cloneAD() const { return new SinusoidDueToXY<typename casa::FunctionTraits<T>::DiffType>(*this); };   
+   virtual casa::Function1D<typename casa::FunctionTraits<T>::BaseType>* cloneNonAD() const { return new SinusoidDueToXY<typename casa::FunctionTraits<T>::BaseType>(*this); };   
 };
 
 //////////////////
@@ -208,7 +212,11 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
   
   for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
        casa::NonLinearFitLM<double> fitter;
-       fitter.setFunction(SinusoidDueToXY());
+       SinusoidDueToXY<double> func;
+       func.parameters()[0] = 1.;
+       func.parameters()[1] = 0.;
+       func.parameters()[2] = 0.;
+       fitter.setFunction(func);
        fitter.setMaxIter(80);
        fitter.setCriteria(0.001);
   
@@ -239,8 +247,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
            param[1] += casa::C::pi;
        }
        const double amplErr = err[0] / 2. / casa::C::pi * wavelength;
-       ASKAPLOG_INFO_STR(logger, "Antenna "<<ant);
-       ASKAPLOG_INFO_STR(logger, "Amplitude of the error "<<ampl<<" +/- "<<amplErr<<" metres");
+       ASKAPLOG_DEBUG_STR(logger, "Antenna "<<ant);
+       ASKAPLOG_DEBUG_STR(logger, "Amplitude of the error "<<ampl<<" +/- "<<amplErr<<" metres");
        const double cphi = cos(param[1]);
        const double sphi = sin(param[1]);
        const double cphiErr = abs(sphi)*err[1];
@@ -249,8 +257,17 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        const double dXErr = sqrt(casa::square(ampl * cphiErr) + casa::square(cphi * amplErr));
        const double dY = -ampl * sphi;
        const double dYErr = sqrt(casa::square(ampl * sphiErr) + casa::square(sphi * amplErr));
-       ASKAPLOG_INFO_STR(logger, "dX: "<<dX<<" +/- "<<dXErr<<" metres");
-       ASKAPLOG_INFO_STR(logger, "dY: "<<dY<<" +/- "<<dYErr<<" metres");       
+       ASKAPDEBUGASSERT(itsCorrections.nrow()>ant);
+       ASKAPDEBUGASSERT(itsErrors.nrow()>ant);
+       ASKAPDEBUGASSERT(itsCorrections.ncolumn()>=2);
+       ASKAPDEBUGASSERT(itsErrors.ncolumn()>=2);
+       itsCorrections(ant,0) = dX; 
+       itsCorrections(ant,1) = dY; 
+       itsErrors(ant,0) = dXErr;
+       itsErrors(ant,1) = dXErr;
+    
+       ASKAPLOG_DEBUG_STR(logger, "dX: "<<dX<<" +/- "<<dXErr<<" metres");
+       ASKAPLOG_DEBUG_STR(logger, "dY: "<<dY<<" +/- "<<dYErr<<" metres");       
   }
       
 }
