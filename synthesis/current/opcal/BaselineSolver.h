@@ -82,7 +82,11 @@ protected:
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
   void solveForZ(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
-  
+
+protected:
+  /// @brief obtain MRO reference position
+  /// @return position measure
+  static casa::MPosition mroPosition();
 
 private:
    

@@ -58,12 +58,13 @@ namespace askap {
 namespace synthesis {
 
 // helper comparator class ordering scans by hour angle
-struct LesserHourAngle {
+struct LesserHAorDec {
  
    /// @brief constructor, sets up position on Earth to do the calculations for
    /// @details
    /// @param[in] pos position on the ground
-   LesserHourAngle(const casa::MPosition &pos) : itsPosition(pos) {}
+   /// @param[in] workWithHA if true, hour angle is compared
+   LesserHAorDec(const casa::MPosition &pos, bool workWithHA) : itsPosition(pos), itsWorkWithHA(workWithHA) {}
    
 
    /// @brief compares two directions 
@@ -79,6 +80,9 @@ struct LesserHourAngle {
 private:
    /// @brief position on the ground to do the calculations for
    casa::MPosition itsPosition;
+   
+   /// @brief true, if hour angle is compared; false, if declination is compared
+   bool itsWorkWithHA;
 };
 
 /// @brief compares two directions 
@@ -89,7 +93,7 @@ private:
 /// @param[in] scan2 second direction
 /// @return true, if the first scan corresponds to a lesser hour angle
 /// @note Time is assumed to be in seconds since 0 MJD, directions are assumed to be in J2000
-bool LesserHourAngle::operator()(const ObservationDescription &scan1, const ObservationDescription &scan2) const
+bool LesserHAorDec::operator()(const ObservationDescription &scan1, const ObservationDescription &scan2) const
 {
   const double time1 = 0.5*(scan1.startTime() + scan1.endTime());
   const casa::MEpoch epoch1(casa::Quantity(time1/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
@@ -103,7 +107,10 @@ bool LesserHourAngle::operator()(const ObservationDescription &scan1, const Obse
   casa::MVDirection hadec2 = casa::MDirection::Convert(casa::MDirection(scan2.direction(),casa::MDirection::J2000), 
          casa::MDirection::Ref(casa::MDirection::HADEC,frame2))().getValue();
 
-  return hadec1.getLong() < hadec2.getLong();
+  if (itsWorkWithHA) {
+      return hadec1.getLong() < hadec2.getLong();
+  } 
+  return hadec1.getLat() < hadec2.getLat();
 }
 
 ////////////////////
@@ -196,13 +203,12 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
 void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
 {
   ASKAPASSERT(scans.size()>1);
-  casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(-26.6991531922, "deg"), 
-           casa::Quantity(116.6310372795, "deg")),casa::MPosition::Ref(casa::MPosition::WGS84));
+  const casa::MPosition mroPos = mroPosition();
   std::vector<size_t> scanIndices(scans.size());
   for (size_t scan=0; scan<scanIndices.size(); ++scan) {
        scanIndices[scan]=scan;
   }
-  std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHourAngle(mroPos)));
+  std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,true)));
 
   // use casa fitter
   casa::Vector<double> hangles(scans.size());
@@ -238,7 +244,7 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
        casa::Vector<double> err = fitter.errors();
        ASKAPCHECK(err.nelements() == 3, "Expect 3 uncertainties out of the fitter, you have size="<<err.nelements());
-       const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do get it from scan's frequency)
+       const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do: get it from scan's frequency)
        double ampl = param[0] / 2. / casa::C::pi * wavelength;
        // fit can converge with either sign of the first coefficient, but we like to always have a positive amplitude
        if (ampl < 0) {
@@ -272,6 +278,16 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
       
 }
 
+/// @brief obtain MRO reference position
+/// @return position measure
+casa::MPosition BaselineSolver::mroPosition()
+{
+   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(-26.6991531922, "deg"), 
+           casa::Quantity(116.6310372795, "deg")),casa::MPosition::Ref(casa::MPosition::WGS84));
+   return mroPos;
+}
+
+
 /// @brief solve for dZ and populate corrections
 /// @param[in] scans description of scans, note separate beams are present as separate scans.
 ///            Scans here are defined by some splitting criterion used in OpCalImpl, and do
@@ -280,7 +296,55 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
 ///            (column index is antenna ID used in the measurement set).
 void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
 {
-  ASKAPTHROW(AskapError, "Not yet implemented");
+  ASKAPASSERT(scans.size()>2);
+  std::vector<size_t> scanIndices(scans.size());
+  for (size_t scan=0; scan<scanIndices.size(); ++scan) {
+       scanIndices[scan]=scan;
+  }
+  const casa::MPosition mroPos = mroPosition();
+  std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,false)));
+
+  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+       // do LSF into phase vs. sin(dec)
+       double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
+       
+       scimath::PhaseUnwrapper<double> unwrapper;
+       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+            const ObservationDescription& scan = scans[scanIndices[cnt]];
+            const double time = 0.5*(scan.startTime() + scan.endTime());
+            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
+            casa::MeasFrame frame(mroPos, epoch);    
+            casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+            const double sd = sin(hadec.getLat());
+            const double phase = unwrapper(arg(caldata(scanIndices[cnt],ant).gain()));
+            // build normal equations
+            sx += sd;
+            sx2 += sd*sd;
+            sy += phase;
+            sy2 += phase*phase;
+            sxy += sd*phase;            
+       }
+       sx /= double(scans.size());
+       sy /= double(scans.size());
+       sx2 /= double(scans.size());
+       sy2 /= double(scans.size());
+       sxy /= double(scans.size());
+       const double denominator = sx2 - sx * sx;
+       ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
+       const double coeff = (sxy - sx * sy) / denominator;
+ 
+       const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do get it from scan's frequency)
+       const double dZ = coeff / 2. / casa::C::pi * wavelength;
+       ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
+       ASKAPDEBUGASSERT(itsCorrections.ncolumn() > 2); 
+       itsCorrections(ant,2) = dZ; 
+       const double r=(sxy-sx*sy)/sqrt(denominator * (sy2-sy*sy));
+       const double dZErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(scans.size())-2));       
+       itsErrors(ant,2) = dZErr;
+       
+       ASKAPLOG_DEBUG_STR(logger, "Antenna "<<ant<<" dZ: "<<dZ<<" +/- "<<dZErr<<" metres");
+  }
 }
 
 
