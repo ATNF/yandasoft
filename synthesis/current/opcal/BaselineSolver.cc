@@ -49,6 +49,9 @@
 
 // std
 #include <algorithm>
+#include <fstream>
+#include <vector>
+#include <iomanip>
 
 ASKAP_LOGGER(logger, ".BaselineSolver");
 
@@ -143,7 +146,7 @@ public:
 /// @param[in] parset parameters of the solver
 BaselineSolver::BaselineSolver(const LOFAR::ParameterSet& parset) : 
   itsSolveXY(parset.getBool("solvexy", true)), itsSolveZ(parset.getBool("solvez",false)),
-  itsRefAnt(parset.getUint("refant",1))
+  itsRefAnt(parset.getUint("refant",1)), itsOrigFCMLayout(parset.getString("origlayout",""))
 {
    ASKAPLOG_INFO_STR(logger, "Initialising antenna location solver");
    ASKAPCHECK(itsSolveXY || itsSolveZ, "Either dX,dY or dZ, or both should be chosen to solve for");
@@ -192,7 +195,51 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
            }
        }       
   }
+  // update positions if necessary
+  if (itsOrigFCMLayout != "") {
+      ASKAPLOG_INFO_STR(logger, "Reading FCM configuration from "<<itsOrigFCMLayout<<", writing corrections.dat");
+      LOFAR::ParameterSet fcmParset(itsOrigFCMLayout);
+      std::vector<std::string> idMap = fcmParset.getStringVector("baselinemap.antennaidx");
+      std::map<std::string, casa::uInt> antmap;
+      // building antenna map
+      for (casa::uInt ant = 0; ant < idMap.size(); ++ant) {
+           const std::string idStr = idMap[ant];
+           ASKAPCHECK(idStr.size() >= 3, "Antenna names in the baselinemap.antennaidx are supposed to be at least 3 symbols long, you have "<<idStr);
+           ASKAPCHECK(idStr.find("ak") == 0, "All names in the baselinemap.antennaidx are supposed to start with ak, you have "<<idStr);
+           const std::string antkey = "ant" + utility::toString<casa::uInt>(utility::fromString<casa::uInt>(idStr.substr(2)));
+           antmap[antkey] = ant;
+      }
+      std::vector<std::string> antennas = fcmParset.getStringVector("antennas");
+      ASKAPCHECK(itsCorrections.nrow() <= antennas.size(), "Number of antennas defined in FCM is smaller than the number of antennas solved for");
+      std::ofstream os("corrections.dat");
+      for (std::vector<std::string>::const_iterator ci=antennas.begin(); ci != antennas.end(); ++ci) {
+           const std::string parsetKey = "antenna."+*ci+".location.itrf";
+           const casa::Vector<double> oldXYZ = fcmParset.isDefined(parsetKey) ? 
+                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey);
+           ASKAPCHECK(oldXYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
+           std::map<std::string, casa::uInt>::const_iterator mapIt = antmap.find(*ci);
+           ASKAPASSERT(mapIt != antmap.end());
+           const casa::uInt ant = mapIt->second;
+           ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" is "<<*ci);
+           if (ant == itsRefAnt) {
+               continue;
+           }
+           os<<"common."<<parsetKey<<" = [";
+           for (casa::uInt elem=0; elem<itsCorrections.ncolumn(); ++elem) {
+                ASKAPASSERT(elem < oldXYZ.nelements());
+                ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
+                // corrections are determined deviations from the best XYZ, need to subtract them to apply
+                os<<std::setprecision(15)<<oldXYZ[elem] - itsCorrections(ant,elem);
+                if (elem == 2) {
+                    os << "]"<<std::endl;
+                } else {
+                    os <<", ";
+                }
+           }
+      }
+  }
 }
+ 
 
 /// @brief solve for dX and dY and populate corrections
 /// @param[in] scans description of scans, note separate beams are present as separate scans.
@@ -340,10 +387,11 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        ASKAPDEBUGASSERT(itsCorrections.ncolumn() > 2); 
        itsCorrections(ant,2) = dZ; 
        const double r=(sxy-sx*sy)/sqrt(denominator * (sy2-sy*sy));
-       const double dZErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(scans.size())-2));       
+       const double coeffErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(scans.size())-2));       
+       const double dZErr = coeffErr / 2. / casa::C::pi * wavelength;
        itsErrors(ant,2) = dZErr;
        
-       ASKAPLOG_DEBUG_STR(logger, "Antenna "<<ant<<" dZ: "<<dZ<<" +/- "<<dZErr<<" metres");
+       ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" dZ: "<<dZ<<" +/- "<<dZErr<<" metres; r="<<r);
   }
 }
 

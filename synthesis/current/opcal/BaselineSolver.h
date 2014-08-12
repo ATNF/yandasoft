@@ -37,6 +37,8 @@
 #include <opcal/IGenericCalSolver.h>
 #include <Common/ParameterSet.h>
 
+// std includes
+#include <string>
 
 namespace askap {
 
@@ -106,6 +108,10 @@ private:
   /// @brief uncertainties for corrections
   /// @details rows are antennas, columns are X,Y and Z
   casa::Matrix<double> itsErrors;
+
+  /// @brief parset file with original antenna layout 
+  /// @details This is either a slice of the FCM or a parset for ingest pipeline
+  std::string itsOrigFCMLayout;
    
 };
 
