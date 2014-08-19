@@ -201,7 +201,7 @@ int main(int argc, char **argv)
       ComplexRandomGainGenerator gen(minPar,maxPar);
       
       // for leakages simulate the same interval of amplitudes but around 0.
-      ComplexRandomGainGenerator leakageGen((minPar-maxPar)/2,(maxPar-minPar)/2);
+      ComplexRandomGainGenerator leakageGen(0.,fabs(maxPar-minPar)/2);
       
       std::ofstream os(outputName.getValue().c_str());
       os<<std::endl;
