@@ -81,6 +81,13 @@ struct ObservationDescription {
   /// @note an exception is thrown if the structure is uninitialised
   void update(casa::uInt cycle, double time);
   
+  /// @brief set scan and field IDs
+  /// @details This information can only be obtained for table-based datasets. Therefore, we deal with these misc fields
+  /// in a separate method.
+  /// @param[in] scanID scan ID to set
+  /// @param[in] fieldID field ID to set
+  void setScanAndFieldIDs(casa::uInt scanID, casa::uInt fieldID);
+  
   // getter methods
 
   /// @brief obtain beam
@@ -112,6 +119,16 @@ struct ObservationDescription {
   /// @return time of the end of this observation (in units set up in accessor)
   /// @note an exception is thrown if the structure is uninitialised
   double endTime() const;
+
+  /// @brief obtain scan ID
+  /// @return scan ID in the appropriate dataset. Zero if the input iterator is not table-based
+  /// @note an exception is thrown if the structure is uninitialised
+  casa::uInt scanID() const;
+
+  /// @brief obtain field ID
+  /// @return field ID in the appropriate dataset. Zero if the input iterator is not table-based
+  /// @note an exception is thrown if the structure is uninitialised
+  casa::uInt fieldID() const;
     
   /// @brief observed direction
   /// @return phase centre of the observation (same frame as used in the accessor)
@@ -143,6 +160,12 @@ private:
   /// @note negative value means the class is uninitialised
   int itsBeam;
   
+  /// @brief scan ID
+  casa::uInt itsScanID;
+  
+  /// @brief field ID
+  casa::uInt itsFieldID;
+    
   /// @brief phase centre direction (same coordinate system as the accessor is set up with)
   casa::MVDirection itsDirection;
   

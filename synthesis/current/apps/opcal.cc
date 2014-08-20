@@ -42,6 +42,7 @@
 #include <Common/ParameterSet.h>
 #include <opcal/OpCalImpl.h>
 #include <opcal/BaselineSolver.h>
+#include <opcal/PointingSolver.h>
 
 
 ASKAP_LOGGER(logger, ".opcal");
@@ -69,7 +70,10 @@ class OpCalApp : public askap::Application
                  }
                  
                  OpCalImpl impl(comms,config());
-                 impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
+                 // we'll eventually get a proper factory method here; for now create explicitly
+                 //impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
+                 impl.setHighLevelSolver(boost::shared_ptr<PointingSolver>(new PointingSolver(config())));
+                 
                  impl.run();                 
                  
             } catch (const askap::AskapError& e) {

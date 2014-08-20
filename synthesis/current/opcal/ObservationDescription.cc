@@ -51,7 +51,8 @@ ObservationDescription::ObservationDescription() : itsBeam(-1) {}
 /// @param[in] freq centre frequency (in accessor units)
 ObservationDescription::ObservationDescription(const std::string &name, casa::uInt cycle, double time, 
        casa::uInt beam, const casa::MVDirection &dir, double freq) : itsName(name), itsStartCycle(cycle), itsEndCycle(cycle),
-       itsStartTime(time), itsEndTime(time), itsBeam(static_cast<int>(beam)), itsDirection(dir), itsFreq(freq) {}
+       itsStartTime(time), itsEndTime(time), itsBeam(static_cast<int>(beam)), 
+       itsScanID(0u), itsFieldID(0u), itsDirection(dir), itsFreq(freq) {}
           
   
 /// @brief check whether the structure has been initialised
@@ -79,7 +80,18 @@ void ObservationDescription::set(const std::string &name, casa::uInt cycle, doub
   itsDirection = dir;
   itsFreq = freq;
 }
-  
+
+/// @brief set scan and field IDs
+/// @details This information can only be obtained for table-based datasets. Therefore, we deal with these misc fields
+/// in a separate method.
+/// @param[in] scanID scan ID to set
+/// @param[in] fieldID field ID to set
+void ObservationDescription::setScanAndFieldIDs(casa::uInt scanID, casa::uInt fieldID)
+{
+  itsScanID = scanID;
+  itsFieldID = fieldID;
+}
+
 // getter methods
 
 /// @brief obtain beam
@@ -99,6 +111,25 @@ const std::string& ObservationDescription::name() const
   ASKAPCHECK(isValid(), "An attempt to get name for an undefined observation structure");
   return itsName;
 }
+
+/// @brief obtain scan ID
+/// @return scan ID in the appropriate dataset. Zero if the input iterator is not table-based
+/// @note an exception is thrown if the structure is uninitialised
+casa::uInt ObservationDescription::scanID() const
+{
+  ASKAPCHECK(isValid(), "An attempt to get scan ID for an undefined observation structure");
+  return itsScanID;
+}
+
+/// @brief obtain field ID
+/// @return field ID in the appropriate dataset. Zero if the input iterator is not table-based
+/// @note an exception is thrown if the structure is uninitialised
+casa::uInt ObservationDescription::fieldID() const
+{
+  ASKAPCHECK(isValid(), "An attempt to get field ID for an undefined observation structure");
+  return itsFieldID;
+}
+
   
 /// @brief obtain start cycle 
 /// @return iteration number of the start of the observation

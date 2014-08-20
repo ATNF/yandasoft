@@ -57,7 +57,7 @@ public:
   /// @param[in] parset parameters of the solver
   explicit BaselineSolver(const LOFAR::ParameterSet& parset);
     
-  /// @brief abstract method to be called when the results are ready
+  /// @brief method to be called when the results are ready
   /// @details This method is called (in derived classes) when the results
   /// are ready. Two parameters describe scans and contain calibration data, respectively.
   /// @param[in] scans description of scans, note separate beams are present as separate scans.

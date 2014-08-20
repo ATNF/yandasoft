@@ -38,6 +38,13 @@
 // own includes
 #include <opcal/ScanStats.h>
 #include <dataaccess/IConstDataIterator.h>
+#include <dataaccess/TableConstDataIterator.h>
+
+#include <askap/AskapLogging.h>
+#include <askap/AskapError.h>
+
+ASKAP_LOGGER(logger, ".ScanStats");
+
 
 // std includes
 #include <set>
@@ -70,6 +77,12 @@ ScanStats::ScanStats(double timeLimit, int cycleLimit) : itsTimeLimit(timeLimit)
 void ScanStats::inspect(const std::string &name, const accessors::IConstDataSharedIter &iter)
 {
   ASKAPASSERT(iter);
+  // correctly typed iterator - for specific table-based functions
+  const boost::shared_ptr<accessors::TableConstDataIterator> tableIt = iter.dynamicCast<accessors::TableConstDataIterator>();
+  if (!tableIt) {
+       ASKAPLOG_WARN_STR(logger, "Dataset "<<name<<" appears not to be table-based. Unable to access scan and field information");
+  }
+  
   const double dirTolerance = 1e-7;
   const double freqTolerance = 1.;
   casa::uInt cycle = 0;
@@ -107,6 +120,10 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                 obs.set(name, cycle, it->time(), beam, it->pointingDir1()[row],freq);
                 ASKAPCHECK(obs.direction().separation(it->pointingDir2()[row]) < dirTolerance, 
                           "Pointing direction is different for two antennas, unsupported scenario");
+                if (tableIt) {
+                    // fill implementation-specific fields (scan and field IDs)
+                    obs.setScanAndFieldIDs(tableIt->currentScanID(), tableIt->currentFieldID());
+                }          
             }        
        } // loop over row
        // aggregate the map into the final buffer
@@ -125,7 +142,9 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                 } 
                 if (sameScan) {
                     sameScan = (fabs(ci->second.frequency() - freq) < freqTolerance);
-                } 
+                }
+                sameScan &= (lastObsThisBeam->scanID() == ci->second.scanID());
+                sameScan &= (lastObsThisBeam->fieldID() == ci->second.fieldID());                
                 sameScan &= (lastObsThisBeam->direction().separation(ci->second.direction()) < dirTolerance);
             }
             if (sameScan) {
