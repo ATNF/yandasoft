@@ -81,6 +81,13 @@ protected:
   /// @return direction in AzEl
   static casa::MVDirection mroAzEl(const casa::MVDirection &dir, double time);
   
+  /// @brief obtain parallactic angle at MRO for the given direction
+  /// @param[in] dir direction of interest in J2000
+  /// @param[in] time time in seconds since 0 MJD
+  /// @return parallactic angle in radians
+  static double mroPA(const casa::MVDirection &dir, double time);
+  
+  
   /// @brief solve for corrections for just one antenna
   /// @param[in] caldata vector of data for all points of the pattern
   /// @return pair with offsets in two coordinates

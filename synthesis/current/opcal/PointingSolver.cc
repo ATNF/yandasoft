@@ -41,6 +41,9 @@
 #include <measures/Measures/MEpoch.h>
 #include <measures/Measures/MeasConvert.h>
 #include <measures/Measures/MCDirection.h>
+#include <scimath/Mathematics/MatrixMathLA.h>
+#include <casa/Arrays/MatrixMath.h>
+#include <measures/Measures/ParAngleMachine.h>
 
 ASKAP_LOGGER(logger, ".PointingSolver");
 
@@ -71,13 +74,18 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
    ASKAPASSERT(scans.size() == caldata.nrow());
    const size_t nScansPerPattern  = 6;
    ASKAPCHECK(scans.size() >= nScansPerPattern, "Require at least "<<nScansPerPattern<<" scans, you have "<<scans.size());
+   
+   std::ofstream os("result.dat");
+   
    for (size_t startScan = 0, pattern = 0; startScan + nScansPerPattern <= scans.size(); startScan += nScansPerPattern,++pattern) {
         const casa::MVDirection& phaseCentre = scans[startScan].direction();
-        const casa::MVDirection azEl = mroAzEl(phaseCentre, 0.5*(scans[startScan + nScansPerPattern/2].startTime()+
-                                               scans[startScan + nScansPerPattern/2].endTime()));
+        const double time = 0.5*(scans[startScan + nScansPerPattern/2].startTime()+
+                                 scans[startScan + nScansPerPattern/2].endTime());
+        const casa::MVDirection azEl = mroAzEl(phaseCentre, time);
         ASKAPLOG_INFO_STR(logger, "Pointing pattern "<<pattern + 1<<" at "<<printDirection(phaseCentre)<<" J2000, Az="<<
                           azEl.getLong()/casa::C::pi*180.<<" deg, El="<<
                           azEl.getLat()/casa::C::pi*180.<<" deg:");
+        os<<azEl.getLong()/casa::C::pi*180.<<" "<<azEl.getLat()/casa::C::pi*180.<<" ";                  
         // consistency check 
         ASKAPDEBUGASSERT(nScansPerPattern > 2);
         const double totalDuration = scans[startScan + nScansPerPattern - 2].endTime() - scans[startScan].startTime(); 
@@ -85,14 +93,26 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
         for (size_t index = startScan + 1; index < startScan + nScansPerPattern; ++index) {
              ASKAPCHECK(scans[index].direction().separation(phaseCentre)<1e-6, "Phase centres seem to vary throughout the pattern");
         }
-        // 
+                 
         for (casa::uInt ant=0; ant<caldata.ncolumn(); ++ant) {
              casa::Vector<GenericCalInfo> thisPatternData = caldata(casa::Slice(startScan, nScansPerPattern - 1),
                      casa::Slice(ant));
-             ASKAPASSERT(thisPatternData.nelements() + 1 == nScansPerPattern);        
-             const std::pair<double, double> result = solveOne(thisPatternData);
-             ASKAPLOG_INFO_STR(logger, " antenna "<<ant<<":  x="<<result.first<<", y="<<result.second);
+             ASKAPASSERT(thisPatternData.nelements() + 1 == nScansPerPattern);  
+             // get result in ra and dec      
+             const std::pair<double, double> resultEq = solveOne(thisPatternData);
+             
+             casa::MVDirection testDir = phaseCentre;
+             testDir.shift(resultEq.first, resultEq.second,true);
+             
+             const casa::MVDirection azElOff = mroAzEl(testDir, time);
+             const double azOff = sin(azElOff.getLong() - azEl.getLong()) * cos(azElOff.getLat()) / casa::C::pi * 180.;
+             const double elOff = (sin(azElOff.getLat())*cos(azEl.getLat()) - cos(azElOff.getLat())*sin(azEl.getLat()) *
+                                   cos(azElOff.getLong() - azEl.getLong())) / casa::C::pi * 180.;
+             
+             os<<azOff<<" "<<elOff<<" ";             
+             ASKAPLOG_INFO_STR(logger, " antenna "<<ant<<":  az="<<azOff<<", el="<<elOff);
         }
+        os<<std::endl;
    }
 }
 
@@ -102,7 +122,52 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
 std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCalInfo> &caldata) const
 {
   ASKAPASSERT(caldata.nelements() == 5);
-  return std::pair<double,double>(0.,0.);
+  casa::Vector<double> amplitudes(caldata.nelements());
+  for (casa::uInt point=0; point<caldata.nelements(); ++point) {
+       ASKAPASSERT(caldata[point].gainDefined());
+       amplitudes[point] = casa::abs(caldata[point].gain());
+  }
+  // normalise
+  amplitudes /= casa::max(amplitudes);
+  //ASKAPLOG_INFO_STR(logger, "Amplitudes: "<<amplitudes);
+  
+  // need a better way to separate scans, but for now assume a fixed order:
+  // +Dec, -Dec, boresight, +RA, -RA
+  const double decshift = 1./180.*casa::C::pi; // one degree
+  const double rashift = decshift * cos(12.39111 / 180. * casa::C::pi); // we just did +/- 4 min of RA
+  const double fwhm = 30./0.8635/1200.*1.02; // need to pass this as a parameter (and extract from data)
+  const double fractBandwidth = 0.304/0.8635;
+  // compute differences w.r.t. predicted gain
+  const double raOffsets[5] = {0.,0.,0., +rashift, -rashift};
+  const double decOffsets[5] = {+decshift, -decshift, 0., 0., 0.};
+  
+  // make least-square fit
+  casa::Matrix<double> nm(2,2,0.); // normal matrix
+  casa::Vector<double> data(2.,0.); // projected right-hand side
+  for (casa::uInt point=0; point<amplitudes.nelements(); ++point) {
+       const double offsetSq = casa::square(raOffsets[point]) + casa::square(decOffsets[point]);
+       const double coeff = -4. * log(2.) / casa::square(fwhm);
+       const double expectedGain = 0.5*(exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+                                        exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
+       amplitudes[point] -= expectedGain;
+       
+       // derivatives of the gain
+       const double dg_dx =  -raOffsets[point] * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+                                        casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
+       const double dg_dy =  -decOffsets[point] * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+                                        casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
+       const double measuredDifference = amplitudes[point] - expectedGain;
+       nm(0,0) += casa::square(dg_dx);
+       nm(0,1) += dg_dx * dg_dy;
+       nm(1,0) += dg_dy * dg_dx;
+       nm(1,1) += casa::square(dg_dy);
+       data[0] += measuredDifference * dg_dx;
+       data[1] += measuredDifference * dg_dy;                                               
+  }
+  ASKAPCHECK(casa::determinate(nm) > 1e-7, "Inversion failed; nm="<<nm);
+  casa::Vector<double> result = casa::product(casa::invert(nm),data);
+  ASKAPASSERT(result.nelements() == 2); 
+  return std::pair<double,double>(result[0],result[1]);
 }
 
 
@@ -110,8 +175,8 @@ std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCal
 /// @return position measure
 casa::MPosition PointingSolver::mroPosition()
 {
-   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(-26.6991531922, "deg"), 
-           casa::Quantity(116.6310372795, "deg")),casa::MPosition::Ref(casa::MPosition::WGS84));
+   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(116.6310372795, "deg"), 
+                          casa::Quantity(-26.6991531922, "deg")), casa::MPosition::Ref(casa::MPosition::WGS84));
    return mroPos;
 }
 
@@ -125,6 +190,29 @@ casa::MVDirection PointingSolver::mroAzEl(const casa::MVDirection &dir, double t
   casa::MeasFrame frame(mroPosition(), epoch);    
   return casa::MDirection::Convert(casa::MDirection(dir, casa::MDirection::J2000), 
          casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+}
+
+/// @brief obtain parallactic angle at MRO for the given direction
+/// @param[in] dir direction of interest in J2000
+/// @param[in] time time in seconds since 0 MJD
+/// @return parallactic angle in radians
+double PointingSolver::mroPA(const casa::MVDirection &dir, double time)
+{
+  const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
+  const casa::MPosition mroPos = mroPosition();
+  const casa::Vector<double> mroPosRad = mroPos.getAngle("rad").getValue();
+  ASKAPASSERT(mroPosRad.nelements() == 2);
+  casa::MeasFrame frame(mroPos, epoch);    
+  /*
+  casa::ParAngleMachine pam(casa::MDirection(dir,casa::MDirection::Ref(casa::MDirection::J2000)));
+  pam.set(frame);
+  return pam(epoch).getValue("rad");
+  */
+  const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(dir, casa::MDirection::J2000), 
+         casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+  const double sq = cos(mroPosRad[1])*sin(hadec.getLong());
+  const double cq = sin(mroPosRad[1])*cos(hadec.getLat()) - cos(mroPosRad[1])*sin(hadec.getLat())*cos(hadec.getLong());
+  return atan2(sq,cq);  
 }
 
 

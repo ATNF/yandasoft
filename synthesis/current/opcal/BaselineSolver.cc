@@ -329,8 +329,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
 /// @return position measure
 casa::MPosition BaselineSolver::mroPosition()
 {
-   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(-26.6991531922, "deg"), 
-           casa::Quantity(116.6310372795, "deg")),casa::MPosition::Ref(casa::MPosition::WGS84));
+   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(116.6310372795, "deg"), 
+                          casa::Quantity(-26.6991531922, "deg")), casa::MPosition::Ref(casa::MPosition::WGS84));
    return mroPos;
 }
 
