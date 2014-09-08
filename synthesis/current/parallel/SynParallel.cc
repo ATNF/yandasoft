@@ -158,8 +158,14 @@ namespace askap
             ASKAPDEBUGASSERT(itsComms.nGroups() > 1);
             // number of parameters per group (note the last group can have more)
             const size_t nPerGroup = names2distribute.size() / itsComms.nGroups();
-            ASKAPCHECK(nPerGroup > 0, "The model has too few parameters ("<<
-                  names2distribute.size()<<") to distribute between "<< itsComms.nGroups()<<" groups");
+            // this check is not relevant if all parameters are in names2keep
+            if (names2distribute.size() > 0) {
+                ASKAPCHECK(nPerGroup > 0, "The model has too few parameters ("<<
+                      names2distribute.size()<<") to distribute between "<< itsComms.nGroups()<<" groups");
+            } else {
+                ASKAPCHECK(names2keep.size() > 0, "The model has too few parameters ("<<
+                      names2keep.size()<<")");
+            }
             
             std::vector<std::string> currentNames;
             currentNames.reserve(itsComms.nGroups() + nPerGroup - 1 + names2keep.size());
@@ -167,7 +173,7 @@ namespace askap
             for (size_t group = 0, index = 0; group<itsComms.nGroups(); ++group, index+=nPerGroup) {
                  const size_t nPerCurrentGroup = (group + 1 < itsComms.nGroups()) ? 
                           nPerGroup : names2distribute.size() - index; 
-                 ASKAPDEBUGASSERT(names2distribute.size() > index);
+                 ASKAPDEBUGASSERT((names2distribute.size() > index) || (names2distribute.size() == 0));
                  if (nPerCurrentGroup != nPerGroup) {
                      ASKAPLOG_WARN_STR(logger, "An unbalanced distribution of the model has been detected. "
                                        " the last group ("<<group<<") will have "<<nPerCurrentGroup<<
