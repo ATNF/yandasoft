@@ -334,6 +334,7 @@ namespace askap
       // these parameters can be set globally or individually
       bool cellsizeNeeded = false;
       bool shapeNeeded = false;
+      int nTerms = 1;
 
       // for image specific parameters, cycle through the images and check whether any advised parameters are undefined.
       const vector<string> imageNames = parset.getStringVector("Images.Names", false);
@@ -371,6 +372,31 @@ namespace askap
               ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr.str().c_str());
               parset.add(param, pstr.str().c_str());
           }
+          param = "Images."+imageNames[img]+".nterms"; // if nterms is set, store it for later
+          if (parset.isDefined(param)) {
+              if ((nTerms>1) && (nTerms!=parset.getInt(param))) {
+                  ASKAPLOG_WARN_STR(logger, "  Imaging with different nterms may not work");
+              }
+              nTerms = parset.getInt(param);
+          }
+      }
+
+      if (nTerms > 1) { // check required MFS parameters
+         param = "visweights"; // set to "MFS" if unset and nTerms > 1
+         if (!parset.isDefined(param)) {
+             std::ostringstream pstr;
+             pstr<<"MFS";
+             ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+             parset.add(param, pstr.str().c_str());
+         }
+         param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
+         if ((parset.getString("visweights")=="MFS") && !parset.isDefined(param)) {
+             std::ostringstream pstr;
+             const double aveFreq = 0.5*(advice.minFreq()+advice.maxFreq());
+             pstr<<aveFreq;
+             ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+             parset.add(param, pstr.str().c_str());
+         }
       }
 
       param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
@@ -405,7 +431,7 @@ namespace askap
           param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
           if (!parset.isDefined(param)) {
               std::ostringstream pstr;
-              // both should be set if either is, but include the latter to be sure that maxResidualW() has been generated.
+              // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
               if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
                   pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
