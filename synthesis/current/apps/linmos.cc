@@ -90,7 +90,7 @@ class LinmosAccumulator {
     ///     weightstate: Corrected, Inherent or Weighted. Default: Corrected.
     /// @param[in] const LOFAR::ParameterSet &parset: linmos parset
     /// @return bool true=success, false=fail
-    bool loadParset(const LOFAR::ParameterSet &parset);
+    bool loadParset(const LOFAR::ParameterSet &parset, accessors::IImageAccess &iacc);
 
     /// @brief set up a single mosaic
     /// @param[in] const vector<string> &inImgNames : vector of images to mosaic
@@ -311,7 +311,7 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset, const Vec
 
 // functions in the linmos accumulator class
 
-bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset) {
+bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset, accessors::IImageAccess &iacc) {
 
     const vector<string> inImgNames = parset.getStringVector("names", true);
     const vector<string> inWgtNames = parset.getStringVector("weights", vector<string>(), true);
@@ -386,6 +386,7 @@ bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset) {
  
         // if reading weights from images, check for inputs associated with other kinds of weighting
         if (parset.isDefined("feeds.centre") ||
+            parset.isDefined("feeds.centreref") ||
             parset.isDefined("feeds.offsetsfile") ||
             parset.isDefined("feeds.names") ||
             parset.isDefined("feeds.spacing") ) {
@@ -398,13 +399,35 @@ bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset) {
 
         ASKAPLOG_INFO_STR(logger, "Looking for parset options associated with primary-beam models");
 
-        // centres for each beam
-        if (parset.isDefined("feeds.centre")) {
+        MVDirection centre;
+        bool centreDefined = false;
 
+        // set the centre of the "feeds" offset parameters (e.g. the boresight of the PAF)
+        if (parset.isDefined("feeds.centre")) {
             ASKAPLOG_INFO_STR(logger, "Found centre of the feeds to use in beam models");
             const vector<string> feedsCentre(parset.getStringVector("feeds.centre"));
             ASKAPCHECK(feedsCentre.size()==2, " -> the feeds.centre vector should have 2 elements");
-            MVDirection centre = convertDir(feedsCentre[0], feedsCentre[1]);
+            centre = convertDir(feedsCentre[0], feedsCentre[1]);
+            centreDefined = true;
+        }
+        else if (parset.isDefined("feeds.centreref")) {
+            int centreref = parset.getInt("feeds.centreref");
+            if ((centreref>=0) && (centreref<inImgNames.size())) {
+                ASKAPLOG_INFO_STR(logger, "Using the reference pixel of input image "<<centreref<<
+                    " as the centre of the feeds to use in beam models");
+                const CoordinateSystem coordSys = iacc.coordSys(inImgNames[centreref]);
+                const int DCpos = coordSys.findCoordinate(Coordinate::DIRECTION,-1);
+                const DirectionCoordinate DC = coordSys.directionCoordinate(DCpos);
+                DC.toWorld(centre,DC.referencePixel());
+                centreDefined = true;
+            }
+            else {
+                ASKAPLOG_WARN_STR(logger, "Found unsuitable centreref parameter: "<<centreref);
+            }
+        }
+
+        // centres for each beam
+        if (centreDefined) {
 
             if (parset.isDefined("feeds.offsetsfile")) {
 
@@ -1463,11 +1486,11 @@ static void merge(const LOFAR::ParameterSet &parset) {
     // initialise an image accumulator
     LinmosAccumulator accumulator;
 
-    // load the parset
-    if ( !accumulator.loadParset(parset) ) return;
-
     // initialise an image accessor
     accessors::IImageAccess& iacc = SynthesisParamsHelper::imageHandler();
+
+    // load the parset
+    if ( !accumulator.loadParset(parset,iacc) ) return;
 
     // loop over the mosaics, reading each in an adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames;
