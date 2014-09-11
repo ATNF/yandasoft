@@ -72,7 +72,8 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
    // need a better way to separate scans, but for now assume a fixed order:
    // +Dec, -Dec, boresight, +RA, -RA, boresight_long (the last one to be skipped)
    ASKAPASSERT(scans.size() == caldata.nrow());
-   const size_t nScansPerPattern  = 6;
+   const size_t nExtraScans  = 0;
+   const size_t nScansPerPattern  = 5 + nExtraScans;
    ASKAPCHECK(scans.size() >= nScansPerPattern, "Require at least "<<nScansPerPattern<<" scans, you have "<<scans.size());
    
    std::ofstream os("result.dat");
@@ -87,20 +88,22 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
                           azEl.getLat()/casa::C::pi*180.<<" deg:");
         os<<azEl.getLong()/casa::C::pi*180.<<" "<<azEl.getLat()/casa::C::pi*180.<<" ";                  
         // consistency check 
-        ASKAPDEBUGASSERT(nScansPerPattern > 2);
-        const double totalDuration = scans[startScan + nScansPerPattern - 2].endTime() - scans[startScan].startTime(); 
+        ASKAPDEBUGASSERT(scans.size() > startScan + 4);
+        const double totalDuration = scans[startScan + 4].endTime() - scans[startScan].startTime(); 
         ASKAPCHECK(totalDuration<1800., "Pattern seems to be too long: "<<totalDuration / 60.<<" min");
         for (size_t index = startScan + 1; index < startScan + nScansPerPattern; ++index) {
              ASKAPCHECK(scans[index].direction().separation(phaseCentre)<1e-6, "Phase centres seem to vary throughout the pattern");
         }
                  
         for (casa::uInt ant=0; ant<caldata.ncolumn(); ++ant) {
-             casa::Vector<GenericCalInfo> thisPatternData = caldata(casa::Slice(startScan, nScansPerPattern - 1),
+             casa::Vector<GenericCalInfo> thisPatternData = caldata(casa::Slice(startScan, 5),
                      casa::Slice(ant));
-             ASKAPASSERT(thisPatternData.nelements() + 1 == nScansPerPattern);  
+             ASKAPASSERT(thisPatternData.nelements() + nExtraScans == nScansPerPattern);  
              // get result in ra and dec      
              const std::pair<double, double> resultEq = solveOne(thisPatternData);
              
+             /*
+             // for offsets in ra,dec
              casa::MVDirection testDir = phaseCentre;
              testDir.shift(resultEq.first, resultEq.second,true);
              
@@ -108,6 +111,9 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
              const double azOff = sin(azElOff.getLong() - azEl.getLong()) * cos(azElOff.getLat()) / casa::C::pi * 180.;
              const double elOff = (sin(azElOff.getLat())*cos(azEl.getLat()) - cos(azElOff.getLat())*sin(azEl.getLat()) *
                                    cos(azElOff.getLong() - azEl.getLong())) / casa::C::pi * 180.;
+             */
+             const double azOff = resultEq.first / casa::C::pi * 180.;
+             const double elOff = resultEq.second / casa::C::pi * 180.;
              
              os<<azOff<<" "<<elOff<<" ";             
              ASKAPLOG_INFO_STR(logger, " antenna "<<ant<<":  az="<<azOff<<", el="<<elOff);
@@ -130,44 +136,76 @@ std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCal
   // normalise
   amplitudes /= casa::max(amplitudes);
   //ASKAPLOG_INFO_STR(logger, "Amplitudes: "<<amplitudes);
+  bool peakAtCentre = true;
+  for (casa::uInt point = 0; point<amplitudes.nelements(); ++point) {
+       if (point != 2) {
+           peakAtCentre &= (amplitudes[point] < 1.);
+       }
+  }
+  if (!peakAtCentre) {
+      ASKAPLOG_WARN_STR(logger, "The middle point of the pointing pattern is expected to be closest to boresight");
+      ASKAPLOG_WARN_STR(logger, "   Normalised amplitudes: "<<amplitudes);
+  }
   
-  // need a better way to separate scans, but for now assume a fixed order:
-  // +Dec, -Dec, boresight, +RA, -RA
-  const double decshift = 1./180.*casa::C::pi; // one degree
-  const double rashift = decshift * cos(12.39111 / 180. * casa::C::pi); // we just did +/- 4 min of RA
+  // need a better way to separate scans, but for now assume a fixed order
   const double fwhm = 30./0.8635/1200.*1.02; // need to pass this as a parameter (and extract from data)
   const double fractBandwidth = 0.304/0.8635;
   // compute differences w.r.t. predicted gain
+  /*
+  // order:
+  // +Dec, -Dec, boresight, +RA, -RA
+  const double decshift = 1./180.*casa::C::pi; // one degree
+  const double rashift = decshift * cos(12.39111 / 180. * casa::C::pi); // we just did +/- 4 min of RA
   const double raOffsets[5] = {0.,0.,0., +rashift, -rashift};
   const double decOffsets[5] = {+decshift, -decshift, 0., 0., 0.};
+  */
+  // order:
+  // for -az,+az,boresight,-el,+el
+  const double shift = fwhm / 1.02 / 2.;
+  const double raOffsets[5] = {-shift,+shift,0., 0.,0.};
+  const double decOffsets[5] = {0., 0., 0.,-shift, +shift};
   
   // make least-square fit
-  casa::Matrix<double> nm(2,2,0.); // normal matrix
-  casa::Vector<double> data(2.,0.); // projected right-hand side
-  for (casa::uInt point=0; point<amplitudes.nelements(); ++point) {
-       const double offsetSq = casa::square(raOffsets[point]) + casa::square(decOffsets[point]);
-       const double coeff = -4. * log(2.) / casa::square(fwhm);
-       const double expectedGain = 0.5*(exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+  std::pair<double,double> result(0.,0.);
+  const size_t nIter = 10;
+  for (size_t iter=0; iter<nIter; ++iter) {
+       casa::Matrix<double> nm(2,2,0.); // normal matrix
+       casa::Vector<double> data(2.,0.); // projected right-hand side
+       for (casa::uInt point=0; point<amplitudes.nelements(); ++point) {
+            const double off1 = raOffsets[point] + result.first;
+            const double off2 = decOffsets[point] + result.second;
+            const double offsetSq = casa::square(off1) + casa::square(off2);
+            const double coeff = -4. * log(2.) / casa::square(fwhm);
+            const double expectedGain = 0.5*(exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
                                         exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
-       amplitudes[point] -= expectedGain;
        
-       // derivatives of the gain
-       const double dg_dx =  -raOffsets[point] * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+            // derivatives of the gain
+            const double dg_dx =  off1 * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
                                         casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
-       const double dg_dy =  -decOffsets[point] * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
+            const double dg_dy =  off2 * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
                                         casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
-       const double measuredDifference = amplitudes[point] - expectedGain;
-       nm(0,0) += casa::square(dg_dx);
-       nm(0,1) += dg_dx * dg_dy;
-       nm(1,0) += dg_dy * dg_dx;
-       nm(1,1) += casa::square(dg_dy);
-       data[0] += measuredDifference * dg_dx;
-       data[1] += measuredDifference * dg_dy;                                               
+            const double measuredDifference = amplitudes[point] - expectedGain;
+            nm(0,0) += casa::square(dg_dx);
+            nm(0,1) += dg_dx * dg_dy;
+            nm(1,0) += dg_dy * dg_dx;
+            nm(1,1) += casa::square(dg_dy);
+            data[0] += measuredDifference * dg_dx;
+            data[1] += measuredDifference * dg_dy;                                               
+       }    
+       ASKAPCHECK(casa::determinate(nm) > 1e-7, "Inversion failed; nm="<<nm);
+       casa::Vector<double> corrections = casa::product(casa::invert(nm),data);
+       ASKAPASSERT(corrections.nelements() == 2); 
+       result.first += corrections[0];
+       result.second += corrections[1];
+       //std::cout<<"Iter="<<iter<<" "<<corrections<<std::endl;
+       if (iter + 1 == nIter) {
+           const double misFit = sqrt(casa::square(corrections[0])+casa::square(corrections[1]));
+           if (misFit > 1e-7) {
+               ASKAPLOG_WARN_STR(logger, "LSF failed to converge after "<<nIter<<" iterations, misFit="<<misFit);
+           }
+       }
   }
-  ASKAPCHECK(casa::determinate(nm) > 1e-7, "Inversion failed; nm="<<nm);
-  casa::Vector<double> result = casa::product(casa::invert(nm),data);
-  ASKAPASSERT(result.nelements() == 2); 
-  return std::pair<double,double>(result[0],result[1]);
+  return result;
 }
 
 
