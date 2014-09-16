@@ -115,7 +115,8 @@ class CimagerApp : public askap::Application
 
                     if (comms.isMaster()) {
                         LOFAR::ParameterSet tmpset = config();
-                        tmpset.subtractSubset("Cimager."); // replace the original Cimager param set with the updated set.
+                        // replace the original Cimager param set with the updated set.
+                        tmpset.subtractSubset("Cimager.");
                         tmpset.adoptCollection(fullset.makeSubset("","Cimager."));
                         ASKAPLOG_INFO_STR(logger, "Parset parameters:\n" << tmpset);
                     }
@@ -177,7 +178,8 @@ class CimagerApp : public askap::Application
                             }
 
                             if (cycle + 1 >= nCycles) {
-                                ASKAPLOG_INFO_STR(logger, "Reached " << nCycles << " cycle(s), the maximum number of major cycles. Stopping.");
+                                ASKAPLOG_INFO_STR(logger, "Reached " << nCycles <<
+                                    " cycle(s), the maximum number of major cycles. Stopping.");
                             }
 
                             if (writeAtMajorCycle) {
