@@ -89,7 +89,25 @@ config["ADE12_WALLABY_C"]        = AntennaConfig("ADE12_WALLABY_C",        ( 2, 
 config["ADE6"]                   = AntennaConfig("ADE6",                   ( 2, 4, 5,14,10,12), datafile)
 config["ADE12"]                  = AntennaConfig("ADE12",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
 config["ADE18"]                  = AntennaConfig("ADE18",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
-
+#
+# The following are those under consideration for the ASKAP community meeting, October 21, 2014
+# 16-antenna configs (ADE12 + 4, either 4BETA or 4 nonBETA)
+config["ADE12_4BETA_1368"]       = AntennaConfig("ADE12_4BETA_1368",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6, 8), datafile)
+config["ADE12_4BETA_1369"]       = AntennaConfig("ADE12_4BETA_1369",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6, 9), datafile)
+config["ADE12_4BETA_136F"]       = AntennaConfig("ADE12_4BETA_136F",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6,15), datafile)
+config["ADE12_4BETA_139F"]       = AntennaConfig("ADE12_4BETA_139F",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 9,15), datafile)
+config["ADE12_4NONBETA_1"]       = AntennaConfig("ADE12_4NONBETA_1",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,19,23,26,21), datafile)
+config["ADE12_4NONBETA_2"]       = AntennaConfig("ADE12_4NONBETA_2",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,18,20,23), datafile)
+config["ADE12_4NONBETA_3"]       = AntennaConfig("ADE12_4NONBETA_3",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,11,22,23), datafile)
+config["ADE12_4NONBETA_4"]       = AntennaConfig("ADE12_4NONBETA_4",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,26,11,22, 7), datafile)
+# 20-antenna configs (ADE12 + 8, either 6BETA+2, or 8 non-BETA)
+config["ADE12_6BETA_AK31_33"]    = AntennaConfig("ADE12_6BETA_AK31_33",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,31,33), datafile)
+config["ADE12_6BETA_AK19_23"]    = AntennaConfig("ADE12_6BETA_AK19_23",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,19,23), datafile)
+config["ADE12_6BETA_AK26_33"]    = AntennaConfig("ADE12_6BETA_AK26_33",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,26,33), datafile)
+config["ADE12_6BETA_AK31_23"]    = AntennaConfig("ADE12_6BETA_AK31_23",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,31,23), datafile)
+config["ADE12_8NONBETA_1"]       = AntennaConfig("ADE12_8NONBETA_1",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,22,34), datafile)
+config["ADE12_8NONBETA_2"]       = AntennaConfig("ADE12_8NONBETA_2",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,17,21), datafile)
+config["ADE12_8NONBETA_3"]       = AntennaConfig("ADE12_8NONBETA_3",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,32,36), datafile)
 
 outputType = ("parset", "calc", "csv", "kml")
 if len(sys.argv) < 2:

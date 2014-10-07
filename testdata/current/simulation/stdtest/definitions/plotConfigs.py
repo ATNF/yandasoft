@@ -21,10 +21,10 @@ yav=y.mean()
 
 fig = plt.figure(1, figsize=(11.7,11.7), dpi=72)
 
-#offset=20
-#textsize='xx-small'
-offset=0
-textsize='medium'
+offset=20
+textsize='xx-small'
+#offset=0
+#textsize='medium'
 
 plt.plot(x-xav,y-yav,'.')
 plt.xlim(-3500,3500)
@@ -40,7 +40,7 @@ for i in [0,2,5,7,8,14]:
 
 # plt ASKAP-12 antennas in green
 for i in [1,3,4,13,9,11,23,26,29,12,15,27]:
-    plt.plot(x[i]-xav,y[i]-yav,'go')
+    plt.plot(x[i]-xav,y[i]-yav,'g.')
 
 theta=np.arange(0,1000)*2*np.pi/1000.
 
