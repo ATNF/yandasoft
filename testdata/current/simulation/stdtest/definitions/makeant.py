@@ -90,6 +90,8 @@ config["ADE6"]                   = AntennaConfig("ADE6",                   ( 2, 
 config["ADE12"]                  = AntennaConfig("ADE12",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
 config["ADE18"]                  = AntennaConfig("ADE18",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
 #
+# An alternative ADE12 config with AK34 replacing AK30 (to test the long fibre run)
+config["ADE12_AK34"]             = AntennaConfig("ADE12_AK34",             ( 2, 4, 5,14,10,12,24,27,34,13,16,28), datafile)
 # The following are those under consideration for the ASKAP community meeting, October 21, 2014
 # 16-antenna configs (ADE12 + 4, either 4BETA or 4 nonBETA)
 config["ADE12_4BETA_1368"]       = AntennaConfig("ADE12_4BETA_1368",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6, 8), datafile)
