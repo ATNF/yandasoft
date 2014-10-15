@@ -102,6 +102,11 @@ config["ADE12_4NONBETA_1"]       = AntennaConfig("ADE12_4NONBETA_1",       ( 2, 
 config["ADE12_4NONBETA_2"]       = AntennaConfig("ADE12_4NONBETA_2",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,18,20,23), datafile)
 config["ADE12_4NONBETA_3"]       = AntennaConfig("ADE12_4NONBETA_3",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,11,22,23), datafile)
 config["ADE12_4NONBETA_4"]       = AntennaConfig("ADE12_4NONBETA_4",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,26,11,22, 7), datafile)
+# These 16-antenna configs have a mix of BETA & non-BETA
+config["ADE12_2BETA_16_AK19_23"] = AntennaConfig("ADE12_2BETA_16_AK19_23", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
+config["ADE12_2BETA_16_AK26_23"] = AntennaConfig("ADE12_2BETA_16_AK26_23", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
+config["ADE12_2BETA_1F_AK19_23"] = AntennaConfig("ADE12_2BETA_1F_AK19_23", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,15,19,23), datafile)
+config["ADE12_2BETA_13_AK19_23"] = AntennaConfig("ADE12_2BETA_1F_AK19_23", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3,19,23), datafile)
 # 20-antenna configs (ADE12 + 8, either 6BETA+2, or 8 non-BETA)
 config["ADE12_6BETA_AK31_33"]    = AntennaConfig("ADE12_6BETA_AK31_33",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,31,33), datafile)
 config["ADE12_6BETA_AK19_23"]    = AntennaConfig("ADE12_6BETA_AK19_23",    ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,19,23), datafile)
@@ -110,6 +115,12 @@ config["ADE12_6BETA_AK31_23"]    = AntennaConfig("ADE12_6BETA_AK31_23",    ( 2, 
 config["ADE12_8NONBETA_1"]       = AntennaConfig("ADE12_8NONBETA_1",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,22,34), datafile)
 config["ADE12_8NONBETA_2"]       = AntennaConfig("ADE12_8NONBETA_2",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,17,21), datafile)
 config["ADE12_8NONBETA_3"]       = AntennaConfig("ADE12_8NONBETA_3",       ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,32,36), datafile)
+# These 20-antenna configs have ADE-18 plus two BETA antennas:
+config["ADE18_2BETA_16"]         = AntennaConfig("ADE18_2BETA_16",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 6), datafile)
+config["ADE18_2BETA_1F"]         = AntennaConfig("ADE18_2BETA_1F",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
+config["ADE18_2BETA_13"]         = AntennaConfig("ADE18_2BETA_16",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 3), datafile)
+
+
 
 outputType = ("parset", "calc", "csv", "kml")
 if len(sys.argv) < 2:
