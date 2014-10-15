@@ -5,6 +5,7 @@ import csv
 import sys
 import os
 import string
+import numpy as np
 
 from locations import *
 
@@ -61,6 +62,24 @@ class AntennaList:
             n.append(self.antennas[ant].padName())
         return n
 
+    def baselineDistribution(self):
+
+        baselines=np.array([])
+
+        for num1 in self.config.antennas:
+
+            for num2 in self.config.antennas:
+
+                if num1 < num2:
+                    dx=self.antennas[num1].easting-self.antennas[num2].easting
+                    dy=self.antennas[num1].northing-self.antennas[num2].northing
+                    baseline=math.hypot(dx,dy)
+            
+                    baselines=np.append(baselines,baseline)
+
+        return baselines
+
+    
     def dump(self):
         print "antennas.telescope = %s" %(self.config.name)
         print "antennas.%s.coordinates = global" %(self.config.name)
