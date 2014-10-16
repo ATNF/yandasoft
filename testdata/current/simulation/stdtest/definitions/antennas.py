@@ -79,6 +79,21 @@ class AntennaList:
 
         return baselines
 
+    def positions(self, reference=-1):
+        positions=np.array([])
+        xref=0
+        yref=0
+        if reference>=0:
+            xref=self.antennas[reference].easting
+            yref=self.antennas[reference].northing
+        for padnum in self.config.antennas:
+            x=self.antennas[padnum].easting - xref
+            y=self.antennas[padnum].northing - yref
+            positions=np.append(positions,[x,y])
+        positions=positions.reshape(len(self.config.antennas),2)
+        return positions
+    
+
     
     def dump(self):
         print "antennas.telescope = %s" %(self.config.name)
