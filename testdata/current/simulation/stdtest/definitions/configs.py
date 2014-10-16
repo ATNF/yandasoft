@@ -91,6 +91,7 @@ def getConfigs():
     config["ADE12_4NONBETA_3"]         = AntennaConfig("ADE12_4NONBETA_3",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,11,22,23), datafile)
     config["ADE12_4NONBETA_4"]         = AntennaConfig("ADE12_4NONBETA_4",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,26,11,22, 7), datafile)
     config["ADE12_4NONBETA_5"]         = AntennaConfig("ADE12_4NONBETA_5",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,19,23,26,11), datafile)
+    config["ADE12_4NONBETA_6"]         = AntennaConfig("ADE12_4NONBETA_6",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,30,31,33,35), datafile)
     # These 16-antenna configs have a mix of BETA & non-BETA                       
     config["ADE12_2BETA_16_AK19_23"]   = AntennaConfig("ADE12_2BETA_16_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
     config["ADE12_2BETA_16_AK26_23"]   = AntennaConfig("ADE12_2BETA_16_AK26_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
