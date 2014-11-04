@@ -355,27 +355,44 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
                 pxpSlice = itsPolXProducts.slice(bufRow,chan);
             }
             for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
+                 // input visibility vector has indexed pol2, but most of the
+                 // gain should be for pol2=pol. So it makes sense to flag this
+                 // output visibility element if the corresponding input element
+                 // is flagged.
+                 // Note: if some of the input data are flagged it might be best
+                 //       to flagged the output. Depends on how much gain is in
+                 //       the off-diagonal terms.
                  if ((pol < bufferNPol) && !measuredFlag(row,chan,pol)) {
                      const casa::Complex model = modelVis(row,chan,pol);
-                     const float visNoise = casa::square(casa::real(measuredNoise(row,chan,pol)));
+                     const float visNoise =
+                         casa::square(casa::real(measuredNoise(row,chan,pol)));
                      const float weight = (visNoise > 0.) ? 1./visNoise : 0.;
                      for (casa::uInt pol2 = 0; pol2<acc.nPol(); ++pol2) {
+                          // ignore this column if flagged
+                          if (measuredFlag(row,chan,pol2)) {
+                              continue;
+                          }
                           /*
                           // temporary hack
-                          if (((pol != 0) && (pol != 3)) || ((pol2 != 0) && (pol2 != 3))) {
+                          if (((pol != 0) && (pol != 3)) ||
+                              ((pol2 != 0) && (pol2 != 3))) {
                               continue;
                           }
                           //
                           */
                           // different polarisations can have different weight?
                           // ignoring for now
-                          pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) * measuredVis(row,chan,pol2));
-                          //pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) * (pol == pol2 ? measuredVis(row,chan,pol2) : casa::Complex(0.,0.)));
+                          pxpSlice.addModelMeasProduct(pol,pol2,
+                              weight * std::conj(model) * measuredVis(row,chan,pol2));
+                          //pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) *
+                          //    (pol == pol2 ? measuredVis(row,chan,pol2) : casa::Complex(0.,0.)));
                           if (pol2<=pol) {
-                              pxpSlice.addModelProduct(pol,pol2, weight * std::conj(model) * modelVis(row,chan,pol2));
+                              pxpSlice.addModelProduct(pol,pol2,
+                                  weight * std::conj(model) * modelVis(row,chan,pol2));
                           }
                      }
-                     //std::cout<<"accumulated ("<<bufRow<<","<<pol<<"): "<<model<<" "<<measuredVis(row,chan,pol)<<std::endl;
+                     //std::cout<<"accumulated ("<<bufRow<<","<<pol<<"): "<<model<<
+                     //    " "<<measuredVis(row,chan,pol)<<std::endl;
                      // unflag this row because it now has some data
                      itsFlag(bufRow,bufChan,pol) = false;
                  } else {
