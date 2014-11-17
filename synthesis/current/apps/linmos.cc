@@ -466,7 +466,7 @@ bool LinmosAccumulator::loadBeamCentres(const LOFAR::ParameterSet &parset,
             centreDefined = true;
         }
         else if (parset.isDefined("feeds.centreref")) {
-            int centreref = parset.getInt("feeds.centreref");
+            uint centreref = parset.getInt("feeds.centreref");
             if ((centreref>=0) && (centreref<inImgNames.size())) {
                 ASKAPLOG_INFO_STR(logger, "Using the reference pixel of input image "<<centreref<<
                     " as the centre of the feeds to use in beam models");
