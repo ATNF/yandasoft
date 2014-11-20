@@ -55,6 +55,7 @@
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapUtil.h>
+#include <askap/StatReporter.h>
 #include <fitting/Params.h>
 #include <measurementequation/SynthesisParamsHelper.h>
 #include <utils/MultiDimArrayPlaneIter.h>
@@ -1725,9 +1726,11 @@ class LinmosApp : public askap::Application
     public:
         virtual int run(int argc, char* argv[])
         {
+	    StatReporter stats;
             LOFAR::ParameterSet subset(config().makeSubset("linmos."));
             SynthesisParamsHelper::setUpImageHandler(subset);
             merge(subset);
+	    stats.logSummary();
             return 0;
         }
 };
