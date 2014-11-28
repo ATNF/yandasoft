@@ -91,7 +91,7 @@ def getConfigs():
     config["ADE12_4NONBETA_3"]         = AntennaConfig("ADE12_4NONBETA_3",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,17,11,22,23), datafile)
     config["ADE12_4NONBETA_4"]         = AntennaConfig("ADE12_4NONBETA_4",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,26,11,22, 7), datafile)
     config["ADE12_4NONBETA_5"]         = AntennaConfig("ADE12_4NONBETA_5",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,19,23,26,11), datafile)
-    config["ADE12_4NONBETA_6"]         = AntennaConfig("ADE12_4NONBETA_6",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,30,31,33,35), datafile)
+    config["ADE12_4NONBETA_6"]         = AntennaConfig("ADE12_4NONBETA_6",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,17), datafile)
     # These 16-antenna configs have a mix of BETA & non-BETA                       
     config["ADE12_2BETA_16_AK19_23"]   = AntennaConfig("ADE12_2BETA_16_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
     config["ADE12_2BETA_16_AK26_23"]   = AntennaConfig("ADE12_2BETA_16_AK26_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
@@ -106,11 +106,36 @@ def getConfigs():
     config["ADE12_8NONBETA_1"]         = AntennaConfig("ADE12_8NONBETA_1",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,22,34), datafile)
     config["ADE12_8NONBETA_2"]         = AntennaConfig("ADE12_8NONBETA_2",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,17,21), datafile)
     config["ADE12_8NONBETA_3"]         = AntennaConfig("ADE12_8NONBETA_3",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,32,36), datafile)
-    config["ADE12_8NONBETA_4"]         = AntennaConfig("ADE12_8NONBETA_4",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,30,19,23,26,11), datafile)
+    config["ADE12_8NONBETA_4"]         = AntennaConfig("ADE12_8NONBETA_4",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,11,17), datafile)
     # These 20-antenna configs have ADE-18 plus two BETA antennas:                 
     config["ADE18_2BETA_16"]           = AntennaConfig("ADE18_2BETA_16",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 6), datafile)
     config["ADE18_2BETA_1F"]           = AntennaConfig("ADE18_2BETA_1F",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
     config["ADE18_2BETA_13"]           = AntennaConfig("ADE18_2BETA_16",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 3), datafile)
+
+    # 30-antenna cases:
+    a36=np.arange(1,37)
+    a=a36[(a36!=1)&(a36!=3)&(a36!=6)&(a36!=8)&(a36!=9)&(a36!=15)]
+    config['ASKAP30_NOBETA']=AntennaConfig('ASKAP30_NOBETA',a.tolist(), datafile)
+    # Put all the BETA ants in, and leave out current last two batches
+    a=a36[(a36!=25)&(a36!=7)&(a36!=18)&(a36!=32)&(a36!=36)&(a36!=29)]
+    config['ASKAP30_BETA_BYBATCH']=AntennaConfig('ASKAP30_BETA_BYBATCH',a, datafile)
+    # Replace 8,9,15 with 7,25,36
+    a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=32)&(a36!=9)&(a36!=29)]
+    config['ASKAP30_3BETA']=AntennaConfig('ASKAP30_3BETA',a, datafile)
+    # Replace 3,8,9,15 with 7,25,32,36
+    a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=3)&(a36!=9)&(a36!=29)]
+    config['ASKAP30_2BETA']=AntennaConfig('ASKAP30_2BETA',a, datafile)
+
+    # 16-ant config with Batch #4 from Adrian Rispler's talk at October 21, 2014 community meeting
+    config["ADE12_BATCH4"]             = AntennaConfig("ADE12_BATCH4",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19), datafile)
+    # 16-ant config with Batch #5 from Adrian Rispler's talk at October 21, 2014 community meeting
+    config["ADE12_BATCH5"]             = AntennaConfig("ADE12_BATCH5",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,23,26,11,17), datafile)
+    # 20-ant array using batches 4 & 5
+    config['ADE12_BATCH4_5']           = AntennaConfig("ADE12_BATCH4_5",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,11,17), datafile)
+
+    # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
+    config["ADE18_WALLABY"]            = AntennaConfig("ADE18_WALLABY",            ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
+    config["ADE18_DINGO"]              = AntennaConfig("ADE18_DINGO",              ( 2, 3, 4, 5, 6,10,11,12,13,14,15,16,21,24,25,27,28,30), datafile)
 
     return config
 
