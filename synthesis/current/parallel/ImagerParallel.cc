@@ -468,6 +468,7 @@ namespace askap
                            dataColumn());
         ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());                   
         IDataSelectorPtr sel=ds.createSelector();
+        sel->chooseCrossCorrelations();
         sel << parset();
         IDataConverterPtr conv=ds.createConverter();
         conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
