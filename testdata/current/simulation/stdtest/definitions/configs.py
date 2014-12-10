@@ -8,8 +8,10 @@ def getConfigs():
 
     config = {}
     config["A27CR3P6B"]                = AntennaConfig("A27CR3P6B",                range(1, 37),        datafile)
+    config["ASKAP36"]                  = AntennaConfig("ASKAP36",                  range(1, 37),        datafile)
     config["A27CR3"]                   = AntennaConfig("A27CR3",                   range(1, 31),        datafile)
-    config["BETA"]                     = AntennaConfig("BETA",                     (1, 3, 6, 8, 9, 29), datafile)
+    config["BETA"]                     = AntennaConfig("BETA",                     (1, 3, 6, 8, 9, 15), datafile)
+    config["BETAXYZ"]                  = AntennaConfig("BETAXYZ",                  (1, 3, 6, 8, 9, 15), datafile)
     config["BETA2"]                    = AntennaConfig("BETA2",                    (1, 3, 6, 8, 9,  2), datafile)
     config["BETA4"]                    = AntennaConfig("BETA4",                    (1, 3, 6, 8, 9,  4), datafile)
     config["BETA5"]                    = AntennaConfig("BETA5",                    (1, 3, 6, 8, 9,  5), datafile)
@@ -75,12 +77,18 @@ def getConfigs():
     # These are the configurations decided upon in 2013 for the 6-, 12- and 18-antenna configurations for the MkII PAFs
     config["ADE6"]                     = AntennaConfig("ADE6",                     ( 2, 4, 5,14,10,12), datafile)
     config["ADE12"]                    = AntennaConfig("ADE12",                    ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
+    config["ASKAP12"]                  = AntennaConfig("ASKAP12",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
     config["ADE18"]                    = AntennaConfig("ADE18",                    ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
+    config["ASKAP18"]                  = AntennaConfig("ASKAP18",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
     #
     # An alternative ADE12 config with AK34 replacing AK30 (to test the long fibre run)
     config["ADE12_AK34"]               = AntennaConfig("ADE12_AK34",               ( 2, 4, 5,14,10,12,24,27,34,13,16,28), datafile)
     #
     # The following are those under consideration for the ASKAP community meeting, October 21, 2014
+    # 16-ant config with Batch #4 from Adrian Rispler's talk at October 21, 2014 community meeting - was ADE12_BATCH4
+    config["ASKAP16_A"]                = AntennaConfig("ASKAP16_A",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19), datafile)
+    # 16-ant config with Batch #5 from Adrian Rispler's talk at October 21, 2014 community meeting - was ADE12_BATCH5
+    config["ASKAP16_B"]                = AntennaConfig("ASKAP16_B",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,23,26,11,17), datafile)
     # 16-antenna configs (ADE12 + 4, either 4BETA or 4 nonBETA)
     config["ADE12_4BETA_1368"]         = AntennaConfig("ADE12_4BETA_1368",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6, 8), datafile)
     config["ADE12_4BETA_1369"]         = AntennaConfig("ADE12_4BETA_1369",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3, 6, 9), datafile)
@@ -96,8 +104,11 @@ def getConfigs():
     config["ADE12_2BETA_16_AK19_23"]   = AntennaConfig("ADE12_2BETA_16_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
     config["ADE12_2BETA_16_AK26_23"]   = AntennaConfig("ADE12_2BETA_16_AK26_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
     config["ADE12_2BETA_1F_AK19_23"]   = AntennaConfig("ADE12_2BETA_1F_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,15,19,23), datafile)
-    config["ADE12_2BETA_13_AK19_23"]   = AntennaConfig("ADE12_2BETA_1F_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3,19,23), datafile)
+    config["ADE12_2BETA_13_AK19_23"]   = AntennaConfig("ADE12_2BETA_13_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3,19,23), datafile)
     config["ADE12_1BETA_1_AK19_23_26"] = AntennaConfig("ADE12_1BETA_1_AK19_23_26", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,19,23,26), datafile)
+
+    # 20-ant array using batches 4 & 5 - was ADE12_BATCH4_5
+    config['ASKAP20_A']                = AntennaConfig("ASKAP20_A",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,11,17), datafile)
     # 20-antenna configs (ADE12 + 8, either 6BETA+2, or 8 non-BETA)
     config["ADE12_6BETA_AK31_33"]      = AntennaConfig("ADE12_6BETA_AK31_33",      ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,31,33), datafile)
     config["ADE12_6BETA_AK19_23"]      = AntennaConfig("ADE12_6BETA_AK19_23",      ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 2, 6, 8, 9,15,19,23), datafile)
@@ -126,16 +137,9 @@ def getConfigs():
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=3)&(a36!=9)&(a36!=29)]
     config['ASKAP30_2BETA']=AntennaConfig('ASKAP30_2BETA',a, datafile)
 
-    # 16-ant config with Batch #4 from Adrian Rispler's talk at October 21, 2014 community meeting
-    config["ADE12_BATCH4"]             = AntennaConfig("ADE12_BATCH4",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19), datafile)
-    # 16-ant config with Batch #5 from Adrian Rispler's talk at October 21, 2014 community meeting
-    config["ADE12_BATCH5"]             = AntennaConfig("ADE12_BATCH5",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,23,26,11,17), datafile)
-    # 20-ant array using batches 4 & 5
-    config['ADE12_BATCH4_5']           = AntennaConfig("ADE12_BATCH4_5",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,11,17), datafile)
-
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
-    config["ADE18_WALLABY"]            = AntennaConfig("ADE18_WALLABY",            ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
-    config["ADE18_DINGO"]              = AntennaConfig("ADE18_DINGO",              ( 2, 3, 4, 5, 6,10,11,12,13,14,15,16,21,24,25,27,28,30), datafile)
+    config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
+    config["ASKAP18_DINGO"]            = AntennaConfig("ASKAP18_DINGO",            ( 2, 3, 4, 5, 6,10,11,12,13,14,15,16,21,24,25,27,28,30), datafile)
 
     return config
 
