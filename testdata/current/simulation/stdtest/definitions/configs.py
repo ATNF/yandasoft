@@ -101,10 +101,14 @@ def getConfigs():
     config["ADE12_4NONBETA_5"]         = AntennaConfig("ADE12_4NONBETA_5",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,19,23,26,11), datafile)
     config["ADE12_4NONBETA_6"]         = AntennaConfig("ADE12_4NONBETA_6",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,17), datafile)
     # These 16-antenna configs have a mix of BETA & non-BETA                       
-    config["ADE12_2BETA_16_AK19_23"]   = AntennaConfig("ADE12_2BETA_16_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
-    config["ADE12_2BETA_16_AK26_23"]   = AntennaConfig("ADE12_2BETA_16_AK26_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
-    config["ADE12_2BETA_1F_AK19_23"]   = AntennaConfig("ADE12_2BETA_1F_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,15,19,23), datafile)
     config["ADE12_2BETA_13_AK19_23"]   = AntennaConfig("ADE12_2BETA_13_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3,19,23), datafile)
+    config["ASKAP16_C"]                = AntennaConfig("ASKAP16_C",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 3,19,23), datafile)
+    config["ADE12_2BETA_16_AK19_23"]   = AntennaConfig("ADE12_2BETA_16_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
+    config["ASKAP16_D"]                = AntennaConfig("ASKAP16_D",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,19,23), datafile)
+    config["ADE12_2BETA_16_AK26_23"]   = AntennaConfig("ADE12_2BETA_16_AK26_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
+    config["ASKAP16_E"]                = AntennaConfig("ASKAP16_E",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1, 6,26,23), datafile)
+    config["ADE12_2BETA_1F_AK19_23"]   = AntennaConfig("ADE12_2BETA_1F_AK19_23",   ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,15,19,23), datafile)
+    config["ASKAP16_F"]                = AntennaConfig("ASKAP16_F",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,15,19,23), datafile)
     config["ADE12_1BETA_1_AK19_23_26"] = AntennaConfig("ADE12_1BETA_1_AK19_23_26", ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 1,19,23,26), datafile)
 
     # 20-ant array using batches 4 & 5 - was ADE12_BATCH4_5
@@ -119,9 +123,12 @@ def getConfigs():
     config["ADE12_8NONBETA_3"]         = AntennaConfig("ADE12_8NONBETA_3",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,32,36), datafile)
     config["ADE12_8NONBETA_4"]         = AntennaConfig("ADE12_8NONBETA_4",         ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26,11,17), datafile)
     # These 20-antenna configs have ADE-18 plus two BETA antennas:                 
+    config["ADE18_2BETA_13"]           = AntennaConfig("ADE18_2BETA_13",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 3), datafile)
+    config["ASKAP20_B"]                = AntennaConfig("ASKAP20_B",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 3), datafile)
     config["ADE18_2BETA_16"]           = AntennaConfig("ADE18_2BETA_16",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 6), datafile)
+    config["ASKAP20_C"]                = AntennaConfig("ASKAP20_C",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 6), datafile)
     config["ADE18_2BETA_1F"]           = AntennaConfig("ADE18_2BETA_1F",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
-    config["ADE18_2BETA_13"]           = AntennaConfig("ADE18_2BETA_16",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 3), datafile)
+    config["ASKAP20_D"]                = AntennaConfig("ASKAP20_D",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
 
     # 30-antenna cases:
     a36=np.arange(1,37)
