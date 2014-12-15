@@ -132,17 +132,18 @@ def getConfigs():
 
     # 30-antenna cases:
     a36=np.arange(1,37)
+    # All 30 non-BETA antennas - was ASKAP30_NOBETA
     a=a36[(a36!=1)&(a36!=3)&(a36!=6)&(a36!=8)&(a36!=9)&(a36!=15)]
-    config['ASKAP30_NOBETA']=AntennaConfig('ASKAP30_NOBETA',a.tolist(), datafile)
-    # Put all the BETA ants in, and leave out current last two batches
+    config['ASKAP30_A']=AntennaConfig('ASKAP30_A',a.tolist(), datafile)
+    # Put all the BETA ants in, and leave out current last two batches - was ASKAP30_BETA_BYBATCH
     a=a36[(a36!=25)&(a36!=7)&(a36!=18)&(a36!=32)&(a36!=36)&(a36!=29)]
-    config['ASKAP30_BETA_BYBATCH']=AntennaConfig('ASKAP30_BETA_BYBATCH',a, datafile)
-    # Replace 8,9,15 with 7,25,36
+    config['ASKAP30_B']=AntennaConfig('ASKAP30_B',a, datafile)
+    # Replace 8,9,15 with 7,25,36 - was ASKAP30_3BETA
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=32)&(a36!=9)&(a36!=29)]
-    config['ASKAP30_3BETA']=AntennaConfig('ASKAP30_3BETA',a, datafile)
-    # Replace 3,8,9,15 with 7,25,32,36
+    config['ASKAP30_C']=AntennaConfig('ASKAP30_C',a, datafile)
+    # Replace 3,8,9,15 with 7,25,32,36 - was ASKAP30_2BETA
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=3)&(a36!=9)&(a36!=29)]
-    config['ASKAP30_2BETA']=AntennaConfig('ASKAP30_2BETA',a, datafile)
+    config['ASKAP30_D']=AntennaConfig('ASKAP30_D',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
