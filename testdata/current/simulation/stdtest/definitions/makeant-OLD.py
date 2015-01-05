@@ -401,7 +401,7 @@ if len(sys.argv) == 4:
 		usage(config)
 		sys.exit(1)
 
-antennas = AntennaList(config[string.upper(sys.argv[1])], string.lower(sys.argv[2]), "ASKAP Antenna Locations Master File.csv", 50, "south")
+antennas = AntennaList(config[string.upper(sys.argv[1])], string.lower(sys.argv[2]), "ASKAP_Antenna_Locations_Master_File.csv", 50, "south")
 
 offxyz = [-2556743.707 - -2556745.438, 5097440.315 - 5097448.114, -2847749.657 - -2847753.833]
 
