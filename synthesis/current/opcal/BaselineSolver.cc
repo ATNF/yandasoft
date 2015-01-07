@@ -275,6 +275,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
   
        // could've cached the hour angles, but for now leave as is
        scimath::PhaseUnwrapper<double> unwrapper;
+       const std::string spcfilename = "phase.xy.ant"+utility::toString(ant)+".dat";
+       std::ofstream os(spcfilename.c_str());
        for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
@@ -286,6 +288,7 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             const double cd = cos(hadec.getLat()); 
             ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
             phases[cnt] = unwrapper(arg(caldata(scanIndices[cnt],ant).gain())) / cd;
+            os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<std::endl;
        }
        casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
@@ -356,6 +359,8 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
        
        scimath::PhaseUnwrapper<double> unwrapper;
+       const std::string spcfilename = "phase.z.ant"+utility::toString(ant)+".dat";
+       std::ofstream os(spcfilename.c_str());
        for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
@@ -365,6 +370,7 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
                                    casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
             const double sd = sin(hadec.getLat());
             const double phase = unwrapper(arg(caldata(scanIndices[cnt],ant).gain()));
+            os<<cnt<<" "<<sd<<" "<<phase / casa::C::pi * 180.<<std::endl;
             // build normal equations
             sx += sd;
             sx2 += sd*sd;
