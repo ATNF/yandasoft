@@ -324,6 +324,9 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset, const Vec
 
 bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset) {
 
+    ASKAPLOG_INFO_STR(logger, "ASKAP linear mosaic task " << ASKAP_PACKAGE_VERSION);
+    ASKAPLOG_INFO_STR(logger, "Parset parameters:\n" << parset);
+
     const vector<string> inImgNames = parset.getStringVector("names", true);
     const vector<string> inWgtNames = parset.getStringVector("weights", vector<string>(), true);
     const string weightTypeName = parset.getString("weighttype");
@@ -429,6 +432,8 @@ bool LinmosAccumulator::loadParset(const LOFAR::ParameterSet &parset) {
         return false;
     }
 
+    if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
+
     if (parset.isDefined("regrid.method")) itsMethod = parset.getString("regrid.method");
     if (parset.isDefined("regrid.decimate")) itsDecimate = parset.getInt("regrid.decimate");
     if (parset.isDefined("regrid.replicate")) itsReplicate = parset.getBool("regrid.replicate");
@@ -468,7 +473,7 @@ bool LinmosAccumulator::loadBeamCentres(const LOFAR::ParameterSet &parset,
         }
         else if (parset.isDefined("feeds.centreref")) {
             uint centreref = parset.getInt("feeds.centreref");
-            if ((centreref>=0) && (centreref<inImgNames.size())) {
+            if (centreref<inImgNames.size()) {
                 ASKAPLOG_INFO_STR(logger, "Using the reference pixel of input image "<<centreref<<
                     " as the centre of the feeds to use in beam models");
                 const CoordinateSystem coordSys = iacc.coordSys(inImgNames[centreref]);
@@ -1083,17 +1088,14 @@ void LinmosAccumulator::loadInputBuffers(const scimath::MultiDimArrayPlaneIter& 
         // invert sensitivities before regridding to avoid artefacts at sharp edges in the sensitivity image
         itsInSenBuffer.put(planeIter.getPlane(inSenPix));
         float sensitivity;
-        float minVal, maxVal;
-        IPosition minPos, maxPos;
-        minMax(minVal,maxVal,minPos,maxPos,inSenPix);
-        float senCutoff = itsCutoff * maxVal; // inSenPix is prop. to image sigma/gain
+
         IPosition pos(2);
         for (int x=0; x<inSenPix.shape()[0];++x) {
             for (int y=0; y<inSenPix.shape()[1];++y) {
                 pos[0] = x;
                 pos[1] = y;
                 sensitivity = itsInSenBuffer.getAt(pos);
-                if (sensitivity>senCutoff) {
+                if (sensitivity>0) {
                     itsInSnrBuffer.putAt(1.0 / (sensitivity * sensitivity), pos);
                 } else {
                     itsInSnrBuffer.putAt(0.0, pos);
@@ -1115,7 +1117,7 @@ void LinmosAccumulator::regrid() {
         itsRegridder.regrid(itsOutSnrBuffer, itsEmethod, itsAxes, itsInSnrBuffer, itsReplicate, itsDecimate, false,
                             itsForce);
     }
-cout << "finished regrid. ";
+
 }
 
 void LinmosAccumulator::accumulatePlane(Array<float>& outPix, Array<float>& outWgtPix,
@@ -1230,6 +1232,8 @@ void LinmosAccumulator::accumulatePlane(Array<float>& outPix, Array<float>& outW
     // Accumulate sensitivity for this slice.
     if (itsDoSensitivity) {
         float invVariance;
+        minMax(minVal,maxVal,minPos,maxPos,itsOutSnrBuffer);
+        float snrCutoff = itsCutoff * itsCutoff * maxVal;
         for (int x=0; x<outPix.shape()[0];++x) {
             for (int y=0; y<outPix.shape()[1];++y) {
                 fullpos[0] = x;
@@ -1237,7 +1241,7 @@ void LinmosAccumulator::accumulatePlane(Array<float>& outPix, Array<float>& outW
                 pos[0] = x;
                 pos[1] = y;
                 invVariance = itsOutSnrBuffer.getAt(pos);
-                if (wgtBuffer.getAt(pos)>=wgtCutoff) {
+                if (invVariance>=snrCutoff && wgtBuffer.getAt(pos)>=wgtCutoff) {
                     outSenPix(fullpos) = outSenPix(fullpos) + invVariance;
                 }
             }
@@ -1357,14 +1361,13 @@ void LinmosAccumulator::accumulatePlane(Array<float>& outPix, Array<float>& outW
     // Accumulate sensitivity for this slice.
     if (itsDoSensitivity) {
         double sensitivity;
-        minMax(minVal,maxVal,minPos,maxPos,inSenPix);
-        float senCutoff = itsCutoff * maxVal; // inSenPix is prop. to image sigma/gain
         for (int x=0; x<outPix.shape()[0];++x) {
             for (int y=0; y<outPix.shape()[1];++y) {
                 fullpos[0] = x;
                 fullpos[1] = y;
                 sensitivity = inSenPix(fullpos);
-                if (wgtPix(wgtpos)>=wgtCutoff && sensitivity>senCutoff) {
+                // wgt and sen should be aligned.
+                if (wgtPix(wgtpos)>=wgtCutoff && sensitivity>0.0) {
                     outSenPix(fullpos) = outSenPix(fullpos) + 1.0 / (sensitivity * sensitivity);
                 }
             }
@@ -1379,7 +1382,6 @@ void LinmosAccumulator::deweightPlane(Array<float>& outPix, const Array<float>& 
     float minVal, maxVal;
     IPosition minPos, maxPos;
     minMax(minVal,maxVal,minPos,maxPos,outWgtPix);
-    float wgtCutoff = itsCutoff * itsCutoff * maxVal; // outWgtPix is prop. to image (gain/sigma)^2
 
     // copy the pixel iterator containing all dimensions
     IPosition fullpos(curpos);
@@ -1388,7 +1390,7 @@ void LinmosAccumulator::deweightPlane(Array<float>& outPix, const Array<float>& 
         for (int y=0; y<outPix.shape()[1];++y) {
             fullpos[0] = x;
             fullpos[1] = y;
-            if (outWgtPix(fullpos)>=wgtCutoff) {
+            if (outWgtPix(fullpos)>0.0) {
                 outPix(fullpos) = outPix(fullpos) / outWgtPix(fullpos);
             } else {
                 outPix(fullpos) = 0.0;
@@ -1397,13 +1399,11 @@ void LinmosAccumulator::deweightPlane(Array<float>& outPix, const Array<float>& 
     }
 
     if (itsDoSensitivity) {
-        minMax(minVal,maxVal,minPos,maxPos,outSenPix);
-        float varCutoff = itsCutoff * maxVal; // outSenPix is prop. to image (gain/sigma)^2 but squaring is too much
         for (int x=0; x<outPix.shape()[0];++x) {
             for (int y=0; y<outPix.shape()[1];++y) {
                 fullpos[0] = x;
                 fullpos[1] = y;
-                if (outWgtPix(fullpos)>=wgtCutoff && outSenPix(fullpos)>varCutoff) {
+                if (outSenPix(fullpos)>0.0) {
                     outSenPix(fullpos) = sqrt(1.0 / outSenPix(fullpos));
                 } else {
                     outSenPix(fullpos) = 0.0;
