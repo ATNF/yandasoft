@@ -141,7 +141,7 @@ namespace askap
         } else {
             ASKAPLOG_INFO_STR(logger, "Distribute model between "<<itsComms.nGroups()<<
                   " groups of workers");
-            // build two lists of parameters: parameters to distribute and parameters to send with all groups
+            // build two lists of parameters: parameters to distribute and parameters to send to all groups
             std::vector<std::string> names2distribute;
             std::vector<std::string> names2keep;
             names2distribute.reserve(names.size());

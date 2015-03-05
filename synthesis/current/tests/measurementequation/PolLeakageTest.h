@@ -64,6 +64,7 @@ namespace askap
     {
       CPPUNIT_TEST_SUITE(PolLeakageTest);
       CPPUNIT_TEST(testBuildCDM);
+      CPPUNIT_TEST(testBETAMuellerMatrix);      
       CPPUNIT_TEST(testSolve);
       CPPUNIT_TEST(testSolvePreAvg);
       CPPUNIT_TEST(testApplication);
@@ -177,6 +178,94 @@ namespace askap
                itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YX),
                             casa::Complex(realGains[ant] - 1.,imagGains[ant])/casa::Complex(10.,0.));                                           
                             
+          }
+      }
+      
+      void testBETAMuellerMatrix() {
+          itsIter = boost::shared_ptr<accessors::DataIteratorStub>(new accessors::DataIteratorStub(1));
+          CPPUNIT_ASSERT(itsIter);          
+          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);
+          CPPUNIT_ASSERT_EQUAL(size_t(1u), da.itsStokes.nelements());
+          
+          casa::Vector<casa::Stokes::StokesTypes> stokes(4);
+          stokes[0] = casa::Stokes::XX;
+          stokes[1] = casa::Stokes::XY;
+          stokes[2] = casa::Stokes::YX;
+          stokes[3] = casa::Stokes::YY;         
+          
+          da.itsStokes.assign(stokes.copy());
+          const casa::uInt nAnt = 6;
+          const casa::uInt nBaselines = nAnt * (nAnt - 1) / 2;
+          da.itsVisibility.resize(nBaselines, 1 , stokes.nelements());
+          da.itsVisibility.set(casa::Complex(-10.,15.));
+          CPPUNIT_ASSERT_EQUAL(nBaselines, da.nRow());
+          CPPUNIT_ASSERT_EQUAL(1u, da.nChannel());
+          CPPUNIT_ASSERT_EQUAL(4u, da.nPol());
+          da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsNoise.set(1.);
+          da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsFlag.set(casa::False);
+          da.itsFrequency.resize(da.nChannel());
+          da.itsFrequency.set(1.4e9);
+          da.itsAntenna1.resize(da.nRow());
+          da.itsAntenna2.resize(da.nRow());
+          da.itsFeed1.resize(da.nRow());
+          da.itsFeed2.resize(da.nRow());
+          da.itsFeed1.set(0u);
+          da.itsFeed2.set(0u);
+          for (casa::uInt ant1=0, row=0; ant1<nAnt; ++ant1) {
+               for (casa::uInt ant2=0; ant2<ant1; ++ant2,++row) {
+                    CPPUNIT_ASSERT(row < da.nRow());
+                    da.itsAntenna1[row] = ant1;
+                    da.itsAntenna2[row] = ant2;
+               }
+          }     
+          // other fields are not used in the code we're testing, so can leave them uninitialised
+          
+          // results obtained from BETA SB 619-621, see ASKAPSDP-1633 (rough, for a representative channel)
+          // order ak06,ak01,ak03,ak15,ak08,ak09 as in the real system
+          const float d12[nAnt] = {0.025, 0.021, 0.08, 0.01, 0.045, 0.035};
+          const float d21[nAnt] = {0.018, 0.015, 0.09, 0.01, 0.035, 0.02};
+          const float xyPhase[nAnt] = {80., 140., -120., 140., 50., -175.};
+
+          // fill parameters
+          itsParams1.reset(new scimath::Params);
+          ASKAPDEBUGASSERT(itsParams1);
+          for (casa::uInt ant=0; ant<nAnt; ++ant) {
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XX),
+                            casa::Complex(1.,0.));
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YY),
+                            casa::Complex(1.,0.));
+               
+               const casa::Complex d12Term = casa::polar(d12[ant], float(xyPhase[ant]/180.*casa::C::pi));              
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XY), d12Term);
+               const casa::Complex d21Term = casa::polar(d21[ant], -float(xyPhase[ant]/180.*casa::C::pi));              
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YX), d21Term);                            
+          }
+          
+          typedef Product<NoXPolGain,LeakageTerm> EffectType; 
+          const EffectType effect(itsParams1);
+          for (casa::uInt testRow = 0; testRow < itsIter->nRow(); ++testRow) {                    
+               const scimath::ComplexDiffMatrix cdm = effect.get(*itsIter,testRow);
+               const casa::uInt testAnt1 = itsIter->antenna1()[testRow];
+               const casa::uInt testAnt2 = itsIter->antenna2()[testRow];
+               casa::Matrix<casa::Complex> mueller(cdm.nRow(),cdm.nColumn());
+               ASKAPDEBUGASSERT(mueller.nrow() == mueller.ncolumn());
+               casa::Vector<float> buf(mueller.nrow() * mueller.ncolumn() - mueller.nrow());
+               casa::uInt count = 0;
+               for (casa::uInt row=0; row<cdm.nRow(); ++row) {
+                    for (casa::uInt col=0; col<cdm.nColumn(); ++col) {
+                         mueller(row,col) = cdm(row,col).value();
+                         if (row != col) {
+                             CPPUNIT_ASSERT(count < buf.nelements());
+                             buf(count++) = casa::abs(mueller(row,col));
+                         }
+                    }
+               }
+               CPPUNIT_ASSERT_EQUAL(buf.nelements(), size_t(count));
+               const float expectedMax = ((testAnt1 == 2) || (testAnt2 == 2)) ? 0.1 : 0.05;
+               CPPUNIT_ASSERT(casa::max(buf) < expectedMax); 
+               //std::cout<<testAnt1<<" "<<testAnt2<<" "<<casa::min(buf)<<" "<<casa::max(buf)<<" "<<casa::median(buf)<<std::endl;
           }
       }
       
