@@ -129,6 +129,9 @@ def getConfigs():
     config["ASKAP20_C"]                = AntennaConfig("ASKAP20_C",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1, 6), datafile)
     config["ADE18_2BETA_1F"]           = AntennaConfig("ADE18_2BETA_1F",           ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
     config["ASKAP20_D"]                = AntennaConfig("ASKAP20_D",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 1,15), datafile)
+    config["ASKAP20_E"]                = AntennaConfig("ASKAP20_E",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 6), datafile)
+    config["ASKAP20_F"]                = AntennaConfig("ASKAP20_F",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 9), datafile)
+    config["ASKAP20_G"]                = AntennaConfig("ASKAP20_G",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 6, 9), datafile)
 
     # 30-antenna cases:
     a36=np.arange(1,37)
@@ -144,6 +147,15 @@ def getConfigs():
     # Replace 3,8,9,15 with 7,25,32,36 - was ASKAP30_2BETA
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=3)&(a36!=9)&(a36!=29)]
     config['ASKAP30_D']=AntennaConfig('ASKAP30_D',a, datafile)
+    # Replace 6,8,9,15 with 7,25,32,36
+    a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=6)&(a36!=9)&(a36!=29)]
+    config['ASKAP30_E']=AntennaConfig('ASKAP30_E',a, datafile)
+    # Replace 1,8,9,15 with 7,25,32,36
+    a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=1)&(a36!=9)&(a36!=29)]
+    config['ASKAP30_F']=AntennaConfig('ASKAP30_F',a, datafile)
+    # Alternative 3-BETA array: include 32 at expense of 11
+    a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=11)&(a36!=9)&(a36!=29)]
+    config['ASKAP30_G']=AntennaConfig('ASKAP30_G',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
