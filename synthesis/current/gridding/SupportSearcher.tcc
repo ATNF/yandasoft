@@ -34,11 +34,48 @@
 
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
+#include <complex>
 
 namespace askap {
 
 namespace synthesis {
 
+// std::norm (and therefore casa::norm) in gcc g++ library appear to
+// be implemented optimised for polar encoding of complex number
+// (abs(x)**2) ! This is faster in theory and practice on my
+// workstation
+// Overload to avoid unnecessary squaring of real data
+template<typename Type>
+Type ampFunction(const std::complex<Type>& c)
+{
+  return real(c)*real(c) + imag(c)*imag(c);
+}
+
+// could use template<typename Type>, but want to exclude types like casa::Complex
+inline double ampFunction(const double& c)
+{
+  return fabs(c);
+}
+inline float ampFunction(const float& c)
+{
+  return fabs(c);
+}
+
+// Include const reference to matrix c to ensure that the correct amplitude function is used
+template<typename Type>
+double processAmplitudeThreshold(const casa::Matrix<std::complex<Type> >& c, const double& cutoff)
+{
+  return fabs(cutoff)*fabs(cutoff);
+}
+
+inline double processAmplitudeThreshold(const casa::Matrix<double>& c, const double& cutoff)
+{
+  return fabs(cutoff);
+}
+inline float processAmplitudeThreshold(const casa::Matrix<float>& c, const double& cutoff)
+{
+  return fabs(cutoff);
+}
 
 /// @brief determine the peak and its position
 /// @details This method fills only itsPeakPos and itsPeakVal. It is
@@ -59,27 +96,24 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
   #pragma omp for
   #endif
   for (int iy=0;iy<int(in.ncolumn());++iy) {
-       double tempPeakVal = -1;      
+       double tempPeakNorm = -1;      
        int tempPeakX = 0, tempPeakY = 0;
        for (int ix=0;ix<int(in.nrow());++ix) {
-	    // the following line has been commented out until we find a better work around on the delphinus/minicp bug
-	    // See ticket:2307
-            //const double curVal = std::abs(in(ix,iy));
-	    const double curVal = std::abs(casa::DComplex(in(ix,iy)));
-            if(tempPeakVal< curVal) {
+       const double curNorm = ampFunction(casa::DComplex(in(ix,iy)));
+            if(tempPeakNorm< curNorm) {
                tempPeakX = ix;
                tempPeakY = iy;
-               tempPeakVal = curVal;
+               tempPeakNorm = curNorm;
             }
        }
        #ifdef _OPENMP
        #pragma omp critical
        {
        #endif
-       if (itsPeakVal < tempPeakVal) {
+       if (itsPeakVal < 0 || (itsPeakVal*itsPeakVal < tempPeakNorm)) {
            itsPeakPos(0) = tempPeakX;
            itsPeakPos(1) = tempPeakY;
-           itsPeakVal = tempPeakVal;
+           itsPeakVal = sqrt(tempPeakNorm);
        }
        #ifdef _OPENMP
        }
@@ -148,15 +182,17 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   itsTRC.resize(2,casa::False);
   itsBLC = -1;
   itsTRC = -1;
-  ASKAPCHECK(itsPeakVal>0.0, "A positive peak value of the convolution function is expected inside doSupportSearch, itsPeakVal" << 
-                             itsPeakVal);
+  ASKAPCHECK(itsPeakVal>0.0,
+             "A positive peak value of the convolution function is expected inside doSupportSearch, itsPeakVal=" << 
+             itsPeakVal);
   ASKAPCHECK(!std::isinf(itsPeakVal), "Peak value is infinite, this shouldn't happen. itsPeakPos="<<itsPeakPos); 
   ASKAPCHECK(itsPeakPos[0]>0 && itsPeakPos[1]>0, "Peak position of the convolution function "<<itsPeakPos<<
              " is too close to the edge, increase maxsupport");
   ASKAPCHECK(itsPeakPos[0] + 1 < int(in.nrow()) && itsPeakPos[1] + 1 < int(in.ncolumn()), 
              "Peak position of the convolution function "<<itsPeakPos<<" is too close to the edge, increase maxsupport");
-  
-  const double absCutoff = itsCutoff*itsPeakVal;
+
+  const double absCutoff = processAmplitudeThreshold(in, itsCutoff*itsPeakVal);
+
   #ifdef _OPENMP
   #pragma omp parallel sections
   {
@@ -164,7 +200,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   {
   #endif 
   for (int ix = 0; ix<=itsPeakPos(0); ++ix) {
-       if (casa::abs(in(ix, itsPeakPos(1))) > absCutoff) {
+       if (ampFunction(in(ix, itsPeakPos(1))) > absCutoff) {
            itsBLC(0) = ix;
            break;
        }
@@ -177,7 +213,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   #endif
   
   for (int iy = 0; iy<=itsPeakPos(1); ++iy) {
-       if (casa::abs(in(itsPeakPos(0),iy)) > absCutoff) {
+       if (ampFunction(in(itsPeakPos(0),iy)) > absCutoff) {
            itsBLC(1) = iy;
            break;
        }
@@ -190,7 +226,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   #endif
 
   for (int ix = int(in.nrow())-1; ix>=itsPeakPos(0); --ix) {
-       if (casa::abs(in(ix, itsPeakPos(1))) > absCutoff) {
+       if (ampFunction(in(ix, itsPeakPos(1))) > absCutoff) {
            itsTRC(0) = ix;
            break;
        }
@@ -203,7 +239,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   #endif
 
   for (int iy = int(in.ncolumn())-1; iy>=itsPeakPos(1); --iy) {
-       if (casa::abs(in(itsPeakPos(0),iy)) > absCutoff) {
+       if (ampFunction(in(itsPeakPos(0),iy)) > absCutoff) {
            itsTRC(1) = iy;
            break;
        }
