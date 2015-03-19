@@ -132,6 +132,7 @@ def getConfigs():
     config["ASKAP20_E"]                = AntennaConfig("ASKAP20_E",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 6), datafile)
     config["ASKAP20_F"]                = AntennaConfig("ASKAP20_F",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 9), datafile)
     config["ASKAP20_G"]                = AntennaConfig("ASKAP20_G",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 6, 9), datafile)
+    config["ASKAP20_H"]                = AntennaConfig("ASKAP20_H",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 7,17,11,19,23,26, 1, 6), datafile)
 
     # 30-antenna cases:
     a36=np.arange(1,37)
@@ -147,6 +148,7 @@ def getConfigs():
     # Replace 3,8,9,15 with 7,25,32,36 - was ASKAP30_2BETA
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=3)&(a36!=9)&(a36!=29)]
     config['ASKAP30_D']=AntennaConfig('ASKAP30_D',a, datafile)
+    config['ASKAP30_D2']=AntennaConfig('ASKAP30_D2',a, datafile)
     # Replace 6,8,9,15 with 7,25,32,36
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=6)&(a36!=9)&(a36!=29)]
     config['ASKAP30_E']=AntennaConfig('ASKAP30_E',a, datafile)
@@ -156,6 +158,32 @@ def getConfigs():
     # Alternative 3-BETA array: include 32 at expense of 11
     a=a36[(a36!=15)&(a36!=8)&(a36!=18)&(a36!=11)&(a36!=9)&(a36!=29)]
     config['ASKAP30_G']=AntennaConfig('ASKAP30_G',a, datafile)
+    # All 6 BETA antennas and all six outer ones too. Leave out last non-outer antennas in planned rollout
+    a=a36[(a36!=29)&(a36!=18)&(a36!=7)&(a36!=25)&(a36!=21)&(a36!=11)]
+    config['ASKAP30_H']=AntennaConfig('ASKAP30_H',a, datafile)
+    # Exclude a couple of the outer antennas
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=33)]
+    config['ASKAP30_I']=AntennaConfig('ASKAP30_I',a, datafile)
+    # ASKAP30_G, but without 35, replace with 18
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=11)&(a36!=35)]
+    config['ASKAP30_J']=AntennaConfig('ASKAP30_J',a, datafile)
+    # ASKAP30_G, but without 35, replace with 11
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=18)&(a36!=35)]
+    config['ASKAP30_K']=AntennaConfig('ASKAP30_K',a, datafile)
+    # ASKAP30_G, but without 33, replace with 18
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=11)&(a36!=33)]
+    config['ASKAP30_L']=AntennaConfig('ASKAP30_L',a, datafile)
+    # ASKAP30_G, but without 33, replace with 11
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=18)&(a36!=33)]
+    config['ASKAP30_M']=AntennaConfig('ASKAP30_M',a, datafile)
+    # ASKAP30_G, but without 32, replace with 18
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=11)]
+    config['ASKAP30_N']=AntennaConfig('ASKAP30_N',a, datafile)
+    # ASKAP30_G, but without 32, replace with 18
+    a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=18)]
+    config['ASKAP30_O']=AntennaConfig('ASKAP30_O',a, datafile)
+
+
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
