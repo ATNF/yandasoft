@@ -182,8 +182,9 @@ def getConfigs():
     # ASKAP30_G, but without 32, replace with 18
     a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=18)]
     config['ASKAP30_O']=AntennaConfig('ASKAP30_O',a, datafile)
-
-
+    # Dave McConnell's compact core alternative
+    a=a36[(a36!=29)&(a36!=26)&(a36!=25)&(a36!=23)&(a36!=22)&(a36!=21)]
+    config['ASKAP30_P']=AntennaConfig('ASKAP30_P',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
