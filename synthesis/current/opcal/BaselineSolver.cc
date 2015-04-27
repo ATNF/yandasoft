@@ -288,7 +288,7 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             const double cd = cos(hadec.getLat()); 
             ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
             phases[cnt] = unwrapper(arg(caldata(scanIndices[cnt],ant).gain())) / cd;
-            os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<std::endl;
+            os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<std::endl;
        }
        casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
@@ -388,7 +388,8 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        const double coeff = (sxy - sx * sy) / denominator;
  
        const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do get it from scan's frequency)
-       const double dZ = coeff / 2. / casa::C::pi * wavelength;
+       // the formula for phase has -sin(dec)*dZ therefore, we have to swap the sign here
+       const double dZ = -coeff / 2. / casa::C::pi * wavelength;
        ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
        ASKAPDEBUGASSERT(itsCorrections.ncolumn() > 2); 
        itsCorrections(ant,2) = dZ; 

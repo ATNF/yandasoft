@@ -117,7 +117,8 @@ void OpCalImpl::run()
            }
            result += utility::toString<casa::uInt>(row)+" "+
                   utility::toString<float>((timeCentroid - firstTime)/60.)+" "+
-                  utility::toString<casa::uInt>(itsScanStats[row].beam());
+                  utility::toString<casa::uInt>(itsScanStats[row].beam()) + " "+
+                  utility::toString<casa::uInt>(itsScanStats[row].fieldID());
        
            for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
                 result += " " + utility::toString<float>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);

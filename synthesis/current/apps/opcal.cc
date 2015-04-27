@@ -71,8 +71,8 @@ class OpCalApp : public askap::Application
                  
                  OpCalImpl impl(comms,config());
                  // we'll eventually get a proper factory method here; for now create explicitly
-                 //impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
-                 impl.setHighLevelSolver(boost::shared_ptr<PointingSolver>(new PointingSolver(config())));
+                 impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
+                 //impl.setHighLevelSolver(boost::shared_ptr<PointingSolver>(new PointingSolver(config())));
                  
                  impl.run();                 
                  
