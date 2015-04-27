@@ -85,6 +85,18 @@ protected:
   ///            (column index is antenna ID used in the measurement set).
   void solveForZ(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
 
+  /// @brief solve for rate-dependent decorrelation
+  /// @details This method is intended for an experiment with calibration solution attempting to fit
+  /// decorrelation due to imperfect rate compensation in the BETA system. Unless some effort is spent
+  /// in the future, this method is not supposed to be part of the production code and may not be
+  /// accessible from parset.
+  /// @param[in] scans description of scans, note separate beams are present as separate scans.
+  ///            Scans here are defined by some splitting criterion used in OpCalImpl, and do
+  ///            not necessarily match the scans known to online system
+  /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
+  ///            (column index is antenna ID used in the measurement set).
+  void solveForDecorrelation(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);  
+  
 protected:
   /// @brief obtain MRO reference position
   /// @return position measure

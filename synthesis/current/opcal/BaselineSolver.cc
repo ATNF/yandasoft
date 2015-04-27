@@ -47,6 +47,9 @@
 #include <scimath/Functionals/Function1D.h>
 #include <scimath/Fitting/NonLinearFitLM.h>
 
+#include <measures/Measures/MCEpoch.h>
+
+
 // std
 #include <algorithm>
 #include <fstream>
@@ -401,6 +404,87 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" dZ: "<<dZ<<" +/- "<<dZErr<<" metres; r="<<r);
   }
 }
+
+/// @brief solve for rate-dependent decorrelation
+/// @details This method is intended for an experiment with calibration solution attempting to fit
+/// decorrelation due to imperfect rate compensation in the BETA system. Unless some effort is spent
+/// in the future, this method is not supposed to be part of the production code and may not be
+/// accessible from parset.
+/// @param[in] scans description of scans, note separate beams are present as separate scans.
+///            Scans here are defined by some splitting criterion used in OpCalImpl, and do
+///            not necessarily match the scans known to online system
+/// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
+///            (column index is antenna ID used in the measurement set).
+void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+{
+  ASKAPASSERT(scans.size()>2);
+  std::vector<size_t> scanIndices(scans.size());
+  for (size_t scan=0; scan<scanIndices.size(); ++scan) {
+       scanIndices[scan]=scan;
+  }
+  const casa::MPosition mroPos = mroPosition();
+  std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,false)));
+  
+  // hardcoded antenna positions - nominal ones are enough as we're only interested in rates
+  const double antxyz[6][3]={{-2556227.87416317, 5097380.43738531, -2848323.37716186},
+                             {-2556084.669, 5097398.337, -2848424.133},
+                             {-2556118.1113922, 5097384.72442044, -2848417.24758565},
+                             {-2555389.85800794, 5097664.67850522, -2848561.91777563},
+                             {-2556002.4999209, 5097320.29662981, -2848637.49793128},
+                             {-2555888.89502723, 5097552.29356202, -2848324.68084774}};
+  const double siderealRate = casa::C::_2pi / 86400. / (1. - 1./365.25);
+
+  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+       ASKAPCHECK(ant < 6, "This experimental code only supports 6 antennas as it is BETA-specific");
+       // do LSF into amp vs. rate
+       double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
+       
+       const std::string spcfilename = "amp.ant"+utility::toString(ant)+".dat";
+       std::ofstream os(spcfilename.c_str());
+       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+            const ObservationDescription& scan = scans[scanIndices[cnt]];
+            const double time = 0.5*(scan.startTime() + scan.endTime());
+            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
+            //casa::MeasFrame frame(mroPos, epoch);
+            casa::MeasFrame frame(epoch);
+            double gast = casa::MEpoch::Convert(epoch, casa::MEpoch::Ref(casa::MEpoch::GAST))().get("d").getValue("d");
+            gast = (gast - casa::Int(gast)) * casa::C::_2pi; // into radians
+            casa::MDirection radec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::TOPO,frame))();
+            const double H0 = gast - radec.getAngle().getValue()(0);
+            const double sH0 = sin(H0);
+            const double cH0 = cos(H0);                                         
+            const double cd = cos(radec.getAngle().getValue()(1));
+            
+            // hardcoded effective LO freq
+            const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
+                          siderealRate * casa::C::_2pi / casa::C::c * 672e6;
+            const double amp = abs(caldata(scanIndices[cnt],ant).gain());
+            
+            os<<cnt<<" "<<rate<<" "<<amp<<std::endl;
+            // build normal equations
+            sx += rate;
+            sx2 += rate*rate;
+            sy += amp;
+            sy2 += amp*amp;
+            sxy += rate*amp;            
+       }
+       sx /= double(scans.size());
+       sy /= double(scans.size());
+       sx2 /= double(scans.size());
+       sy2 /= double(scans.size());
+       sxy /= double(scans.size());
+       const double denominator = sx2 - sx * sx;
+       ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
+       const double coeff = (sxy - sx * sy) / denominator;
+ 
+       const double r=(sxy-sx*sy)/sqrt(denominator * (sy2-sy*sy));
+       const double coeffErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(scans.size())-2));       
+       
+       ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" coeff: "<<coeff<<" +/- "<<coeffErr<<" s; r="<<r);
+  }  
+}  
+
 
 
 } // namespace synthesis
