@@ -354,24 +354,27 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
                 // update the slice to point to the correct channel of the buffer
                 pxpSlice = itsPolXProducts.slice(bufRow,chan);
             }
+
+            // if any polarisations are flagged, ignore this visibility
+            casa::Bool JonesFlag = casa::False;
             for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
-                 // input visibility vector has indexed pol2, but most of the
-                 // gain should be for pol2=pol. So it makes sense to flag this
-                 // output visibility element if the corresponding input element
-                 // is flagged.
-                 // Note: if some of the input data are flagged it might be best
-                 //       to flagged the output. Depends on how much gain is in
-                 //       the off-diagonal terms.
-                 if ((pol < bufferNPol) && !measuredFlag(row,chan,pol)) {
+                if (measuredFlag(row,chan,pol)) {
+                    JonesFlag = casa::True;
+                    break;
+                }
+            }
+            if (JonesFlag) {
+                itsFlagIgnored += acc.nPol();
+                continue;
+            }
+
+            for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
+                 if (pol < bufferNPol) {
                      const casa::Complex model = modelVis(row,chan,pol);
                      const float visNoise =
                          casa::square(casa::real(measuredNoise(row,chan,pol)));
                      const float weight = (visNoise > 0.) ? 1./visNoise : 0.;
                      for (casa::uInt pol2 = 0; pol2<acc.nPol(); ++pol2) {
-                          // ignore this column if flagged
-                          if (measuredFlag(row,chan,pol2)) {
-                              continue;
-                          }
                           /*
                           // temporary hack
                           if (((pol != 0) && (pol != 3)) ||
