@@ -75,7 +75,10 @@ def getConfigs():
     config["ADE12_WALLABY_C"]          = AntennaConfig("ADE12_WALLABY_C",          ( 2, 3, 4, 6, 7,12,15,18,19,22,23,25), datafile)
     #
     # These are the configurations decided upon in 2013 for the 6-, 12- and 18-antenna configurations for the MkII PAFs
-    config["ADE6"]                     = AntennaConfig("ADE6",                     ( 2, 4, 5,14,10,12), datafile)
+    #   Updated (April 2015) to show the actual antennas used for the first 4- & 6-antenna configs
+    config["ADE6_ORIG"]                = AntennaConfig("ADE6_ORIG",                ( 2, 4, 5,14,10,12), datafile)
+    config["ADE4"]                     = AntennaConfig("ADE4",                     ( 2, 4, 5,12), datafile)
+    config["ADE6"]                     = AntennaConfig("ADE6",                     ( 2, 4, 5,14,13,12), datafile)
     config["ADE12"]                    = AntennaConfig("ADE12",                    ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
     config["ASKAP12"]                  = AntennaConfig("ASKAP12",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
     config["ADE18"]                    = AntennaConfig("ADE18",                    ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
@@ -132,6 +135,7 @@ def getConfigs():
     config["ASKAP20_E"]                = AntennaConfig("ASKAP20_E",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 6), datafile)
     config["ASKAP20_F"]                = AntennaConfig("ASKAP20_F",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 3, 9), datafile)
     config["ASKAP20_G"]                = AntennaConfig("ASKAP20_G",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26, 6, 9), datafile)
+    # The following is an alternative 20-antenna system that doesn't include the outer antennas 31/33/35
     config["ASKAP20_H"]                = AntennaConfig("ASKAP20_H",                ( 2, 4, 5,14,10,12,24,27,30,13,16,28, 7,17,11,19,23,26, 1, 6), datafile)
 
     # 30-antenna cases:
@@ -179,12 +183,15 @@ def getConfigs():
     # ASKAP30_G, but without 32, replace with 18
     a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=11)]
     config['ASKAP30_N']=AntennaConfig('ASKAP30_N',a, datafile)
-    # ASKAP30_G, but without 32, replace with 18
+    # ASKAP30_G, but without 32, replace with 11
     a=a36[(a36!=29)&(a36!=15)&(a36!=8)&(a36!=9)&(a36!=32)&(a36!=18)]
     config['ASKAP30_O']=AntennaConfig('ASKAP30_O',a, datafile)
     # Dave McConnell's compact core alternative
     a=a36[(a36!=29)&(a36!=26)&(a36!=25)&(a36!=23)&(a36!=22)&(a36!=21)]
     config['ASKAP30_P']=AntennaConfig('ASKAP30_P',a, datafile)
+    # Ron Ekers' suggested compromise
+    a=a36[(a36!=31)&(a36!=35)&(a36!=25)&(a36!=26)&(a36!=22)&(a36!=29)]
+    config['ASKAP30_Q']=AntennaConfig('ASKAP30_Q',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)

@@ -23,10 +23,11 @@ fig = plt.figure(1, figsize=(11.7,11.7), dpi=72)
 
 offset=20
 textsize='xx-small'
+markersize=8
 #offset=0
 #textsize='medium'
 
-plt.plot(x-xav,y-yav,'.')
+plt.plot(x-xav,y-yav,'.',ms=markersize)
 plt.xlim(-3500,3500)
 plt.ylim(-3500,3500)
 #plt.text(x-xav+20,y-yav+20,pads)
@@ -36,11 +37,11 @@ for i in range(1,37):
 
 # plot BETA antennas in red
 for i in [0,2,5,7,8,14]:
-    plt.plot(x[i]-xav,y[i]-yav,'r.')
+    plt.plot(x[i]-xav,y[i]-yav,'r.',ms=markersize)
 
 # plt ASKAP-12 antennas in green
 for i in [1,3,4,13,9,11,23,26,29,12,15,27]:
-    plt.plot(x[i]-xav,y[i]-yav,'g.')
+    plt.plot(x[i]-xav,y[i]-yav,'g.',ms=markersize)
 
 theta=np.arange(0,1000)*2*np.pi/1000.
 
