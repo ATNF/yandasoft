@@ -205,7 +205,8 @@ namespace askap
       
       /// @brief name of the parameter taken as a reference
       /// @details empty string means no referencing is required
-      std::string itsRefGain;
+      std::string itsRefGainXX;
+      std::string itsRefGainYY;
       
       /// @brief flag switching the gain calibration on
       bool itsSolveGains;

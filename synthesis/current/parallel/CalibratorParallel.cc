@@ -138,8 +138,24 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       /// Create the solver  
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
-      itsRefGain = parset.getString("refgain","");
-      
+
+      if (parset.isDefined("refantenna") && parset.isDefined("refgain")) {
+          ASKAPLOG_WARN_STR(logger,"refantenna and refgain are both defined. refantenna will be used.");
+      }
+      if (parset.isDefined("refantenna")) {
+          const int refAntenna = parset.getInt32("refantenna",-1);
+          const int refBeam = 0;
+          itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::XX);
+          itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::YY);
+      } else if (parset.isDefined("refgain")) {
+          const string refGain = parset.getString("refgain","");
+          itsRefGainXX = refGain;
+          itsRefGainYY = refGain;
+      } else {
+          itsRefGainXX = "";
+          itsRefGainYY = "";
+      }
+
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = CalibAccessFactory::rwCalSolutionSource(parset);
       ASKAPASSERT(itsSolutionSource);
@@ -333,7 +349,7 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    
    ASKAPCHECK(itsSolutionInterval < 0, "Time-dependent solutions are supported only with pre-averaging, you have interval = "<<
               itsSolutionInterval<<" seconds");
-   ASKAPCHECK(itsSolveBandpass, "Bandpass solution is only supported for pre-averaging at the moment (for simplicity)");           
+   ASKAPCHECK(!itsSolveBandpass, "Bandpass solution is only supported for pre-averaging at the moment (for simplicity)");           
               
    // the old code without pre-averaging
    if (itsSolveGains && !itsSolveLeakage) {
@@ -471,8 +487,15 @@ void CalibratorParallel::solveNE()
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
-      if (itsRefGain != "") {
-          ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<itsRefGain<<" equal to 0");
+      if (itsRefGainXX != "") {
+          if (itsRefGainXX == itsRefGainYY) {
+              ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
+                  itsRefGainXX<<" equal to 0");
+          } else {
+              ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<
+                  itsRefGainXX<<" equal to 0 and YY phases to have that of "<<
+                  itsRefGainYY<<" equal to 0");
+          }
           rotatePhases();
       }
   }
@@ -492,7 +515,8 @@ void CalibratorParallel::rotatePhases()
   ASKAPDEBUGASSERT(itsModel);
   // by default assume frequency-independent case
   std::vector<std::string> names(itsModel->freeNames());
-  casa::Vector<casa::Complex> refPhaseTerms;  
+  casa::Array<casa::Complex> refPhaseTerms;  
+  const casa::uInt refPols = 2;
   if (itsSolveBandpass) {
       // first find the required dimensionality
       casa::uInt maxChan = 0;
@@ -507,30 +531,52 @@ void CalibratorParallel::rotatePhases()
            }
       }
       // build a vector of reference phase terms, one per channel
-      refPhaseTerms.resize(maxChan + 1);
+      refPhaseTerms.resize(casa::IPosition(2,maxChan+1,refPols));
       for (casa::uInt chan = 0; chan <= maxChan; ++chan) {
-           const std::string parname = accessors::CalParamNameHelper::addChannelInfo(itsRefGain, chan);
-           ASKAPCHECK(itsModel->has(parname), "phase rotation to `"<<parname<<
+           const std::string xRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainXX, chan);
+           const std::string yRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainYY, chan);
+           ASKAPCHECK(itsModel->has(xRefPar), "phase rotation to `"<<xRefPar<<
               "` is impossible because this parameter is not present in the model, channel = "<<chan);
-           refPhaseTerms[chan] = casa::polar(1.f,-arg(itsModel->complexValue(parname)));
+           ASKAPCHECK(itsModel->has(yRefPar), "phase rotation to `"<<yRefPar<<
+              "` is impossible because this parameter is not present in the model, channel = "<<chan);
+           refPhaseTerms(casa::IPosition(2,chan,0)) = casa::polar(1.f,-arg(itsModel->complexValue(xRefPar)));
+           refPhaseTerms(casa::IPosition(2,chan,1)) = casa::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
       }                      
   } else {   
-     ASKAPCHECK(itsModel->has(itsRefGain), "phase rotation to `"<<itsRefGain<<
-             "` is impossible because this parameter is not present in the model");
-     refPhaseTerms.resize(1);
-     refPhaseTerms[0] = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGain)));
+      ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
+              "` is impossible because this parameter is not present in the model");
+      ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
+              "` is impossible because this parameter is not present in the model");
+      refPhaseTerms.resize(casa::IPosition(2,1,refPols));
+      refPhaseTerms(casa::IPosition(2,0,0)) = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
+      refPhaseTerms(casa::IPosition(2,0,1)) = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
   }
-  ASKAPDEBUGASSERT(refPhaseTerms.nelements() > 0);
+  ASKAPDEBUGASSERT(refPhaseTerms.nelements() > 1);
                        
   for (std::vector<std::string>::const_iterator it=names.begin();
                it!=names.end();++it)  {
        const std::string parname = *it;
-       if (parname.find("gain") != std::string::npos) {
-           const casa::uInt index = itsSolveBandpass ? accessors::CalParamNameHelper::extractChannelInfo(parname).first : 0;                               
+       const casa::uInt index = itsSolveBandpass ?
+           accessors::CalParamNameHelper::extractChannelInfo(parname).first : 0;
+       if (parname.find("gain.g11") != std::string::npos) {
            itsModel->update(parname,
-                 itsModel->complexValue(parname)*refPhaseTerms[index]);
-       } 
-  }             
+                 itsModel->complexValue(parname)*refPhaseTerms(casa::IPosition(2,index,0)));
+       }
+       else if (parname.find("gain.g22") != std::string::npos) {
+           itsModel->update(parname,
+                 itsModel->complexValue(parname)*refPhaseTerms(casa::IPosition(2,index,1)));
+       }
+       else if (parname.find("leakage.d12") != std::string::npos) {
+           itsModel->update(parname,
+                 itsModel->complexValue(parname)*
+                 refPhaseTerms(casa::IPosition(2,index,1))*conj(refPhaseTerms(casa::IPosition(2,index,0))));
+       }
+       else if (parname.find("leakage.d21") != std::string::npos) {
+           itsModel->update(parname,
+                 itsModel->complexValue(parname)*
+                 refPhaseTerms(casa::IPosition(2,index,0))*conj(refPhaseTerms(casa::IPosition(2,index,1))));
+       }
+  }
 }
 
 /// @brief helper method to extract solution time from NE.
