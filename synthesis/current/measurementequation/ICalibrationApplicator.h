@@ -84,6 +84,8 @@ struct ICalibrationApplicator {
   /// @param[in] flag if true, beam=0 calibration is applied to all beams
   virtual void beamIndependent(bool flag) = 0;
   
+  virtual void phaseOnly(bool flag) = 0;
+  
 };
 
 } // namespace synthesis

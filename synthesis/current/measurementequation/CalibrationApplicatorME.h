@@ -93,10 +93,17 @@ public:
   virtual void allowFlag(bool flag);
   
   /// @brief determines whether beam=0 calibration is used for all beams or not
-  /// @details It is handy to be able to apply the same solution for all beams. With 
-  /// this flag set, beam=0 solution will be used for all beams.
+  /// @details It is handy to be able to apply the same solution for all beams. 
+  /// With this flag set, beam=0 solution will be used for all beams.
   /// @param[in] flag if true, beam=0 calibration is applied to all beams
   virtual void beamIndependent(bool flag);
+
+  /// @brief normalise gain update amplitudes before application
+  /// @details It may be useful to only update phases during calibration, for
+  /// instance during self-calibration with a limited number of antennas.
+  /// @param[in] flag if true, only phases will be updated when applying
+  /// calibration solutions
+  virtual void phaseOnly(bool flag);
 
 private:
   /// @brief true, if correct method is to scale the noise estimate
@@ -105,8 +112,13 @@ private:
   /// @brief true, if the data corresponding to invalid solution are flagged
   bool itsFlagAllowed;  
   
-  /// @brief true, if beam index should be ignored and beam=0 corrections applied to all beams
+  /// @brief true, if beam index should be ignored and beam=0 corrections
+  /// applied to all beams
   bool itsBeamIndependent;
+  
+  /// @brief true, if gain update amplitudes are set to unity before they are
+  /// applied
+  bool itsPhaseOnly;
 };
 
 } // namespace synthesis
