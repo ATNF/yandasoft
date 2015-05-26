@@ -294,22 +294,12 @@ void CalibrationMEBase::allowFlag(bool flag)
 }
 
 /// @brief determines whether beam=0 calibration is used for all beams or not
-/// @details It is handy to be able to apply the same solution for all beams. 
-/// With this flag set, beam=0 solution will be used for all beams.
+/// @details It is handy to be able to apply the same solution for all beams. With 
+/// this flag set, beam=0 solution will be used for all beams.
 /// @param[in] flag if true, beam=0 calibration is applied to all beams
 void CalibrationMEBase::beamIndependent(bool flag)
 {
   ASKAPTHROW(AskapError, "CalibrationMEBase::beamIndependent is not implemented, flag="<<flag);
-}
-
-/// @brief normalise gain update amplitudes before application
-/// @details It may be useful to only update phases during calibration, for
-/// instance during self-calibration with a limited number of antennas.
-/// @param[in] flag if true, only phases will be updated when applying
-/// calibration solutions
-void CalibrationMEBase::phaseOnly(bool flag)
-{
-  ASKAPTHROW(AskapError, "CalibrationMEBase::phaseOnly is not implemented, flag="<<flag);
 }
 
 

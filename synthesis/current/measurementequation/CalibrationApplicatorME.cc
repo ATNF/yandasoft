@@ -57,8 +57,7 @@ namespace synthesis {
 /// @details It initialises ME for a given solution source.
 /// @param[in] src calibration solution source to work with
 CalibrationApplicatorME::CalibrationApplicatorME(const boost::shared_ptr<accessors::ICalSolutionConstSource> &src) :
-     CalibrationSolutionHandler(src), itsScaleNoise(false), itsFlagAllowed(false), itsBeamIndependent(false),
-     itsPhaseOnly(false) {}
+     CalibrationSolutionHandler(src), itsScaleNoise(false), itsFlagAllowed(false), itsBeamIndependent(false) {}
 
 /// @brief correct model visibilities for one accessor (chunk).
 /// @details This method corrects the data in the given accessor
@@ -105,10 +104,6 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
                              itsBeamIndependent ? 0 : beam1[row], chan);
             casa::SquareMatrix<casa::Complex, 2> jones2 = calSolution().jones(antenna2[row],
                              itsBeamIndependent ? 0 : beam2[row], chan);
-            if (itsPhaseOnly) {
-                calSolution().normaliseJones(jones1);
-                calSolution().normaliseJones(jones2);
-            }
             for (casa::uInt i = 0; i < nPol; ++i) {
                  for (casa::uInt j = 0; j < nPol; ++j) {
                       const casa::uInt index1 = indices(i);
@@ -125,18 +120,15 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
             const float detThreshold = 1e-25;
             if (itsFlagAllowed) {
                 if (casa::abs(det)<detThreshold) {
-                    ASKAPCHECK(noiseAndFlagDA,
-                        "Accessor type passed to CalibrationApplicatorME does not support change of flags");
+                    ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
                     noiseAndFlagDA->rwFlag().yzPlane(row).row(chan).set(true);
                     thisChan.set(0.);
                     continue;
                 }
             } else {
-              ASKAPCHECK(casa::abs(det)>detThreshold,"Unable to apply calibration for (antenna1,beam1)=("<<
-                  antenna1[row]<<","<<beam1[row]<<") and (antenna2,beam2)=("<<antenna2[row]<<","<<beam2[row]<<
-                  "), time="<<chunk.time()/86400.-55000<<" determinate is too close to 0. D="<<casa::abs(det)<<
-                  " matrix="<<mueller<<" jones1="<<jones1.matrix()<<" jones2="<<jones2.matrix()<<" dir="<<
-                  askap::printDirection(chunk.pointingDir1()[row]));           
+              ASKAPCHECK(casa::abs(det)>detThreshold, "Unable to apply calibration for (antenna1,beam1)=("<<antenna1[row]<<","<<beam1[row]<<") and (antenna2,beam2)=("<<antenna2[row]<<
+                               ","<<beam2[row]<<"), time="<<chunk.time()/86400.-55000<<" determinate is too close to 0. D="<<casa::abs(det)<<" matrix="<<mueller
+                       <<" jones1="<<jones1.matrix()<<" jones2="<<jones2.matrix()<<" dir="<<askap::printDirection(chunk.pointingDir1()[row]));           
             }           
             const casa::Vector<casa::Complex> origVis = thisChan.copy();
             ASKAPDEBUGASSERT(thisChan.nelements() == nPol);
@@ -149,8 +141,7 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
                  thisChan[pol] = temp;
             }
             if (itsScaleNoise) {
-                ASKAPCHECK(noiseAndFlagDA,
-                    "Accessor type passed to CalibrationApplicatorME does not support change of the noise estimate");
+                ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of the noise estimate");
                 casa::Vector<casa::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
                 const casa::Vector<casa::Complex> origNoise = thisChanNoise.copy();
                 ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
@@ -195,38 +186,26 @@ void CalibrationApplicatorME::allowFlag(bool flag)
 {
   itsFlagAllowed = flag;
   if (itsFlagAllowed) {
-     ASKAPLOG_INFO_STR(logger,
-         "CalibrationApplicatorME will flag visibilites if inversion of the calibration solution fails");
+     ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will flag visibilites if inversion of the calibration solution fails");
   } else {
-     ASKAPLOG_INFO_STR(logger,
-         "CalibrationApplicatorME will throw an exception if inversion of the calibration solution fails");
+     ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will throw an exception if inversion of the calibration solution fails");
   }
 }
 
 /// @brief determines whether beam=0 calibration is used for all beams or not
-/// @details It is handy to be able to apply the same solution for all beams. 
-/// With this flag set, beam=0 solution will be used for all beams.
+/// @details It is handy to be able to apply the same solution for all beams. With 
+/// this flag set, beam=0 solution will be used for all beams.
 /// @param[in] flag if true, beam=0 calibration is applied to all beams
 void CalibrationApplicatorME::beamIndependent(bool flag)
 {
   itsBeamIndependent = flag;
   if (itsBeamIndependent) {
-      ASKAPLOG_INFO_STR(logger,
-          "CalibrationApplicatorME will apply beam=0 calibration solutions to all beams encountered");
+      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply beam=0 calibration solutions to all beams encountered");
   } else {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply beam-dependent calibration solutions");
   }
 }
 
-/// @brief normalise gain update amplitudes before application
-/// @details It may be useful to only update phases during calibration, for
-/// instance during self-calibration with a limited number of antennas.
-/// @param[in] flag if true, only phases will be updated when applying
-/// calibration solutions
-void CalibrationApplicatorME::phaseOnly(bool flag)
-{
-  itsPhaseOnly = flag;
-}
 
 } // namespace synthesis
 

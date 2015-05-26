@@ -481,8 +481,7 @@ namespace askap
         ASKAPCHECK(gridder(), "Gridder not defined");
         if (!itsSolutionSource) {
             ASKAPLOG_INFO_STR(logger, "No calibration is applied" );
-            boost::shared_ptr<ImageFFTEquation> fftEquation(
-                          new ImageFFTEquation (*itsModel, it, gridder()));
+            boost::shared_ptr<ImageFFTEquation> fftEquation(new ImageFFTEquation (*itsModel, it, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
             fftEquation->useSphFuncForPSF(parset().getBool("sphfuncforpsf", false));
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
@@ -495,7 +494,6 @@ namespace askap
             calME->scaleNoise(parset().getBool("calibrate.scalenoise",false));
             calME->allowFlag(parset().getBool("calibrate.allowflag",false));
             calME->beamIndependent(parset().getBool("calibrate.ignorebeam", false));
-            calME->phaseOnly(parset().getBool("calibrate.phaseonly", false));
             //
             IDataSharedIter calIter(new CalibrationIterator(it,calME));
             boost::shared_ptr<ImageFFTEquation> fftEquation(
