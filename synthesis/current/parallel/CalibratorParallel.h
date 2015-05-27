@@ -229,6 +229,9 @@ namespace askap
       /// @brief flag to treat gains as beam-independent
       bool itsBeamIndependentGains;
       
+      /// @brief flag to set gain amplitudes to unity before output to file
+      bool itsNormaliseGains;
+      
       /// @brief solution source to store the result
       /// @details This object is initialised by the master. It stores the solution
       /// in parset file, casa table or a database.

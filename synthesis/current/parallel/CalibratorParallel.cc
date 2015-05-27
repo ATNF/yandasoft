@@ -105,7 +105,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MEParallelApp(comms,parset), 
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
-      itsBeamIndependentGains(false), itsSolutionInterval(-1.)
+      itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.)
 {  
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
@@ -114,6 +114,11 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       if (what2solve.find("antennagains") != std::string::npos) {
           ASKAPLOG_INFO_STR(logger, "Same gain values are assumed for all beams (i.e. antenna-based)");
           itsBeamIndependentGains = true;
+      }
+      itsNormaliseGains = parset.getBool("normalisegains",false);
+      if (itsNormaliseGains) {
+          ASKAPLOG_INFO_STR(logger,
+              "Newly found gains will be normalised to have amplitudes of unity at output");
       }
   }
   if (what2solve.find("leakages") != std::string::npos) {
@@ -708,7 +713,7 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       std::vector<std::string> parlist = itsModel->freeNames();
       for (std::vector<std::string>::const_iterator it = parlist.begin(); 
            it != parlist.end(); ++it) {
-           const casa::Complex val = itsModel->complexValue(*it);
+           casa::Complex val = itsModel->complexValue(*it);
            if (itsSolveBandpass) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0, 
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
@@ -721,6 +726,13 @@ void CalibratorParallel::writeModel(const std::string &postfix)
            } else {
                const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
                     accessors::CalParamNameHelper::parseParam(*it);
+               if ( itsNormaliseGains ) {
+                   if ( casa::fabs(val) > 0.0 && 
+                        ((paramType.second == casa::Stokes::XX) ||
+                         (paramType.second == casa::Stokes::YY)) ) {
+                       val /= casa::fabs(val);
+                   }
+               }
                solAcc->setJonesElement(paramType.first, paramType.second, val);
            }
       }
