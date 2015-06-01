@@ -27,7 +27,7 @@
 /// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 
 //# Includes
-#include "CommandLineParser.h"
+#include <string>
 #include <casa/aips.h>
 #include <casa/Exceptions/Error.h>
 #include <casa/Logging/LogIO.h>
@@ -67,7 +67,7 @@ void usage(void) {
 
 casa::String passMsParameter(int argc, const char** argv)
 {
-  for(casa::uInt i=1; i<argc; i++) {
+  for(int i=1; i<argc; i++) {
       std::string arg = argv[i];
       if(arg.find("-")!=0) {
           return arg;
@@ -78,7 +78,7 @@ casa::String passMsParameter(int argc, const char** argv)
 
 casa::Bool passFlagParameter(int argc, const char** argv, const char* par)
 {
-  for(casa::uInt i=1; i<argc; i++) {
+  for(int i=1; i<argc; i++) {
       if(!std::strcmp(argv[i], par)) return casa::True;
   }
   return casa::False;
@@ -88,7 +88,7 @@ template <typename T>
 T passFlaggedParameter(int argc, const char** argv, const char* par, T def)
 {
   T val = def;
-  for(casa::uInt i=1; i<argc; i++) {
+  for(int i=1; i<argc; i++) {
       std::string arg = argv[i];
       if(arg.find(par)==0) {
           casa::Int pos = arg.find("=")+1;
@@ -103,11 +103,11 @@ template<>
 casa::Long passFlaggedParameter(int argc, const char** argv, const char* par, casa::Long def)
 {
   casa::Long val = def;
-  for(casa::uInt i=1; i<argc; i++) {
+  for(int i=1; i<argc; i++) {
       std::string arg = argv[i];
       if(arg.find(par)==0) {
           casa::Int pos = arg.find("=")+1;
-          val = stoi(arg.substr(pos,arg.size()-pos));
+          val = atoi(arg.substr(pos,arg.size()-pos).c_str());
           break;
       }
   }
@@ -118,11 +118,11 @@ template<>
 casa::Bool passFlaggedParameter(int argc, const char** argv, const char* par, casa::Bool def)
 {
   casa::Bool val = def;
-  for(casa::uInt i=1; i<argc; i++) {
+  for(int i=1; i<argc; i++) {
       std::string arg = argv[i];
       if(arg.find(par)==0) {
           casa::Int pos = arg.find("=")+1;
-          casa::Int val = stoi(arg.substr(pos,arg.size()-pos));
+          casa::Int val = atoi(arg.substr(pos,arg.size()-pos).c_str());
           switch(val) {
             case 0:
               return casa::False;
