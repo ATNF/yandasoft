@@ -192,6 +192,12 @@ def getConfigs():
     # Ron Ekers' suggested compromise
     a=a36[(a36!=31)&(a36!=35)&(a36!=25)&(a36!=26)&(a36!=22)&(a36!=29)]
     config['ASKAP30_Q']=AntennaConfig('ASKAP30_Q',a, datafile)
+    # Ron Ekers' "final" ASKAP-30 configuration
+    a=a36[(a36!=1)&(a36!=7)&(a36!=11)&(a36!=21)&(a36!=31)&(a36!=35)]
+    config['ASKAP30_R']=AntennaConfig('ASKAP30_R',a, datafile)
+
+    # Call this one the 'canonical' 30-antenna version
+    config['ASKAP30']=AntennaConfig('ASKAP30',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
     config["ASKAP18_WALLABY"]          = AntennaConfig("ASKAP18_WALLABY",          ( 2, 3, 4, 5, 9,10,11,12,13,14,16,21,22,24,25,27,28,30), datafile)
