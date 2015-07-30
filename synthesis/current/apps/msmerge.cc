@@ -253,11 +253,10 @@ void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest
     // Add new rows to the destination and copy the data
     dest.pointing().addRow(sc.nrow());
 
-    // TODO: The first two left out because adding "target" hangs the merge (or at least
-    // gets it stuch in some long/infinite loop). Maybe need to handle these
-    // MeasCol differently
-    //dc.direction().putColumn(sc.direction());
-    //dc.target().putColumn(sc.target());
+    // Improved way of copying the target & direction arrays
+    dc.target().put(0,sc.target().get(0));
+    dc.direction().put(0,sc.direction().get(0));
+
     dc.antennaId().putColumn(sc.antennaId());
     dc.interval().putColumn(sc.interval());
     dc.name().putColumn(sc.name());
