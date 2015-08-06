@@ -254,9 +254,18 @@ void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest
     dest.pointing().addRow(sc.nrow());
 
     // Improved way of copying the target & direction arrays
-    dc.target().put(0,sc.target().get(0));
-    dc.direction().put(0,sc.direction().get(0));
-
+    // Need to copy the entire column (not just the first row), but
+    // doing it with a single putColumn was found to be too slow (not
+    // hanging, just taking a long time with the second call).
+    ASKAPLOG_DEBUG_STR(logger, "Starting copy of direction & target columns");
+    ASKAPCHECK(sc.direction().nrow()==sc.target().nrow(),
+               "Different numbers of rows for POINTING table's DIRECTION & TARGET columns. Exiting.");
+    for(unsigned int i=0;i<sc.direction().nrow();i++){
+        dc.direction().put(i,sc.direction().get(i));
+        dc.target().put(i,sc.target().get(i));
+    }
+    ASKAPLOG_DEBUG_STR(logger, "Finished copy of direction & target columns");
+    
     dc.antennaId().putColumn(sc.antennaId());
     dc.interval().putColumn(sc.interval());
     dc.name().putColumn(sc.name());
