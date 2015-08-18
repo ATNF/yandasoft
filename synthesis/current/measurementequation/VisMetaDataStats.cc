@@ -218,9 +218,9 @@ casa::MVDirection VisMetaDataStats::getOffsetDir(const std::pair<double,double> 
 std::pair<double,double> VisMetaDataStats::getOffsets(const casa::MVDirection &dir) const
 {
   ASKAPCHECK(itsRefDirValid, "getOffsets() called before any visibility has been processed, nvis="<<nVis());
-  const double offset1 = sin(dir.getLong() - itsReferenceDir.getLong()) * cos(dir.getLat());
-  const double offset2 = sin(dir.getLat()) * cos(itsReferenceDir.getLat()) - cos(dir.getLat()) * sin(itsReferenceDir.getLat())
-                                           * cos(dir.getLong() - itsReferenceDir.getLong());
+  const double offset1 = asin(sin(dir.getLong() - itsReferenceDir.getLong()) * cos(dir.getLat()));
+  const double offset2 = asin(sin(dir.getLat()) * cos(itsReferenceDir.getLat()) - cos(dir.getLat()) * sin(itsReferenceDir.getLat())
+                                           * cos(dir.getLong() - itsReferenceDir.getLong()));
   return std::pair<double,double>(offset1,offset2);  
 }
 

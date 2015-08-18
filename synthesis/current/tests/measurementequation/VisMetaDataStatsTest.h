@@ -51,6 +51,7 @@ namespace askap
 {
   namespace synthesis
   {
+
     class VisMetaDataStatsTest : public CppUnit::TestFixture
     {
       CPPUNIT_TEST_SUITE(VisMetaDataStatsTest);
@@ -62,6 +63,8 @@ namespace askap
       CPPUNIT_TEST_EXCEPTION(testTangentCheck,AskapError);    
       CPPUNIT_TEST_EXCEPTION(testToleranceCheck,AskapError);    
       CPPUNIT_TEST(testReset);  
+      //CPPUNIT_TEST(testDirectionMerge);
+      CPPUNIT_TEST(testDirOffsets);
       CPPUNIT_TEST_SUITE_END();
     protected:
       static void modifyStubbedData(accessors::DataAccessorStub &acc) {
@@ -278,6 +281,68 @@ namespace askap
          // now merge
          stats1.merge(stats2);
          checkCombined(stats1);
+      }
+   
+      void testDirectionMerge() {
+         // Unit test written while debugging ASKAPSDP-1689
+         
+         // set up the tree
+         std::vector<boost::shared_ptr<VisMetaDataStats> > tree(7);
+         for (size_t i = 0; i<tree.size(); ++i) {
+              const casa::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
+              
+              accessors::DataAccessorStub acc(true);
+              const casa::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
+              acc.itsPointingDir1.set(testDir1);
+              acc.itsPointingDir2.set(testDir1);
+
+              if (i == 5) {
+                  const casa::MVDirection testDir2(asQuantity("12:35:39.34"), asQuantity("-044.59.28.59"));
+                  acc.itsPointingDir1.set(testDir2);
+                  acc.itsPointingDir2.set(testDir2);
+              }
+              
+              VisMetaDataStats stats(tangent);
+              stats.process(acc);         
+
+              // serialise
+              LOFAR::BlobString b1(false);
+              LOFAR::BlobOBufString bob(b1);
+              LOFAR::BlobOStream bos(bob);
+              bos << stats;
+
+              tree[i].reset(new VisMetaDataStats);
+              CPPUNIT_ASSERT(tree[i]);
+
+              // de-serialise
+              LOFAR::BlobIBufString bib(b1);
+              LOFAR::BlobIStream bis(bib);
+              bis >> *tree[i];
+         }
+
+         // manual tree-reduction
+         CPPUNIT_ASSERT_EQUAL(size_t(7u), tree.size());
+         tree[1]->merge(*tree[3]);
+         tree[1]->merge(*tree[4]);
+         tree[2]->merge(*tree[5]);
+         tree[2]->merge(*tree[6]);
+         tree[0]->merge(*tree[1]);
+         tree[0]->merge(*tree[2]);
+      }
+
+      void testDirOffsets() {
+         const casa::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
+         VisMetaDataStats stats1(tangent);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().first, 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().second, 1e-6);
+
+         
+         const casa::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
+
+         const std::pair<double, double> offsets1 = stats1.getOffsets(testDir1);
+         const casa::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
+
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., testDir1.separation(processedDir1), 1e-10);
       }
       
     };

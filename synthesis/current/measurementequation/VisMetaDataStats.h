@@ -48,6 +48,8 @@ namespace askap {
 
 namespace synthesis {
 
+
+
 /// @brief An estimator of statistics for metadata associated with visibilities
 /// @details Some configuration parameters depend on the metadata, for example
 /// cell size depends on the largest baseline. The ASKAP approach is to set
@@ -264,7 +266,8 @@ private:
    /// are used to estimate the centre and the field size.
    std::pair<double,double> itsFieldTRC;
    
-   
+   // for testing
+   friend class VisMetaDataStatsTest;  
 };
 
 } // namespace synthesis
