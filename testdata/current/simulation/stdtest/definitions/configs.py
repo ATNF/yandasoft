@@ -196,7 +196,8 @@ def getConfigs():
     a=a36[(a36!=1)&(a36!=7)&(a36!=11)&(a36!=21)&(a36!=31)&(a36!=35)]
     config['ASKAP30_R']=AntennaConfig('ASKAP30_R',a, datafile)
 
-    # Call this one the 'canonical' 30-antenna version
+    # This is the final 30-antenna configuration, as of 2/9/15
+    a=a36[(a36!=7)&(a36!=11)&(a36!=21)&(a36!=29)&(a36!=31)&(a36!=35)]
     config['ASKAP30']=AntennaConfig('ASKAP30',a, datafile)
 
     # These are 18-antenna configs suggested by WALLABY & DINGO at the community meeting
