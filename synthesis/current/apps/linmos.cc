@@ -36,7 +36,6 @@
 // System includes
 #include <sstream>
 #include <typeinfo>
-
 #include <iostream>
 
 // other 3rd party
@@ -49,7 +48,8 @@
 #include <images/Images/ImageRegrid.h>
 
 // Local packages includes
-#include <measurementequation/LinmosAccumulator.h>
+#include <measurementequation/SynthesisParamsHelper.h>
+#include <utils/LinmosAccumulator.h>
 
 ASKAP_LOGGER(logger, ".linmos");
 
@@ -63,7 +63,7 @@ using namespace askap::synthesis;
 static void merge(const LOFAR::ParameterSet &parset) {
 
     // initialise an image accumulator
-    LinmosAccumulator accumulator;
+    scimath::LinmosAccumulator accumulator;
 
     // load the parset
     if ( !accumulator.loadParset(parset) ) return;
