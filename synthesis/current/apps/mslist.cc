@@ -36,6 +36,11 @@
 #include <ms/MeasurementSets/MSLister.h>
 #include <askap/AskapError.h>
 
+//DAM testing stderr output
+#include <askap/AskapLogging.h>
+#include <askap/Log4cxxLogSink.h>
+ASKAP_LOGGER(logger, "mslist");
+
 void usage(void) {
   std::cerr << "Usage: " << "mslist [--verbose] MS_filename" << std::endl <<
                "  --brief               brief listing (default with verbose)" << std::endl <<
@@ -189,7 +194,28 @@ int main(int argc, const char* argv[])
         verbose = casa::True;
     }
 
-    casa::LogIO os;
+    /*
+    //DAM testing stderr output
+    // the following is screwing up the formatting
+    // adding \n before each mss call helps, but still get the annoying messages
+    std::ifstream config("askap.log_cfg", std::ifstream::in);
+    if (config) {
+        ASKAPLOG_INIT("askap.log_cfg");
+    } else {
+        std::ostringstream ss;
+        ss << argv[0] << ".log_cfg";
+        ASKAPLOG_INIT(ss.str().c_str());
+    }
+    // Ensure that CASA log messages are captured
+    casa::LogSinkInterface* globalSink = new askap::Log4cxxLogSink();
+    casa::LogSink::globalSink(globalSink);
+    */
+
+    //DAM testing stderr output
+    casa::LogSink globalSink(casa::LogMessage::NORMAL, &std::cout);
+    casa::LogIO os(globalSink);
+
+    //casa::LogIO os;
 
     casa::MeasurementSet ms(msfile, casa::Table::Old);
     casa::MSSummary mss(ms);

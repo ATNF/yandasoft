@@ -1,4 +1,5 @@
 scimath=Code/Base/scimath/current
+imagemath=Code/Base/imagemath/current
 common=3rdParty/LOFAR/Common/Common-3.3
 blob=3rdParty/LOFAR/Blob/Blob-1.2
 askapparallel=Code/Base/askapparallel/current
