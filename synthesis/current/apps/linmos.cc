@@ -181,7 +181,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
     ASKAPLOG_INFO_STR(linmoslogger, "Parset parameters:\n" << parset);
 
     // initialise an image accumulator
-    imagemath::LinmosAccumulator accumulator;
+    imagemath::LinmosAccumulator<float> accumulator;
 
     // load the parset
     if ( !accumulator.loadParset(parset) ) return;
@@ -225,14 +225,13 @@ static void merge(const LOFAR::ParameterSet &parset) {
             ASKAPLOG_INFO_STR(logger, " - input sensitivity images: " << inSenNames);
         }
 
-        // loop over the input images and set vectors
+        // set the output coordinate system and shape, based on the overlap of input images
         vector<IPosition> inShapeVec;
         vector<CoordinateSystem> inCoordSysVec;
         for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
             inShapeVec.push_back(iacc.shape(*it));
             inCoordSysVec.push_back(iacc.coordSys(*it));
         }
-        // set the output coordinate system and shape, based on the overlap of input images
         accumulator.setOutputParameters(inShapeVec, inCoordSysVec);
 
         // set up the output pixel arrays
