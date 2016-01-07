@@ -27,9 +27,12 @@ markersize=8
 #offset=0
 #textsize='medium'
 
+dist=3500
+#dist=1500
+
 plt.plot(x-xav,y-yav,'.',ms=markersize)
-plt.xlim(-3500,3500)
-plt.ylim(-3500,3500)
+plt.xlim(-dist,dist)
+plt.ylim(-dist,dist)
 #plt.text(x-xav+20,y-yav+20,pads)
 for i in range(1,37):
 #    plt.text(x[i-1]-xav,y[i-1]-yav,'%s'%i)
