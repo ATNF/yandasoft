@@ -178,7 +178,7 @@ namespace askap
       }
 
       // Fourier filter the spheroidal (crop in Fourier space in line with gridding kernel support size)
-      const bool doFiltering = true;
+      const bool doFiltering = false;
       if (doFiltering) {
          //DAM Need to investigate times when support>3 (e.g. w-proj).
          //    When it is variable there isn't one right value to use...
