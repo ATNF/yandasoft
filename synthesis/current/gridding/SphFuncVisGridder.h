@@ -1,7 +1,6 @@
-/// @file
+/// @file SphFuncVisGridder.h
 ///
-
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2007,2015,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -54,9 +53,13 @@ namespace askap
 			public:
 
 				/// @brief Standard two dimensional gridding
-				/// @param[in] support support size in pixels (spheroidal function with m=2*support will be generated)
+				/// @param[in] alpha spheroidal function alpha value
+				/// @param[in] support support size in pixels (spheroidal
+				/// function with m=2*support will be generated)
 				/// @param[in] oversample number of oversampling planes
-				explicit SphFuncVisGridder(int support = 3, int oversample = 128);
+				explicit SphFuncVisGridder(const float alpha = 1.,
+                                           const int support = 3,
+                                           const int oversample = 128);
 
 				virtual ~SphFuncVisGridder();
 
@@ -101,8 +104,31 @@ namespace askap
 				
 				/// @brief calculator of spheroidal function
 				scimath::SpheroidalFunction itsSphFunc;
+	
+				/// @brief whether to iterpolate the spheroidal function at nu=1
+                /// @details The function is undefined and set to zero at nu=1,
+                /// but that is not the numerical limit. Setting itsInterp true
+                /// will use neighbouring values to estimate it (to 2nd order).
+				bool itsInterp;
+	
+				/// @brief iterpolate the spheroidal function at nu=1
+                /// @details The function is undefined and set to zero at nu=1,
+                /// but that is not the numerical limit. Setting itsInterp true
+                /// will use neighbouring values to estimate it (to 2nd order).
+                /// @param[in] func vector to be interpolated
+                template<typename T>
+                void interpolateEdgeValues(casa::Vector<T> &func);
+
+			private:
+			
+				/// @brief prolate spheroidal alpha parameter
+                float itsAlpha;
+
 		};
 
 	}
 }
+
+#include <gridding/SphFuncVisGridder.tcc>
+
 #endif

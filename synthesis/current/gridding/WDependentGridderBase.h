@@ -1,11 +1,11 @@
-/// @file
+/// @file WDependentGridderBase.h
 ///
 /// @brief Gridder taking w-term into account
 /// @details
 /// This is a base class for all gridders taking w-term into account. It manages sampling
 /// in w-space (which may be non-linear, if so chosen by the user)
 ///
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2007,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -55,7 +55,7 @@ public:
    /// @details
    /// @param[in] wmax Maximum baseline (wavelengths)
    /// @param[in] nwplanes Number of w planes   
-   WDependentGridderBase(const double wmax, const int nwplanes); 
+   WDependentGridderBase(const double wmax, const int nwplanes, const float alpha=1.); 
    
    /// @brief destructor, writes w-plane hit distribution if necessary
    virtual ~WDependentGridderBase();

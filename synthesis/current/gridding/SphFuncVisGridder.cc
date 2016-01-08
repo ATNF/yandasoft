@@ -1,4 +1,6 @@
-/// @copyright (c) 2007 CSIRO
+/// @file SphFuncVisGridder.cc
+///
+/// @copyright (c) 2007,2015,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -27,6 +29,7 @@ ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
 
 #include <gridding/SphFuncVisGridder.h>
 #include <casa/Arrays/ArrayIter.h>
+#include <fft/FFTWrapper.h>
 #include <profile/AskapProfiler.h>
 
 
@@ -35,14 +38,21 @@ namespace askap
   namespace synthesis
   {
     /// @brief Standard two dimensional gridding
+    /// @param[in] alpha alpha value for prolate spheroidal function
     /// @param[in] support support size in pixels (spheroidal function with m=2*support will be generated)
     /// @param[in] oversample number of oversampling planes
-    SphFuncVisGridder::SphFuncVisGridder(int support, int oversample) : itsSphFunc(casa::C::pi*support, 1.)
+    SphFuncVisGridder::SphFuncVisGridder(const float alpha,
+                                         const int support,
+                                         const int oversample) :
+        itsSphFunc(casa::C::pi*support, alpha)
     {
        ASKAPASSERT(support>=3);
        ASKAPASSERT(oversample>=1);       
+       ASKAPASSERT(alpha>=0. && alpha<=2.);       
        itsOverSample = oversample;
        itsSupport = support;
+       itsAlpha = alpha;
+       itsInterp = true;
     }
 
     SphFuncVisGridder::~SphFuncVisGridder()
@@ -60,10 +70,11 @@ namespace askap
 	{
 	  const int oversample=parset.getInt32("oversample", 128);
 	  const int support=parset.getInt32("support", 3);
+	  const float alpha=parset.getFloat("alpha", 1.);
 	  ASKAPLOG_INFO_STR(logger, "Setting up spheroidal function gridder with support="<<
 	                    support<<" and oversample="<<oversample);
 	                    
-	  return IVisGridder::ShPtr(new SphFuncVisGridder(support,oversample));
+	  return IVisGridder::ShPtr(new SphFuncVisGridder(alpha,support,oversample));
 	}    
 
     /// Clone a copy of this Gridder
@@ -97,15 +108,21 @@ namespace askap
           ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
           itsConvFunc[plane].resize(cSize, cSize);
           itsConvFunc[plane].set(0.0);
+          casa::Vector<casa::DComplex> bufx(cSize);
+          casa::Vector<casa::DComplex> bufy(cSize);
           for (int ix=0; ix<cSize; ++ix) {
             double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
-            double fx=grdsf(nux)*(1.0-std::pow(nux, 2));
+            bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
+          }
+          for (int iy=0; iy<cSize; ++iy) {
+            double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
+            bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
+          }
+          for (int ix=0; ix<cSize; ++ix) {
             for (int iy=0; iy<cSize; ++iy) {
-              double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
-              double fy=grdsf(nuy)*(1.0-std::pow(nuy, 2));
-              itsConvFunc[plane](ix, iy)=fx*fy;
-            } // for iy
-          } // for ix
+              itsConvFunc[plane](ix, iy)=bufx(ix)*bufy(iy);
+            }
+          }
         } // for fracu
       } // for fracv
       
@@ -133,19 +150,66 @@ namespace askap
       ASKAPDEBUGASSERT(itsShape(0)>1);
       ASKAPDEBUGASSERT(itsShape(1)>1);
       
-      
-      // note grdsf(-1)=0.
+      // initialise buffers to enable a filtering of the correction
+      // function in Fourier space.
+      casa::Vector<casa::DComplex> bufx(itsShape(0));
+      casa::Vector<casa::DComplex> bufy(itsShape(1));
+
+      // note grdsf(1)=0.
       for (int ix=0; ix<itsShape(0); ++ix)
       {
         const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
         const double val = grdsf(nux);
-        ccfx(ix) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;             
+        bufx(ix) = casa::DComplex(val,0.0);
       }
+
       for (int iy=0; iy<itsShape(1); ++iy)
       {
         const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
         const double val = grdsf(nuy);
-        ccfy(iy) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;                     
+        bufy(iy) = casa::DComplex(val,0.0);
+      }
+
+      if (itsInterp) {
+        // The spheroidal is undefined and set to zero at nu=1, but that
+        // is not the numerical limit. Estimate it from its neighbours.
+        interpolateEdgeValues(bufx);
+        interpolateEdgeValues(bufy);
+      }
+
+      // Fourier filter the spheroidal (crop in Fourier space in line with gridding kernel support size)
+      const bool doFiltering = true;
+      if (doFiltering) {
+         //DAM Need to investigate times when support>3 (e.g. w-proj).
+         //    When it is variable there isn't one right value to use...
+         //    Also a problem: itsSupport==0 during w-proj degridding.
+         //int support = itsSupport>0 ? itsSupport : 3;
+         int support = 3;
+         scimath::fft(bufx, true);
+         scimath::fft(bufy, true);
+         for (int ix=0; ix<itsShape(0)/2-support; ++ix) {
+           bufx(ix) = 0.0;
+         }
+         for (int ix=itsShape(0)/2+support+1; ix<itsShape(0); ++ix) {
+           bufx(ix) = 0.0;
+         }
+         for (int iy=0; iy<itsShape(1)/2-support; ++iy) {
+           bufy(iy) = 0.0;
+         }
+         for (int iy=itsShape(1)/2+support+1; iy<itsShape(1); ++iy) {
+           bufy(iy) = 0.0;
+         }
+         scimath::fft(bufx, false);
+         scimath::fft(bufy, false);
+      }
+
+      for (int ix=0; ix<itsShape(0); ++ix) {
+        double val = real(bufx(ix));
+        ccfx(ix) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
+      }
+      for (int iy=0; iy<itsShape(1); ++iy) {
+        double val = real(bufy(iy));
+        ccfy(iy) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
       }
 
       casa::ArrayIterator<double> it(grid, 2);
@@ -231,5 +295,6 @@ namespace askap
                     return value;
                   }
                  */
-                }
-              }
+
+  }
+}

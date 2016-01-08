@@ -1,4 +1,6 @@
-/// @copyright (c) 2007 CSIRO
+/// @file WProjectVisGridder.cc
+///
+/// @copyright (c) 2007,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -52,8 +54,9 @@ WProjectVisGridder::WProjectVisGridder(const double wmax,
                                        const int overSample,
                                        const int maxSupport,
                                        const int limitSupport,
-                                       const std::string& name) :
-        WDependentGridderBase(wmax, nwplanes),
+                                       const std::string& name,
+                                       const float alpha) :
+        WDependentGridderBase(wmax, nwplanes, alpha),
         itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
         itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false)
 {
@@ -197,6 +200,13 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         ccfy(iy) = grdsf(nuy) / float(qny);
     }
 
+    if (itsInterp) {
+      // The spheroidal is undefined and set to zero at nu=1, but that
+      // is not the numerical limit. Estimate it from its neighbours.
+      interpolateEdgeValues(ccfx);
+      interpolateEdgeValues(ccfy);
+    }
+
     // Now we step through the w planes, starting the furthest
     // out. We calculate the support for that plane and use it
     // for all the others.
@@ -273,8 +283,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
             ASKAPCHECK(support*itsOverSample < nx / 2,
                        "Overflowing convolution function for w-plane " << iw <<
-                       " - increase maxSupport or decrease overSample; support=" << support << " oversample=" << itsOverSample <<
-                       " nx=" << nx);
+                       " - increase maxSupport or decrease overSample; support=" <<
+                       support << " oversample=" << itsOverSample << " nx=" << nx);
             cfSupport.itsSize = limitSupportIfNecessary(support);
 
             if (itsSupport == 0) {
@@ -304,21 +314,21 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                 // insert it into the convolution function
                 for (int iy = -support; iy < support; ++iy) {
                     for (int ix = -support; ix < support; ++ix) {
+                        const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
+                        const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
                         ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
                         ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
                         ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                        ASKAPDEBUGASSERT((ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2 >= 0);
-                        ASKAPDEBUGASSERT((iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2 >= 0);
-                        ASKAPDEBUGASSERT((ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2 < int(thisPlane.nrow()));
-                        ASKAPDEBUGASSERT((iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2 < int(thisPlane.ncolumn()));
+                        ASKAPDEBUGASSERT(kx >= 0);
+                        ASKAPDEBUGASSERT(ky >= 0);
+                        ASKAPDEBUGASSERT(kx < int(thisPlane.nrow()));
+                        ASKAPDEBUGASSERT(ky < int(thisPlane.ncolumn()));
                         //if (w < 0) {
                         //    itsConvFunc[plane](ix + support, iy + support) =
                         //        conj(thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
                         //              (iy + cfSupport.itsOffsetV) * itsOverSample + fracv + ny / 2));
                         //} else {
-                        itsConvFunc[plane](ix + support, iy + support) =
-                            thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
-                                   (iy + cfSupport.itsOffsetV) * itsOverSample + fracv + ny / 2);
+                        itsConvFunc[plane](ix + support, iy + support) = thisPlane(kx, ky);
                         //}
                     } // for ix
                 } // for iy
@@ -446,9 +456,11 @@ IVisGridder::ShPtr WProjectVisGridder::createGridder(const LOFAR::ParameterSet& 
     const int maxSupport = parset.getInt32("maxsupport", 256);
     const int limitSupport = parset.getInt32("limitsupport", 0);
     const string tablename = parset.getString("tablename", "");
+    const float alpha=parset.getFloat("alpha", 1.);
+
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
     boost::shared_ptr<WProjectVisGridder> gridder(new WProjectVisGridder(wmax, nwplanes, cutoff, oversample,
-            maxSupport, limitSupport, tablename));
+            maxSupport, limitSupport, tablename, alpha));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
     return gridder;

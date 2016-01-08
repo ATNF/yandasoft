@@ -382,8 +382,10 @@ void TableVisGridder::logCFCacheStats() const
    if (nPlanes > 0) {
        float effectiveSize = (float(memUsed)-float(sizeof(casa::Matrix<casa::Complex>)*nPlanes)) / 
                              (sizeof(casa::Complex)*itsOverSample*itsOverSample*nPlanes);
-       ASKAPLOG_DEBUG_STR(logger, "Cache of convolution functions take "<<float(memUsed)/1024/1024<<" Mb of memory or "<<std::endl<<
-                                 float(memUsed)/nPlanes/1024/1024<<" Mb of memory per plane (before oversampling)");
+       ASKAPLOG_DEBUG_STR(logger, "Cache of convolution functions take " <<
+                                  float(memUsed)/1024/1024<<" Mb of memory or ");
+       ASKAPLOG_DEBUG_STR(logger, float(memUsed)/nPlanes/1024/1024 <<
+                                  " Mb of memory per plane (before oversampling)");
        ASKAPDEBUGASSERT(effectiveSize>=0.);
        effectiveSize = sqrt(effectiveSize);
        ASKAPLOG_DEBUG_STR(logger, "Effective CF size (in terms of memory usage) is "<<long(effectiveSize)<<", effective support="<<

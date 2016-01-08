@@ -2,7 +2,7 @@
 ///
 /// WProjectVisGridder: W projection gridding
 
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2007,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -68,7 +68,8 @@ namespace askap
                 WProjectVisGridder(const double wmax, const int nwplanes,
                         const double cutoff, const int overSample,
                         const int maxSupport, const int limitSupport,
-                        const std::string& name=std::string(""));
+                        const std::string& name=std::string(""),
+                        const float alpha=1.);
 
                 virtual ~WProjectVisGridder();
 

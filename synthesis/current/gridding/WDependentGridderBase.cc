@@ -1,11 +1,11 @@
-/// @file
+/// @file WDependentGridderBase.cc
 ///
 /// @brief Gridder taking w-term into account
 /// @details
 /// This is a base class for all gridders taking w-term into account. It manages sampling
 /// in w-space (which may be non-linear, if so chosen by the user)
 ///
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2007,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -50,8 +50,10 @@ using namespace askap::synthesis;
 /// @details
 /// @param[in] wmax Maximum baseline (wavelengths)
 /// @param[in] nwplanes Number of w planes   
-WDependentGridderBase::WDependentGridderBase(const double wmax, const int nwplanes) : itsWScale(wmax),
-     itsNWPlanes(nwplanes) 
+WDependentGridderBase::WDependentGridderBase(const double wmax,
+                                             const int nwplanes,
+                                             const float alpha) :
+     SphFuncVisGridder(alpha), itsWScale(wmax), itsNWPlanes(nwplanes) 
 {
   ASKAPCHECK(wmax>0.0, "Baseline length must be greater than zero, you have wmax="<<wmax);
   ASKAPCHECK(nwplanes>0, "Number of w planes must be greater than zero, you have nwplanes="<<nwplanes);
@@ -69,11 +71,15 @@ WDependentGridderBase::~WDependentGridderBase()
 {
   if (itsWPlaneStats.size()) {
       const std::string tag = isPSFGridder() ? "(PSF gridder)" : "(non-PSF gridder)";
-      ASKAPLOG_INFO_STR(logger, "W-plane hit statistics "<<tag<<":  plane(nwplanes="<<itsNWPlanes<<")  w-term(wmax="<<getWMax()<<")  Number of hits");
+      ASKAPLOG_INFO_STR(logger, "W-plane hit statistics "<<tag<<
+          ":  plane(nwplanes="<<itsNWPlanes<<")  w-term(wmax="<<
+          getWMax()<<")  Number of hits");
       for (int plane = 0; plane<int(itsWPlaneStats.size()); ++plane) {
            if (plane < itsNWPlanes) {
                const int val = itsWPlaneStats[plane];
-               ASKAPLOG_INFO_STR(logger, "W-plane hit statistics:     "<<std::setw(4)<<plane<<"  "<<std::setw(9)<<std::setprecision(7)<<getWTerm(plane)<<"  "<<val);
+               ASKAPLOG_INFO_STR(logger, "W-plane hit statistics:     "<<
+                   std::setw(4)<<plane<<"  "<<std::setw(9)<<
+                   std::setprecision(7)<<getWTerm(plane)<<"  "<<val);
            }
       }
   }
