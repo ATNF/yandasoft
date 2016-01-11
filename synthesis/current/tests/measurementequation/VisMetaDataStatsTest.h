@@ -63,8 +63,10 @@ namespace askap
       CPPUNIT_TEST_EXCEPTION(testTangentCheck,AskapError);    
       CPPUNIT_TEST_EXCEPTION(testToleranceCheck,AskapError);    
       CPPUNIT_TEST(testReset);  
-      //CPPUNIT_TEST(testDirectionMerge);
+      CPPUNIT_TEST(testDirectionMerge);
+      CPPUNIT_TEST(testDirectionMerge1);
       CPPUNIT_TEST(testDirOffsets);
+      CPPUNIT_TEST(testDirOffsets1);
       CPPUNIT_TEST_SUITE_END();
     protected:
       static void modifyStubbedData(accessors::DataAccessorStub &acc) {
@@ -330,6 +332,38 @@ namespace askap
          tree[0]->merge(*tree[2]);
       }
 
+      void testDirectionMerge1() {
+         // a variant of testDirectionMerge written during ASKAPSDP-1741 debugging
+
+         // set up the tree
+         std::vector<boost::shared_ptr<VisMetaDataStats> > tree(7);
+
+         for (size_t i = 0; i<tree.size(); ++i) {
+              const casa::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
+              
+              accessors::DataAccessorStub acc(true);
+              const casa::MVDirection testDir1(asQuantity("22:40:00.0"), asQuantity("-59.59.59.92"));
+              acc.itsPointingDir1.set(testDir1);
+              acc.itsPointingDir2.set(testDir1);
+   
+              
+              tree[i].reset(new VisMetaDataStats(tangent));
+              CPPUNIT_ASSERT(tree[i]);
+              if (i != 0) {
+                  tree[i]->process(acc);
+              } 
+         }
+         // manual tree-reduction
+         CPPUNIT_ASSERT_EQUAL(size_t(7u), tree.size());
+         tree[1]->merge(*tree[3]);
+         tree[1]->merge(*tree[4]);
+         tree[2]->merge(*tree[5]);
+         tree[2]->merge(*tree[6]);
+         tree[0]->merge(*tree[1]);
+         tree[0]->merge(*tree[2]);
+
+      }
+
       void testDirOffsets() {
          const casa::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
          VisMetaDataStats stats1(tangent);
@@ -343,6 +377,33 @@ namespace askap
          const casa::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
 
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., testDir1.separation(processedDir1), 1e-10);
+      }
+
+      void testDirOffsets1() {
+         // test similar to testDirOffset. Written during debugging of ASKAPSDP-1741
+         // It starts from offsets, rather than directions.
+
+         const casa::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
+         VisMetaDataStats stats1(tangent);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().first, 1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().second, 1e-6);
+
+         const std::pair<double, double> offsets(-0.0254597653712066, -0.00112324390908837);
+         std::pair<double, double> offsets1 = offsets;
+         // note, it looks like the accuracy always drop with each iteration. The number below
+         // define what we test for and is a good limit given the number of tree-reductions we
+         // expect to have in our system
+         const size_t nIter = 5;
+         for (size_t iter = 0; iter < nIter; ++iter) {
+              const casa::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
+              offsets1 = stats1.getOffsets(processedDir1);
+         }
+         // for some reason the accuracy of MVDirection::shift is not good enough. 
+         // this test results in errors about 1.8e-6 rad or 4 arcsec. Ideally, it needs
+         // to be investigated at some stage.
+         //std::cout<<offsets1.second - offsets.second<<std::endl;
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(offsets.first, offsets1.first, 2e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(offsets.second, offsets1.second, 2e-6);
       }
       
     };

@@ -36,6 +36,11 @@
 #include <askap/AskapError.h>
 #include <Blob/BlobArray.h>
 
+#include <askap_synthesis.h>
+#include <askap/AskapLogging.h>
+ASKAP_LOGGER(logger, ".measurementequation.vismetadatastats");
+#include <iomanip>
+
 namespace askap {
 
 namespace synthesis {
@@ -177,8 +182,31 @@ void VisMetaDataStats::merge(const VisMetaDataStats &other)
            ASKAPDEBUGASSERT(itsRefDirValid);
            const casa::MVDirection otherBLCDir = other.getOffsetDir(other.itsFieldBLC);
            const casa::MVDirection otherTRCDir = other.getOffsetDir(other.itsFieldTRC);
-           const std::pair<double,double> otherBLC = getOffsets(otherBLCDir);
-           const std::pair<double,double> otherTRC = getOffsets(otherTRCDir);
+           std::pair<double,double> otherBLC = getOffsets(otherBLCDir);
+           std::pair<double,double> otherTRC = getOffsets(otherTRCDir);
+
+           // a hack related to ASKAPSDP-1741. Due to accuracy of MVDirection::shift, referencing
+           // of offsets from another object to the same reference may result in inconsistent blc/trc
+           if ((otherTRC.first < otherBLC.first) && ((otherBLC.first - otherTRC.first) < 1e-15)) {
+               const double temp = otherTRC.first;
+               otherTRC.first = otherBLC.first;
+               otherBLC.first = temp;
+           }
+           if ((otherTRC.second < otherBLC.second) && ((otherBLC.second - otherTRC.second) < 1e-15)) {
+               const double temp = otherTRC.second;
+               otherTRC.second = otherBLC.second;
+               otherBLC.second = temp;
+           }
+           //
+
+           /*
+           ASKAPLOG_DEBUG_STR(logger, "otherBLCDir="<<printDirection(otherBLCDir)<<" -> "<<std::setprecision(15)<<otherBLC.first<<" "<<otherBLC.second);
+           ASKAPLOG_DEBUG_STR(logger, "otherTRCDir="<<printDirection(otherTRCDir)<<" -> "<<std::setprecision(15)<<otherTRC.first<<" "<<otherTRC.second);
+           ASKAPLOG_DEBUG_STR(logger, "trc-blc="<<std::setprecision(15)<<otherTRC.first-otherBLC.first<<" "<<otherTRC.second - otherBLC.second);
+           ASKAPLOG_DEBUG_STR(logger, "other(trc-blc)="<<std::setprecision(15)<<other.itsFieldTRC.first-other.itsFieldBLC.first<<" "<<other.itsFieldTRC.second - other.itsFieldBLC.second);
+           ASKAPLOG_DEBUG_STR(logger, "refDir="<<printDirection(itsReferenceDir)<<" vs other.refDir="<<printDirection(other.itsReferenceDir));
+           */
+
            // cross checks just in case
            ASKAPDEBUGASSERT(otherBLC.first <= otherTRC.first);
            ASKAPDEBUGASSERT(otherBLC.second <= otherTRC.second);
@@ -209,6 +237,8 @@ casa::MVDirection VisMetaDataStats::getOffsetDir(const std::pair<double,double> 
   casa::MVDirection result(itsReferenceDir);
   result.shift(offsets.first,offsets.second,casa::True);
   return result;
+  // Note, the accuracy of the shift method doesn't seem to be good enough for some reason.
+  // (found while debugging ASKAPSDP-1741)
 }
    
 /// @brief helper method to compute offsets of the given direction w.r.t. the reference direction
@@ -243,6 +273,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
   }
   
   const casa::Vector<casa::MVDirection> &pointingDir = acc.pointingDir1();
+  //ASKAPLOG_DEBUG_STR(logger, "referenceDir = "<<printDirection(itsReferenceDir));
   for (casa::uInt row=0; row < acc.nRow(); ++row) {
        const std::pair<double,double> offsets = getOffsets(pointingDir[row]);
        if ( (itsNVis == 0ul) && (row == 0) ) {
@@ -262,6 +293,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
             }            
        }
   }
+  ASKAPLOG_DEBUG_STR(logger, "after iteration over "<<acc.nRow()<<" rows blc: "<<std::setprecision(15)<<itsFieldBLC.first<<" "<<itsFieldBLC.second<<" trc: "<<itsFieldTRC.first<<" "<<itsFieldTRC.second);
   
   const double currentMaxFreq = casa::max(acc.frequency());
   const double currentMinFreq = casa::min(acc.frequency());
@@ -415,6 +447,8 @@ LOFAR::BlobIStream& operator>>(LOFAR::BlobIStream &is, casa::MVDirection &dir) {
 void VisMetaDataStats::writeToBlob(LOFAR::BlobOStream& os) const
 {
   ASKAPCHECK(!itsAccessorAdapter.isAssociated(), "An attempt to serialise VisMetaDataStats with accessor adapter in the attached state");
+  ASKAPCHECK(itsFieldBLC.first <= itsFieldTRC.first, "Inconsistent blc and trc prior to send, difference.first="<<std::setprecision(15)<<itsFieldTRC.first - itsFieldBLC.first);
+  ASKAPCHECK(itsFieldBLC.second <= itsFieldTRC.second, "Inconsistent blc and trc prior to send, difference.second="<<std::setprecision(15)<<itsFieldTRC.second - itsFieldBLC.second);
   os.putStart("VisMetaDataStats",VIS_META_DATA_STATS_STREAM_VERSION);
   os<<itsTangent<<itsTangentSet<<itsAccessorAdapter.tolerance()<<(LOFAR::TYPES::uint64)itsNVis<<itsMaxU<<itsMaxV<<itsMaxW<<itsMaxResidualW<<
     itsMinFreq<<itsMaxFreq<<itsMaxAntennaIndex<<itsMaxBeamIndex<<itsReferenceDir<<itsRefDirValid<<
@@ -439,6 +473,9 @@ void VisMetaDataStats::readFromBlob(LOFAR::BlobIStream& is)
   is >> itsMaxU >> itsMaxV >> itsMaxW >> itsMaxResidualW >> itsMinFreq >> itsMaxFreq >> itsMaxAntennaIndex >> itsMaxBeamIndex >>
         itsReferenceDir >> itsRefDirValid >> itsFieldBLC.first >> itsFieldBLC.second >> itsFieldTRC.first >> itsFieldTRC.second;     
   is.getEnd();       
+  // consistency check
+  ASKAPCHECK(itsFieldBLC.first <= itsFieldTRC.first, "Inconsistent blc and trc received, difference.first="<<std::setprecision(15)<<itsFieldTRC.first - itsFieldBLC.first);
+  ASKAPCHECK(itsFieldBLC.second <= itsFieldTRC.second, "Inconsistent blc and trc received, difference.second="<<std::setprecision(15)<<itsFieldTRC.second - itsFieldBLC.second);
 }
 
 /// @brief estimate of the field size
