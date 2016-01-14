@@ -18,6 +18,9 @@ def analyseResult(spr, expected_flux = 1.):
    stats = spr.imageStats('image.field1.restored')
    print "Statistics for restored image: ",stats
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
+   print "DAM offsets: ",psf_peak[0],psf_peak[1],true_peak[0],true_peak[1]
+   # disterr is dominated by an error in the calculus above: the vector sum
+   # of l,m offsets on the great circle does not give the true total offset.
    if disterr > 16:
       raise RuntimeError, "Offset between true and expected position exceeds 2 cell sizes (16 arcsec), d=%f, true_peak=%s" % (disterr,true_peak)
    if abs(stats['peak']-expected_flux)>0.02:
@@ -47,10 +50,10 @@ spr = SynthesisProgramRunner(template_parset = 'pbcorrtest_template.in')
 spr.runSimulator()
 
 spr.runImager()
-analyseResult(spr,3.3/2.)
+analyseResult(spr,3.26/2.)
 
 spr.initParset()
 spr.addToParset("Cimager.restore.equalise = True")
 spr.runImager()
-analyseResult(spr,3.21/2.)
+analyseResult(spr,3.14/2.)
 
