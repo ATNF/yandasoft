@@ -122,7 +122,7 @@ namespace askap
 			private:
 			
 				/// @brief prolate spheroidal alpha parameter
-                float itsAlpha;
+                double itsAlpha;
 
 		};
 

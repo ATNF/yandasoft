@@ -44,14 +44,13 @@ namespace askap
     SphFuncVisGridder::SphFuncVisGridder(const float alpha,
                                          const int support,
                                          const int oversample) :
-        itsSphFunc(casa::C::pi*support, alpha)
+        itsSphFunc(casa::C::pi*support, alpha), itsAlpha(static_cast<double>(alpha))
     {
        ASKAPASSERT(support>=3);
        ASKAPASSERT(oversample>=1);       
        ASKAPASSERT(alpha>=0. && alpha<=2.);       
        itsOverSample = oversample;
        itsSupport = support;
-       itsAlpha = alpha;
        itsInterp = true;
     }
 
@@ -111,11 +110,11 @@ namespace askap
           casa::Vector<casa::DComplex> bufx(cSize);
           casa::Vector<casa::DComplex> bufy(cSize);
           for (int ix=0; ix<cSize; ++ix) {
-            double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
+            const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
             bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
           }
           for (int iy=0; iy<cSize; ++iy) {
-            double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
+            const double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
             bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
           }
           for (int ix=0; ix<cSize; ++ix) {
