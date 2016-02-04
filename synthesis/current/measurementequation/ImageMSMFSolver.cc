@@ -245,6 +245,7 @@ namespace askap
           
                     // Setup the PSFs - all ( 2 x ntaylor - 1 ) of them for the first time.
                     casa::Array<float> psfZeroArray(planeIter.planeShape());
+                    casa::Array<float> psfWorkArray;
                     // Only set up a single preconditioner function. May need to do all of them.
                     casa::Array<float> pcfZeroArray;
 
@@ -273,6 +274,7 @@ namespace askap
 	   	   	   	                
                         if (order == 0) {
                             psfZeroArray = psfArray.copy();
+                            psfWorkArray.resize(planeIter.planeShape());
 	                        // setup an anternative preconditioner function, if it isn't empty
                             ASKAPCHECK(normalEquations().preconditionerSlice().count(thisOrderParam)>0,
                                 "Preconditioner function Slice for plane="<<plane<<
@@ -285,7 +287,8 @@ namespace askap
                             }
                         }
 	    	   
-                        if( doPreconditioning(psfZeroArray,psfArray,pcfZeroArray) ) {
+                        psfWorkArray = psfZeroArray.copy();
+                        if( doPreconditioning(psfWorkArray,psfArray,pcfZeroArray) ) {
                            // Write PSFs to disk.
                            ASKAPLOG_INFO_STR(logger, "Exporting preconditioned psfs (to be stored to disk later)");
                            Axes axes(ip.axes(thisOrderParam));
@@ -318,7 +321,8 @@ namespace askap
                         // Setup the Residual Images and Model Images  - ( ntaylor ) of them
                         if (order < nTaylor) {
                             // Now precondition the residual images
-                            doPreconditioning(psfZeroArray,dirtyArray,pcfZeroArray);
+                            psfWorkArray = psfZeroArray.copy();
+                            doPreconditioning(psfWorkArray,dirtyArray,pcfZeroArray);
 		   
                             // We need lattice equivalents. We can use ArrayLattice which involves
                             // no copying
