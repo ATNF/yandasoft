@@ -192,7 +192,7 @@ void SnapShotImagingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
 
   itsDoPSF = dopsf; // other fields are unused for the PSF gridder
   itsDoPCF = dopcf; // other fields are unused for the PreConditioner Function gridder
-  if (dopsf && itsNoPSFReprojection) {
+  if ((dopsf || dopcf) && itsNoPSFReprojection) {
       // do the standard initialisation for the PSF gridder
       ASKAPDEBUGASSERT(itsGridder);
       itsGridder->initialiseGrid(axes,shape,dopsf,dopcf);
@@ -221,7 +221,7 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
   ASKAPTRACE("SnapShotImagingGridderAdapter::grid");
 
   ASKAPDEBUGASSERT(itsGridder);
-  if (isPSFGridder() && itsNoPSFReprojection) {
+  if ((isPSFGridder() || isPCFGridder()) && itsNoPSFReprojection) {
       itsAccessorAdapter.associate(acc);
       // for PSF gridder we don't do any image-plane regridding in this mode
       itsGridder->grid(itsAccessorAdapter);
@@ -268,7 +268,7 @@ void SnapShotImagingGridderAdapter::finaliseGrid(casa::Array<double>& out)
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseGrid");
 
   ASKAPDEBUGASSERT(itsGridder);
-  if (isPSFGridder() && itsNoPSFReprojection) {
+  if ((isPSFGridder() || isPCFGridder()) && itsNoPSFReprojection) {
       itsGridder->finaliseGrid(out);
   } else {
       if (!itsBuffersFinalised) {
@@ -287,7 +287,7 @@ void SnapShotImagingGridderAdapter::finaliseWeights(casa::Array<double>& out)
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseWeights");
 
   ASKAPDEBUGASSERT(itsGridder);
-  if (isPSFGridder() && itsNoPSFReprojection) {
+  if ((isPSFGridder() || isPCFGridder()) && itsNoPSFReprojection) {
       itsGridder->finaliseWeights(out);
   } else {
       if (!itsBuffersFinalised) {
@@ -410,7 +410,6 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   ASKAPCHECK(!itsFirstAccessor, 
        "finaliseGriddingOfCurrentPlane is called while itsFirstAccessor flag is true. This is not supposed to happen");
   if (isPSFGridder()) {
-  const std::string msg = isPSFGridder() ? "PSF" : "dirty image";     
       ASKAPLOG_DEBUG_STR(logger, "Finalising current PSF");
   } else if (isPCFGridder()) {
       ASKAPLOG_DEBUG_STR(logger, "Finalising current preconditioner function");
