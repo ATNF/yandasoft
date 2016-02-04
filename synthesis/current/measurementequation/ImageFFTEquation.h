@@ -117,15 +117,21 @@ namespace askap
         void setIterator(accessors::IDataSharedIter& idi);
 
 
-        /// @brief define whether the default spheroidal function gridder is used for PSF
-        /// @details We have an option to build PSF using the default spheriodal function
-        /// gridder, i.e. no w-term and no primary beam is simulated, as an alternative 
-        /// to the same user-defined gridder as used for the model. Apart from the speed, 
-        /// it probably makes the overall approximation better (i.e. removes some factors 
-        /// of spatial dependence).
-        /// @param[in] useSphFunc true, if spheroidal function gridder is to be used for PSF
-        void useSphFuncForPSF(bool useSphFunc);
-        
+        /// @brief define whether to use an alternative gridder for the PSF
+        /// and/or the preconditioner function.
+        /// @details We have an option to build the PSF using the default
+        /// spheriodal function gridder or the box (nearest neighbour) gridder,
+        /// i.e. no w-term and no primary beam is simulated, as an alternative 
+        /// to the same user-defined gridder as used for the model. Apart from 
+        /// speed, it probably makes the approximation better (i.e. removes
+        /// some factors of spatial  dependence) and may lead to cleaner
+        /// preconditioning. However it can filter out features of the W and AW
+        /// kernels during preconditioning when robustness approaches uniform
+        /// weighting. A separate preconditioner function can also be selected.
+        /// @param[in] parset imager parameter set to check for PSF options.
+        /// Current options: sphfuncforpsf, boxforpsf and gentlepreconditioner.
+        void useAlternativePSF(const LOFAR::ParameterSet& parset);
+       
         /// @brief setup object function to update degridded visibilities
         /// @details For the parallel implementation of the measurement equation we need
         /// inter-rank communication. To avoid introducing cross-dependency of the measurement
@@ -148,6 +154,9 @@ namespace askap
         
         /// Map of PSF gridders
         mutable std::map<string, IVisGridder::ShPtr> itsPSFGridders;
+        
+        /// Map of Wiener preconditioning gridders
+        mutable std::map<string, IVisGridder::ShPtr> itsPreconGridders;
 
         /// Iterator giving access to the data
         mutable accessors::IDataSharedIter itsIdi;
@@ -173,8 +182,18 @@ namespace askap
         /// @details We have an option to build PSF using the default spheriodal function
         /// gridder, i.e. no w-term and no primary beam is simulated. Apart from speed, 
         /// it probably makes the approximation better (i.e. removes some factors of spatial 
-        /// dependence).
+        /// dependence). However it can filter out features of the W and AW kernels during
+        /// preconditioning when robustness approaches uniform weighting.
         bool itsSphFuncPSFGridder;
+
+        /// @brief true, if the PSF is built using the box (nearest neighbour) gridder
+        /// @details We have an option to build PSF using the box (nearest neighbour)
+        /// gridder, i.e. no w-term and no primary beam is simulated. Pros and cons
+        /// are similar to the itsSphFuncPSFGridder option, however this gridder can lead
+        /// to cleaner preconditioning (esp. as robustness approaches uniform weighting).
+        bool itsBoxPSFGridder;
+
+        bool itsUsePreconGridder;
 
         /// @brief if set, visibility cube will be passed through this object function
         /// @details For the parallel implementation of the measurement equation we need

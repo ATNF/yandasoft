@@ -106,7 +106,8 @@ public:
    /// @param[in] shape Shape of output image: cube: u,v,pol,chan
    /// @param[in] dopsf Make the psf?
    virtual void initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf = true);
+                const casa::IPosition& shape, const bool dopsf = true,
+                const bool dopcf=false);
 
    /// @brief grid the visibility data.
    /// @param[in] acc const data accessor to work with
@@ -169,6 +170,10 @@ protected:
    /// but may do something fancy if the gridder is calculating dirty image
    /// @return true, if this gridder is a psf gridder
    bool inline isPSFGridder() const { return itsDoPSF;}
+      
+   /// @brief check whether this is a preconditioner function gridder
+   /// @return true, if this gridder is a pcf gridder
+   bool inline isPCFGridder() const { return itsDoPCF; }
 
    /// @brief coefficient A of the fit
    /// @details This is a parameter of the best fitted plane 
@@ -255,6 +260,10 @@ private:
    /// @brief true if this gridder is computing PSF
    /// @details We pass all calls to the wrapped gridder for PSF calculation
    bool itsDoPSF;
+   
+   /// @brief true if this gridder is computing PreConditioner Function
+   /// @details We pass all calls to the wrapped gridder for PCF calculation
+   bool itsDoPCF;
    
    /// @brief target coordinate system visible from outside
    /// @details This gridder can setup the wrapped gridder to work with a 

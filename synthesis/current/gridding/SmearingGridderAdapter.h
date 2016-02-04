@@ -79,7 +79,8 @@ public:
    /// @param[in] shape Shape of output image: cube: u,v,pol,chan
    /// @param[in] dopsf Make the psf?
    virtual void initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf = true);
+                const casa::IPosition& shape, const bool dopsf = true,
+                const bool dopcf=false);
 
    /// @brief grid the visibility data.
    /// @param[in] acc const data accessor to work with

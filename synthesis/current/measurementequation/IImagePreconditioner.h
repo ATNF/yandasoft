@@ -59,7 +59,9 @@ namespace askap
 	    /// @param[in] psf an array with the PSF
 	    /// @param[in] dirty an array with dirty image
 	    /// @return true if psf and dirty have been altered
-	    virtual bool doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const = 0;
+	    virtual bool doPreconditioning(casa::Array<float>& psf,
+                                       casa::Array<float>& dirty,
+                                       casa::Array<float>& pcf) const = 0;
     };
 
   }

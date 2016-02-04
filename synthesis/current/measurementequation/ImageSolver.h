@@ -90,7 +90,9 @@ namespace askap
         /// @details 
         /// @param[in] psf point spread function do modify
         /// @param[in] dirty dirty image to modify
-	bool doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const;
+	bool doPreconditioning(casa::Array<float>& psf,
+                           casa::Array<float>& dirty,
+                           casa::Array<float>& pcf) const;
    
 	/// @brief perform normalization of the dirty image and psf
 	/// @details This method divides the PSF and dirty image by the diagonal of the Hessian.

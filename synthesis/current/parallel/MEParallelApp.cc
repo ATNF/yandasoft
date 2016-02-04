@@ -77,11 +77,13 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
            for (int i=0; i<nProcs-1; ++i) {
                 itsMs[i] = substitute(tmpl);
                 if ((itsComms.rank() - 1) == i) {
-                    ASKAPLOG_INFO_STR(logger, "Measurement set "<<tmpl<<" for rank "<<i+1<<" is substituted by "<<itsMs[i]);
+                    ASKAPLOG_INFO_STR(logger, "Measurement set "<<tmpl<<
+                        " for rank "<<i+1<<" is substituted by "<<itsMs[i]);
                 }
            }
        } else {
-          ASKAPLOG_INFO_STR(logger, "Skip measurment set substitution, names are given explicitly: "<<itsMs);
+          ASKAPLOG_INFO_STR(logger,
+              "Skip measurment set substitution, names are given explicitly: "<<itsMs);
        }
        if (nProcs>1) {
            ASKAPCHECK(int(itsMs.size()) == (nProcs-1),
@@ -90,14 +92,17 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
        
        // configure uvw-machine cache parameters (to be set up via Data Source)
        const int cacheSize = parset.getInt32("nUVWMachines",1);
-       ASKAPCHECK(cacheSize > 0 ,"Cache size is supposed to be a positive number, you have "<<cacheSize);
+       ASKAPCHECK(cacheSize > 0 ,
+           "Cache size is supposed to be a positive number, you have "<<cacheSize);
        itsUVWMachineCacheSize = size_t(cacheSize);
        itsUVWMachineCacheTolerance = 
            SynthesisParamsHelper::convertQuantity(parset.getString("uvwMachineDirTolerance", 
                                                    "1e-6rad"),"rad");
          
-       ASKAPLOG_DEBUG_STR(logger, "UVWMachine cache will store "<<itsUVWMachineCacheSize<<" machines");
-       ASKAPLOG_DEBUG_STR(logger, "Tolerance on the directions is "<<itsUVWMachineCacheTolerance/casa::C::pi*180.*3600.<<" arcsec");
+       ASKAPLOG_DEBUG_STR(logger, "UVWMachine cache will store "<<
+           itsUVWMachineCacheSize<<" machines");
+       ASKAPLOG_DEBUG_STR(logger, "Tolerance on the directions is "<<
+           itsUVWMachineCacheTolerance/casa::C::pi*180.*3600.<<" arcsec");
         
        // Create the gridder using a factory acting on a parameterset
        itsGridder = createGridder(comms, parset);

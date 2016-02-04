@@ -244,12 +244,18 @@ namespace askap
 	   //casa::IPosition vecShape(1, out.shape().product());
 	   for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
 	   
-	        ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0, "Diagonal not present");
+	        ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
+                "Diagonal not present " << name);
 	        casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
-	        ASKAPCHECK(normalEquations().dataVector(name).size()>0, "Data vector not present");
+	        ASKAPCHECK(normalEquations().dataVector(name).size()>0,
+                "Data vector not present " << name);
 	        casa::Vector<double> dv = normalEquations().dataVector(name);
-	        ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0, "PSF Slice not present");
+	        ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0,
+                "PSF Slice not present " << name);
             casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(name)->second);
+	        ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
+                "Preconditioner fuction Slice not present for " << name);
+	        casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(name)->second);
  
             if (planeIter.tag()!="") {
                 // it is not a single plane case, there is something to report
@@ -268,6 +274,14 @@ namespace askap
             casa::Array<float> psfArray(planeIter.planeShape());
             casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
 
+	        // send an anternative preconditioner function, if it isn't empty.
+	        casa::Array<float> pcfArray;
+            if (pcf.shape() > 0) {
+	          ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
+              pcfArray.resize(planeIter.planeShape());
+	          casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
+            }
+
             // uninitialised mask shared pointer means that we don't need it (i.e. no weight equalising)
             boost::shared_ptr<casa::Array<float> > mask;
             if (itsEqualiseNoise) {
@@ -279,7 +293,7 @@ namespace askap
             }
        
             // Do the preconditioning
-            doPreconditioning(psfArray,dirtyArray);
+            doPreconditioning(psfArray,dirtyArray,pcfArray);
 	   
             // Normalize by the diagonal
             doNormalization(planeIter.getPlaneVector(diag),tol(),psfArray,dirtyArray,mask);

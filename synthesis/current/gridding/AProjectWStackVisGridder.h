@@ -107,7 +107,8 @@ namespace askap
       /// @param shape Shape of output image: u,v,pol,chan
       /// @param dopsf Make the psf?
       virtual void initialiseGrid(const scimath::Axes& axes,
-              const casa::IPosition& shape, const bool dopsf=true);
+              const casa::IPosition& shape, const bool dopsf=true,
+			  const bool dopcf=false);
    
       /// @brief Initialise the degridding
       /// @param axes axes specifications

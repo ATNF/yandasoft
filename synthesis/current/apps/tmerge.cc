@@ -92,10 +92,11 @@ class TmergeApp : public askap::Application
                 reference[dim] = outCoordSys.referencePixel()[dim];
             }
             casa::Vector<double> outPSFVec;
+            casa::Vector<double> outPreconVec;
             casa::Vector<double> outWeightVec(IPosition(1, outShape.product()),0.);
             casa::Vector<double> outDataVec(IPosition(1, outShape.product()),0.);
-            ne->addSlice(paramName, outPSFVec, outWeightVec, outDataVec,
-                         outShape, reference, outCoordSys);
+            ne->addSlice(paramName, outPSFVec, outWeightVec, outPreconVec,
+                         outDataVec, outShape, reference, outCoordSys);
 
             // load images into the model
             for (std::vector<std::string>::const_iterator ci = images.begin(); ci != images.end(); ++ci) {
@@ -119,10 +120,11 @@ class TmergeApp : public askap::Application
                 }
                 casa::IPosition vecShape(1, model->value(paramName).nelements());
                 casa::Vector<double> inPSFVec;
+                casa::Vector<double> inPreconVec;
                 casa::Vector<double> inWeightVec(vecShape,1.); // overwritten if linmos is used
                 casa::Vector<double> inDataVec(model->value(paramName).reform(vecShape));
-                imageNe.addSlice(paramName, inPSFVec, inWeightVec, inDataVec,
-                                 imageShape, reference, coordSys);
+                imageNe.addSlice(paramName, inPSFVec, inWeightVec, inPreconVec,
+                                 inDataVec, imageShape, reference, coordSys);
 
                 // merge with the normal equation mosaic
                 ne->merge(imageNe);

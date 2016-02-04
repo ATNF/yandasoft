@@ -70,6 +70,7 @@ int main(int argc, char **argv) {
      SynthesisParamsHelper::setUpImageHandler(parset);
      casa::Array<float> psf = SynthesisParamsHelper::imageHandler().read("picmf.psf");
      casa::Array<float> img = SynthesisParamsHelper::imageHandler().read("testimg.img");
+     casa::Array<float> pcf = SynthesisParamsHelper::imageHandler().read("picmf.psf");
      ASKAPASSERT(psf.shape().nonDegenerate() == img.shape().nonDegenerate());
      
           
@@ -82,7 +83,7 @@ int main(int argc, char **argv) {
      std::cerr<<"Initialization of preconditioner: "<<timer.real()<<std::endl;            
      timer.mark();     
      
-     wp->doPreconditioning(psf,img);
+     wp->doPreconditioning(psf,img,pcf);
      
      std::cerr<<"Preconditioning: time="<<timer.real()<<std::endl;
      

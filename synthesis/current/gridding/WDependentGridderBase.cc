@@ -70,7 +70,9 @@ WDependentGridderBase::WDependentGridderBase(const double wmax,
 WDependentGridderBase::~WDependentGridderBase()
 {
   if (itsWPlaneStats.size()) {
-      const std::string tag = isPSFGridder() ? "(PSF gridder)" : "(non-PSF gridder)";
+      std::string tag = "(non-PSF gridder)";
+      if (isPSFGridder()) tag = "(PSF gridder)";
+      if (isPCFGridder()) tag = "(preconditioner function gridder)";
       ASKAPLOG_INFO_STR(logger, "W-plane hit statistics "<<tag<<
           ":  plane(nwplanes="<<itsNWPlanes<<")  w-term(wmax="<<
           getWMax()<<")  Number of hits");

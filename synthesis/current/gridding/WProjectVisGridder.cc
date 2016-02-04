@@ -65,7 +65,6 @@ WProjectVisGridder::WProjectVisGridder(const double wmax,
     itsSupport = 0;
     itsOverSample = overSample;
     setTableName(name);
-
     itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
 }
 
@@ -159,6 +158,58 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         initConvFuncOffsets(nWPlanes());
     }
 
+    if (isPCFGridder()) {
+
+      // A simple grid kernel for use in setting up the preconditioner function.
+      // Set up as a nearest neighbour gridder (based partly on the Box gridder).
+      // It is assumed that any non-zero cfSupport.itsOffsetU or
+      // cfSupport.itsOffsetV will be taken care of in gridding/preconditioning
+      // with an appropriate use of the wKernelPix data.
+
+      itsSupport=1;
+      const int cSize=2*itsSupport+1;
+      const int cCenter=(cSize-1)/2;
+
+      // Use the w & oversampling setup as the main grid kernels.
+      for (int iw = 0; iw < nWPlanes(); ++iw) {
+
+        // Store the main kernel size (in pixels) in the imag part.
+        // What size should be stored? From some simple fits:
+        //   1e-2 cutoff: support ~ sqrt( 7^2 + (w.theta^2)^2 )
+        //   1e-3 cutoff: support ~ 6.02 + 1.14*w.theta^2
+        // Preconditioning happens after "deconvolving" the anti-aliasing part
+        // of the kernel. When w=0 this should reduce the support from the
+        // nominal value of 7, however for larger w kernels it won't (in fact
+        // it may result in the gridded data ringing out across the uv plane).
+        // So do we want to limit the support when w.Theta ~ 0 but keep +/-3 for
+        // larger kernels? I don't know that this is right, but it's a start.
+        float wThetaPix = fabs(getWTerm(iw)) / (itsUVCellSize(0) * itsUVCellSize(0));
+        float wKernelPix;
+        if (wThetaPix < 1) {
+          wKernelPix = 3;
+        } else if (itsCutoff < 0.01) {
+          wKernelPix = 6 + 1.14*wThetaPix;
+        } else {
+          wKernelPix = sqrt( 49 + wThetaPix*wThetaPix );
+        }
+
+        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
+            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
+                const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
+                ASKAPDEBUGASSERT(plane < int(itsConvFunc.size()));
+                itsConvFunc[plane].resize(cSize, cSize);
+                itsConvFunc[plane].set(0.0);
+                // are fracu and fracv being correctly used here?
+                const int ix = -float(fracu)/float(itsOverSample);
+                const int iy = -float(fracv)/float(itsOverSample);
+                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casa::Complex(1.0, wKernelPix);
+            }
+        }
+
+      }
+
+      return;
+    }
 
     /// These are the actual cell sizes used
     const double cellx = 1.0 / (double(itsShape(0)) * itsUVCellSize(0));
@@ -241,7 +292,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     ASKAPDEBUGASSERT(iy - qny / 2 + ny / 2 < ny);
                     ASKAPDEBUGASSERT(ix + nx / 2 >= qnx / 2);
                     ASKAPDEBUGASSERT(iy + ny / 2 >= qny / 2);
-                    thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) = casa::DComplex(wt * cos(phase), -wt * sin(phase));
+                    thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
+                        casa::DComplex(wt * cos(phase), -wt * sin(phase));
                     //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=casa::DComplex(wt*cos(phase));
                 }
             }
@@ -259,11 +311,12 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         //scimath::fft2d(buffer, true);
         //casa::convertArray<casa::Complex,casa::DComplex>(thisPlane,buffer);
 
-
         /*
             for (uint xx=0;xx<thisPlane.nrow();++xx) {
              for (uint yy=0;yy<thisPlane.ncolumn();++yy) {
-                  ASKAPCHECK(!std::isinf(casa::abs(thisPlane(xx,yy))), "Infinite value detected for plane="<<iw<<" at "<<xx<<","<<yy<<" "<<thisPlane(xx,yy));
+                  ASKAPCHECK(!std::isinf(casa::abs(thisPlane(xx,yy))),
+                      "Infinite value detected for plane="<<iw<<
+                      " at "<<xx<<","<<yy<<" "<<thisPlane(xx,yy));
                  }
         }
         */
@@ -294,6 +347,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
             if (isOffsetSupportAllowed()) {
                 setConvFuncOffset(iw, cfSupport.itsOffsetU, cfSupport.itsOffsetV);
             }
+        
         }
 
         ASKAPCHECK(itsConvFunc.size() > 0, "Convolution function not sized correctly");
@@ -312,8 +366,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
                 // Now cut out the inner part of the convolution function and
                 // insert it into the convolution function
-                for (int iy = -support; iy < support; ++iy) {
-                    for (int ix = -support; ix < support; ++ix) {
+                for (int iy = -support; iy <= support; ++iy) {
+                    for (int ix = -support; ix <= support; ++ix) {
                         const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
                         const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
                         ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
@@ -330,8 +384,9 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                         //} else {
                         itsConvFunc[plane](ix + support, iy + support) = thisPlane(kx, ky);
                         //}
-                    } // for ix
-                } // for iy
+                    }
+                }
+
             } // for fracv
         } // for fracu
 
@@ -459,8 +514,8 @@ IVisGridder::ShPtr WProjectVisGridder::createGridder(const LOFAR::ParameterSet& 
     const float alpha=parset.getFloat("alpha", 1.);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
-    boost::shared_ptr<WProjectVisGridder> gridder(new WProjectVisGridder(wmax, nwplanes, cutoff, oversample,
-            maxSupport, limitSupport, tablename, alpha));
+    boost::shared_ptr<WProjectVisGridder> gridder(new WProjectVisGridder(wmax, nwplanes,
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
     return gridder;
@@ -491,9 +546,11 @@ void WProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     const bool absCutoff = parset.getBool("cutoff.absolute", false);
 
     if (absCutoff) {
-        ASKAPLOG_INFO_STR(logger, "Cutoff value of " << itsCutoff << " will be treated as an absolute threshold during CF generation");
+        ASKAPLOG_INFO_STR(logger, "Cutoff value of " << itsCutoff <<
+            " will be treated as an absolute threshold during CF generation");
     } else {
-        ASKAPLOG_INFO_STR(logger, "Cutoff value of " << itsCutoff << " will be treated as a threshold relative to the peak during CF generation");
+        ASKAPLOG_INFO_STR(logger, "Cutoff value of " << itsCutoff <<
+            " will be treated as a threshold relative to the peak during CF generation");
         ASKAPCHECK(itsCutoff > 0.0, "Cutoff must be positive");
         ASKAPCHECK(itsCutoff < 1.0, "Cutoff must be less than 1.0");
     }

@@ -71,7 +71,9 @@ namespace askap
 	    /// @param[in] psf array with PSF
 	    /// @param[in] dirty array with dirty image
 	    /// @return true if psf and dirty have been altered
-	    virtual bool doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const;
+	    virtual bool doPreconditioning(casa::Array<float>& psf,
+                                       casa::Array<float>& dirty,
+                                       casa::Array<float>& pcf) const;
 
       private:
   	    /// @brief Noise Power Spectrum

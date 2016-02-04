@@ -79,7 +79,9 @@ public:
    /// @param[in] psf array with PSF
    /// @param[in] dirty array with dirty image
    /// @return true if psf and dirty have been altered
-   virtual bool doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const;
+   virtual bool doPreconditioning(casa::Array<float>& psf,
+                                  casa::Array<float>& dirty,
+                                  casa::Array<float>& pcf) const;
 
    /// @brief a helper method to apply the taper to one given array
    /// @details We need exactly the same operation for psf and dirty image. This method

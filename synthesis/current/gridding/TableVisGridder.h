@@ -104,7 +104,8 @@ namespace askap
       /// @param shape Shape of output image: u,v,pol,chan
       /// @param dopsf Make the psf?
       virtual void initialiseGrid(const scimath::Axes& axes,
-          const casa::IPosition& shape, const bool dopsf=true);
+          const casa::IPosition& shape, const bool dopsf=true,
+          const bool dopcf=false);
 
       /// @brief Grid the visibility data.
       /// @param acc const data accessor to work with
@@ -278,11 +279,21 @@ namespace askap
       /// @return true if this gridder is configured to calculate PSF, false otherwise
       bool inline isPSFGridder() const { return itsDopsf; }
       
+      /// @brief gridder configured to calculate PreConditioner Function?
+      /// @details
+      /// @return true if this gridder is configured to calculate PCF, false otherwise
+      bool inline isPCFGridder() const { return itsDopcf; }
+      
       /// @brief configure gridder to calculate PSF or residuals
       /// @details This method is expected to be called from overridden initialiseGrid method
       /// @param[in] dopsf if true, the gridder is configured to calculate PSF, otherwise
       /// a normal residual grid is calculated.
       void inline configureForPSF(bool dopsf) { itsDopsf = dopsf;}
+      
+      /// @brief configure gridder to calculate PreConditioner Function
+      /// @details This method is expected to be called from overridden initialiseGrid method
+      /// @param[in] dopcf if true, the gridder is configured to calculate PCF
+      void inline configureForPCF(bool dopcf) { itsDopcf = dopcf;}
         
       /// @brief obtain the centre of the image
       /// @details This method extracts RA and DEC axes from itsAxes and
@@ -467,6 +478,8 @@ protected:
 
       /// @brief is this gridder a PSF gridder?
       bool itsDopsf;
+      /// @brief is this gridder a PreConditioner Function gridder?
+      bool itsDopcf;
         
       /// Generic grid/degrid - this is the heart of this framework. It should never
       /// need to be overridden

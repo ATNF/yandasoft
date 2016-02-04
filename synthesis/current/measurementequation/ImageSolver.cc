@@ -187,7 +187,9 @@ namespace askap
     }
 
     // Apply all the preconditioners in the order in which they were created.
-    bool ImageSolver::doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const
+    bool ImageSolver::doPreconditioning(casa::Array<float>& psf,
+                                        casa::Array<float>& dirty,
+                                        casa::Array<float>& pcf) const
     {
         ASKAPTRACE("ImageSolver::doPreconditioning");
 
@@ -195,7 +197,7 @@ namespace askap
 	    bool status=false;
 	    for(std::map<int, IImagePreconditioner::ShPtr>::const_iterator pciter=itsPreconditioners.begin(); pciter!=itsPreconditioners.end(); pciter++)
 	    {
-	      status = status | (pciter->second)->doPreconditioning(psf,dirty);
+	      status = status | (pciter->second)->doPreconditioning(psf,dirty,pcf);
 	    }
 	    // we could write the result to the file or return it as a parameter (but we need an image name
 	    // here to compose a proper parameter name)
@@ -247,10 +249,15 @@ namespace askap
         
              ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for solution");
              casa::Vector<double>  diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
-             ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0, "Data vector not present for solution");
+             ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
+                 "Data vector not present for solution");
              casa::Vector<double> dv = normalEquations().dataVector(indit->first);
-	         ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0, "PSF Slice not present");
+	         ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
+                 "PSF Slice not present");
              casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+	         ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
+                 "Preconditioner Slice not present");
+             casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 
              if (planeIter.tag() != "") {
                  // it is not a single plane case, there is something to report
@@ -258,14 +265,20 @@ namespace askap
                                            " tagged as "<<planeIter.tag());
              }
 
-
 	         casa::Array<float> dirtyArray(planeIter.planeShape());
              casa::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
              casa::Array<float> psfArray(planeIter.planeShape());
              casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
-	
+             // some preconditioners use the PSF do generate the filter, so only
+             // set this up if it is needed.
+             casa::Array<float> pcfArray;
+             if (pcf.shape() > 0) {
+               ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
+               casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
+             }
+
              // Do the preconditioning
-             const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray);
+             const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray,pcfArray);
              
              // Normalize by the diagonal
              doNormalization(planeIter.getPlaneVector(diag),tol(),psfArray,dirtyArray);

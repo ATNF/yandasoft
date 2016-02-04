@@ -137,13 +137,16 @@ namespace askap
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for "<<
 		       indit->first);
 	    casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
-	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0, "Data vector not present for "<<
-		       indit->first);
+	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
+            "Data vector not present for " << indit->first);
 	    casa::Vector<double> dv = normalEquations().dataVector(indit->first);
-	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0, "PSF Slice not present for "<<
-		       indit->first);
+	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
+            "PSF Slice not present for " << indit->first);
 	    casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
-	    
+	    ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
+            "Preconditioner fuction Slice not present for " << indit->first);
+	    casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+
 	    if (planeIter.tag()!="") {
 	      // it is not a single plane case, there is something to report
 	      ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
@@ -157,8 +160,15 @@ namespace askap
 	    ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
 			      dirtyArray.shape()<<" after padding");
 
+	    // send an anternative preconditioner function, if it isn't empty.
+	    casa::Array<float> pcfArray;
+        if (pcf.shape() > 0) {
+	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
+	      pcfArray = padImage(planeIter.getPlane(pcf));
+        }
+
 	    // Precondition the PSF and DIRTY images before solving.
-	    const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray);
+	    const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray,pcfArray);
         doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
                         boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
 	    if (wasPreconditioning) {

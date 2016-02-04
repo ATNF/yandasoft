@@ -483,7 +483,7 @@ namespace askap
             ASKAPLOG_INFO_STR(logger, "No calibration is applied" );
             boost::shared_ptr<ImageFFTEquation> fftEquation(new ImageFFTEquation (*itsModel, it, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
-            fftEquation->useSphFuncForPSF(parset().getBool("sphfuncforpsf", false));
+            fftEquation->useAlternativePSF(parset());
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
             itsEquation = fftEquation;
         } else {
@@ -499,7 +499,7 @@ namespace askap
             boost::shared_ptr<ImageFFTEquation> fftEquation(
                           new ImageFFTEquation (*itsModel, calIter, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
-            fftEquation->useSphFuncForPSF(parset().getBool("sphfuncforpsf", false));
+            fftEquation->useAlternativePSF(parset());
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
             itsEquation = fftEquation;
         }

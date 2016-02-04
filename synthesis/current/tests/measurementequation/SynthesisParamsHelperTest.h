@@ -133,11 +133,14 @@ namespace askap
            CPPUNIT_ASSERT(shape[0] == shape[1]);
            casa::Array<float> dirty(shape,0.);
            casa::Array<float> psfArray(shape,0.);
+           casa::Array<float> pcfArray(shape,0.);
            casa::Matrix<float> psf(psfArray.nonDegenerate());
+           casa::Matrix<float> pcf(pcfArray.nonDegenerate());
            psf(shape[0]/2,shape[1]/2) = 1.;           
+           pcf(shape[0]/2,shape[1]/2) = 1.;           
            const double factor = 4.*log(2.) * fabs(increments[0]) * shape[0] / casa::C::pi;
            GaussianTaperPreconditioner gp(factor/SynthesisParamsHelper::convertQuantity("20arcsec","rad"));
-           gp.doPreconditioning(psfArray,dirty);  
+           gp.doPreconditioning(psfArray,dirty,pcfArray);  
            
            // update the parameter
            casa::Array<double> temp(psfArray.shape());

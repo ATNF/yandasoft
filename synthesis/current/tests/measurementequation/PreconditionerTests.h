@@ -105,7 +105,7 @@ namespace askap
         {
           GaussianTaperPreconditioner gtp(25.,15.,M_PI/18.);
           casa::IPosition shape(2,128,128);
-          casa::Array<float> psf(shape), dirty(shape);
+          casa::Array<float> psf(shape), dirty(shape), pcf;
           psf.set(0.); dirty.set(0.);
           dirty(casa::IPosition(2,64,64)) = 1.;
           
@@ -121,7 +121,7 @@ namespace askap
                }
           }
   
-          gtp.doPreconditioning(psf,dirty);
+          gtp.doPreconditioning(psf,dirty,pcf);
           
           casa::ArrayLattice<float> psfLattice(psf);
           casa::ArrayLattice<casa::Complex> scratch(psf.shape());

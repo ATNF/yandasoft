@@ -91,7 +91,7 @@ TableVisGridder::TableVisGridder() : itsSumWeights(),
 	itsModelIsEmpty(false), itsSamplesGridded(0),
 			itsSamplesDegridded(0), itsVectorsFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
 	itsTimeCoordinates(0.0), itsTimeConvFunctions(0.0), itsTimeGridded(0.0), 
-	itsTimeDegridded(0.0), itsDopsf(false),
+	itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
 	itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false),
 	itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
 	itsTrackWeightPerOversamplePlane(false)
@@ -104,7 +104,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
         itsModelIsEmpty(false), itsName(name), itsSamplesGridded(0),
         itsSamplesDegridded(0), itsVectorsFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
         itsTimeCoordinates(0.0), itsTimeConvFunctions(0.0), itsTimeGridded(0.0), 
-        itsTimeDegridded(0.0), itsDopsf(false),
+        itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
         itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false), 	
         itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
         itsTrackWeightPerOversamplePlane(false)
@@ -134,6 +134,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
      itsTimeGridded(other.itsTimeGridded),
      itsTimeDegridded(other.itsTimeDegridded),
      itsDopsf(other.itsDopsf),
+     itsDopcf(other.itsDopcf),
      itsFirstGriddedVis(other.itsFirstGriddedVis),
      itsFeedUsedForPSF(other.itsFeedUsedForPSF),
      itsPointingUsedForPSF(other.itsPointingUsedForPSF),
@@ -191,6 +192,31 @@ TableVisGridder::~TableVisGridder() {
 		    ASKAPLOG_DEBUG_STR(logger, "   Time per point (psf)        = " << 1e9
 	              *itsTimeGridded/itsNumberGridded << " (ns)");
 		    ASKAPLOG_DEBUG_STR(logger, "   Performance for PSF         = "
+				<< 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
+		} else if (isPCFGridder()) {
+            ASKAPLOG_DEBUG_STR(logger, "TableVisGridder PreConditioner Function gridding statistics");
+		    ASKAPLOG_DEBUG_STR(logger, "   PCF samples gridded       = "
+                              << itsSamplesGridded);
+            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (psf)     = "
+                              << itsVectorsFlagged);                  
+		    ASKAPLOG_DEBUG_STR(logger, "   Total time for PCF gridding   = "
+				<< itsTimeGridded << " (s)");
+		    ASKAPLOG_DEBUG_STR(logger, "   PCF gridding time         = " << 1e6
+			 	*itsTimeGridded/itsSamplesGridded << " (us) per sample");
+		    ASKAPLOG_DEBUG_STR(logger, "   Total time converting for PCF = "
+	            << itsTimeCoordinates << " (s)");
+	        ASKAPLOG_DEBUG_STR(logger, "   Total time building CFs and indices for PCF = "
+				<< itsTimeConvFunctions << " (s)");				
+		    ASKAPLOG_DEBUG_STR(logger, "   PCF coord conversion      = "
+				  << 1e6 * itsTimeCoordinates/itsSamplesGridded << " (us) per sample");
+		    ASKAPLOG_DEBUG_STR(logger, "   PCF CFs and indices      = "
+				  << 1e6 * itsTimeConvFunctions/itsSamplesGridded << " (us) per sample");
+		    ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
+		    ASKAPLOG_DEBUG_STR(logger, "   Points gridded (psf)        = "
+	              << itsNumberGridded);
+		    ASKAPLOG_DEBUG_STR(logger, "   Time per point (psf)        = " << 1e9
+	              *itsTimeGridded/itsNumberGridded << " (ns)");
+		    ASKAPLOG_DEBUG_STR(logger, "   Performance for PCF         = "
 				<< 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
 		} else {
             ASKAPLOG_DEBUG_STR(logger, "TableVisGridder gridding statistics");
@@ -287,13 +313,19 @@ void TableVisGridder::save(const std::string& name) {
 	    iptable.setParameters(ip);
 	} else {
 	    if (itsNumberGridded == 0) {
-	        ASKAPLOG_DEBUG_STR(logger, "Ignore tablename="<<name<<" option as no visibilities were gridded");
+	        ASKAPLOG_DEBUG_STR(logger, "Ignore tablename="<<name<<
+                               " option as no visibilities were gridded");
 	        return;
-            }
-            if (isPSFGridder()) {
-                ASKAPLOG_DEBUG_STR(logger, "Ignore tablename="<<name<<" option for the PSF gridder");
-                 return;
-            }
+        }
+        if (isPSFGridder()) {
+            ASKAPLOG_DEBUG_STR(logger, "Ignore tablename="<<name<<
+                               " option for the PSF gridder");
+             return;
+        } else if (isPCFGridder()) {
+            ASKAPLOG_DEBUG_STR(logger, "Ignore tablename="<<name<<
+                               " option for the Preconditioner Function gridder");
+             return;
+        }
    
 	    const std::string imgName = name.substr(6);
 	    // number of planes before oversampling
@@ -402,6 +434,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    
    if (forward && isPSFGridder()) {
        ASKAPTHROW(AskapError, "Logic error: the gridder is not supposed to be used for degridding in the PSF mode")
+   }
+   if (forward && isPCFGridder()) {
+       ASKAPTHROW(AskapError, "Logic error: the gridder is not supposed to be used for degridding in the PCF mode")
    }
       
    casa::Timer timer;
@@ -576,7 +611,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
              casa::Vector<casa::Complex> imagePolFrameNoise(nImagePols);
              
              if (!forward) {
-                 if (!isPSFGridder()) {
+                 if (!isPSFGridder() && !isPCFGridder()) {
                      imagePolFrameVis = gridPolConv(syncHelper.zVector(acc.visibility(),i,chan));			     
                  }
                  // we just don't need this quantity for the forward gridder, although there would be no
@@ -673,7 +708,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                          ASKAPDEBUGASSERT(pol < uint(itsSumWeights.shape()(1)));
                          ASKAPDEBUGASSERT(imageChan < int(itsSumWeights.shape()(2)));
                                   
-                         if (!isPSFGridder()) {
+                         if (!isPSFGridder() && !isPCFGridder()) {
                              /// Gridding visibility data onto grid
                              casa::Complex rVis = phasor*conj(imagePolFrameVis[pol])*visNoiseWt;
                              if (itsVisWeight) {
@@ -687,14 +722,17 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
       
                              itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;
                          }
-                         /// Grid PSF?
-                         if (isPSFGridder() && (itsUseAllDataForPSF || ((itsFeedUsedForPSF == acc.feed1()(i)) &&
-                             (itsPointingUsedForPSF.separation(acc.dishPointing1()(i))<1e-6)))) {
+                         /// Grid the PSF?
+                         if (isPSFGridder() &&
+                             (itsUseAllDataForPSF ||
+                              ((itsFeedUsedForPSF == acc.feed1()(i)) &&
+                               (itsPointingUsedForPSF.separation(acc.dishPointing1()(i))<1e-6)))) {
                               casa::Complex uVis(1.,0.);
                               uVis *= visNoiseWt;
                               if (itsVisWeight) {
                                   uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
                               }
+
                               GridKernel::grid(grid, convFunc, uVis, iuOffset, ivOffset, support);
                       
                               itsSamplesGridded+=1.0;
@@ -702,6 +740,32 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
     
                               itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;               
                          } // end if psf needs to be done
+                         /// Grid the preconditioner function?
+                         if (isPCFGridder()) {
+                              casa::Complex uVis(1.,0.);
+                              uVis *= visNoiseWt;
+                              // I don't think we want different preconditioning for different Taylor terms.
+                              //if (itsVisWeight) {
+                              //    uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
+                              //}
+
+                              // storing w information in the imaginary part of the PCF,
+                              // so make them add with conjugate symmetry.
+                              if ((ivOffset<itsShape(1)/2 && iuOffset>=itsShape(0)/2) ||
+                                  (ivOffset<=itsShape(1)/2 && iuOffset<itsShape(0)/2)) {
+                              //if (isPCFGridder() && ivOffset<itsShape(1)/2) {
+                                casa::Matrix<casa::Complex> conjFunc = conj(convFunc);
+                                GridKernel::grid(grid, conjFunc, uVis, iuOffset, ivOffset, support);
+                              } else {
+                                GridKernel::grid(grid, convFunc, uVis, iuOffset, ivOffset, support);
+                              }
+                      
+                              itsSamplesGridded+=1.0;
+                              itsNumberGridded+=double((2*support+1)*(2*support+1));
+    
+                              itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;               
+                         } // end if pcf needs to be done
+
 		     } // end if forward (else case, reverse operation)
                  } // end of on-grid if statement
             }//end of pol loop
@@ -836,7 +900,7 @@ void TableVisGridder::initStokes()
 
 
 void TableVisGridder::initialiseGrid(const scimath::Axes& axes,
-		const casa::IPosition& shape, const bool dopsf) {
+		const casa::IPosition& shape, const bool dopsf, const bool dopcf) {
      ASKAPTRACE("TableVisGridder::initialiseGrid");
 
      ASKAPDEBUGASSERT(shape.nelements()>=2);
@@ -847,6 +911,7 @@ void TableVisGridder::initialiseGrid(const scimath::Axes& axes,
      initStokes();
 		
      configureForPSF(dopsf);
+     configureForPCF(dopcf);
 
      /// We only need one grid
      itsGrid.resize(1);
@@ -1065,6 +1130,7 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
 		const casa::Array<double>& in) {
    ASKAPTRACE("TableVisGridder::initialiseDegrid");
     configureForPSF(false);
+    configureForPCF(false);
 	itsShape = scimath::PaddingUtils::paddedShape(in.shape(),paddingFactor());
 	
 	initialiseCellSize(axes);

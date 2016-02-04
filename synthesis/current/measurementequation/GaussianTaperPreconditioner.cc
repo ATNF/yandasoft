@@ -90,7 +90,9 @@ IImagePreconditioner::ShPtr GaussianTaperPreconditioner::clone()
 /// @param[in] psf array with PSF
 /// @param[in] dirty array with dirty image
 /// @return true if psf and dirty have been altered
-bool GaussianTaperPreconditioner::doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const
+bool GaussianTaperPreconditioner::doPreconditioning(casa::Array<float>& psf,
+                                                    casa::Array<float>& dirty,
+                                                    casa::Array<float>& pcf) const
 {
   ASKAPTRACE("GaussianTaperPreconditioner::doPreconditioning");
 

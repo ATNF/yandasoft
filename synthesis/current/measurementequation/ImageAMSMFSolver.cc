@@ -237,8 +237,13 @@ namespace askap
 	  
 	  // Setup the normalization vector	  
 	  ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
-	  ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0, "Diagonal not present");
+	  ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0,
+         "Diagonal not present " << zeroOrderParam);
 	  casa::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
+	  // Setup the perconditioner function vector, if it has been defined
+	  ASKAPCHECK(normalEquations().preconditionerSlice().count(zeroOrderParam)>0,
+          "Preconditioner fuction Slice not present for " << zeroOrderParam);
+	  casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(zeroOrderParam)->second);
 	  
 	  ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
 	  
@@ -263,6 +268,14 @@ namespace askap
 	  // Now precondition the residual images using the zeroth order psf. We need to 
 	  // keep a copy of the zeroth PSF to avoid having it overwritten each time.
 	  Array<float> psfWorkArray;
+	  // also keep a copy of an anternative preconditioner function, if it isn't empty.
+	  // should only need the zeroth order for preconditioning, so set that now.
+	  Array<float> pcfWorkArray;
+	  Array<float> pcfZeroArray;
+      if (pcf.shape() > 0) {
+        pcfZeroArray.resize(planeIter.planeShape());
+	    casa::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
+      }
 	  for( uInt order=0; order < limit; ++order) {
 	       ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._initcopy");
 	    
@@ -318,17 +331,21 @@ namespace askap
 	    // For the first cycle we need to precondition and normalise all PSFs and all dirty images
 	    itsPSFZeroCentre=-1;
 	    for(uInt order=0; order < 2 * itsNumberTaylor - 1; ++order) {
-	      // We need to work with the original preconditioning PSF since it gets overridden
+	      // We need to work with the original PSF since it gets overridden
 	      psfWorkArray = itsPSFZeroArray.copy();
-	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order << ") centre value " << psfLongVec(order).nonDegenerate()(centre));
+	      pcfWorkArray = pcfZeroArray.copy();
+	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order <<
+              ") centre value " << psfLongVec(order).nonDegenerate()(centre));
               // Precondition this order PSF using PSF(0)
-	      if(doPreconditioning(psfWorkArray, psfLongVec(order))) {
-             ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order << ") centre value " << psfLongVec(order).nonDegenerate()(centre));
+	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfWorkArray)) {
+             ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order <<
+                 ") centre value " << psfLongVec(order).nonDegenerate()(centre));
              // Now we can precondition the dirty (residual) array using PSF(0)
              psfWorkArray = itsPSFZeroArray.copy();
+	         pcfWorkArray = pcfZeroArray.copy();
              ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<<
                                 " ("<<tagLogString<< ") and order=" << order);
-             doPreconditioning(psfWorkArray,dirtyLongVec(order));
+             doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfWorkArray);
 	      }
 	      // Normalise. 
 	      ASKAPLOG_DEBUG_STR(logger, "Normalising PSF and Dirty image for order " << order);
@@ -355,7 +372,8 @@ namespace askap
             // Precondition the dirty (residual) array
 	    for(uInt order=0; order < itsNumberTaylor; ++order) {
 	      psfWorkArray = itsPSFZeroArray.copy();
-	      if(doPreconditioning(psfWorkArray,dirtyLongVec(order))) {
+	      pcfWorkArray = pcfZeroArray.copy();
+	      if(doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfWorkArray)) {
 		ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<< " ("<<tagLogString<< ") and order=" << order);
 	      }
 	      // Normalise. 
@@ -363,7 +381,7 @@ namespace askap
 	      doNormalization(planeIter.getPlaneVector(normdiag),tol(),psfWorkArray,itsPSFZeroCentre,dirtyLongVec(order),
 			      boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
 	      if(order<itsNumberTaylor) {
-		dirtyVec(order)=dirtyLongVec(order);
+	        dirtyVec(order)=dirtyLongVec(order);
 	      }
 	    }// Loop over order
 	  }

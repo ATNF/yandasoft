@@ -118,6 +118,7 @@ int main(int argc, char **argv) {
      fillArray(psf,rg);
      casa::Array<float> img(shape);
      fillArray(img,rg);
+     casa::Array<float> pcf;
           
      std::cerr<<"Image initialization: "<<timer.real()<<std::endl;
      timer.mark();
@@ -131,7 +132,7 @@ int main(int argc, char **argv) {
      timer.mark();     
      
      for (size_t run=0; run<numberOfRuns; ++run) {
-          wp.doPreconditioning(psf,img);
+          wp.doPreconditioning(psf,img,pcf);
      }
      
      std::cerr<<"Preconditioning <"<<numberOfRuns<<" run(s)>: "<<timer.real()<<std::endl;

@@ -137,9 +137,9 @@ void TestCFGenPerformance::init()
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
 void TestCFGenPerformance::initialiseGrid(const scimath::Axes& axes,
-               const casa::IPosition& shape, const bool dopsf)
+               const casa::IPosition& shape, const bool dopsf, const bool dopcf)
 {
-  AWProjectVisGridder::initialiseGrid(axes,shape,dopsf);
+  AWProjectVisGridder::initialiseGrid(axes,shape,dopsf,dopcf);
   init();
 }
 

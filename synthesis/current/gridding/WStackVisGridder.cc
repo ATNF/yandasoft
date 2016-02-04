@@ -96,7 +96,7 @@ namespace askap
     }
 
     void WStackVisGridder::initialiseGrid(const scimath::Axes& axes,
-        const casa::IPosition& shape, const bool dopsf)
+        const casa::IPosition& shape, const bool dopsf, const bool dopcf)
     {
       ASKAPTRACE("WStackVisGridder::initialiseGrid");
       ASKAPDEBUGASSERT(shape.nelements()>=2);
@@ -106,6 +106,7 @@ namespace askap
       
       initStokes();
       configureForPSF(dopsf);
+      configureForPCF(dopcf);
 
       /// We need one grid for each plane
       itsGrid.resize(nWPlanes());
@@ -173,12 +174,15 @@ namespace askap
     void WStackVisGridder::finaliseGrid(casa::Array<double>& out)
     {
       ASKAPTRACE("WStackVisGridder::finaliseGrid");
-      if (!isPSFGridder()) {
-          ASKAPLOG_INFO_STR(logger, "Stacking " << nWPlanes()
-                          << " planes of W stack to get final image");
-      } else {
+      if (isPSFGridder()) {
           ASKAPLOG_INFO_STR(logger, "Stacking " << nWPlanes()
                           << " planes of W stack to get final PSF");
+      } else if (isPCFGridder()) {
+          ASKAPLOG_INFO_STR(logger, "Stacking " << nWPlanes()
+                          << " planes of W stack to get final preconditioner fuction");
+      } else {
+          ASKAPLOG_INFO_STR(logger, "Stacking " << nWPlanes()
+                          << " planes of W stack to get final image");
       }
       ASKAPDEBUGASSERT(itsGrid.size()>0);
       // buffer for the result as doubles
@@ -216,6 +220,7 @@ namespace askap
       ASKAPTRACE("WStackVisGridder::initialiseDegrid");
       itsShape = scimath::PaddingUtils::paddedShape(in.shape(),paddingFactor());
       configureForPSF(false);
+      configureForPCF(false);
 
       initialiseCellSize(axes);
       initStokes();

@@ -88,10 +88,10 @@ boost::shared_ptr<IVisGridder> SmearingGridderAdapter::clone()
 /// @param[in] shape Shape of output image: cube: u,v,pol,chan
 /// @param[in] dopsf Make the psf?
 void SmearingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf)
+                const casa::IPosition& shape, const bool dopsf, const bool dopcf)
 {
    ASKAPDEBUGASSERT(itsGridder);
-   itsGridder->initialiseGrid(axes,shape,dopsf);
+   itsGridder->initialiseGrid(axes,shape,dopsf,dopcf);
 }
 
 /// @brief grid the visibility data.

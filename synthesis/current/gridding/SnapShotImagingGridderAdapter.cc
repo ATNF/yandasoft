@@ -77,7 +77,7 @@ boost::mutex SnapShotImagingGridderAdapter::theirMutex;
 SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
                                const double tolerance, const casa::uInt decimate,
                                const casa::Interpolate2D::Method method) :
-     itsAccessorAdapter(tolerance), itsDoPSF(false), itsCoeffA(0.), itsCoeffB(0.),
+     itsAccessorAdapter(tolerance), itsDoPSF(false), itsDoPCF(false), itsCoeffA(0.), itsCoeffB(0.),
      itsFirstAccessor(true), itsBuffersFinalised(false), itsNumOfImageRegrids(0), itsTimeImageRegrid(0.),
      itsNumOfInitialisations(0), itsLastFitTimeStamp(0.), itsShortestIntervalBetweenFits(3e7),
      itsLongestIntervalBetweenFits(-1.), itsModelIsEmpty(false), itsClippingFactor(0.), itsNoPSFReprojection(true),
@@ -93,7 +93,7 @@ SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const boost::shared
 /// @param[in] other an object to copy from
 SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const SnapShotImagingGridderAdapter &other) :
     IVisGridder(other), itsAccessorAdapter(other.itsAccessorAdapter.tolerance()), itsDoPSF(other.itsDoPSF),
-    itsAxes(other.itsAxes), itsImageBuffer(other.itsImageBuffer.copy()),
+    itsDoPCF(other.itsDoPCF), itsAxes(other.itsAxes), itsImageBuffer(other.itsImageBuffer.copy()),
     itsWeightsBuffer(other.itsWeightsBuffer.copy()), itsCoeffA(other.itsCoeffA), itsCoeffB(other.itsCoeffB),
     itsFirstAccessor(other.itsFirstAccessor), itsBuffersFinalised(other.itsBuffersFinalised),
     itsNumOfImageRegrids(other.itsNumOfImageRegrids), itsTimeImageRegrid(other.itsTimeImageRegrid),
@@ -186,15 +186,16 @@ boost::shared_ptr<IVisGridder> SnapShotImagingGridderAdapter::clone()
 /// @param[in] shape Shape of output image: cube: u,v,pol,chan
 /// @param[in] dopsf Make the psf?
 void SnapShotImagingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf)
+                const casa::IPosition& shape, const bool dopsf, const bool dopcf)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::initialiseGrid");
 
   itsDoPSF = dopsf; // other fields are unused for the PSF gridder
+  itsDoPCF = dopcf; // other fields are unused for the PreConditioner Function gridder
   if (dopsf && itsNoPSFReprojection) {
       // do the standard initialisation for the PSF gridder
       ASKAPDEBUGASSERT(itsGridder);
-      itsGridder->initialiseGrid(axes,shape,dopsf);
+      itsGridder->initialiseGrid(axes,shape,dopsf,dopcf);
   } else {
       ASKAPDEBUGASSERT(shape.nelements() >= 2);
       reportAndInitIntervalStats();
@@ -250,7 +251,7 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
           // need to patch axes here before passing to initialise grid
           axes.addDirectionAxis(currentPlaneDirectionCoordinate());
           //
-          itsGridder->initialiseGrid(axes,itsImageBuffer.shape(),isPSFGridder());
+          itsGridder->initialiseGrid(axes,itsImageBuffer.shape(),isPSFGridder(),isPCFGridder());
           itsFirstAccessor = false;
       }
       itsGridder->grid(itsAccessorAdapter);
@@ -314,6 +315,7 @@ void SnapShotImagingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
   reportAndInitIntervalStats();
   ++itsNumOfInitialisations;
   itsDoPSF = false;
+  itsDoPCF = false;
   itsAxes = axes;
   itsImageBuffer.assign(image);
   // the following flag means the gridding will be 
@@ -407,8 +409,14 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   ASKAPDEBUGASSERT(itsGridder);
   ASKAPCHECK(!itsFirstAccessor, 
        "finaliseGriddingOfCurrentPlane is called while itsFirstAccessor flag is true. This is not supposed to happen");
+  if (isPSFGridder()) {
   const std::string msg = isPSFGridder() ? "PSF" : "dirty image";     
-  ASKAPLOG_DEBUG_STR(logger, "Finalising current "<<msg);
+      ASKAPLOG_DEBUG_STR(logger, "Finalising current PSF");
+  } else if (isPCFGridder()) {
+      ASKAPLOG_DEBUG_STR(logger, "Finalising current preconditioner function");
+  } else {
+      ASKAPLOG_DEBUG_STR(logger, "Finalising current dirty image");
+  }
   casa::Array<double> scratch(itsImageBuffer.shape());
   itsGridder->finaliseGrid(scratch);
   imageRegrid(scratch, itsImageBuffer, true);

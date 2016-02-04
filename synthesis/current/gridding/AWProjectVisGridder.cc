@@ -163,10 +163,10 @@ void AWProjectVisGridder::initialiseSumOfWeights()
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
 void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casa::IPosition& shape,
-        const bool dopsf)
+        const bool dopsf, const bool dopcf)
 {
     ASKAPTRACE("AWProjectVisGridder::initialiseGrid");
-    WProjectVisGridder::initialiseGrid(axes, shape, dopsf);
+    WProjectVisGridder::initialiseGrid(axes, shape, dopsf, dopcf);
 
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
@@ -265,19 +265,18 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     const double ccellx = 1.0 / (double(qnx) * itsUVCellSize(0));
     const double ccelly = 1.0 / (double(qny) * itsUVCellSize(1));
 
+    /*
     casa::Vector<double> ccfx(nx);
     casa::Vector<double> ccfy(ny);
-
     for (casa::uInt ix = 0; ix < nx; ++ix) {
         const double nux = std::abs(double(ix) - double(nx / 2)) / double(nx / 2);
         ccfx(ix) = grdsf(nux); // /double(qnx);
     }
-
     for (casa::uInt iy = 0; iy < ny; ++iy) {
         const double nuy = std::abs(double(iy) - double(ny / 2)) / double(ny / 2);
         ccfy(iy) = grdsf(nuy); // /double(qny);
     }
-
+    */
 
     UVPattern &pattern = uvPattern();
     casa::Matrix<casa::DComplex> thisPlane = getCFBuffer();
@@ -293,9 +292,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             makeCFValid(feed, currentField());
             nDone++;
             casa::MVDirection offset(acc.pointingDir1()(row).getAngle());
-            rwSlopes()(0, feed, currentField()) = isPSFGridder() ? 0. : sin(offset.getLong()
+            rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
                                                   - out.getLong()) * cos(offset.getLat());
-            rwSlopes()(1, feed, currentField()) = isPSFGridder() ? 0. : sin(offset.getLat())
+            rwSlopes()(1, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
                                                   * cos(out.getLat()) - cos(offset.getLat()) * sin(out.getLat())
                                                   * cos(offset.getLong() - out.getLong());
 

@@ -245,7 +245,9 @@ namespace askap
           
                     // Setup the PSFs - all ( 2 x ntaylor - 1 ) of them for the first time.
                     casa::Array<float> psfZeroArray(planeIter.planeShape());
-                                        
+                    // Only set up a single preconditioner function. May need to do all of them.
+                    casa::Array<float> pcfZeroArray;
+
                     // buffer for the peak of zero-order PSF
                     float zeroPSFPeak = -1;
                     for( int order=0; order < nOrders; ++order) {
@@ -254,11 +256,11 @@ namespace askap
 	                    const std::string thisOrderParam = iph.paramName();
                         ASKAPLOG_INFO_STR(logger, "MSMFS solver: processing order "<<order<<" ("<<nTaylor<<
                                           " Taylor terms + "<<nTaylor-1<<" cross-terms), parameter name: "<<thisOrderParam);
-                        ASKAPCHECK(normalEquations().normalMatrixSlice().count(thisOrderParam)>0, "PSF Slice for plane="<<
-                                   plane<<" and order="<<order<<" is not present");
+                        ASKAPCHECK(normalEquations().normalMatrixSlice().count(thisOrderParam)>0,
+                            "PSF Slice for plane="<<plane<<" and order="<<order<<" is not present");
                         casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
-                        ASKAPCHECK(normalEquations().dataVector(thisOrderParam).size()>0, "Data vector not present for cube plane="<<
-                                   plane<<" and order="<<order);
+                        ASKAPCHECK(normalEquations().dataVector(thisOrderParam).size()>0,
+                            "Data vector not present for cube plane="<<plane<<" and order="<<order);
                         casa::Vector<double> dv = normalEquations().dataVector(thisOrderParam);
 	   
                         casa::Array<float> psfArray(planeIter.planeShape());
@@ -271,9 +273,19 @@ namespace askap
 	   	   	   	                
                         if (order == 0) {
                             psfZeroArray = psfArray.copy();
+	                        // setup an anternative preconditioner function, if it isn't empty
+                            ASKAPCHECK(normalEquations().preconditionerSlice().count(thisOrderParam)>0,
+                                "Preconditioner function Slice for plane="<<plane<<
+                                " and order="<<order<<" is not present");
+                            casa::Vector<double>
+                                pcf(normalEquations().preconditionerSlice().find(thisOrderParam)->second);
+                            if (pcf.shape() > 0) {
+                                pcfZeroArray.resize(planeIter.planeShape());
+                                casa::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
+                            }
                         }
 	    	   
-                        if( doPreconditioning(psfZeroArray,psfArray) ) {
+                        if( doPreconditioning(psfZeroArray,psfArray,pcfZeroArray) ) {
                            // Write PSFs to disk.
                            ASKAPLOG_INFO_STR(logger, "Exporting preconditioned psfs (to be stored to disk later)");
                            Axes axes(ip.axes(thisOrderParam));
@@ -306,7 +318,7 @@ namespace askap
                         // Setup the Residual Images and Model Images  - ( ntaylor ) of them
                         if (order < nTaylor) {
                             // Now precondition the residual images
-                            doPreconditioning(psfZeroArray,dirtyArray);
+                            doPreconditioning(psfZeroArray,dirtyArray,pcfZeroArray);
 		   
                             // We need lattice equivalents. We can use ArrayLattice which involves
                             // no copying

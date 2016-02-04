@@ -68,7 +68,9 @@ namespace askap
 	    return IImagePreconditioner::ShPtr(new RobustPreconditioner(*this));
     }
     
-    bool RobustPreconditioner::doPreconditioning(casa::Array<float>& psf, casa::Array<float>& dirty) const
+    bool RobustPreconditioner::doPreconditioning(casa::Array<float>& psf,
+                                                 casa::Array<float>& dirty,
+                                                 casa::Array<float>& pcf) const
     {
       ASKAPTRACE("RobustPreconditioner::doPreconditioning");
       ASKAPLOG_INFO_STR(logger, "Applying Robust filter with robustness parameter " << itsRobust);

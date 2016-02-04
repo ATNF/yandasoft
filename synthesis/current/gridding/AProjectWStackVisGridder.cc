@@ -172,10 +172,13 @@ void AProjectWStackVisGridder::initIndices(const accessors::IConstDataAccessor& 
 /// @param axes axes specifications
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
-void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,  const casa::IPosition& shape, const bool dopsf)
+void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,
+                                              const casa::IPosition& shape,
+                                              const bool dopsf,
+                                              const bool dopcf)
 {
     ASKAPTRACE("AProjectWStackVisGridder::initialiseGrid");
-    WStackVisGridder::initialiseGrid(axes,shape,dopsf);
+    WStackVisGridder::initialiseGrid(axes,shape,dopsf,dopcf);
 
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
@@ -254,9 +257,9 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
             makeCFValid(feed, currentField());
             nDone++;
             casa::MVDirection offset(acc.pointingDir1()(row).getAngle());
-            rwSlopes()(0, feed, currentField()) = isPSFGridder() ? 0. : sin(offset.getLong()
+            rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
                     -out.getLong()) *cos(offset.getLat());
-            rwSlopes()(1, feed, currentField())= isPSFGridder() ? 0. : sin(offset.getLat())
+            rwSlopes()(1, feed, currentField())= isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
                 *cos(out.getLat()) - cos(offset.getLat())*sin(out.getLat())
                 *cos(offset.getLong()-out.getLong());
 

@@ -32,7 +32,6 @@ ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
 #include <fft/FFTWrapper.h>
 #include <profile/AskapProfiler.h>
 
-
 namespace askap
 {
   namespace synthesis
@@ -99,6 +98,31 @@ namespace askap
 
       const int cSize=2*itsSupport+1; // 7;
 
+if (isPCFGridder()) {
+
+      for (int fracv=0; fracv<itsOverSample; ++fracv) {
+        for (int fracu=0; fracu<itsOverSample; ++fracu) {
+          const int plane=fracu+itsOverSample*fracv;
+          ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
+          itsConvFunc[plane].resize(cSize, cSize);
+          itsConvFunc[plane].set(0.0);
+          //should probably use something like this
+          //const float wt = grdsf(0)*grdsf(0);
+          for (int ix=0; ix<cSize; ++ix) {
+            const double nux_pix=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsOverSample);
+            for (int iy=0; iy<cSize; ++iy) {
+              const double nuy_pix=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsOverSample);
+              if (nux_pix*nux_pix + nuy_pix*nuy_pix < 1.0) {
+                itsConvFunc[plane](ix, iy) = 1.0;
+              }
+            }
+          }
+
+        } // for fracu
+      } // for fracv
+
+} else {
+
       /// This must be changed for non-MFS
 
       for (int fracv=0; fracv<itsOverSample; ++fracv) {
@@ -124,6 +148,8 @@ namespace askap
           }
         } // for fracu
       } // for fracv
+
+}
       
       // force normalization for all fractional offsets (or planes)
       for (size_t plane = 0; plane<itsConvFunc.size(); ++plane) {
@@ -148,6 +174,8 @@ namespace askap
       casa::Vector<double> ccfy(itsShape(1));
       ASKAPDEBUGASSERT(itsShape(0)>1);
       ASKAPDEBUGASSERT(itsShape(1)>1);
+
+      if (isPCFGridder()) return;
       
       // initialise buffers to enable a filtering of the correction
       // function in Fourier space.
@@ -176,14 +204,14 @@ namespace askap
         interpolateEdgeValues(bufy);
       }
 
-      // Fourier filter the spheroidal (crop in Fourier space in line with gridding kernel support size)
-      const bool doFiltering = false;
+      // Fourier filter the spheroidal (crop in Fourier space in line with
+      // gridding kernel support size)
+      const bool doFiltering = true;
       if (doFiltering) {
-         //DAM Need to investigate times when support>3 (e.g. w-proj).
-         //    When it is variable there isn't one right value to use...
-         //    Also a problem: itsSupport==0 during w-proj degridding.
-         //int support = itsSupport>0 ? itsSupport : 3;
+         // Some more advanced gridders have support>3 (e.g. w-proj).
+         // 
          int support = 3;
+         const casa::DComplex maxBefore = bufx(itsShape(0)/2);
          scimath::fft(bufx, true);
          scimath::fft(bufy, true);
          for (int ix=0; ix<itsShape(0)/2-support; ++ix) {
@@ -200,6 +228,10 @@ namespace askap
          }
          scimath::fft(bufx, false);
          scimath::fft(bufy, false);
+         // Normalise after filtering.
+         const casa::DComplex normalisation = maxBefore / bufx(itsShape(0)/2);
+         bufx *= normalisation;
+         bufy *= normalisation;
       }
 
       for (int ix=0; ix<itsShape(0); ++ix) {
@@ -226,6 +258,7 @@ namespace askap
         }
         it.next();
       }
+
     }
     
     /*

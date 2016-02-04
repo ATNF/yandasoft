@@ -33,13 +33,12 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 #include <fitting/Params.h>
 #include <measurementequation/ImageFFTEquation.h>
 #include <measurementequation/SynthesisParamsHelper.h>
+#include <gridding/BoxVisGridder.h>
 #include <gridding/SphFuncVisGridder.h>
 #include <fitting/ImagingNormalEquations.h>
 #include <fitting/DesignMatrix.h>
 #include <fitting/Axes.h>
 #include <profile/AskapProfiler.h>
-
-#include <gridding/SphFuncVisGridder.h>
 
 #include <scimath/Mathematics/RigidVector.h>
 
@@ -64,7 +63,9 @@ namespace askap
 
     ImageFFTEquation::ImageFFTEquation(const askap::scimath::Params& ip,
         IDataSharedIter& idi) : scimath::Equation(ip),
-      askap::scimath::ImagingEquation(ip), itsIdi(idi), itsSphFuncPSFGridder(false)
+      askap::scimath::ImagingEquation(ip), itsIdi(idi),
+      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
+      itsUsePreconGridder(false)
     {
       itsGridder = IVisGridder::ShPtr(new SphFuncVisGridder());
       init();
@@ -72,7 +73,8 @@ namespace askap
     
 
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi) :
-      itsIdi(idi), itsSphFuncPSFGridder(false)
+      itsIdi(idi), itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
+      itsUsePreconGridder(false)
     {
       itsGridder = IVisGridder::ShPtr(new SphFuncVisGridder());
       reference(defaultParameters().clone());
@@ -81,7 +83,8 @@ namespace askap
 
     ImageFFTEquation::ImageFFTEquation(const askap::scimath::Params& ip,
         IDataSharedIter& idi, IVisGridder::ShPtr gridder) : scimath::Equation(ip),
-      askap::scimath::ImagingEquation(ip), itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false)
+      askap::scimath::ImagingEquation(ip), itsGridder(gridder), itsIdi(idi),
+      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false), itsUsePreconGridder(false)
     {
       init();
     }
@@ -89,7 +92,8 @@ namespace askap
 
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi,
         IVisGridder::ShPtr gridder) :
-      itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false)
+      itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false),
+      itsBoxPSFGridder(false), itsUsePreconGridder(false)
     {
       reference(defaultParameters().clone());
       init();
@@ -98,25 +102,39 @@ namespace askap
     ImageFFTEquation::~ImageFFTEquation()
     {
     }
-    
-    /// @brief define whether the default spheroidal function gridder is used for PSF
-    /// @details We have an option to build PSF using the default spheriodal function
-    /// gridder, i.e. no w-term and no primary beam is simulated, as an alternative 
-    /// to the same user-defined gridder as used for the model. Apart from the speed, 
-    /// it probably makes the overall approximation better (i.e. removes some factors 
-    /// of spatial dependence).
-    /// @param[in] useSphFunc true, if spheroidal function gridder is to be used for PSF
-    void ImageFFTEquation::useSphFuncForPSF(bool useSphFunc)
+     
+    /// @brief define whether to use an alternative gridder for the PSF
+    /// and/or the preconditioner function
+    void ImageFFTEquation::useAlternativePSF(const LOFAR::ParameterSet& parset)
     {
-      itsSphFuncPSFGridder = useSphFunc;
-      if (itsSphFuncPSFGridder) {
-         ASKAPLOG_INFO_STR(logger, "The default spheroidal function gridder will be used to calculate PSF");
+      const bool useGentlePCF = parset.getBool("gentlepreconditioner", false);
+      const bool useBoxPSF = parset.getBool("boxforpsf", false);
+      const bool useSphPSF = parset.getBool("sphfuncforpsf", false);
+
+      if (useGentlePCF) {
+         itsUsePreconGridder = true;
+         ASKAPLOG_INFO_STR(logger,
+             "A separate tophat-style gridder will be used to calculate the preconditioner function");
+      }
+
+      if (useBoxPSF) {
+         itsBoxPSFGridder = true;
+         ASKAPLOG_INFO_STR(logger,
+             "The box (nearest neighbour) gridder will be used to calculate the PSF");
+         if (useSphPSF) {
+             ASKAPLOG_WARN_STR(logger,
+                 "The spheroidal function will not be used to calculate the PSF");
+         }
+      } else if (useSphPSF) {
+         itsSphFuncPSFGridder = true;
+         ASKAPLOG_INFO_STR(logger,
+             "The default spheroidal function gridder will be used to calculate the PSF");
       } else {
-         ASKAPLOG_INFO_STR(logger, "The PSF will be calculated by the same gridder type as used for the model and residuals");
+         ASKAPLOG_INFO_STR(logger,
+             "The PSF will be calculated by the same gridder type as used for the model and residuals");
       }
     }
-    
-
+     
     askap::scimath::Params ImageFFTEquation::defaultParameters()
     {
       Params ip;
@@ -138,6 +156,8 @@ namespace askap
         itsIdi=other.itsIdi;
         itsGridder = other.itsGridder;
         itsSphFuncPSFGridder = other.itsSphFuncPSFGridder;
+        itsBoxPSFGridder = other.itsBoxPSFGridder;
+        itsUsePreconGridder = other.itsUsePreconGridder;
         itsVisUpdateObject = other.itsVisUpdateObject;
       }
       return *this;
@@ -289,18 +309,27 @@ namespace askap
           itsResidualGridders[imageName]=itsGridder->clone();
         }
         if(itsPSFGridders.count(imageName)==0) {
-          if (itsSphFuncPSFGridder) {
+          if (itsBoxPSFGridder) {
+             boost::shared_ptr<BoxVisGridder> psfGridder(new BoxVisGridder);
+             itsPSFGridders[imageName] = psfGridder;
+          } else if (itsSphFuncPSFGridder) {
              boost::shared_ptr<SphFuncVisGridder> psfGridder(new SphFuncVisGridder);
              itsPSFGridders[imageName] = psfGridder;
           } else {
              itsPSFGridders[imageName] = itsGridder->clone();
           }
         }
+        if(itsUsePreconGridder && itsPreconGridders.count(imageName)==0) {
+           // Should this be a clone of the psf or the image?
+           //itsPreconGridders[imageName] = itsGridder->clone();
+           itsPreconGridders[imageName] = itsPSFGridders[imageName]->clone();
+        }
       }
       // Now we initialise appropriately
       ASKAPLOG_DEBUG_STR(logger, "Initialising for model degridding and residual gridding" );
       if (completions.size() == 0) {
-          ASKAPLOG_WARN_STR(logger, "Found no free image parameters, this rank will not contribute usefully to normal equations");
+          ASKAPLOG_WARN_STR(logger,
+              "Found no free image parameters, this rank will not contribute usefully to normal equations");
       }
       bool somethingHasToBeDegridded = false;
       for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
@@ -315,12 +344,17 @@ namespace askap
         if (!itsModelGridders[imageName]->isModelEmpty()) {
             somethingHasToBeDegridded = true;
         }
-        /// Now the residual images, dopsf=false
+        /// Now the residual images, dopsf=false, dopcf=false
         itsResidualGridders[imageName]->customiseForContext(*it);
         itsResidualGridders[imageName]->initialiseGrid(axes, imageShape, false);
-        // and PSF gridders, dopsf=true
+        // and PSF gridders, dopsf=true, dopcf=false
         itsPSFGridders[imageName]->customiseForContext(*it);
         itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);        
+        // and PSF gridders, dopsf=false, dopcf=false
+        if (itsUsePreconGridder) {
+            itsPreconGridders[imageName]->customiseForContext(*it);
+            itsPreconGridders[imageName]->initialiseGrid(axes, imageShape, false, true);
+        }
       }
       // synchronise emtpy flag across multiple ranks if necessary
       if (itsVisUpdateObject) {
@@ -377,6 +411,12 @@ namespace askap
                     #pragma omp task
                     #endif
                     itsPSFGridders[imageName]->grid(accBuffer);
+                    if (itsUsePreconGridder) {
+                        #ifdef _OPENMP
+                        #pragma omp task
+                        #endif
+                        itsPreconGridders[imageName]->grid(accBuffer);
+                    }
                     tempCounter += accBuffer.nRow();
                 }
            }
@@ -392,16 +432,19 @@ namespace askap
       // We have looped over all the data, so now we have to complete the 
       // transforms and fill in the normal equations with the results from the
       // residual gridders
-      ASKAPLOG_DEBUG_STR(logger, "Adding residual image, PSF, and weights image to the normal equations" );
+      if (itsUsePreconGridder) {
+        ASKAPLOG_DEBUG_STR(logger,
+            "Adding residual image, PSF, preconditioner function and weights image to the normal equations" );
+      } else {
+        ASKAPLOG_DEBUG_STR(logger,
+            "Adding residual image, PSF and weights image to the normal equations" );
+      }
       for (vector<string>::const_iterator it=completions.begin();it!=completions.end();++it)
       {
         const string imageName("image"+(*it));
         const casa::IPosition imageShape(parameters().value(imageName).shape());
 
-        casa::Array<double> imagePSF(imageShape);
-        casa::Array<double> imageWeight(imageShape);
         casa::Array<double> imageDeriv(imageShape);
-
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
         
         /*
@@ -413,9 +456,12 @@ namespace askap
         // end debugging code
         */
 
+        casa::Array<double> imagePSF(imageShape);
         itsPSFGridders[imageName]->finaliseGrid(imagePSF);
 
+        casa::Array<double> imageWeight(imageShape);
         itsResidualGridders[imageName]->finaliseWeights(imageWeight);
+
         /*{ 
           casa::Array<double> imagePSFWeight(imageShape);
           itsPSFGridders[imageName]->finaliseWeights(imagePSFWeight);
@@ -434,14 +480,23 @@ namespace askap
              // we may still be able to have data after summing all parts of the NE
           } 
         }*/
+
+        casa::IPosition vecShape(1, imagePSF.nelements());
+
+        casa::Vector<double> imagePreconVec;
+        if (itsUsePreconGridder) {
+          casa::Array<double> imagePrecon(imageShape);
+          itsPreconGridders[imageName]->finaliseGrid(imagePrecon);
+          imagePreconVec.reference(imagePrecon.reform(vecShape));
+        }
+
         {
           casa::IPosition reference(4, imageShape(0)/2, imageShape(1)/2, 0, 0);
-          casa::IPosition vecShape(1, imagePSF.nelements());
           casa::Vector<double> imagePSFVec(imagePSF.reform(vecShape));
           casa::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
           casa::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
-          ne.addSlice(imageName, imagePSFVec, imageWeightVec, imageDerivVec,
-              imageShape, reference);
+          ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
+              imageDerivVec, imageShape, reference);
         }
       }
     }
