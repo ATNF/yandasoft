@@ -270,7 +270,6 @@ namespace askap
 	  Array<float> psfWorkArray;
 	  // also keep a copy of an anternative preconditioner function, if it isn't empty.
 	  // should only need the zeroth order for preconditioning, so set that now.
-	  Array<float> pcfWorkArray;
 	  Array<float> pcfZeroArray;
       if (pcf.shape() > 0) {
         pcfZeroArray.resize(planeIter.planeShape());
@@ -333,19 +332,17 @@ namespace askap
 	    for(uInt order=0; order < 2 * itsNumberTaylor - 1; ++order) {
 	      // We need to work with the original PSF since it gets overridden
 	      psfWorkArray = itsPSFZeroArray.copy();
-	      pcfWorkArray = pcfZeroArray.copy();
 	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order <<
               ") centre value " << psfLongVec(order).nonDegenerate()(centre));
               // Precondition this order PSF using PSF(0)
-	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfWorkArray)) {
+	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfZeroArray)) {
              ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order <<
                  ") centre value " << psfLongVec(order).nonDegenerate()(centre));
              // Now we can precondition the dirty (residual) array using PSF(0)
              psfWorkArray = itsPSFZeroArray.copy();
-	         pcfWorkArray = pcfZeroArray.copy();
              ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<<
                                 " ("<<tagLogString<< ") and order=" << order);
-             doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfWorkArray);
+             doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfZeroArray);
 	      }
 	      // Normalise. 
 	      ASKAPLOG_DEBUG_STR(logger, "Normalising PSF and Dirty image for order " << order);
@@ -372,8 +369,7 @@ namespace askap
             // Precondition the dirty (residual) array
 	    for(uInt order=0; order < itsNumberTaylor; ++order) {
 	      psfWorkArray = itsPSFZeroArray.copy();
-	      pcfWorkArray = pcfZeroArray.copy();
-	      if(doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfWorkArray)) {
+	      if(doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfZeroArray)) {
 		ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<< " ("<<tagLogString<< ") and order=" << order);
 	      }
 	      // Normalise. 
