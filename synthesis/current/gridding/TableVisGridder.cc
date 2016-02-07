@@ -763,7 +763,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                               itsSamplesGridded+=1.0;
                               itsNumberGridded+=double((2*support+1)*(2*support+1));
     
-                              itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;               
+                              // these aren't used. Can parobably also disable the PSF weights
+                              //itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;               
                          } // end if pcf needs to be done
 
 		     } // end if forward (else case, reverse operation)

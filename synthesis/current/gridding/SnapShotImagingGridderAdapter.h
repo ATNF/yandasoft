@@ -49,6 +49,7 @@
 #include <scimath/Mathematics/Interpolate2D.h>
 #include <measures/Measures/MDirection.h>
 #include <images/Images/TempImage.h>
+#include <images/Images/ImageRegrid.h>
 
 #ifdef _OPENMP
 #include <boost/thread/mutex.hpp>
@@ -214,6 +215,7 @@ protected:
    void imageRegrid(const casa::Array<double> &input, casa::Array<double> &output,
                     bool toTarget) const;
    
+   void pcfRegrid(casa::ImageRegrid<double>& regridder) const;
    
    /// @brief clip image 
    /// @details This method clips the image by zeroing the edges according to the

@@ -48,6 +48,8 @@ ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 #include <utils/MultiDimArrayPlaneIter.h>
 #include <utils/PaddingUtils.h>
 
+#include <fft/FFTWrapper.h>
+
 #include <casa/OS/Timer.h>
 #include <images/Images/ImageRegrid.h>
 #include <coordinates/Coordinates/CoordinateSystem.h>
@@ -419,9 +421,14 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   casa::Array<double> scratch(itsImageBuffer.shape());
   itsGridder->finaliseGrid(scratch);
   imageRegrid(scratch, itsImageBuffer, true);
-  ASKAPLOG_DEBUG_STR(logger, "Finalising current weights");
-  itsGridder->finaliseWeights(scratch);
-  imageRegrid(scratch, itsWeightsBuffer, true);  
+
+  //DAM: do we really need itsSumWeights for the PSF ir PCF???
+  //if (!isPSFGridder() && !isPCFGridder()) {
+  if (!isPCFGridder()) {
+    ASKAPLOG_DEBUG_STR(logger, "Finalising current weights");
+    itsGridder->finaliseWeights(scratch);
+    imageRegrid(scratch, itsWeightsBuffer, true);  
+  }
   itsBuffersFinalised = true;
 }
 
@@ -472,7 +479,7 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
            casa::Array<double> &output, bool toTarget) const
 {
    ASKAPTRACE("SnapShotImagingGridderAdapter::imageRegrid");    
-  
+ 
    // for stats
    casa::Timer timer;
    timer.mark();
@@ -538,8 +545,12 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
         { 
           boost::unique_lock<boost::mutex> lock(theirMutex);
         #endif
-          regridder.regrid(itsTempOutImg, itsInterpolationMethod,
-                  casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+          if (!isPCFGridder()) {
+            regridder.regrid(itsTempOutImg, itsInterpolationMethod,
+                    casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+          } else {
+            pcfRegrid(regridder);
+          }
         #ifdef _OPENMP
         }
         #endif
@@ -557,6 +568,75 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
         imageClip(outRef);
    }
    itsTimeImageRegrid += timer.real();
+}
+
+void SnapShotImagingGridderAdapter::pcfRegrid(casa::ImageRegrid<double>& regridder) const
+{
+   // Special regridder for the preconditioner function
+
+   // The PCF uses the imaginary part of Fourier components to store estimates
+   // of the gridding kernel size. It has nothing to do with phases. The real and
+   // imaginary images need to be split out, regridded separately, then recombined. 
+   casa::IPosition shape = itsTempInImg.shape();
+   casa::Array<casa::DComplex> scratch(shape);
+   casa::Array<casa::DComplex> scratchReal(shape);
+   casa::Array<casa::DComplex> scratchImag(shape);
+   // Copy to a complex array and transform to the uv plane
+   casa::convertArray<casa::DComplex,double>(scratch, itsTempInImg.get());
+   scimath::fft2d(scratch, true);
+
+   // Regrid the real part
+   casa::convertArray<casa::DComplex,double>(scratchReal, real(scratch));
+   scimath::fft2d(scratchReal, false);
+   itsTempInImg.put(real(scratchReal));
+   regridder.regrid(itsTempOutImg, itsInterpolationMethod,
+           casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+   casa::convertArray<casa::DComplex,double>(scratchReal, itsTempOutImg.get());
+   scimath::fft2d(scratchReal, true);
+   casa::convertArray<casa::DComplex,double>(scratchReal, real(scratchReal));
+
+   // Regrid the imaginary part
+   // Even though these are non-negative numbers, they are stored with conjugate
+   // symmetry to ensure that they form a real PCF image. However, we need to
+   // regrid the non-negative numbers, so take the absolute values first.
+   casa::convertArray<casa::DComplex,double>(scratchImag, abs(imag(scratch)));
+   scimath::fft2d(scratchImag, false);
+   itsTempInImg.put(real(scratchImag));
+   regridder.regrid(itsTempOutImg, itsInterpolationMethod,
+           casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+   casa::convertArray<casa::DComplex,double>(scratchImag, itsTempOutImg.get());
+   scimath::fft2d(scratchImag, true);
+   casa::convertArray<casa::DComplex,double>(scratchImag, real(scratchImag));
+
+   // Recombine the real and imaginary uv grids. Need to add the imaginary parts
+   // with conjugate symmetry or the real image storage will lose them.
+   casa::IPosition start(shape.nelements());
+   casa::IPosition end(shape.nelements());
+   for (casa::uInt k=0; k<start.nelements(); ++k) {
+     start(k) = 0;
+     end(k) = 0;
+   }
+   start(0) = 0;
+   end(0) = shape[0]/2-1;
+   start(1) = 0;
+   end(1) = shape[1]/2;
+   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,+1)*scratchImag(start,end);
+   start(1) = shape[1]/2+1;
+   end(1) = shape[1]-1;
+   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,-1)*scratchImag(start,end);
+   start(0) = shape[0]/2;
+   end(0) = shape[0]-1;
+   start(1) = 0;
+   end(1) = shape[1]/2-1;
+   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,+1)*scratchImag(start,end);
+   start(1) = shape[1]/2;
+   end(1) = shape[1]-1;
+   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,-1)*scratchImag(start,end);
+
+   // Transform back to an image
+   scimath::fft2d(scratch, false);
+   itsTempOutImg.put(real(scratch));
+
 }
 
 /// @brief obtain the tangent point
