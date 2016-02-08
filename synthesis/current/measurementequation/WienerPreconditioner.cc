@@ -96,7 +96,7 @@ namespace askap
     
     bool WienerPreconditioner::doPreconditioning(casa::Array<float>& psf,
                                                  casa::Array<float>& dirty,
-                                                 casa::Array<float>& pcf) const
+                                                 casa::Array<float>& pcfIn) const
     {
       ASKAPTRACE("WienerPreconditioner::doPreconditioning");
       if (!itsUseRobustness && (itsParameter < 1e-6)) {
@@ -109,11 +109,13 @@ namespace askap
 
       // If the preconditioner function is undefined, use the psf
       bool newFilter = true;
-      if (pcf.shape() == 0) {
+      casa::Array<float> pcf;
+      if (pcfIn.shape() == 0) {
           pcf.reference(psf);
           newFilter = false;
           ASKAPLOG_INFO_STR(logger, "Applying old-style Wiener filter");
       } else {
+          pcf.reference(pcfIn);
           ASKAPLOG_INFO_STR(logger, "Applying new-style Wiener filter");
       }
       ASKAPCHECK(pcf.shape().conform(psf.shape()),
@@ -210,10 +212,6 @@ namespace askap
         }
       
       } // if (autoThreshold)
-
-      // for debugging - to export preconditioner function
-      //scimath::saveAsCasaImage("pcf.img",real(scratch.asArray()));
-      //throw 1;
       
       // Make the transfer function
       casa::ArrayLattice<casa::Complex> xfr(shape);
@@ -257,7 +255,7 @@ namespace askap
         }
 
         // for debugging - to export kernel widths
-        //scimath::saveAsCasaImage("kernelwidths.img",kernelWidthArray.asArray());
+        //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthArray.asArray());
         //throw 1;
 
         // Build the filter as follows:
@@ -347,6 +345,7 @@ namespace askap
             pos(0) = x;
             pos(1) = y;
 
+            // should regionCount=0 regions have filter values of 0 or 1?
             if (localCount > 0) {
               wienerfilter.putAt(1.0 / (noisePower*regionSum/double(regionCount) + 1.0), pos);
             }
@@ -364,13 +363,16 @@ namespace askap
             normFactor*conj(scratch)/(real(scratch*conj(scratch)) + noisePower)));
 
       }
-      
       // for debugging - to export Wiener filter
-      //scimath::saveAsCasaImage("wienerfilter.img",real(wienerfilter.asArray()));
+      //scimath::saveAsCasaImage("wienerfilter.uv",real(wienerfilter.asArray()));
       //throw 1;
-      
+
       // Apply the Wiener filter to the xfr and transform to the filtered PSF
       scratch.copyData(casa::LatticeExpr<casa::Complex> (wienerfilter * xfr));
+      // for debugging - to export Wiener filter
+      //scimath::saveAsCasaImage("xfr.uv",real(xfr.asArray()));
+      //scimath::saveAsCasaImage("xfrnew.uv",real(scratch.asArray()));
+      //throw 1;
       casa::LatticeFFT::cfft2d(scratch, casa::False);       
       lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
       const float maxPSFAfter=casa::max(psf);
