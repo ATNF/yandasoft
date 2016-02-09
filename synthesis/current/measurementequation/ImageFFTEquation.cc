@@ -107,7 +107,7 @@ namespace askap
     /// and/or the preconditioner function
     void ImageFFTEquation::useAlternativePSF(const LOFAR::ParameterSet& parset)
     {
-      const bool useGentlePCF = parset.getBool("gentlepreconditioner", false);
+      const bool useGentlePCF = parset.getBool("preconditioner.preservecf", false);
       const bool useBoxPSF = parset.getBool("boxforpsf", false);
       const bool useSphPSF = parset.getBool("sphfuncforpsf", false);
 

@@ -129,7 +129,7 @@ namespace askap
         /// kernels during preconditioning when robustness approaches uniform
         /// weighting. A separate preconditioner function can also be selected.
         /// @param[in] parset imager parameter set to check for PSF options.
-        /// Current options: sphfuncforpsf, boxforpsf and gentlepreconditioner.
+        /// Current options: sphfuncforpsf, boxforpsf and preconditioner.preservecf.
         void useAlternativePSF(const LOFAR::ParameterSet& parset);
        
         /// @brief setup object function to update degridded visibilities
