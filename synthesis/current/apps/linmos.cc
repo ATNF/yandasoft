@@ -267,7 +267,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             }
 
             // set the input coordinate system and shape
-            accumulator.setInputParameters(iacc.shape(inImgName), iacc.coordSys(inImgName));
+            accumulator.setInputParameters(iacc.shape(inImgName), iacc.coordSys(inImgName), img);
 
             Array<float> inPix = iacc.read(inImgName);
             Array<float> inWgtPix;
