@@ -422,8 +422,7 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   itsGridder->finaliseGrid(scratch);
   imageRegrid(scratch, itsImageBuffer, true);
 
-  //DAM: do we really need itsSumWeights for the PSF ir PCF???
-  //if (!isPSFGridder() && !isPCFGridder()) {
+  // do we really need itsSumWeights for the PSF ir PCF? Disabled for the latter.
   if (!isPCFGridder()) {
     ASKAPLOG_DEBUG_STR(logger, "Finalising current weights");
     itsGridder->finaliseWeights(scratch);

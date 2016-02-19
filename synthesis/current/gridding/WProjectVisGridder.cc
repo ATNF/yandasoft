@@ -162,6 +162,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
       // A simple grid kernel for use in setting up the preconditioner function.
       // Set up as a nearest neighbour gridder (based partly on the Box gridder).
+      // Gridding weight is written to the real part, gridding support is written
+      // to the imaginary part.
       // It is assumed that any non-zero cfSupport.itsOffsetU or
       // cfSupport.itsOffsetV will be taken care of in gridding/preconditioning
       // with an appropriate use of the wKernelPix data.
@@ -200,6 +202,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                 itsConvFunc[plane].resize(cSize, cSize);
                 itsConvFunc[plane].set(0.0);
                 // are fracu and fracv being correctly used here?
+                // I think they should be -ve, since the offset in nux & nuy is +ve.
                 const int ix = -float(fracu)/float(itsOverSample);
                 const int iy = -float(fracv)/float(itsOverSample);
                 itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casa::Complex(1.0, wKernelPix);

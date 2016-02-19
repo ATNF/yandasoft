@@ -96,60 +96,64 @@ namespace askap
       }
       itsConvFunc.resize(itsOverSample*itsOverSample);
 
-      const int cSize=2*itsSupport+1; // 7;
+      if (isPCFGridder()) {
 
-if (isPCFGridder()) {
+        // A simple grid kernel for use in setting up the preconditioner function.
+        // Set up as a nearest neighbour gridder (based partly on the Box gridder).
+        // Gridding weight is written to the real part, gridding support is written
+        // to the imaginary part.
 
-      for (int fracv=0; fracv<itsOverSample; ++fracv) {
-        for (int fracu=0; fracu<itsOverSample; ++fracu) {
-          const int plane=fracu+itsOverSample*fracv;
-          ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
-          itsConvFunc[plane].resize(cSize, cSize);
-          itsConvFunc[plane].set(0.0);
-          //should probably use something like this
-          //const float wt = grdsf(0)*grdsf(0);
-          for (int ix=0; ix<cSize; ++ix) {
-            const double nux_pix=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsOverSample);
+        itsSupport=1;
+        const int cSize=2*itsSupport+1;
+        const int cCenter=(cSize-1)/2;
+
+        // This gridding function is divided out of the psf & dirty image
+        // before preconditioning, so ideally the support should be reduced
+        // back the pixel/s it falls in. Settng to 3 to be conservative.
+        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
+            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
+                const int plane=fracu+itsOverSample*fracv;
+                ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
+                itsConvFunc[plane].resize(cSize, cSize);
+                itsConvFunc[plane].set(0.0);
+                // are fracu and fracv being correctly used here?
+                // I think they should be -ve, since the offset in nux & nuy is +ve.
+                const int ix = -float(fracu)/float(itsOverSample);
+                const int iy = -float(fracv)/float(itsOverSample);
+                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casa::Complex(1.0, 3.0);
+            }
+        }
+
+      } else {
+
+        /// This must be changed for non-MFS
+     
+        const int cSize=2*itsSupport + 1; // 7;
+        for (int fracv=0; fracv<itsOverSample; ++fracv) {
+          for (int fracu=0; fracu<itsOverSample; ++fracu) {
+            const int plane=fracu+itsOverSample*fracv;
+            ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
+            itsConvFunc[plane].resize(cSize, cSize);
+            itsConvFunc[plane].set(0.0);
+            casa::Vector<casa::DComplex> bufx(cSize);
+            casa::Vector<casa::DComplex> bufy(cSize);
+            for (int ix=0; ix<cSize; ++ix) {
+              const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
+              bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
+            }
             for (int iy=0; iy<cSize; ++iy) {
-              const double nuy_pix=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsOverSample);
-              if (nux_pix*nux_pix + nuy_pix*nuy_pix < 1.0) {
-                itsConvFunc[plane](ix, iy) = 1.0;
+              const double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
+              bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
+            }
+            for (int ix=0; ix<cSize; ++ix) {
+              for (int iy=0; iy<cSize; ++iy) {
+                itsConvFunc[plane](ix, iy)=bufx(ix)*bufy(iy);
               }
             }
-          }
+          } // for fracu
+        } // for fracv
 
-        } // for fracu
-      } // for fracv
-
-} else {
-
-      /// This must be changed for non-MFS
-
-      for (int fracv=0; fracv<itsOverSample; ++fracv) {
-        for (int fracu=0; fracu<itsOverSample; ++fracu) {
-          const int plane=fracu+itsOverSample*fracv;
-          ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
-          itsConvFunc[plane].resize(cSize, cSize);
-          itsConvFunc[plane].set(0.0);
-          casa::Vector<casa::DComplex> bufx(cSize);
-          casa::Vector<casa::DComplex> bufy(cSize);
-          for (int ix=0; ix<cSize; ++ix) {
-            const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
-            bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
-          }
-          for (int iy=0; iy<cSize; ++iy) {
-            const double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
-            bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
-          }
-          for (int ix=0; ix<cSize; ++ix) {
-            for (int iy=0; iy<cSize; ++iy) {
-              itsConvFunc[plane](ix, iy)=bufx(ix)*bufy(iy);
-            }
-          }
-        } // for fracu
-      } // for fracv
-
-}
+      }
       
       // force normalization for all fractional offsets (or planes)
       for (size_t plane = 0; plane<itsConvFunc.size(); ++plane) {
