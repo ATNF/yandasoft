@@ -78,12 +78,13 @@ boost::mutex SnapShotImagingGridderAdapter::theirMutex;
 /// plane gives w-deviation exceeding this value)
 SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
                                const double tolerance, const casa::uInt decimate,
-                               const casa::Interpolate2D::Method method) :
+                               const casa::Interpolate2D::Method method,
+                               const bool doPredictWPlane) :
      itsAccessorAdapter(tolerance), itsDoPSF(false), itsDoPCF(false), itsCoeffA(0.), itsCoeffB(0.),
      itsFirstAccessor(true), itsBuffersFinalised(false), itsNumOfImageRegrids(0), itsTimeImageRegrid(0.),
      itsNumOfInitialisations(0), itsLastFitTimeStamp(0.), itsShortestIntervalBetweenFits(3e7),
      itsLongestIntervalBetweenFits(-1.), itsModelIsEmpty(false), itsClippingFactor(0.), itsNoPSFReprojection(true),
-     itsDecimationFactor(decimate), itsInterpolationMethod(method)
+     itsDecimationFactor(decimate), itsInterpolationMethod(method), itsPredictWPlane(doPredictWPlane)
 {
   ASKAPCHECK(gridder, "SnapShotImagingGridderAdapter should only be initialised with a valid gridder");
   itsGridder = gridder->clone();
@@ -104,13 +105,14 @@ SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const SnapShotImagi
     itsLongestIntervalBetweenFits(other.itsLongestIntervalBetweenFits), 
     itsTempInImg(), itsTempOutImg(), itsModelIsEmpty(other.itsModelIsEmpty), itsClippingFactor(other.itsClippingFactor),
     itsNoPSFReprojection(other.itsNoPSFReprojection), itsDecimationFactor(other.itsDecimationFactor),
-    itsInterpolationMethod(other.itsInterpolationMethod)
+    itsInterpolationMethod(other.itsInterpolationMethod), itsPredictWPlane(other.itsPredictWPlane)
 {
   ASKAPCHECK(other.itsGridder, 
        "copy constructor of SnapShotImagingGridderAdapter got an object somehow set up with an empty gridder");
   ASKAPCHECK(!other.itsAccessorAdapter.isAssociated(), 
      "An attempt to copy gridder adapter with the accessor adapter associated with some real data accessor. This shouldn't happen.");
   itsGridder = other.itsGridder->clone();  
+
 }
 
 /// @brief destructor just to print some stats
@@ -223,6 +225,12 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
   ASKAPTRACE("SnapShotImagingGridderAdapter::grid");
 
   ASKAPDEBUGASSERT(itsGridder);
+  
+  // Switches on the predict W plane mode in the Accessor
+  if (itsPredictWPlane){
+        itsAccessorAdapter.setPredictWPlaneMode();
+  }
+    
   if ((isPSFGridder() || isPCFGridder()) && itsNoPSFReprojection) {
       itsAccessorAdapter.associate(acc);
       // for PSF gridder we don't do any image-plane regridding in this mode
@@ -234,6 +242,7 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
       const scimath::ChangeMonitor cm = itsAccessorAdapter.planeChangeMonitor();
       // the call to rotatedUVW method would assess whether the current plane is still
       // fine. The result is cached, so there is no performance penalty.
+      
       itsAccessorAdapter.rotatedUVW(getTangentPoint());
       if ((cm != itsAccessorAdapter.planeChangeMonitor()) || itsFirstAccessor) {
           if (!itsFirstAccessor) {
@@ -355,6 +364,9 @@ void SnapShotImagingGridderAdapter::degrid(IDataAccessor& acc)
   const scimath::ChangeMonitor cm = itsAccessorAdapter.planeChangeMonitor();
   // the call to rotatedUVW method would assess whether the current plane is still
   // fine. The result is cached, so there is no performance penalty.
+  if (itsPredictWPlane) {
+      itsAccessorAdapter.setPredictWPlaneMode();
+  }
   itsAccessorAdapter.rotatedUVW(getTangentPoint());
   if ((cm != itsAccessorAdapter.planeChangeMonitor()) || itsFirstAccessor) {
        if (!itsFirstAccessor) {

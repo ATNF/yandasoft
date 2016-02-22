@@ -112,29 +112,29 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         addPreDefinedGridder<BoxVisGridder>();
         addPreDefinedGridder<SphFuncVisGridder>();        
     }
-    
-	// buffer for the result
-	IVisGridder::ShPtr gridder;
-	/// @todo Better handling of string case
+
+    // buffer for the result
+    IVisGridder::ShPtr gridder;
+    /// @todo Better handling of string case
     std::string prefix("gridder");	
     const string gridderName = parset.getString(prefix);
     prefix += "." + gridderName + ".";
     ASKAPLOG_DEBUG_STR(logger, "Attempting to greate gridder "<<gridderName);
     gridder = createGridder (gridderName, parset.makeSubset(prefix));
-    
-	ASKAPASSERT(gridder);
-	if (parset.isDefined("gridder.padding")) {
-	    const float padding =parset.getFloat("gridder.padding");
-	    ASKAPLOG_INFO_STR(logger, "Use padding at the gridder level, padding factor = "<<padding);
-	    boost::shared_ptr<VisGridderWithPadding> vg = 
-	        boost::dynamic_pointer_cast<VisGridderWithPadding>(gridder);
-	    ASKAPCHECK(vg, "Gridder type ("<<parset.getString("gridder")<<
-	               ") is incompatible with the padding option");
-	    vg->setPaddingFactor(padding);           
-	} else {
-            ASKAPLOG_INFO_STR(logger,"No padding at the gridder level");
+
+    ASKAPASSERT(gridder);
+    if (parset.isDefined("gridder.padding")) {
+        const float padding =parset.getFloat("gridder.padding");
+        ASKAPLOG_INFO_STR(logger, "Use padding at the gridder level, padding factor = "<<padding);
+        boost::shared_ptr<VisGridderWithPadding> vg = 
+            boost::dynamic_pointer_cast<VisGridderWithPadding>(gridder);
+        ASKAPCHECK(vg, "Gridder type ("<<parset.getString("gridder")<<
+                ") is incompatible with the padding option");
+        vg->setPaddingFactor(padding);           
+    } else {
+        ASKAPLOG_INFO_STR(logger,"No padding at the gridder level");
     }
-    
+
     if (parset.isDefined("gridder.MaxPointingSeparation")) {
         const double threshold = SynthesisParamsHelper::convertQuantity(
                     parset.getString("gridder.MaxPointingSeparation","-1rad"),"rad");
@@ -149,62 +149,67 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
                                      ", all data will be used");
     }
     
-	if (parset.isDefined("gridder.alldatapsf")) {
-	    const bool useAll = parset.getBool("gridder.alldatapsf");
-	    if (useAll) {
-	        ASKAPLOG_INFO_STR(logger, "Use all data for PSF calculations instead of the representative feed and field");
-	    } else {
-	        ASKAPLOG_INFO_STR(logger, "Use representative feed and field for PSF calculation");
-	    }
-	    boost::shared_ptr<TableVisGridder> tvg = 
-	        boost::dynamic_pointer_cast<TableVisGridder>(gridder);
-	    ASKAPCHECK(tvg, "Gridder type ("<<parset.getString("gridder")<<
-	               ") is incompatible with the alldatapsf option");
-	    tvg->useAllDataForPSF(useAll);
-	} else {
-	    ASKAPLOG_INFO_STR(logger, "gridder.alldatapsf option is not used, default to representative feed and field for PSF calculation");
-	}	
+    if (parset.isDefined("gridder.alldatapsf")) {
+        const bool useAll = parset.getBool("gridder.alldatapsf");
+        if (useAll) {
+            ASKAPLOG_INFO_STR(logger, "Use all data for PSF calculations instead of the representative feed and field");
+        } else {
+            ASKAPLOG_INFO_STR(logger, "Use representative feed and field for PSF calculation");
+        }
+        boost::shared_ptr<TableVisGridder> tvg = 
+            boost::dynamic_pointer_cast<TableVisGridder>(gridder);
+        ASKAPCHECK(tvg, "Gridder type ("<<parset.getString("gridder")<<
+                ") is incompatible with the alldatapsf option");
+        tvg->useAllDataForPSF(useAll);
+    } else {
+        ASKAPLOG_INFO_STR(logger, "gridder.alldatapsf option is not used, default to representative feed and field for PSF calculation");
+    }	
 
     {
-       const bool osWeight = parset.getBool("gridder.oversampleweight",false);
-	   if (osWeight) {
-	       ASKAPLOG_INFO_STR(logger, "Weight will be tracked per oversampling plane");
-	   } else {
-	        ASKAPLOG_INFO_STR(logger, "First oversampling plane will always be used for weight computation");
-	   }
-	   boost::shared_ptr<TableVisGridder> tvg = 
-	       boost::dynamic_pointer_cast<TableVisGridder>(gridder);
-	   if (tvg) {
-           tvg->trackWeightPerPlane(osWeight);
-	   } else {
-	       ASKAPLOG_WARN_STR(logger,"Gridder type ("<<parset.getString("gridder")<<
-	              ") is incompatible with the oversampleweight option (trying to set it to "<<osWeight<<")");
-	   }
-	}	
-	
-	// Initialize the Visibility Weights
-	if (parset.getString("visweights","")=="MFS")
-	{
+        const bool osWeight = parset.getBool("gridder.oversampleweight",false);
+        if (osWeight) {
+            ASKAPLOG_INFO_STR(logger, "Weight will be tracked per oversampling plane");
+        } else {
+            ASKAPLOG_INFO_STR(logger, "First oversampling plane will always be used for weight computation");
+        }
+        boost::shared_ptr<TableVisGridder> tvg = 
+            boost::dynamic_pointer_cast<TableVisGridder>(gridder);
+        if (tvg) {
+            tvg->trackWeightPerPlane(osWeight);
+        } else {
+            ASKAPLOG_WARN_STR(logger,"Gridder type ("<<parset.getString("gridder")<<
+                    ") is incompatible with the oversampleweight option (trying to set it to "<<osWeight<<")");
+        }
+    }	
+
+    // Initialize the Visibility Weights
+    if (parset.getString("visweights","")=="MFS")
+    {
         double reffreq=parset.getDouble("visweights.MFS.reffreq", 1.405e+09);
         ASKAPLOG_INFO_STR(logger, "Initialising for MFS with reference frequency " << reffreq << " Hz");
         ASKAPLOG_INFO_STR(logger, "Assuming that the number of Taylor terms is greater than 1");
 
         gridder->initVisWeights(IVisWeights::ShPtr(new VisWeightsMultiFrequency(reffreq)));
-	}
-	else // Null....
-	{
-	  //		gridder->initVisWeights(IVisWeights::ShPtr(new VisWeightsMultiFrequency()));
-	}
-	
-	if (parset.getBool("gridder.snapshotimaging",false)) {
+    }
+    else // Null....
+    {
+        //		gridder->initVisWeights(IVisWeights::ShPtr(new VisWeightsMultiFrequency()));
+    }
+
+    if (parset.getBool("gridder.snapshotimaging",false)) {
         ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to do snap-shot imaging");
         const double wtolerance = parset.getDouble("gridder.snapshotimaging.wtolerance"); 
-	    ASKAPLOG_INFO_STR(logger, "w-coordinate tolerance is "<<wtolerance<<" wavelengths");
+        ASKAPLOG_INFO_STR(logger, "w-coordinate tolerance is "<<wtolerance<<" wavelengths");
         const casa::uInt decimate = parset.getUint("gridder.snapshotimaging.coorddecimation", 3);
         const casa::Interpolate2D::Method method = interpMethod(
                 parset.getString("gridder.snapshotimaging.interpmethod", "cubic"));
-	    boost::shared_ptr<SnapShotImagingGridderAdapter> adapter(
-                new SnapShotImagingGridderAdapter(gridder, wtolerance, decimate, method));
+
+        const bool PredictWPlane = parset.getBool("gridder.snapshotimaging.PredictWPlane",false);
+        if (PredictWPlane) {    
+            ASKAPLOG_INFO_STR(logger, "W-plane fitting via prediction will be used in snapshot mode");
+        }
+        boost::shared_ptr<SnapShotImagingGridderAdapter> adapter(
+                new SnapShotImagingGridderAdapter(gridder, wtolerance, decimate, method, PredictWPlane));
         const double clippingFactor = parset.getDouble("gridder.snapshotimaging.clipping", 0.);
         ASKAPLOG_INFO_STR(logger, "Clipping factor is "<<clippingFactor);
         adapter->setClippingFactor(float(clippingFactor));
@@ -213,7 +218,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         // possible additional configuration comes here
         gridder = adapter;
     }
-    
+
     if (parset.getBool("gridder.bwsmearing",false)) {
         ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to simulate bandwidth smearing");
         const double chanBW = parset.getDouble("gridder.bwsmearing.chanbw",1e6);

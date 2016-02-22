@@ -82,11 +82,13 @@ public:
    /// during regridding. A decimation factor of 0 (or 1) implies no decimation, which is the
    /// slowest and most accurate.
    /// @param[in] method the interpolation method to use for regridding.
+   /// @param[in] PredictWPlane - flag to use the interative method to predict the best fit W plane
+   /// as opposed to evaluating it at the current time.
    SnapShotImagingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
            const double tolerance,
            const casa::uInt decimate = 0,
-           const casa::Interpolate2D::Method method = casa::Interpolate2D::CUBIC);
-
+           const casa::Interpolate2D::Method method = casa::Interpolate2D::CUBIC,
+           const bool PredictWPlane = false);
 
    /// @brief copy constructor
    /// @details We need this because the gridder doing actual work is held by a shared pointer,
@@ -374,6 +376,9 @@ private:
    /// @brief mutex to deal with lack of thread safety in casa's regrid
    static boost::mutex theirMutex;
    #endif
+
+   ///@brief Use the predicted W plane ... or not
+   bool itsPredictWPlane;
 };
    
 } // namespace synthesis
