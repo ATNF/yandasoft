@@ -204,7 +204,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         const casa::Interpolate2D::Method method = interpMethod(
                 parset.getString("gridder.snapshotimaging.interpmethod", "cubic"));
 
-        const bool PredictWPlane = parset.getBool("gridder.snapshotimaging.PredictWPlane",false);
+        const bool PredictWPlane = parset.getBool("gridder.snapshotimaging.longtrack",false);
         if (PredictWPlane) {    
             ASKAPLOG_INFO_STR(logger, "W-plane fitting via prediction will be used in snapshot mode");
         }
