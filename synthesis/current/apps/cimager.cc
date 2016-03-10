@@ -142,10 +142,30 @@ class CimagerApp : public askap::Application
                         SignalCounter sigcount;
                         SignalManagerSingleton::instance()->registerHandler(SIGUSR1, &sigcount);
 
+                        // Distribute initial model
+                        imager.broadcastModel();
+                        imager.receiveModel();
+
                         /// Perform multiple major cycles
                         for (int cycle = 0; cycle < nCycles; ++cycle) {
-                            imager.broadcastModel();
-                            imager.receiveModel();
+
+                            if (imager.params()->has("peak_residual")) {
+                                const double peak_residual = imager.params()->scalarValue("peak_residual");
+                                ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << peak_residual);
+                                if (peak_residual < targetPeakResidual) {
+                                    ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+                                            << targetPeakResidual << " Jy. Stopping.");
+                                    break;
+                                } else {
+                                    if (targetPeakResidual < 0) {
+                                        ASKAPLOG_INFO_STR(logger, "Major cycle flux threshold is not used.");
+                                    } else {
+                                        ASKAPLOG_INFO_STR(logger, "It is above the major cycle threshold of "
+                                                << targetPeakResidual << " Jy. Continuing.");
+                                    }
+                                }
+                            }
+
                             ASKAPLOG_INFO_STR(logger, "*** Starting major cycle " << cycle << " ***");
                             imager.calcNE();
                             imager.solveNE();
@@ -157,24 +177,6 @@ class CimagerApp : public askap::Application
                                     ASKAPLOG_INFO_STR(logger, "Signal SIGUSR1 receieved. Stopping.");
                                     break;
                                 }
-
-                                if (imager.params()->has("peak_residual")) {
-                                    const double peak_residual = imager.params()->scalarValue("peak_residual");
-                                    ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << peak_residual);
-
-                                    if (peak_residual < targetPeakResidual) {
-                                        ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
-                                                << targetPeakResidual << " Jy. Stopping.");
-                                        break;
-                                    } else {
-                                        if (targetPeakResidual < 0) {
-                                            ASKAPLOG_INFO_STR(logger, "Major cycle flux threshold is not used.");
-                                        } else {
-                                            ASKAPLOG_INFO_STR(logger, "It is above the major cycle threshold of "
-                                                    << targetPeakResidual << " Jy. Continuing.");
-                                        }
-                                    }
-                                }
                             }
 
                             if (cycle + 1 >= nCycles) {
@@ -185,10 +187,12 @@ class CimagerApp : public askap::Application
                             if (writeAtMajorCycle) {
                                 imager.writeModel(std::string(".majorcycle.") + utility::toString(cycle + 1));
                             }
+
+                            // Distribute current model
+                            imager.broadcastModel();
+                            imager.receiveModel();
                         }
 
-                        imager.broadcastModel();
-                        imager.receiveModel();
                         ASKAPLOG_INFO_STR(logger, "*** Finished major cycles ***");
                         imager.calcNE();
                         imager.receiveNE();
