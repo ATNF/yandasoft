@@ -593,7 +593,7 @@ namespace askap
         
         // we will probably send all of them out in the future, but for now
         // let's extract the largest residual
-        const std::vector<std::string> peakParams = itsModel->completions("peak_residual.");
+        const std::vector<std::string> peakParams = itsModel->completions("peak_residual.",true);
         
         double peak = peakParams.size() == 0 ? getPeakResidual() : -1.;
         for (std::vector<std::string>::const_iterator peakParIt = peakParams.begin();

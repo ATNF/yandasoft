@@ -139,7 +139,7 @@ namespace askap
           // dirty=dirty/maxPSFBefore;
           maxPSFBefore=1.0;
       }
-                  
+
       casa::ArrayLattice<float> lpsf(psf);
       casa::ArrayLattice<float> ldirty(dirty);
       casa::ArrayLattice<float> lpcf(pcf);
@@ -388,7 +388,7 @@ namespace askap
 
       ldirty.copyData(casa::LatticeExpr<float>(real(scratch)));
       dirty *= maxPSFBefore/maxPSFAfter;
- 
+
       return true;
 
     }
