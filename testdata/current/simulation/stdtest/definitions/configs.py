@@ -80,9 +80,10 @@ def getConfigs():
     config["ADE4"]                     = AntennaConfig("ADE4",                     ( 2, 4, 5,12), datafile)
     config["ADE6"]                     = AntennaConfig("ADE6",                     ( 2, 4, 5,14,13,12), datafile)
     config["ADE12"]                    = AntennaConfig("ADE12",                    ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
+    config["ASKAP12"]                  = AntennaConfig("ASKAP12",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
     # Belatedly updated (Feb 2016) to replace AK27 with AK25
     config["ASKAP12_ORIG"]             = AntennaConfig("ASKAP12_ORIG",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28), datafile)
-    config["ASKAP12"]                  = AntennaConfig("ASKAP12",                  ( 2, 4, 5,14,10,12,24,25,30,13,16,28), datafile)
+    config["ASKAP12_ALT"]              = AntennaConfig("ASKAP12_ALT",              ( 2, 4, 5,14,10,12,24,25,30,13,16,28), datafile)
     # Updated (Jan 2016) to match the antennas planned for the AR3 as listed in V2.0, Draft F of the ASKAP Commissioning plan
     config["ASKAP18_ORIG"]             = AntennaConfig("ASKAP18_ORIG",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
     config["ASKAP18"]                  = AntennaConfig("ASKAP18",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,25,17,26,18,34,19), datafile)
