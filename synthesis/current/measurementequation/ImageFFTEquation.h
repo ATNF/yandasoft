@@ -80,6 +80,15 @@ namespace askap
         /// @param gridder Shared pointer to a gridder
         ImageFFTEquation(const askap::scimath::Params& ip,
           accessors::IDataSharedIter& idi, IVisGridder::ShPtr gridder);
+
+        /// Standard constructor with specified gridder
+        /// @param ip Parameters
+        /// @param idi Data iterator
+        /// @param gridder Shared pointer to a gridder
+        /// @param parset parameter set to check for PSF/PCF options.
+        ImageFFTEquation(const askap::scimath::Params& ip,
+          accessors::IDataSharedIter& idi, IVisGridder::ShPtr gridder,
+          const LOFAR::ParameterSet& parset);
         
         /// Constructor with default parameters with specified gridder
         /// @param idi Data iterator

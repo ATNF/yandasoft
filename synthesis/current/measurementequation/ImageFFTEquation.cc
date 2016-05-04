@@ -90,6 +90,16 @@ namespace askap
     }
     ;
 
+    ImageFFTEquation::ImageFFTEquation(const askap::scimath::Params& ip,
+        IDataSharedIter& idi, IVisGridder::ShPtr gridder,
+        const LOFAR::ParameterSet& parset) : scimath::Equation(ip),
+      askap::scimath::ImagingEquation(ip), itsGridder(gridder), itsIdi(idi),
+      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false), itsUsePreconGridder(false)
+    {
+      useAlternativePSF(parset);
+      init();
+    }
+
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi,
         IVisGridder::ShPtr gridder) :
       itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false),
