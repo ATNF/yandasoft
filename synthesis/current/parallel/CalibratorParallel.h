@@ -253,6 +253,36 @@ namespace askap
       /// @details It is handy to store the perfect measurement equation, so it is not
       /// recreated every time for each solution interval. 
       boost::shared_ptr<IMeasurementEquation const> itsPerfectME;
+
+
+      /// @brief helper method to update maximal expected numbers for pre-averaging
+      /// @details This method updates global maxima based on the current local values. It is handy to
+      /// avoid code dublication as well as for the case if we ever decide to trim the pre-aveaging buffer
+      /// to exclude fixed parameters.
+      /// @param[in] nAnt currently expected number of antennas in the buffer
+      /// @param[in] nBeam currently expected number of beams in the buffer
+      /// @param[in] nChan currently expected number of frequency channels in the buffer
+      void updatePreAvgBufferEstimates(const casa::uInt nAnt, const casa::uInt nBeam, const casa::uInt nChan = 1);
+
+      /// @brief maximum number of antennas for pre-averging
+      /// @details It is handy to cache the number of antennas expected to be dealt with in pre-averaging.
+      /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
+      /// change from integration to integration.
+      casa::uInt itsMaxNAntForPreAvg;
+
+      /// @brief maximum number of beams for pre-averging
+      /// @details It is handy to cache the number of beams expected to be dealt with in pre-averaging.
+      /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
+      /// change from integration to integration.
+      casa::uInt itsMaxNBeamForPreAvg;
+
+      /// @brief maximum number of channels for pre-averging
+      /// @details It is handy to cache the number of channels expected to be dealt with in pre-averaging.
+      /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
+      /// change from integration to integration. It is also used to give a warning if calibration effect is frequency
+      /// independent and more than one channel is selected for preaveraging.
+      casa::uInt itsMaxNChanForPreAvg;
+
     };
 
   }

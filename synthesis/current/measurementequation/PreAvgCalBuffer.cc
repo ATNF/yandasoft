@@ -117,7 +117,7 @@ void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
   } else {
       itsBeam = acc.feed1();
   }
-  casa::uInt unusedBeamId = casa::max(itsBeam)*10;
+  const casa::uInt unusedBeamId = casa::max(itsBeam)*10;
   const casa::Vector<casa::uInt>& feed2 = acc.feed2();
   for (casa::uInt row=0; row<numberOfRows; ++row) {
        if ((itsBeam[row] != feed2[row]) || (itsBeamIndependent && (itsBeam[row] != 0))) {

@@ -105,7 +105,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MEParallelApp(comms,parset), 
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
-      itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.)
+      itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u)
 {  
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
@@ -153,7 +154,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
           itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::XX);
           itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::YY);
       } else if (parset.isDefined("refgain")) {
-          const string refGain = parset.getString("refgain","");
+          const string refGain = parset.getString("refgain");
           itsRefGainXX = refGain;
           itsRefGainYY = refGain;
       } else {
@@ -186,6 +187,26 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
           ASKAPLOG_INFO_STR(logger, "Solution will be made for each "<<itsSolutionInterval<<" seconds chunk of the dataset");
       }
   }
+}
+
+/// @brief helper method to update maximal expected numbers for pre-averaging
+/// @details This method updates global maxima based on the current local values. It is handy to
+/// avoid code dublication as well as for the case if we ever decide to trim the pre-aveaging buffer
+/// to exclude fixed parameters.
+/// @param[in] nAnt currently expected number of antennas in the buffer
+/// @param[in] nBeam currently expected number of beams in the buffer
+/// @param[in] nChan currently expected number of frequency channels in the buffer
+void CalibratorParallel::updatePreAvgBufferEstimates(const casa::uInt nAnt, const casa::uInt nBeam, const casa::uInt nChan)
+{
+   if (itsMaxNAntForPreAvg < nAnt) {
+       itsMaxNAntForPreAvg = nAnt;
+   }
+   if (itsMaxNBeamForPreAvg < nBeam) {
+       itsMaxNBeamForPreAvg = nBeam;
+   }
+   if (itsMaxNChanForPreAvg < nChan) {
+       itsMaxNChanForPreAvg = nChan;
+   }
 }
 
 /// @brief initalise measurement equation and model
@@ -222,6 +243,9 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
                     */
                }
           }
+          // technically could've done it outside the if-statement but this way it reflects the intention to keep track
+          // which parameters are added to the model
+          updatePreAvgBufferEstimates(nAnt, nBeam);
       }
       if (itsSolveLeakage) {
           ASKAPLOG_INFO_STR(logger, "Initialise leakages (unknowns) for "<<nAnt<<" antennas and "<<nBeam<<" beam(s).");
@@ -231,6 +255,9 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
                     itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YX),casa::Complex(0.,0.));
                }
           }
+          // technically could've done it outside the if-statement but this way it reflects the intention to keep track
+          // which parameters are added to the model
+          updatePreAvgBufferEstimates(nAnt, nBeam);
       }
       if (itsSolveBandpass) {
           const casa::uInt nChan = parset.getInt32("nChan",304);
@@ -246,6 +273,7 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
                     }
                }
           }          
+          updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
       }
   }
   if (itsComms.isWorker()) {
@@ -401,6 +429,17 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
        ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");       
    }
    ASKAPDEBUGASSERT(preAvgME);
+   // without the following lines of code, the buffer initialisation will be performed based on the first sighted
+   // data chunk. This is however problematic if the shape of data may change from iteration to iteration
+   ASKAPDEBUGASSERT(itsMaxNAntForPreAvg > 0);
+   ASKAPDEBUGASSERT(itsMaxNBeamForPreAvg > 0);
+   ASKAPDEBUGASSERT(itsMaxNChanForPreAvg > 0);
+   if ((itsMaxNChanForPreAvg > 1) && !preAvgME->isFrequencyDependent()) {
+       ASKAPLOG_WARN_STR(logger, "Pre-averaging calibration buffer size estimate ("<<itsMaxNChanForPreAvg<<
+              " channels) doesn't seem to be aligned with the frequency dependence property of selected calibration effects");
+   }
+   preAvgME->initialise(itsMaxNAntForPreAvg, itsMaxNBeamForPreAvg, itsMaxNChanForPreAvg);
+
    // this is just an optimisation, should work without this line
    preAvgME->beamIndependent(itsBeamIndependentGains);
    preAvgME->accumulate(dsi,perfectME);

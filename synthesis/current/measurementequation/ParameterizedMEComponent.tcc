@@ -47,7 +47,9 @@ template<bool FDP>
 inline scimath::ComplexDiff ParameterizedMEComponent<FDP>::getParameter(const std::string &name) const
 {
    ASKAPDEBUGASSERT(parameters());
-   ASKAPCHECK(parameters()->has(name), "Parameter "<<name<<" is not defined in NoXPolGain::getParameter");
+   ASKAPCHECK(parameters()->has(name), "Parameter "<<name<<
+        " is not defined in NoXPolGain::getParameter. Most likely the measurement set contains more antennas/beams than are "
+        "initialised for the solution or beam-independent model is not configured properly");
 
    const casa::Complex gain = parameters()->complexValue(name);
    return scimath::ComplexDiff(name, gain);
