@@ -146,6 +146,7 @@ void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
 void PreAvgCalBuffer::initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt nChan)
 {
   ASKAPDEBUGASSERT(nChan > 0);
+  ASKAPASSERT(nAnt > 0);
   const casa::uInt numberOfRows = nBeam*nAnt*(nAnt-1)/2;
   if (itsFlag.shape() != casa::IPosition(3,int(numberOfRows),int(nChan),4)) {
      // resizing buffers

@@ -17,7 +17,7 @@ Csimulator.antennas.definition                  =       A27CR3P6B.in
 Csimulator.feeds.definition                     =       ASKAP1feed.in
 
 Csimulator.spws.names                      =       [Wide0]
-Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "XX YY"]
+Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "XX XY YX YY"]
 #
 # Standard settings for the simulaton step
 #
@@ -115,6 +115,7 @@ Ccalibrator.dataset                              = field1.ms
 Ccalibrator.nAnt                                 = 36
 Ccalibrator.nBeam                                = 1
 #Ccalibrator.refgain                              = gain.g11.0.0
+Ccalibrator.refantenna  = 0
 #Ccalibrator.calibaccess                         = parset
 Ccalibrator.calibaccess.parset                  = result.dat
 Ccalibrator.calibaccess.table                   = "caldata.tab"
@@ -136,4 +137,4 @@ Ccalibrator.gridder.WProject.nwplanes               = 33
 Ccalibrator.gridder.WProject.oversample             = 8
 Ccalibrator.gridder.WProject.maxsupport       = 1024
 Ccalibrator.gridder.WProject.cutoff           = 0.001
-Ccalibrator.ncycles                                 = 5
+Ccalibrator.ncycles                                 = 25

@@ -110,6 +110,8 @@ spr.initParset()
 spr.runImager()
 analyseResult(spr)
 
+print "First run of ccalibrator, should get gains close to (1.,0.)"
+
 spr.addToParset("Ccalibrator.calibaccess = parset")
 spr.runCalibrator()
 # here result.dat should be close to (1.,0) within 0.03 or so
@@ -124,6 +126,7 @@ spr.initParset()
 spr.addToParset("Csimulator.corrupt = true")
 spr.runSimulator()
 
+print "Second run of ccalibrator, gains should be close to rndgains.in"
 # calibrate again
 spr.addToParset("Ccalibrator.calibaccess = parset")
 spr.runCalibrator()
@@ -140,6 +143,7 @@ for k,v in res_gains.items():
       raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val)
 
 # now try to obtain time-dependent solution (note, a proper analysis of the result is not done)
+print "Third run of ccalibrator. Time-dependent solution for antennagains"
 spr.initParset()
 spr.addToParset("Ccalibrator.calibaccess = table")
 spr.addToParset("Ccalibrator.interval = 600s")
@@ -147,6 +151,7 @@ spr.addToParset("Ccalibrator.solve = antennagains")
 os.system("rm -rf caldata.tab")
 spr.runCalibrator()
 
+print "Testing calibration application."
 # run cimager applying time-dependent calibration
 spr.addToParset("Cimager.calibrate = true")
 spr.addToParset("Cimager.calibaccess = table")
