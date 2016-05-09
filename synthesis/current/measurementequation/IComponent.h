@@ -40,11 +40,11 @@
 #include <vector>
 
 // casa includes
-#include <scimath/Mathematics/AutoDiff.h>
-#include <scimath/Mathematics/AutoDiffMath.h>
-#include <casa/Arrays/Vector.h>
-#include <scimath/Mathematics/RigidVector.h>
-#include <measures/Measures/Stokes.h>
+#include <casacore/scimath/Mathematics/AutoDiff.h>
+#include <casacore/scimath/Mathematics/AutoDiffMath.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
+#include <casacore/measures/Measures/Stokes.h>
 
 
 namespace askap {

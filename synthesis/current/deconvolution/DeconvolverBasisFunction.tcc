@@ -32,13 +32,13 @@
 
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/MaskArrMath.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <scimath/Mathematics/MatrixMathLA.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/MaskArrMath.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/scimath/Mathematics/MatrixMathLA.h>
 
 // Local package includes
 #include <measurementequation/SynthesisParamsHelper.h>

@@ -35,7 +35,7 @@
 // ASKAPsoft includes
 #include <fitting/Params.h>
 #include <askap/StatReporter.h>
-#include <casa/Logging/LogIO.h>
+#include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
 #include <CommandLineParser.h>
 #include <askapparallel/AskapParallel.h>

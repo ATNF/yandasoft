@@ -32,17 +32,17 @@ ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 #include <gridding/AWProjectVisGridder.h>
 #include <fft/FFTWrapper.h>
 #include <utils/PaddingUtils.h>
-#include <casa/Arrays/ArrayIter.h>
-#include <casa/BasicSL/Complex.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Cube.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <measures/Measures/MDirection.h>
-#include <casa/Quanta/MVDirection.h>
-#include <casa/Quanta/MVAngle.h>
-#include <casa/Quanta/MVTime.h>
+#include <casacore/casa/Arrays/ArrayIter.h>
+#include <casacore/casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
+#include <casacore/casa/Quanta/MVAngle.h>
+#include <casacore/casa/Quanta/MVTime.h>
 
 // Local package includes
 #include <measurementequation/SynthesisParamsHelper.h>

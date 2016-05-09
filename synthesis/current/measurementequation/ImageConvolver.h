@@ -25,11 +25,11 @@
 #define ASKAP_SYNTHESIS_IMAGECONVOLVER_H
 
 // ASKAPsoft Includes
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <images/Images/ImageInterface.h>
-#include <lattices/Lattices/Lattice.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/images/Images/ImageInterface.h>
+#include <casacore/lattices/Lattices/Lattice.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 
 namespace askap {
 namespace synthesis {

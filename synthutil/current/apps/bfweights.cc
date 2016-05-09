@@ -25,13 +25,13 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <casa/aips.h>
-#include <measures/Measures/MDirection.h>
-#include <casa/Quanta/MVDirection.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Exceptions/Error.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/aips.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Exceptions/Error.h>
+#include <casacore/casa/BasicSL/Complex.h>
 #include <calweightsolver/ImplCalWeightSolver.h>
 #include <calweightsolver/EigenSolve.h>
 

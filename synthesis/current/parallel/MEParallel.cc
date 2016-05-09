@@ -55,7 +55,7 @@
 #include <fitting/ImagingNormalEquations.h>
 #include <fitting/GenericNormalEquations.h>
 #include <profile/AskapProfiler.h>
-#include <casa/OS/Timer.h>
+#include <casacore/casa/OS/Timer.h>
 
 ASKAP_LOGGER(logger, ".parallel");
 

@@ -33,13 +33,13 @@ ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 #include <askap/AskapUtil.h>
 #include <fft/FFTWrapper.h>
 
-#include <casa/BasicSL/Constants.h>
-#include <casa/Arrays/ArrayIter.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/Arrays/Slicer.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/Arrays/ArrayIter.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/Slicer.h>
 
-#include <measures/Measures/MDirection.h>
-#include <measures/Measures/UVWMachine.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/measures/Measures/UVWMachine.h>
 
 #include <fitting/Params.h>
 #include <fitting/ParamsCasaTable.h>
@@ -60,7 +60,7 @@ using namespace askap;
 #include <sstream>
 #include <iomanip>
 
-#include <casa/OS/Timer.h>
+#include <casacore/casa/OS/Timer.h>
 
 namespace askap {
 namespace synthesis {

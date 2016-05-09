@@ -34,13 +34,13 @@
 #define ASKAP_SYNTHESIS_SIMULATOR_H
 
 //# Includes
-#include <casa/BasicSL/String.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Quanta/Quantum.h>
-#include <measures/Measures/MPosition.h>
-#include <measures/Measures/MEpoch.h>
-#include <measures/Measures/MDirection.h>
-#include <ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/casa/BasicSL/String.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/measures/Measures/MEpoch.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
 
 namespace askap
 {

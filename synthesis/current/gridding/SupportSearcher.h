@@ -32,9 +32,9 @@
 #ifndef SUPPORT_SEARCHER_H
 #define SUPPORT_SEARCHER_H
 
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/IPosition.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 
 namespace askap {

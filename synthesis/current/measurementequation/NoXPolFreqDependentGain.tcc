@@ -37,7 +37,7 @@
 #include <calibaccess/CalParamNameHelper.h>
 
 // casa includes
-#include <measures/Measures/Stokes.h>
+#include <casacore/measures/Measures/Stokes.h>
 
 // std includes
 #include <string>

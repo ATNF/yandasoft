@@ -36,8 +36,8 @@
 
 #include <string>
 
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
 #include <askap/ISignalHandler.h>

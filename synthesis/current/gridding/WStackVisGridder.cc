@@ -30,10 +30,10 @@ ASKAP_LOGGER(logger, ".gridding.wstackgridder");
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
 
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <casa/BasicSL/Constants.h>
+#include <casacore/casa/BasicSL/Constants.h>
 #include <fft/FFTWrapper.h>
 #include <utils/PaddingUtils.h>
 #include <profile/AskapProfiler.h>

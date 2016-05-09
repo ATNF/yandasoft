@@ -28,8 +28,8 @@
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".deconvolver.factory");
-#include <casa/BasicSL/String.h>   // for downcase
-#include <images/Images/PagedImage.h>
+#include <casacore/casa/BasicSL/String.h>   // for downcase
+#include <casacore/images/Images/PagedImage.h>
 
 #include <deconvolution/DeconvolverHelpers.h>
 #include <deconvolution/DeconvolverFactory.h>

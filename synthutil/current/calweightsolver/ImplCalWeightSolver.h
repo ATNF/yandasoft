@@ -30,16 +30,16 @@
 // solves for the best FPA weights for an optimum calibration on a
 // given sky model
 
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <components/ComponentModels/SkyComponent.h>
 #include <components/ComponentModels/ComponentList.h>
-#include <measures/Measures/MDirection.h>
-#include <casa/Exceptions/Error.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/BasicSL/String.h>
-#include <images/Images/PagedImage.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Exceptions/Error.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/BasicSL/String.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 
 #include <boost/shared_ptr.hpp>

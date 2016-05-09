@@ -32,13 +32,13 @@ ASKAP_LOGGER(logger, ".measurementequation.imagesolver");
 
 #include <askap/AskapError.h>
 
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Vector.h>
 
-#include <lattices/Lattices/ArrayLattice.h>
-#include <lattices/Lattices/LatticeFFT.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
 #include <utils/MultiDimArrayPlaneIter.h>
 
 using namespace askap;

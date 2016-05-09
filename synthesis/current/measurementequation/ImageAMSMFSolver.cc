@@ -28,21 +28,21 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
 
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/casa/Arrays/Vector.h>
 #include <measurementequation/SynthesisParamsHelper.h>
 #include <measurementequation/ImageParamsHelper.h>
 #include <utils/MultiDimArrayPlaneIter.h>
 
 #include <deconvolution/DeconvolverMultiTermBasisFunction.h>
 
-#include <lattices/Lattices/LatticeCleaner.h>
-#include <lattices/Lattices/MultiTermLatticeCleaner.h>
-#include <lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeCleaner.h>
+#include <casacore/lattices/LatticeMath/MultiTermLatticeCleaner.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
 
 #include <measurementequation/ImageAMSMFSolver.h>
 

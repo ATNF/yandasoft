@@ -28,7 +28,7 @@
 #include <dataaccess/TableDataSource.h>
 #include <askap_accessors.h>
 #include <askap/AskapLogging.h>
-#include <casa/Logging/LogIO.h>
+#include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
 ASKAP_LOGGER(logger, "");
 
@@ -39,10 +39,10 @@ ASKAP_LOGGER(logger, "");
 #include <askapparallel/AskapParallel.h>
 
 // casa
-#include <measures/Measures/MFrequency.h>
-#include <tables/Tables/Table.h>
-#include <casa/OS/Timer.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/measures/Measures/MFrequency.h>
+#include <casacore/tables/Tables/Table.h>
+#include <casacore/casa/OS/Timer.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 
 // std

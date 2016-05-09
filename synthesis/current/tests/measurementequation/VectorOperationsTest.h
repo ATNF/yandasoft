@@ -32,10 +32,10 @@
 
 // own includes
 #include <measurementequation/VectorOperations.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <scimath/Mathematics/AutoDiff.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/scimath/Mathematics/AutoDiff.h>
+#include <casacore/casa/BasicSL/Complex.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <askap/AskapError.h>
 #include <fitting/ComplexDiff.h>

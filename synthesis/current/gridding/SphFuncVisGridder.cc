@@ -28,7 +28,7 @@ ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
 #include <askap/AskapError.h>
 
 #include <gridding/SphFuncVisGridder.h>
-#include <casa/Arrays/ArrayIter.h>
+#include <casacore/casa/Arrays/ArrayIter.h>
 #include <fft/FFTWrapper.h>
 #include <profile/AskapProfiler.h>
 

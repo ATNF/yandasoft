@@ -28,12 +28,12 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 /// casa includes
-#include <tables/Tables/ArrayColumn.h>
-#include <tables/Tables/ScalarColumn.h>
-#include <tables/Tables/Table.h>
-#include <tables/Tables/TableDesc.h>
-#include <tables/Tables/TableColumn.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/tables/Tables/ArrayColumn.h>
+#include <casacore/tables/Tables/ScalarColumn.h>
+#include <casacore/tables/Tables/Table.h>
+#include <casacore/tables/Tables/TableDesc.h>
+#include <casacore/tables/Tables/TableColumn.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 // own includes
 #include <askap/AskapError.h>

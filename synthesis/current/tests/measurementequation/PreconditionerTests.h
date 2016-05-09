@@ -32,14 +32,14 @@
 #include <measurementequation/GaussianTaperPreconditioner.h>
 #include <measurementequation/GaussianTaperCache.h>
 #include <measurementequation/SynthesisParamsHelper.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/BasicSL/Complex.h>
 #include <askap/AskapError.h>
-#include <lattices/LatticeMath/Fit2D.h>
-#include <lattices/Lattices/ArrayLattice.h>
-#include <lattices/Lattices/LatticeFFT.h>
-#include <lattices/Lattices/LatticeExpr.h>
+#include <casacore/lattices/LatticeMath/Fit2D.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+#include <casacore/lattices/LEL/LatticeExpr.h>
 
 
 #include <cppunit/extensions/HelperMacros.h>

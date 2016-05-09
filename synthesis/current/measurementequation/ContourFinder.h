@@ -47,8 +47,8 @@
 #include <askap/AskapError.h>
 
 // casa includes
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/IPosition.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/IPosition.h>
 
 namespace askap {
 

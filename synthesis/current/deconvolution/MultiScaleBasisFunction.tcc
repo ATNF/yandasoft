@@ -32,10 +32,10 @@
 #include <askap_synthesis.h>
 
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Cube.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 #include <fft/FFTWrapper.h>
 
 ASKAP_LOGGER(decmsbaselogger, ".deconvolution.multiscalebasisfunction");

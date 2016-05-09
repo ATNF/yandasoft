@@ -43,8 +43,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
-#include <casa/Arrays/Array.h>
-#include <images/Images/ImageRegrid.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/images/Images/ImageRegrid.h>
 
 // Local packages includes
 #include <measurementequation/SynthesisParamsHelper.h>

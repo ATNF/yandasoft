@@ -24,13 +24,13 @@
 
 #include <iostream>
 
-#include <images/Images/PagedImage.h>
-#include <images/Images/ImageInterface.h>
-#include <casa/Arrays/Array.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/images/Images/ImageInterface.h>
+#include <casacore/casa/Arrays/Array.h>
 #include <utils/PaddingUtils.h>
-#include <lattices/Lattices/ArrayLattice.h>
-#include <lattices/Lattices/LatticeFFT.h>
-#include <lattices/Lattices/LatticeExpr.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+#include <casacore/lattices/LEL/LatticeExpr.h>
 #include <askap/AskapError.h>
 
 using namespace casa;

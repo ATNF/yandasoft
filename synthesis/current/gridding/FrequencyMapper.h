@@ -32,7 +32,7 @@
 #define FREQUENCY_MAPPER_H
 
 #include <fitting/Axes.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Vector.h>
 
 #include <vector>
 

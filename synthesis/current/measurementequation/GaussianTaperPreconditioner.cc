@@ -37,13 +37,13 @@ ASKAP_LOGGER(logger, ".measurementequation.gaussiantaperpreconditioner");
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
 
-#include <lattices/Lattices/ArrayLattice.h>
-#include <lattices/Lattices/LatticeFFT.h>
-#include <lattices/Lattices/LatticeExpr.h>
-#include <casa/BasicSL/Constants.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <scimath/Mathematics/SquareMatrix.h>
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+#include <casacore/lattices/LEL/LatticeExpr.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/scimath/Mathematics/SquareMatrix.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 
 namespace askap {
 

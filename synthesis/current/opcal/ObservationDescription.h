@@ -34,7 +34,7 @@
 #define SYNTHESIS_OBSERVATION_DESCRIPTION_H
 
 // casa includes
-#include <measures/Measures/MDirection.h>
+#include <casacore/measures/Measures/MDirection.h>
 
 // std includes
 #include <string>

@@ -38,12 +38,12 @@
 #include "measurementequation/SynthesisParamsHelper.h"
 
 // casa includes
-#include <measures/Measures/MEpoch.h>
-#include <measures/Measures/MeasConvert.h>
-#include <measures/Measures/MCDirection.h>
-#include <scimath/Mathematics/MatrixMathLA.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <measures/Measures/ParAngleMachine.h>
+#include <casacore/measures/Measures/MEpoch.h>
+#include <casacore/measures/Measures/MeasConvert.h>
+#include <casacore/measures/Measures/MCDirection.h>
+#include <casacore/scimath/Mathematics/MatrixMathLA.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/measures/Measures/ParAngleMachine.h>
 
 ASKAP_LOGGER(logger, ".PointingSolver");
 

@@ -32,7 +32,7 @@
 
 #include <measurementequation/ImageCleaningSolver.h>
 
-#include <lattices/Lattices/LatticeCleaner.h>
+#include <casacore/lattices/LatticeMath/LatticeCleaner.h>
 #include <utils/FixedSizeCache.h>
 
 #include <map>

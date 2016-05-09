@@ -28,12 +28,12 @@
 
 //# Includes
 #include <string>
-#include <casa/aips.h>
-#include <casa/Exceptions/Error.h>
-#include <casa/Logging/LogIO.h>
-#include <ms/MeasurementSets/MeasurementSet.h>
-#include <ms/MeasurementSets/MSSummary.h>
-#include <ms/MeasurementSets/MSLister.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Exceptions/Error.h>
+#include <casacore/casa/Logging/LogIO.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MSOper/MSSummary.h>
+#include <casacore/ms/MSOper/MSLister.h>
 #include <askap/AskapError.h>
 
 //DAM testing stderr output
@@ -188,6 +188,9 @@ int main(int argc, const char* argv[])
     casa::Bool showflags     = casa::False;
     casa::String msselect    = "";
 
+    // This now needed as the interface to list has changed
+    casa::String observation = "";
+
     // set default behaviour to brief
     if (!brief && !full && !what && !how && !tables && !data) {
         brief = casa::True;
@@ -272,7 +275,7 @@ int main(int argc, const char* argv[])
 
         msl.list(options, datacolumn, field, spw,
                  antenna, timerange, correlation,
-                 scan, feed, array, uvrange,
+                 scan, feed, array,observation,uvrange,
                  average, showflags, msselect,
                  pagerows, listfile);
 

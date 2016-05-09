@@ -54,10 +54,10 @@
 #include <Blob/BlobIStream.h>
 #include <Blob/BlobOStream.h>
 
-#include <casa/OS/Timer.h>
-#include <casa/Utilities/Regex.h>
-#include <casa/BasicSL/String.h>
-#include <casa/OS/Path.h>
+#include <casacore/casa/OS/Timer.h>
+#include <casacore/casa/Utilities/Regex.h>
+#include <casacore/casa/BasicSL/String.h>
+#include <casacore/casa/OS/Path.h>
 
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>

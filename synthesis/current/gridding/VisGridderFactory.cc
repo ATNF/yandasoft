@@ -28,9 +28,9 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.visgridderfactory");
 #include <askap/AskapError.h>
-#include <casa/OS/DynLib.h>        // for dynamic library loading
-#include <casa/BasicSL/String.h>   // for downcase
-#include <scimath/Mathematics/Interpolate2D.h>
+#include <casacore/casa/OS/DynLib.h>        // for dynamic library loading
+#include <casacore/casa/BasicSL/String.h>   // for downcase
+#include <casacore/scimath/Mathematics/Interpolate2D.h>
 
 // Local package includes
 #include <gridding/VisGridderFactory.h>

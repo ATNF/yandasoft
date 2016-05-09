@@ -40,7 +40,7 @@
 #include <fitting/DesignMatrix.h>
 #include <fitting/PolXProducts.h>
 #include <fitting/Params.h>
-#include <casa/Arrays/MatrixMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");

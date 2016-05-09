@@ -32,9 +32,9 @@
 #define SYNIMAGERESTORESOLVER_H_
 
 #include <measurementequation/ImageSolver.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Quanta.h>
-#include <lattices/Lattices/ArrayLattice.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Quanta.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <Common/ParameterSet.h>
 #include <measurementequation/RestoringBeamHelper.h>
 

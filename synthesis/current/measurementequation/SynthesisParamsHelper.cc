@@ -29,7 +29,7 @@
 #include <utils/MultiDimArrayPlaneIter.h>
 #include <utils/PaddingUtils.h>
 #include <gridding/SupportSearcher.h>
-#include <lattices/LatticeMath/Fit2D.h>
+#include <casacore/lattices/LatticeMath/Fit2D.h>
 
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>
@@ -38,25 +38,25 @@ ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
 
-#include <casa/aips.h>
-#include <casa/BasicSL/Constants.h>
-#include <casa/Quanta.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/Quanta.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <images/Images/PagedImage.h>
-#include <images/Images/TempImage.h>
-#include <lattices/Lattices/ArrayLattice.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
-#include <coordinates/Coordinates/LinearCoordinate.h>
-#include <coordinates/Coordinates/StokesCoordinate.h>
-#include <coordinates/Coordinates/SpectralCoordinate.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/images/Images/TempImage.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/coordinates/Coordinates/LinearCoordinate.h>
+#include <casacore/coordinates/Coordinates/StokesCoordinate.h>
+#include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
 #include <Common/ParameterSet.h>
 #include <Common/Exceptions.h>
 
-#include <measures/Measures/Stokes.h>
+#include <casacore/measures/Measures/Stokes.h>
 
 #include <vector>
 #include <algorithm>

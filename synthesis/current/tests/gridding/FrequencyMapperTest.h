@@ -30,9 +30,9 @@
 #include <gridding/FrequencyMapper.h>
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/IPosition.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 #include <boost/shared_ptr.hpp>
 

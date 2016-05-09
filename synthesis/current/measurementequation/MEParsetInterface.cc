@@ -25,8 +25,8 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 ///
 
-#include <casa/aips.h>
-#include <casa/Quanta.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Quanta.h>
 
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>

@@ -33,9 +33,9 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <casa/BasicSL/Constants.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <scimath/Mathematics/SquareMatrix.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/scimath/Mathematics/SquareMatrix.h>
 
 
 

@@ -31,9 +31,9 @@
 
 #include <string>
 
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 #include <boost/shared_ptr.hpp>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(decentropylogger, ".deconvolution.entropy");

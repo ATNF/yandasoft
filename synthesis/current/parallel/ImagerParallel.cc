@@ -65,8 +65,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <parallel/GroupVisAggregator.h>
 #include <parallel/AdviseParallel.h>
 
-#include <casa/aips.h>
-#include <casa/OS/Timer.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/OS/Timer.h>
 
 #include <Common/ParameterSet.h>
 

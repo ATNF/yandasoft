@@ -48,7 +48,7 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
-#include <casa/OS/Timer.h>
+#include <casacore/casa/OS/Timer.h>
 
 
 using namespace askap;

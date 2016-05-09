@@ -31,7 +31,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
-#include <ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <dataaccess/SharedIter.h>
 #include <measurementequation/IMeasurementEquation.h>
 #include <askapparallel/AskapParallel.h>

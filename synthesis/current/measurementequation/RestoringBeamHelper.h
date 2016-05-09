@@ -35,8 +35,8 @@
 #define RESTORING_BEAM_HELPER_H
 
 // casa includes
-#include <casa/Arrays/Vector.h>
-#include <casa/Quanta.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Quanta.h>
 
 // own includes
 #include <fitting/Params.h>

@@ -31,8 +31,8 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
-#include <casa/Quanta/MVDirection.h>
-#include <casa/Quanta/Quantum.h>
+#include <casacore/casa/Quanta/MVDirection.h>
+#include <casacore/casa/Quanta/Quantum.h>
 
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>

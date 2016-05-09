@@ -32,15 +32,15 @@
 #include <vector>
 
 // ASKAPsoft includes
-#include <casa/Arrays/IPosition.h>
+#include <casacore/casa/Arrays/IPosition.h>
 #include <CommandLineParser.h>
 #include <askap/AskapError.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
-#include <coordinates/Coordinates/Coordinate.h>
-#include <coordinates/Coordinates/LinearCoordinate.h>
-#include <casa/Quanta/MVDirection.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/coordinates/Coordinates/Coordinate.h>
+#include <casacore/coordinates/Coordinates/LinearCoordinate.h>
+#include <casacore/casa/Quanta/MVDirection.h>
 #include <imageaccess/CasaImageAccess.h>
-#include <images/Images/PagedImage.h>
+#include <casacore/images/Images/PagedImage.h>
 
 // Using
 using namespace askap;

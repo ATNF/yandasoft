@@ -35,8 +35,8 @@
 
 
 #include <boost/shared_ptr.hpp>
-#include <lattices/Lattices/LatticeCleaner.h>
-#include <lattices/Lattices/MultiTermLatticeCleaner.h>
+#include <casacore/lattices/LatticeMath/LatticeCleaner.h>
+#include <casacore/lattices/LatticeMath/MultiTermLatticeCleaner.h>
 
 #include <map>
 

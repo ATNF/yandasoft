@@ -31,10 +31,12 @@
 
 #include <string>
 
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/BasicSL/STLIO.h>
+
 #include <fft/FFTWrapper.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(decfistalogger, ".deconvolution.fista");

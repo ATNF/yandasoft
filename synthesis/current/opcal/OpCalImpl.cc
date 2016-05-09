@@ -58,7 +58,7 @@ ASKAP_LOGGER(logger, ".OpCalImpl");
 #include <measurementequation/MEParsetInterface.h>
 #include <measurementequation/ImagingEquationAdapter.h>
 
-#include <casa/BasicSL.h>
+#include <casacore/casa/BasicSL.h>
 
 // std includes
 

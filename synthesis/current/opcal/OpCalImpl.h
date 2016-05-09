@@ -35,7 +35,7 @@
 #define SYNTHESIS_OP_CAL_IMPL_H
 
 // casa includes
-#include <casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Matrix.h>
 
 // ASKAPsoft includes
 #include <askapparallel/AskapParallel.h>

@@ -37,8 +37,8 @@
 
 #include <measurementequation/VisMetaDataStats.h>
 #include <dataaccess/DataAccessorStub.h>
-#include <casa/Quanta/Quantum.h>
-#include <casa/Quanta/MVDirection.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/casa/Quanta/MVDirection.h>
 
 #include <Blob/BlobString.h>
 #include <Blob/BlobOBufString.h>

@@ -44,7 +44,7 @@
 #include <opcal/ScanStats.h>
 #include <opcal/GenericCalInfo.h>
 
-#include <casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Matrix.h>
 
 namespace askap {
 

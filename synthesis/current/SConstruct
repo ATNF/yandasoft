@@ -23,6 +23,8 @@ env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
 if sys.platform != 'darwin':
     env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
 
+env.AppendUnique(CCFLAGS=['-Wno-unused-local-typedefs'])
+
 # create build object with library name
 pkg = env.AskapPackage("synthesis")
 env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']

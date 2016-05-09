@@ -25,8 +25,8 @@
 ///
 
 // casa includes
-#include <casa/BasicSL/Complex.h>
-#include <casa/Logging/LogIO.h>
+#include <casacore/casa/BasicSL/Complex.h>
+#include <casacore/casa/Logging/LogIO.h>
 
 // LOFAR
 #include <Common/ParameterSet.h>

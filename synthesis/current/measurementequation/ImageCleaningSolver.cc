@@ -37,8 +37,8 @@ ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 #include <measurementequation/ImageCleaningSolver.h>
 #include <askap/AskapError.h>
 #include <utils/PaddingUtils.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 
 namespace askap {

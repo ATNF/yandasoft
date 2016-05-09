@@ -31,10 +31,10 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // casa includes
-#include <casa/Logging/LogIO.h>
-#include <casa/OS/Timer.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Logging/LogIO.h>
+#include <casacore/casa/OS/Timer.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 
 // own includes

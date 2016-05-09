@@ -31,8 +31,8 @@
 #ifndef SYN_WEINER_PRECONDITIONER_H_
 #define SYN_WEINER_PRECONDITIONER_H_
 
-#include <casa/aips.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Vector.h>
 #include <fitting/Axes.h>
 
 #include <Common/ParameterSet.h>

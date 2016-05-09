@@ -85,8 +85,8 @@ ASKAP_LOGGER(logger, ".parallel");
 
 
 // casa includes
-#include <casa/aips.h>
-#include <casa/OS/Timer.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/OS/Timer.h>
 
 using namespace askap;
 using namespace askap::scimath;

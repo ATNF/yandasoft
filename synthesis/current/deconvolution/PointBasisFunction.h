@@ -35,8 +35,8 @@
 #include <string>
 
 #include <boost/shared_ptr.hpp>
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
 
 #include <deconvolution/BasisFunction.h>
 

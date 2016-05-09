@@ -33,7 +33,7 @@
 #include <Common/ParameterSet.h>
 #include <parallel/MEParallelApp.h>
 #include <measurementequation/VisMetaDataStats.h>
-#include <casa/Quanta/MVDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
 
 #include <boost/shared_ptr.hpp>
 #include <string>

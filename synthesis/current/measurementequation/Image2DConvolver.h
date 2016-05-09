@@ -25,17 +25,17 @@
 #define ASKAP_SYNTHESIS_IMAGE2DCONVOLVER_H
 
 // ASKAPsoft includes
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Quanta/Quantum.h>
-#include <casa/Quanta/Unit.h>
-#include <casa/Arrays/IPosition.h>
-#include <images/Images/ImageInfo.h>
-#include <images/Images/ImageInterface.h>
-#include <scimath/Mathematics/VectorKernel.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/casa/Quanta/Unit.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/images/Images/ImageInfo.h>
+#include <casacore/images/Images/ImageInterface.h>
+#include <casacore/scimath/Mathematics/VectorKernel.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 
 namespace askap {
 namespace synthesis {
@@ -112,6 +112,55 @@ class Image2DConvolver {
                                       const casa::IPosition& axes) const;
         //
         casa::uInt sizeOfGaussian(casa::Double width, casa::Double nSigma) const;
+
+        //
+        // Legacy methods from casa::ImageUtilities. The functionality of these
+        // four methods below is now provided by WCBox/Polygon - but the interface is 
+        // sufficiently different to make them incompatible for the moment.
+        //
+        // Convert a length and position angle in world units (for a non-coupled 
+        // coordinate) to pixels. The length is in some 2D plane in the 
+        // CoordinateSystem specified  by pixelAxes.
+
+        void worldWidthsToPixel (casa::LogIO& os, casa::Vector<casa::Double>& dParameters,
+                                   const casa::Vector<casa::Quantum<casa::Double> >& parameters,
+                                   const casa::CoordinateSystem& cSys,
+                                   const casa::IPosition& pixelAxes,
+                                   casa::Bool doRef=casa::False) const;
+
+
+
+        casa::Bool pixelWidthsToWorld (casa::LogIO& os,
+                                   casa::Vector<casa::Quantum<casa::Double> >& wParameters,
+                                   const casa::Vector<casa::Double>& pParameters,
+                                   const casa::CoordinateSystem& cSys,
+                                   const casa::IPosition& pixelAxes,
+                                   casa::Bool doRef=casa::False) const;
+
+        casa::Double worldWidthToPixel (casa::LogIO& os, casa::Double positionAngle,
+                                    const casa::Quantum<casa::Double>& length,
+                                    const casa::CoordinateSystem& cSys,
+                                    const casa::IPosition& pixelAxes) const;
+
+
+
+        casa::Quantum<casa::Double> pixelWidthToWorld (casa::LogIO& os, casa::Double positionAngle,
+                                             casa::Double length,
+                                             const casa::CoordinateSystem& cSys,
+                                             const casa::IPosition& pixelAxes) const;
+
+        // Convert 2d sky shape (parameters=major axis, minor axis, position angle)
+        // from pixels to world at reference pixel. pixelAxes describes which
+        // 2 pixel axes of the coordinate system our 2D shape is in.
+        // On input pa is positive for +x -> +y in pixel frame
+        // On output pa is positive N->E
+        // Returns True if major/minor exchanged themselves on conversion to world.
+        casa::Bool skyPixelWidthsToWorld (casa::LogIO& os,
+                                      casa::Vector<casa::Quantum<casa::Double> >& wParameters,
+                                      const casa::CoordinateSystem& cSys,
+                                      const casa::Vector<casa::Double>& pParameters,
+                                      const casa::IPosition& pixelAxes, casa::Bool doRef) const;
+
 };
 
 }

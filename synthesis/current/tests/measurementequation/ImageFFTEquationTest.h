@@ -31,20 +31,20 @@
 #include <dataaccess/DataIteratorStub.h>
 #include <fitting/ParamsCasaTable.h>
 
-#include <casa/aips.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Cube.h>
-#include <measures/Measures/MPosition.h>
-#include <casa/Quanta/Quantum.h>
-#include <casa/Quanta/MVPosition.h>
-#include <casa/BasicSL/Constants.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/casa/Quanta/MVPosition.h>
+#include <casacore/casa/BasicSL/Constants.h>
 
 #include <askap/AskapError.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 
 //#include <measurementequation/SynthesisParamsHelper.h>
-//#include <casa/Arrays/ArrayMath.h>
+//#include <casacore/casa/Arrays/ArrayMath.h>
 
 #include <stdexcept>
 

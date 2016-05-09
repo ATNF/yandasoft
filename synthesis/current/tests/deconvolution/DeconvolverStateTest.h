@@ -31,7 +31,7 @@
 #include <deconvolution/DeconvolverState.h>
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 #include <boost/shared_ptr.hpp>
 

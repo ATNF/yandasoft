@@ -35,14 +35,14 @@
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
-#include <casa/aips.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <scimath/Mathematics/VectorKernel.h>
-#include <images/Images/TempImage.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/scimath/Mathematics/VectorKernel.h>
+#include <casacore/images/Images/TempImage.h>
 
 // Local package includes
 #include <measurementequation/ImageRestoreSolver.h>

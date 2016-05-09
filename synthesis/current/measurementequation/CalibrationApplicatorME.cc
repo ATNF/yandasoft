@@ -34,9 +34,9 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <measurementequation/CalibrationApplicatorME.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <scimath/Mathematics/MatrixMathLA.h>
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/scimath/Mathematics/MatrixMathLA.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 #include <askap/AskapError.h>
 #include <utils/PolConverter.h>
 #include <dataaccess/IFlagAndNoiseDataAccessor.h>

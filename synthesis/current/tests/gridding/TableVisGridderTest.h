@@ -33,12 +33,12 @@
 #include <fitting/Params.h>
 #include <measurementequation/ComponentEquation.h>
 #include <dataaccess/DataIteratorStub.h>
-#include <casa/aips.h>
-#include <casa/Arrays/Matrix.h>
-#include <measures/Measures/MPosition.h>
-#include <casa/Quanta/Quantum.h>
-#include <casa/Quanta/MVPosition.h>
-#include <casa/BasicSL/Constants.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/casa/Quanta/MVPosition.h>
+#include <casacore/casa/BasicSL/Constants.h>
 #include <askap/AskapError.h>
 #include <gridding/VisGridderFactory.h>
 

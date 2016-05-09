@@ -36,8 +36,8 @@
 #include <boost/shared_ptr.hpp>
 
 // casa includes
-#include "casa/OS/Timer.h"
-#include <casa/Arrays/Array.h>
+#include "casacore/casa/OS/Timer.h"
+#include <casacore/casa/Arrays/Array.h>
 
 // other 3rd party
 #include <Common/ParameterSet.h>

@@ -31,8 +31,8 @@
 #ifndef GAUSSIAN_TAPER_CACHE_H
 #define GAUSSIAN_TAPER_CACHE_H
 
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/IPosition.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/IPosition.h>
 
 namespace askap {
 

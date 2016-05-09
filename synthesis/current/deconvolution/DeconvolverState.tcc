@@ -33,7 +33,7 @@
 #include <askap_synthesis.h>
 
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 
 #include <deconvolution/DeconvolverState.h>
 #include <deconvolution/DeconvolverState.h>

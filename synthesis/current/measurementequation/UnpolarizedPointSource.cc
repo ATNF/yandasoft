@@ -33,7 +33,7 @@
 
 #include <measurementequation/UnpolarizedPointSource.h>
 
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 
 namespace askap {
 

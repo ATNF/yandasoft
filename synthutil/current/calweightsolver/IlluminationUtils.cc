@@ -29,17 +29,17 @@
 
 #include <calweightsolver/IlluminationUtils.h>
 
-#include <images/Images/PagedImage.h>
-//#include <coordinates/Coordinates/StokesCoordinate.h>
-//#include <coordinates/Coordinates/SpectralCoordinate.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
-#include <coordinates/Coordinates/LinearCoordinate.h>
-#include <coordinates/Coordinates/Projection.h>
-#include <measures/Measures/MDirection.h>
-#include <lattices/Lattices/ArrayLattice.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/images/Images/PagedImage.h>
+//#include <casacore/coordinates/Coordinates/StokesCoordinate.h>
+//#include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/LinearCoordinate.h>
+#include <casacore/coordinates/Coordinates/Projection.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 #include <gridding/BasicCompositeIllumination.h>
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 #include <fft/FFTWrapper.h>
 
 #include <Common/ParameterSet.h>
@@ -49,7 +49,7 @@
 
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
-#include <casa/Logging/LogIO.h>
+#include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
 
 namespace askap {

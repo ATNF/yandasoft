@@ -27,8 +27,8 @@
 
 
 // casa includes
-#include <casa/BasicMath/Random.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/BasicMath/Random.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 // own includes
 #include <askap/AskapUtil.h>

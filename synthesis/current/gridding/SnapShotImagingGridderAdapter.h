@@ -45,11 +45,11 @@
 #include <boost/shared_ptr.hpp>
 #include <dataaccess/BestWPlaneDataAccessor.h>
 #include <fitting/Axes.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
-#include <scimath/Mathematics/Interpolate2D.h>
-#include <measures/Measures/MDirection.h>
-#include <images/Images/TempImage.h>
-#include <images/Images/ImageRegrid.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/scimath/Mathematics/Interpolate2D.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/images/Images/TempImage.h>
+#include <casacore/images/Images/ImageRegrid.h>
 
 #ifdef _OPENMP
 #include <boost/thread/mutex.hpp>

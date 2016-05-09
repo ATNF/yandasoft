@@ -31,11 +31,11 @@
 #include <string>
 
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/BasicMath/Math.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/BasicMath/Math.h>
 
 ASKAP_LOGGER(decemptinesslogger, ".deconvolution.emptiness");
 

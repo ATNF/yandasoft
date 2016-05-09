@@ -32,7 +32,7 @@
 
 #include <string>
 
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 
 namespace askap

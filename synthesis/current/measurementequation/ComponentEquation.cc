@@ -27,16 +27,16 @@
 #include <fitting/INormalEquations.h>
 #include <fitting/DesignMatrix.h>
 
-#include <measures/Measures/Stokes.h>
-#include <scimath/Mathematics/RigidVector.h>
-#include <casa/BasicSL/Constants.h>
-#include <casa/BasicSL/Complex.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Cube.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <scimath/Mathematics/AutoDiff.h>
-#include <scimath/Mathematics/AutoDiffMath.h>
+#include <casacore/measures/Measures/Stokes.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/scimath/Mathematics/AutoDiff.h>
+#include <casacore/scimath/Mathematics/AutoDiffMath.h>
 
 
 #include <measurementequation/UnpolarizedPointSource.h>

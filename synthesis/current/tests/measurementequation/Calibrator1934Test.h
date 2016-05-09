@@ -74,8 +74,8 @@ public:
       for (casa::uInt ch = 0; ch<acc.nChannel(); ++ch) {
            const casa::Matrix<casa::Complex> vis = acc.itsVisibility.xzPlane(ch);
            const double expectedFlux = fluxes[ch];
-           CPPUNIT_ASSERT_EQUAL(acc.nRow(), vis.nrow());
-           CPPUNIT_ASSERT_EQUAL(acc.nPol(), vis.ncolumn());
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
            
            for (casa::uInt row = 0; row<vis.nrow(); ++row) {
                 for (casa::uInt col = 0; col<vis.ncolumn(); ++col) {
@@ -119,8 +119,8 @@ public:
       const double fluxes[] = {10.631, 13.181, 14.292, 14.768, 15.055, 15.138, 14.926, 14.389};
       for (casa::uInt ch = 0; ch<acc.nChannel(); ++ch) {
            const casa::Matrix<casa::Complex> vis = acc.itsVisibility.xzPlane(ch);
-           CPPUNIT_ASSERT_EQUAL(acc.nRow(), vis.nrow());
-           CPPUNIT_ASSERT_EQUAL(acc.nPol(), vis.ncolumn());
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
            for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
                 // we simulate XX and YY; x-pols should all be zeros 
                 const double expectedFlux = (pol % 3 == 0) ? fluxes[ch] * 0.5 : 0.;

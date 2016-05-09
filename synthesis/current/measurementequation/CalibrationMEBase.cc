@@ -33,13 +33,13 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // casa includes
-#include <casa/complex.h>
+#include <casacore/casa/complex.h>
 
 // own includes
 #include <measurementequation/CalibrationMEBase.h>
 #include <profile/AskapProfiler.h>
 
-#include <casa/Arrays/MatrixMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
 #include <dataaccess/MemBufferDataAccessor.h>

@@ -32,7 +32,7 @@
 
 #include <measurementequation/ImageCleaningSolver.h>
 
-#include <lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <deconvolution/DeconvolverFista.h>
 
 namespace askap {

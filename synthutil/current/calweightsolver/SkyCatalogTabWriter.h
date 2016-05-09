@@ -22,10 +22,10 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
-#include <casa/aips.h>
-#include <casa/Exceptions/Error.h>
-#include <tables/Tables/Table.h>
-#include <casa/BasicSL/String.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Exceptions/Error.h>
+#include <casacore/tables/Tables/Table.h>
+#include <casacore/casa/BasicSL/String.h>
 
 /// An auxiliary class to write annotation table from the supplied data
 class SkyCatalogTabWriter {

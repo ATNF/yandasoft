@@ -38,8 +38,8 @@
 
 #include <gridding/IBasicIllumination.h>
 
-#include <scimath/Mathematics/RigidVector.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
+#include <casacore/casa/Arrays/Vector.h>
 
 #include <boost/shared_ptr.hpp>
 

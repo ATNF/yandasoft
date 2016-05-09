@@ -33,9 +33,9 @@
 #include <string>
 
 // ASKAPsoft includes
-#include <casa/aips.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 namespace askap {
     namespace synthesis {

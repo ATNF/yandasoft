@@ -32,7 +32,7 @@
 #include <askap_synthesis.h>
 
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 ASKAP_LOGGER(decpointbaselogger, ".deconvolution.pointbasis");
 
 #include <deconvolution/PointBasisFunction.h>

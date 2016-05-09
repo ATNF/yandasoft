@@ -40,10 +40,10 @@
 #include <utility>
 
 // casa includes
-#include <measures/Measures/MDirection.h>
-#include <casa/Quanta/MVDirection.h>
-#include <measures/Measures/MPosition.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/casa/Arrays/Vector.h>
 
 namespace askap {
 

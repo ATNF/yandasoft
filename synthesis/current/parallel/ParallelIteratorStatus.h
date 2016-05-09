@@ -30,7 +30,7 @@
 #ifndef ASKAP_SYNTHESIS_PARALLEL_ITERATOR_STATUS_H
 #define ASKAP_SYNTHESIS_PARALLEL_ITERATOR_STATUS_H
 
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>
 

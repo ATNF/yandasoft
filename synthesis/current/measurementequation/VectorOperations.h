@@ -34,7 +34,7 @@
 #ifndef VECTOR_OPERATIONS_H
 #define VECTOR_OPERATIONS_H
 
-#include <scimath/Mathematics/AutoDiff.h>
+#include <casacore/scimath/Mathematics/AutoDiff.h>
 #include <fitting/ComplexDiff.h>
 
 

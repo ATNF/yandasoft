@@ -41,7 +41,7 @@
 #include <string>
 
 // casa includes
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 #ifdef _OPENMP
 // boost includes

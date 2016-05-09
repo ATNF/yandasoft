@@ -22,17 +22,17 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
-#include <casa/Arrays/IPosition.h>
-#include <images/Images/PagedImage.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/images/Images/PagedImage.h>
 #include <CommandLineParser.h>
 #include <askap/AskapError.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
-#include <coordinates/Coordinates/Coordinate.h>
-#include <casa/Quanta/MVAngle.h>
-#include <casa/Quanta/Quantum.h>
-#include <measures/Measures/MDirection.h>
-#include <casa/Quanta/MVDirection.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/coordinates/Coordinates/Coordinate.h>
+#include <casacore/casa/Quanta/MVAngle.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
 
 
 #include <stdexcept>

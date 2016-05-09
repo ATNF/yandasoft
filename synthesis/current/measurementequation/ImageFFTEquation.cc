@@ -40,13 +40,13 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 #include <fitting/Axes.h>
 #include <profile/AskapProfiler.h>
 
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 
-#include <casa/BasicSL/Constants.h>
-#include <casa/BasicSL/Complex.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 #include <stdexcept>
 

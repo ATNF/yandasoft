@@ -28,8 +28,8 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <casa/BasicSL/Constants.h>
-#include <casa/Arrays/ArrayMath.h>
+#include <casacore/casa/BasicSL/Constants.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 
 #include <gridding/DiskIllumination.h>

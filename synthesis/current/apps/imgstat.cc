@@ -27,19 +27,19 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <casa/Arrays/IPosition.h>
-#include <images/Images/PagedImage.h>
-#include <images/Images/SubImage.h>
-#include <images/Images/ImageStatistics.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/images/Images/SubImage.h>
+#include <casacore/images/Images/ImageStatistics.h>
 #include <CommandLineParser.h>
 #include <askap/AskapError.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
-#include <coordinates/Coordinates/Coordinate.h>
-#include <casa/Quanta/MVAngle.h>
-#include <casa/Quanta/Quantum.h>
-#include <measures/Measures/MDirection.h>
-#include <casa/Quanta/MVDirection.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/coordinates/Coordinates/Coordinate.h>
+#include <casacore/casa/Quanta/MVAngle.h>
+#include <casacore/casa/Quanta/Quantum.h>
+#include <casacore/measures/Measures/MDirection.h>
+#include <casacore/casa/Quanta/MVDirection.h>
 
 
 #include <stdexcept>
@@ -47,7 +47,7 @@
 
 using namespace askap;
 
-void printDirection(ostream &os,const casa::MDirection &dir)  {
+void printDirection(std::ostream &os,const casa::MDirection &dir)  {
     double lngbuf=dir.getValue().getLong("deg").getValue();
     if (lngbuf<0) lngbuf+=360.;
     os<<(dir.getRefString()!="GALACTIC"?casa::MVAngle::Format(casa::MVAngle::TIME):
@@ -87,7 +87,7 @@ int main(int argc, const char** argv) {
      
      // print peak in the image and position of the peak 
      std::cout<<tmax<<" ";
-     printDirection(cout,res);
+     printDirection(std::cout,res);
      std::cout<<" # Max RA Dec (Epoch)"<<std::endl;
      
      std::cout<<std::setprecision(15)<<res.getValue().getLong("deg").getValue()<<" "<<

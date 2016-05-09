@@ -29,12 +29,12 @@
 #include <askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
-#include <casa/Logging/LogIO.h>
+#include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
-#include <casa/OS/Timer.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/IPosition.h>
+#include <casacore/casa/OS/Timer.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/IPosition.h>
 #include <boost/shared_ptr.hpp>
 
 #include <measurementequation/IImagePreconditioner.h>

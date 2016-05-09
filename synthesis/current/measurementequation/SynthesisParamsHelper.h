@@ -32,17 +32,17 @@
 #ifndef SYNSYNTHESISPARAMSHELPER_H_
 #define SYNSYNTHESISPARAMSHELPER_H_
 
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Slicer.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Slicer.h>
 
 #include <fitting/Params.h>
 #include <fitting/Axes.h>
 
 #include <Common/ParameterSet.h>
-#include <images/Images/TempImage.h>
-#include <images/Images/ImageInterface.h>
-#include <coordinates/Coordinates/Projection.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/images/Images/TempImage.h>
+#include <casacore/images/Images/ImageInterface.h>
+#include <casacore/coordinates/Coordinates/Projection.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
 
 #include <imageaccess/IImageAccess.h>

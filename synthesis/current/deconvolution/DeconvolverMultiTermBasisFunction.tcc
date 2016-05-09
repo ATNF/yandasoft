@@ -32,14 +32,15 @@
 
 #include <string>
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
-#include <casa/Arrays/Array.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/ArrayMath.h>
-#include <casa/Arrays/MaskArrMath.h>
-#include <casa/Arrays/MatrixMath.h>
-#include <scimath/Mathematics/MatrixMathLA.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/MaskArrMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/scimath/Mathematics/MatrixMathLA.h>
+#include <casacore/casa/BasicSL/STLIO.h>
 #include <measurementequation/SynthesisParamsHelper.h>
 #include <profile/AskapProfiler.h>
 ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
@@ -145,8 +146,7 @@ namespace askap {
             defaultScales[2] = 30.0;
             std::vector<float> scales = parset.getFloatVector("scales", defaultScales);
 
-            ASKAPLOG_DEBUG_STR(decmtbflogger, "Constructing Multiscale basis function with scales "
-                                   << scales);
+            ASKAPLOG_DEBUG_STR(decmtbflogger, "Constructing Multiscale basis function with scales " << scales);
             Bool orthogonal = parset.getBool("orthogonal", false);
             if (orthogonal) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Multiscale basis functions will be orthogonalised");

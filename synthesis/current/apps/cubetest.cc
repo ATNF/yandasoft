@@ -22,10 +22,10 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
-#include <casa/Arrays/Cube.h>
-#include <casa/Arrays/ArrayIO.h>
-#include <casa/Arrays/IPosition.h>
-#include <casa/BasicSL/Complex.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Arrays/ArrayIO.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/casa/BasicSL/Complex.h>
 
 
 #include <iostream>

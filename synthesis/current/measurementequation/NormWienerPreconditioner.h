@@ -30,8 +30,8 @@
 #ifndef SYN_NORMWEINER_PRECONDITIONER_H_
 #define SYN_NORMWEINER_PRECONDITIONER_H_
 
-#include <casa/aips.h>
-#include <casa/Arrays/Vector.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Vector.h>
 #include <fitting/Axes.h>
 
 #include <boost/shared_ptr.hpp>

@@ -37,7 +37,7 @@
 
 #include <dataaccess/IConstDataAccessor.h>
 #include <dataaccess/BestWPlaneDataAccessor.h>
-#include <measures/Measures/MDirection.h>
+#include <casacore/measures/Measures/MDirection.h>
 #include <fitting/ISerializable.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>

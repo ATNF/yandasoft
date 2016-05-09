@@ -50,12 +50,12 @@ ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 #include <fft/FFTWrapper.h>
 
-#include <casa/OS/Timer.h>
-#include <images/Images/ImageRegrid.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
-#include <lattices/Lattices/ArrayLattice.h>
-#include <casa/Arrays/Array.h>
-#include <scimath/Mathematics/Interpolate2D.h>
+#include <casacore/casa/OS/Timer.h>
+#include <casacore/images/Images/ImageRegrid.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/scimath/Mathematics/Interpolate2D.h>
 
 //#include <measurementequation/SynthesisParamsHelper.h>
 

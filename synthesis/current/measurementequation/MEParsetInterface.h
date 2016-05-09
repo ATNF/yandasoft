@@ -37,7 +37,7 @@
 
 #include <string>
 
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 
 // own includes
 #include <fitting/Params.h>

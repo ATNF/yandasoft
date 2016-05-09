@@ -43,7 +43,7 @@
 #define CALIBRATION_ME_H
 
 // casa includes
-#include <casa/Arrays/MatrixMath.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
 
 // own includes
 #include <fitting/GenericEquation.h>

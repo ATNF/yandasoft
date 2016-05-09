@@ -40,14 +40,14 @@
 #include <utils/PhaseUnwrapper.h>
 
 // casa includes
-#include <measures/Measures/MPosition.h>
-#include <measures/Measures/MEpoch.h>
-#include <measures/Measures/MeasConvert.h>
-#include <measures/Measures/MCDirection.h>
-#include <scimath/Functionals/Function1D.h>
-#include <scimath/Fitting/NonLinearFitLM.h>
+#include <casacore/measures/Measures/MPosition.h>
+#include <casacore/measures/Measures/MEpoch.h>
+#include <casacore/measures/Measures/MeasConvert.h>
+#include <casacore/measures/Measures/MCDirection.h>
+#include <casacore/scimath/Functionals/Function1D.h>
+#include <casacore/scimath/Fitting/NonLinearFitLM.h>
 
-#include <measures/Measures/MCEpoch.h>
+#include <casacore/measures/Measures/MCEpoch.h>
 
 
 // std

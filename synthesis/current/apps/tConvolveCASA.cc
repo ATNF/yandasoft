@@ -46,11 +46,11 @@ using std::endl;
 using std::complex;
 using std::abs;
 
-#include <casa/aips.h>
-#include <casa/Arrays/Vector.h>
-#include <casa/Arrays/Matrix.h>
-#include <casa/Arrays/Cube.h>
-#include <scimath/Mathematics/RigidVector.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Matrix.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/scimath/Mathematics/RigidVector.h>
 
 // Typedefs for easy testing
 // Cost of using double for Coord is low, cost for

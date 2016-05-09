@@ -32,8 +32,8 @@
 #include <askap_synthesis.h>
 
 #include <askap/AskapLogging.h>
-#include <casa/aips.h>
-#include <casa/Arrays/Cube.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/Cube.h>
 
 using namespace casa;
 

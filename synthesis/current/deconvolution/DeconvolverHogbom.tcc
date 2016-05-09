@@ -32,9 +32,9 @@
 
 #include <string>
 
-#include <casa/aips.h>
+#include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
-#include <casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Array.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(dechogbomlogger, ".deconvolution.hogbom");
 

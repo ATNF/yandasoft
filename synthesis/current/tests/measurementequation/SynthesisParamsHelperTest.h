@@ -38,7 +38,7 @@
 #include <utils/ImageUtils.h>
 #include <measurementequation/ImageParamsHelper.h>
 #include <cppunit/extensions/HelperMacros.h>
-#include <coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
 
 #include <askap/AskapError.h>

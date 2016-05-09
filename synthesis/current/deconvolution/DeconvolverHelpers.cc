@@ -26,9 +26,9 @@
 
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
-#include <casa/OS/Directory.h>
-#include <images/Images/PagedImage.h>
-#include <casa/BasicSL/String.h>   // for downcase
+#include <casacore/casa/OS/Directory.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/casa/BasicSL/String.h>   // for downcase
 
 ASKAP_LOGGER(logger, ".deconvolver.helpers");
 

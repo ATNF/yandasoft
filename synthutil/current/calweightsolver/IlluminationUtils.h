@@ -32,7 +32,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <gridding/IBasicIllumination.h>
-#include <coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 
 
 #include <string>

@@ -96,9 +96,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(itsIter->nRow(),pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(itsIter->nPol(),pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nRow(),pacBuf.flag().nrow());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nPol(),pacBuf.flag().nplane());
-         CPPUNIT_ASSERT_EQUAL(1u,pacBuf.flag().ncolumn());
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(1u,casa::uInt(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(1u,casa::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT_EQUAL(casa::Stokes::I, pacBuf.stokes()[0]);
                   
@@ -136,9 +136,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nRow(),pacBuf.flag().nrow());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nPol(),pacBuf.flag().nplane());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nChannel(),pacBuf.flag().ncolumn());
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(4u,casa::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
          for (casa::uInt pol = 0; pol<4; ++pol) {
@@ -201,9 +201,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(190u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nRow(),pacBuf.flag().nrow());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nPol(),pacBuf.flag().nplane());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nChannel(),pacBuf.flag().ncolumn());
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(4u,casa::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
          for (casa::uInt pol = 0; pol<4; ++pol) {
@@ -395,9 +395,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(8u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nRow(),pacBuf.flag().nrow());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nPol(),pacBuf.flag().nplane());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nChannel(),pacBuf.flag().ncolumn());     
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));     
          CPPUNIT_ASSERT(itsME);
          CPPUNIT_ASSERT(itsIter);
          
@@ -414,9 +414,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(8u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nRow(),pacBuf.flag().nrow());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nPol(),pacBuf.flag().nplane());
-         CPPUNIT_ASSERT_EQUAL(pacBuf.nChannel(),pacBuf.flag().ncolumn());
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
 
          //
          const scimath::PolXProducts &pxp = pacBuf.polXProducts();                            

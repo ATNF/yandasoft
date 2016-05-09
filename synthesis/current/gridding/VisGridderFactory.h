@@ -35,7 +35,7 @@
 
 // ASKAPsoft includes
 #include <Common/ParameterSet.h>
-#include <scimath/Mathematics/Interpolate2D.h>
+#include <casacore/scimath/Mathematics/Interpolate2D.h>
 #include <boost/shared_ptr.hpp>
 
 // Loacl package includes

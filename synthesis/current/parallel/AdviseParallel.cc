@@ -42,8 +42,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <fitting/INormalEquations.h>
 #include <fitting/Solver.h>
 
-#include <casa/aips.h>
-#include <casa/OS/Timer.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/OS/Timer.h>
 
 #include <Blob/BlobString.h>
 #include <Blob/BlobIBufString.h>
