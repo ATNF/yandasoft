@@ -105,23 +105,24 @@ void OpCalImpl::run()
       itsHighLevelSolver->process(itsScanStats,itsCalData);
   } else {
       ASKAPLOG_INFO_STR(logger, "High-level solver is not defined, just printing the summary below");
-      ASKAPLOG_INFO_STR(logger, "#no time_since_start(min) beamID phase1 phase2 ... phaseN (in degrees)");
+      ASKAPLOG_INFO_STR(logger, "#no time_since_start(min) beamID fieldID scanID amp1 phase1 amp2 phase2 ... ampN phaseN (phase in degrees)");
       
       float firstTime = 0;
       for (casa::uInt row=0; row<itsCalData.nrow(); ++row) {
            std::string result;
            ASKAPDEBUGASSERT(itsScanStats.size() > row);
-           const float timeCentroid = 0.5*(itsScanStats[row].startTime() + itsScanStats[row].endTime());
+           const double timeCentroid = itsScanStats[row].startTime() + 0.5*(itsScanStats[row].endTime() - itsScanStats[row].startTime());
            if (row == 0) {
                firstTime = timeCentroid;
            }
            result += utility::toString<casa::uInt>(row)+" "+
-                  utility::toString<float>((timeCentroid - firstTime)/60.)+" "+
+                  utility::toString<double>((timeCentroid - firstTime)/60.)+" "+
                   utility::toString<casa::uInt>(itsScanStats[row].beam()) + " "+
-                  utility::toString<casa::uInt>(itsScanStats[row].fieldID());
+                  utility::toString<casa::uInt>(itsScanStats[row].fieldID()) + " "+
+                  utility::toString<casa::uInt>(itsScanStats[row].scanID());
        
            for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
-                result += " " + utility::toString<float>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
+                result += " " + utility::toString<double>(std::abs(itsCalData(row,ant).gain())) + " " + utility::toString<double>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
            }
            ASKAPLOG_INFO_STR(logger, "result: "<<result);
       }

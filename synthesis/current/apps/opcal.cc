@@ -71,8 +71,19 @@ class OpCalApp : public askap::Application
                  
                  OpCalImpl impl(comms,config());
                  // we'll eventually get a proper factory method here; for now create explicitly
-                 impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
-                 //impl.setHighLevelSolver(boost::shared_ptr<PointingSolver>(new PointingSolver(config())));
+                 const std::string hlSolver = config().getString("solver","");
+                 if (hlSolver != "") {
+                     ASKAPLOG_INFO_STR(logger, "Calibration results will be passed to '"<<hlSolver<<"' solver");
+                     if (hlSolver == "baseline") {
+                         impl.setHighLevelSolver(boost::shared_ptr<BaselineSolver>(new BaselineSolver(config())));
+                     } else if (hlSolver == "pointing") {
+                         impl.setHighLevelSolver(boost::shared_ptr<PointingSolver>(new PointingSolver(config())));
+                     } else {
+                       ASKAPCHECK(false, "Unknown high-level solver: "<<hlSolver);
+                     }
+                 } else {
+                     ASKAPLOG_INFO_STR(logger, "High-level solver has not been defined, raw calibration results will be printed in the log");
+                 }
                  
                  impl.run();                 
                  
