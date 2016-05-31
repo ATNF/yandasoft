@@ -158,7 +158,7 @@ void OpCalImpl::inspectData()
 /// fills itsCalData
 void OpCalImpl::runCalibration()
 {   
-   const casa::uInt nAnt = parset().getUint("nant",6);
+   const casa::uInt nAnt = parset().getUint("nant",12);
    ASKAPCHECK(nAnt > 0, "Expect a positive number of antennas");
    itsCalData.resize(itsScanStats.size(), nAnt);
    // ensure each element is undefined although this is not necessary, strictly speaking
@@ -251,14 +251,20 @@ void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &be
     
           ASKAPDEBUGASSERT(itsModel);
           itsModel->reset();
+          casa::uInt maxBeamID = 0;
           for (std::map<casa::uInt,size_t>::const_iterator ci = thisChunkBeams.begin(); ci!=thisChunkBeams.end(); ++ci) {
                for (casa::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
                     itsModel->add(accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::XX), casa::Complex(1., 0.));
                     itsModel->add(accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::YY), casa::Complex(1., 0.));            
                }
+               if (maxBeamID < ci->first) {
+                   maxBeamID = ci->first;
+               }
           }
           itsME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
           ASKAPDEBUGASSERT(itsME);          
+          // explicit initialisation of pre-averaging buffer to avoid issues described in ASKAPSDP-1747
+          itsME->initialise(itsCalData.ncolumn(), maxBeamID + 1, 1);
        }
        // accumulate data
        ASKAPDEBUGASSERT(it.hasMore());
