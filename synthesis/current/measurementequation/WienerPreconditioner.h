@@ -33,6 +33,7 @@
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Vector.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <fitting/Axes.h>
 
 #include <Common/ParameterSet.h>
@@ -92,7 +93,8 @@ namespace askap
       /// @details
       /// @param[in] parset subset of parset file (with preconditioner.Wiener. removed)
       /// @return shared pointer 
-      static boost::shared_ptr<WienerPreconditioner> createPreconditioner(const LOFAR::ParameterSet &parset);
+      static boost::shared_ptr<WienerPreconditioner> createPreconditioner(const LOFAR::ParameterSet &parset,
+                                                                          const bool useCachedPcf = false);
     
     protected:
       /// @brief enable Filter tapering 
@@ -117,7 +119,19 @@ namespace askap
 
       /// @brief true, if parameter is robustness, false if it is the noise power
       bool itsUseRobustness;
-  
+
+      /// @brief cache for intermediate Wiener filtering PCF weight array
+      // Declare as statics so that the time-consuming PCF weights can be stored for all preconditioners.
+      // It needs to be controllable though, for times when different solvers have different PSFs (e.g.
+      // when different frequencies are deconvolved on the same MPI rank.
+      static bool itsUseCachedPcf;
+      static double itsAveWgtSum;
+      static casa::Array<float> itsPcf;
+
+      /// @brief cache for Wiener filter array
+      // do not make this static, since in general different solvers will require different preconditioning.
+      mutable casa::ArrayLattice<casa::Complex> itsWienerfilter;
+ 
       /// @brief gaussian taper in the image domain (in pixels)
       /// @details fwhm is stored inside cache class. 
       boost::shared_ptr<GaussianTaperCache> itsTaperCache;

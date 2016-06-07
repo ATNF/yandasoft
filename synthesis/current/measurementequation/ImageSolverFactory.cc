@@ -145,7 +145,9 @@ namespace askap
       const vector<string> preconditioners=parset.getStringVector("preconditioner.Names",std::vector<std::string>());
       for (vector<string>::const_iterator pc = preconditioners.begin(); pc != preconditioners.end(); ++pc) {
 	if ( (*pc)=="Wiener" ) {
-	  solver->addPreconditioner(WienerPreconditioner::createPreconditioner(parset.makeSubset("preconditioner.Wiener.")));
+	  // if this is the restore solver, use the cached preconditioner function (if it exists).
+	  solver->addPreconditioner(WienerPreconditioner::createPreconditioner(
+          parset.makeSubset("preconditioner.Wiener."), solver->getIsRestoreSolver()));
 	} else if ( (*pc)=="NormWiener" ) {
 	  const float robustness = parset.getFloat("preconditioner.NormWiener.robustness",0.0);
 	  solver->addPreconditioner(IImagePreconditioner::ShPtr(new NormWienerPreconditioner(robustness)));

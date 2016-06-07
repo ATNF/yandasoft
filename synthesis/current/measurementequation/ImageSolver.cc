@@ -64,7 +64,8 @@ namespace askap
   {
 
     ImageSolver::ImageSolver() :
-      itsZeroWeightCutoffArea(false), itsZeroWeightCutoffMask(true), itsSaveIntermediate(true)
+      itsZeroWeightCutoffArea(false), itsZeroWeightCutoffMask(true),
+      itsSaveIntermediate(true), itsIsRestoreSolver(false)
     {
     }
 
@@ -542,6 +543,15 @@ namespace askap
             ASKAPLOG_INFO_STR(logger, "S/N-based clean will search optimum of flux * sqrt(tolerance) in this area");
         }
     }
+
+    void ImageSolver::setIsRestoreSolver() {
+        itsIsRestoreSolver = true;
+    }
+
+    bool ImageSolver::getIsRestoreSolver() {
+        return itsIsRestoreSolver;
+    }
+
 
   } // namespace synthesis
 } // namespace askap

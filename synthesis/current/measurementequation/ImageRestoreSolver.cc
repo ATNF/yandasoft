@@ -72,6 +72,7 @@ namespace askap
     ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
 	    itsBeamHelper(beamHelper), itsEqualiseNoise(false)
     {
+        setIsRestoreSolver();
     }
     
     void ImageRestoreSolver::init()

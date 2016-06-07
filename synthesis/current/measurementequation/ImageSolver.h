@@ -93,7 +93,10 @@ namespace askap
 	bool doPreconditioning(casa::Array<float>& psf,
                            casa::Array<float>& dirty,
                            casa::Array<float>& pcf) const;
-   
+  
+    void setIsRestoreSolver();
+    bool getIsRestoreSolver();
+ 
 	/// @brief perform normalization of the dirty image and psf
 	/// @details This method divides the PSF and dirty image by the diagonal of the Hessian.
 	/// If a non-void shared pointer is specified for the mask parameter, this method assigns
@@ -253,7 +256,6 @@ namespace askap
               const casa::IPosition &shape, const std::string &prefix, const casa::Array<float> &arr, 
               const casa::IPosition &pos);
     
-                 
 private:
 	/// Instance of a preconditioner
 	// IImagePreconditioner::ShPtr itsPreconditioner;
@@ -274,6 +276,10 @@ private:
       /// @brief Control saving of intermediate images
       /// @details If true, then selected images are saved to parameters and thence to disk
       bool itsSaveIntermediate;
+
+      /// @brief 
+      /// @details 
+      bool itsIsRestoreSolver;
 
     };
 
