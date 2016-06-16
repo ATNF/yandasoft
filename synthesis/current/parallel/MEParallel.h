@@ -111,6 +111,19 @@ namespace askap
 
                 /// @brief Receive the normal equations from all workers into this master
                 void receiveNE();
+            
+                /// @brief Return the shared pointer to the Imaging Normal Equations
+                askap::scimath::INormalEquations::ShPtr getNE() const {
+                    return itsNe;
+                
+                };
+            
+                /// @brief Set the shared pointer to the Imaging Normal Equations
+                askap::scimath::INormalEquations::ShPtr setNE(askap::scimath::INormalEquations::ShPtr ne)  {
+                    itsNe = ne;
+                    return itsNe;
+                    
+                };
 
                 /// @brief Perform a reduction for normal equations from all
                 /// workers to the master.

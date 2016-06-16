@@ -207,7 +207,17 @@ namespace askap
                            << " seconds ");
       }
     }
-
+    // drop a new model in place
+    void SynParallel::replaceModel(scimath::Params::ShPtr Model)
+    {
+        ASKAPTRACE("SynParallel::replaceModel");
+        if (itsComms.isParallel() && itsComms.isWorker())
+        {
+            ASKAPCHECK(itsModel, "Model not defined prior to receiving")
+            // copy over the model - not just the reference
+            *itsModel = *Model;
+        }
+    }
     // Receive the model from the master
     void SynParallel::receiveModel()
     {

@@ -258,17 +258,27 @@ void AdviseParallel::calcOne(const std::string &ms)
    ASKAPDEBUGASSERT(itsEstimator);
    
    accessors::TableDataSource ds(ms, accessors::TableDataSource::MEMORY_BUFFERS, dataColumn());
+
+   ASKAPLOG_INFO_STR(logger, "Initialised accessor" );
    ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());      
+   
+   ASKAPLOG_INFO_STR(logger, "Initialised UVW cache" );
    accessors::IDataSelectorPtr sel=ds.createSelector();
+   ASKAPLOG_INFO_STR(logger, "Initialised data selector" );
+
    sel << parset();
+   ASKAPLOG_INFO_STR(logger, "Filled selector" << parset());
    accessors::IDataConverterPtr conv=ds.createConverter();
+   ASKAPLOG_INFO_STR(logger, "Initialised converter" );
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
    conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
    conv->setEpochFrame(); // time since 0 MJD
    accessors::IDataSharedIter it=ds.createIterator(sel, conv);
+   ASKAPLOG_INFO_STR(logger, "Initialised iterator" );
    for (; it.hasMore(); it.next()) {
         // iteration over the dataset
         itsEstimator->process(*it);
+        
    }
    
    ASKAPLOG_INFO_STR(logger, "Finished iteration for "<< ms << " in "<< timer.real()

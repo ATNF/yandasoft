@@ -232,7 +232,7 @@ askap::scimath::INormalEquations::ShPtr MEParallel::receiveNormalEquations(int s
         ne->reset(); // Reset the normal equation, not the pointer!
     }
 
-    ASKAPLOG_DEBUG_STR(logger, "Waiting to receive normal equations from rank " << source);
+    ASKAPLOG_INFO_STR(logger, "Waiting to receive normal equations from rank " << source);
     casa::Timer timer;
     timer.mark();
 
@@ -244,7 +244,7 @@ askap::scimath::INormalEquations::ShPtr MEParallel::receiveNormalEquations(int s
     in >> rank >> *ne;
     in.getEnd();
     ASKAPCHECK(rank == source, "Received normal equations are from an unexpected source");
-    ASKAPLOG_DEBUG_STR(logger, "Received normal equations from rank " << source
+    ASKAPLOG_INFO_STR(logger, "Received normal equations from rank " << source
             << " after " << timer.real() << " seconds");
 
     return ne;

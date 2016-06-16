@@ -78,6 +78,9 @@ namespace askap
       /// @brief Receive the model from the master
       void receiveModel();
 
+      /// @brief Locally replace the current model with the argument
+      void replaceModel(scimath::Params::ShPtr Model);
+
       /// Substitute %w by worker number, and %n by number of workers (one less than the number
       // of nodes). This allows workers to do different work! This just calls
       // through to the AskapParallel version of substitute()

@@ -40,13 +40,15 @@
 #include <casacore/casa/Arrays/MaskArrMath.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <casacore/scimath/Mathematics/MatrixMathLA.h>
-#include <casacore/casa/BasicSL/STLIO.h>
 #include <measurementequation/SynthesisParamsHelper.h>
 #include <profile/AskapProfiler.h>
 ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <deconvolution/MultiScaleBasisFunction.h>
+
+// DAM
+#include <utils/ImageUtils.h>
 
 namespace askap {
 
@@ -146,7 +148,8 @@ namespace askap {
             defaultScales[2] = 30.0;
             std::vector<float> scales = parset.getFloatVector("scales", defaultScales);
 
-            ASKAPLOG_DEBUG_STR(decmtbflogger, "Constructing Multiscale basis function with scales " << scales);
+            ASKAPLOG_DEBUG_STR(decmtbflogger, "Constructing Multiscale basis function with scales "
+                                   << scales);
             Bool orthogonal = parset.getBool("orthogonal", false);
             if (orthogonal) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Multiscale basis functions will be orthogonalised");
@@ -241,14 +244,33 @@ namespace askap {
 
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
             // Calculate transform of PSF(0)
+// DAM if we do an extra convolution with the PSF, only the inner part should be used.
+/*
             Array<FT> xfrZero(this->psf(0).shape().nonDegenerate());
             xfrZero.set(FT(0.0));
-            casa::setReal(xfrZero, this->psf(0).nonDegenerate());
+            // Only transform a central sub portion of the PSF, and xero pad the rest
+            Int Fsub = 4;
+            casa::IPosition pos0(xfrZero.shape().nelements());
+            casa::IPosition pos1(xfrZero.shape().nelements());
+            casa::IPosition shape(xfrZero.shape().nelements());
+            for (uInt k=0; k<xfrZero.shape().nelements(); ++k) {
+                shape(k) = xfrZero.shape()[k] / Fsub;
+                pos0(k) = xfrZero.shape()[k] / 2 - shape(k) / 2;
+                pos1(k) = xfrZero.shape()[k] / 2 + shape(k) / 2 - 1;
+            }
+            Array<FT> xfrSub(shape);
+            casa::setReal(xfrSub, this->psf(0).nonDegenerate()(pos0,pos1));
+            xfrZero(pos0,pos1) = xfrSub;
             scimath::fft2d(xfrZero, true);
+            //casa::setReal(xfrZero, this->psf(0).nonDegenerate());
             T normPSF;
-            normPSF = casa::sum(casa::real(xfrZero * conj(xfrZero))) / xfrZero.nelements();
+// DAM
+// If we remove conj(xfrZero) from "work" below, what should be used here?
+            //normPSF = casa::sum(casa::real(xfrZero * conj(xfrZero))) / xfrZero.nelements();
+            normPSF = casa::sum(casa::real(xfrZero)) / xfrZero.nelements();
             ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
             xfrZero = xfrZero / FT(normPSF);
+*/
 
             ASKAPLOG_DEBUG_STR(decmtbflogger,
                                "Calculating convolutions of residual images with basis functions");
@@ -271,12 +293,30 @@ namespace askap {
                     // Calculate product and transform back
                     Array<FT> work(this->dirty(term).nonDegenerate().shape());
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
+// DAM
+                    //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
+                    work = conj(basisFunctionFFT) * residualFFT;
+bool DAM_DUMP = false;
+if (DAM_DUMP) scimath::saveAsCasaImage("work.uv",real(work));
                     scimath::fft2d(work, false);
 
+if (DAM_DUMP) {
+  scimath::saveAsCasaImage("work.lm",real(work));
+  scimath::saveAsCasaImage("psf.lm",this->psf(0).nonDegenerate());
+  scimath::saveAsCasaImage("dirty.lm",this->dirty(0).nonDegenerate());
+  scimath::saveAsCasaImage("bf.uv",real(basisFunctionFFT));
+  scimath::saveAsCasaImage("psf.uv",real(residualFFT));
+  //scimath::saveAsCasaImage("dirty.uv",real(xfrZero));
+  exit(0);
+}
+
                     // basis function * psf
+// DAM
+                    //ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
+                    //                       << ")*PSF(0)*Residual(" << term << "): max = " << max(real(work))
+                    //                       << " min = " << min(real(work)));
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
-                                           << ")*PSF(0)*Residual(" << term << "): max = " << max(real(work))
+                                           << ")*Residual(" << term << "): max = " << max(real(work))
                                            << " min = " << min(real(work)));
 
                     this->itsResidualBasis(base)(term) = real(work);
@@ -329,8 +369,8 @@ namespace askap {
             //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
             Slicer subPsfSlicer(subPsfStart, subPsfShape);
             // check just in case
-            ASKAPCHECK(subPsfSlicer.length() == subPsfShape, "Slicer selected length of " << subPsfSlicer.length() <<
-                       " is different from requested shape " << subPsfShape);
+            ASKAPCHECK(subPsfSlicer.length() == subPsfShape, "Slicer selected length of " <<
+                subPsfSlicer.length() << " is different from requested shape " << subPsfShape);
 
             casa::IPosition minPos;
             casa::IPosition maxPos;
@@ -348,7 +388,8 @@ namespace askap {
 
             // Calculate XFR for the subsection only. We need all PSF's up to
             // 2*nTerms-1
-            ASKAPCHECK(this->itsPsfLongVec.nelements() == (2*this->itsNumberTerms - 1), "PSF long vector has wrong length " << this->itsPsfLongVec.nelements());
+            ASKAPCHECK(this->itsPsfLongVec.nelements() == (2*this->itsNumberTerms - 1),
+                "PSF long vector has wrong length " << this->itsPsfLongVec.nelements());
 
             // Calculate all the transfer functions
             Vector<Array<FT> > subXFRVec(2*this->itsNumberTerms - 1);
@@ -361,7 +402,10 @@ namespace askap {
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
             // Calculate transform of PSF(0)
             T normPSF;
-            normPSF = casa::sum(casa::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
+// DAM
+// If we remove subXFRVec(0) from "work" below, what should be used here?
+            //normPSF = casa::sum(casa::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
+            normPSF = casa::sum(casa::real(subXFRVec(0))) / subXFRVec(0).nelements();
             ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
 
             itsPSFCrossTerms.resize(nBases, nBases);
@@ -384,12 +428,21 @@ namespace askap {
                         for (uInt term2 = term1; term2 < this->itsNumberTerms; term2++) {
                             //          ASKAPLOG_DEBUG_STR(decmtbflogger, "Calculating convolutions of PSF("
                             //                << term1 << "+" << term2 << ") with basis functions");
+// DAM
+                            //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
+                            //       subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
                             work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
-                                   subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
+                                   conj(subXFRVec(term1 + term2)) / normPSF;
                             scimath::fft2d(work, false);
+// DAM
+                            //ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
+                            //                       << ")*PSF(" << term1 + term2
+                            //                       << ")*PSF(0): max = " << max(real(work))
+                            //                       << " min = " << min(real(work))
+                            //                       << " centre = " << real(work(subPsfPeak)));
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
                                                    << ")*PSF(" << term1 + term2
-                                                   << ")*PSF(0): max = " << max(real(work))
+                                                   << "): max = " << max(real(work))
                                                    << " min = " << min(real(work))
                                                    << " centre = " << real(work(subPsfPeak)));
                             // Remember that casa::Array reuses the same memory where possible so this
@@ -447,7 +500,8 @@ namespace askap {
                                       << this->state()->currentIter() << " iterations");
                 ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
             } else {
-                ASKAPLOG_INFO_STR(decmtbflogger, "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
+                ASKAPLOG_INFO_STR(decmtbflogger,
+                    "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
             }
             this->finalise();
 
@@ -456,8 +510,8 @@ namespace askap {
 
         // This contains the heart of the Multi-Term BasisFunction Clean algorithm
         template<class T, class FT>
-        void DeconvolverMultiTermBasisFunction<T, FT>::chooseComponent(uInt& optimumBase, casa::IPosition& absPeakPos,
-                T& absPeakVal, Vector<T>& peakValues)
+        void DeconvolverMultiTermBasisFunction<T, FT>::chooseComponent(uInt& optimumBase,
+                casa::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues)
         {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction:::chooseComponent");
             const uInt nBases(this->itsResidualBasis.nelements());
@@ -470,7 +524,8 @@ namespace askap {
             // Here the weights image is used as a weight in the determination
             // of the maximum i.e. it finds the max in weight . residual. The values
             // returned are without the weight
-            bool isWeighted((this->itsWeight.nelements() > 0) && (this->itsWeight(0).shape().nonDegenerate().conform(this->itsResidualBasis(0)(0).shape())));
+            bool isWeighted((this->itsWeight.nelements() > 0) &&
+                (this->itsWeight(0).shape().nonDegenerate().conform(this->itsResidualBasis(0)(0).shape())));
 
             Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
@@ -511,8 +566,9 @@ namespace askap {
                         coefficients(term1).resize(this->dirty(0).shape().nonDegenerate());
                         coefficients(term1).set(T(0.0));
                         for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
-                            coefficients(term1) = coefficients(term1)
-                                                  + T(this->itsInverseCouplingMatrix(base)(term1, term2)) * this->itsResidualBasis(base)(term2);
+                            coefficients(term1) = coefficients(term1) +
+                                                  T(this->itsInverseCouplingMatrix(base)(term1, term2)) *
+                                                  this->itsResidualBasis(base)(term2);
                         }
                     }
 
@@ -553,6 +609,12 @@ namespace askap {
                             minValues(term) = coefficients(term)(minPos);
                             maxValues(term) = coefficients(term)(maxPos);
                         }
+
+//std::cout << "DAM Residual @ " << maxPos << ", dirty = " << this->dirty(0)(maxPos) << " coefficients = " <<
+//             T(this->itsInverseCouplingMatrix(base)(0,0))<<" x "<<this->itsResidualBasis(base)(0)(maxPos) << " = " << 
+//             T(this->itsInverseCouplingMatrix(base)(0,0))*this->itsResidualBasis(base)(0)(maxPos) << " (" <<
+//             coefficients(0)(maxPos) << ")" << std::endl;
+
                     }
                 }
 
@@ -576,7 +638,8 @@ namespace askap {
                 peakValues(term1) = 0.0;
                 for (uInt term2 = 0; term2 < this->itsNumberTerms; ++term2) {
                     peakValues(term1) +=
-                        T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) * this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
+                        T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) *
+                        this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
                 }
             }
 
@@ -627,7 +690,6 @@ namespace askap {
             IPosition subPsfStride(2, 1, 1);
 
             Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-
             const casa::IPosition psfShape(2, this->itsBasisFunction->basisFunction().shape()(0),
                                            this->itsBasisFunction->basisFunction().shape()(1));
 

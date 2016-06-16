@@ -102,14 +102,14 @@ namespace askap
       /// also support construction from a python dictionary (for example).
       /// The command line inputs are needed solely for MPI - currently no
       /// application specific information is passed on the command line.
-      /// @param comms communication object 
+      /// @param comms communication object
       /// @param parset ParameterSet for inputs
       ImagerParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset);
 
       /// @brief Estimate any appropriate parameters that were not specified in the parset.
       /// @details The Cadvise application is used to fill in missing parameters.
-      /// @param comms communication object 
+      /// @param comms communication object
       /// @param parset initial ParameterSet
       /// @return updated ParameterSet
       static LOFAR::ParameterSet autoSetParameters(askap::askapparallel::AskapParallel& comms,
@@ -122,7 +122,7 @@ namespace askap
       virtual void calcNE();
 
       /// @brief Solve the normal equations (runs in the solver)
-      /// @details Either a dirty image can be constructed or the 
+      /// @details Either a dirty image can be constructed or the
       /// multiscale clean can be used, as specified in the parset file.
       virtual void solveNE();
 
@@ -141,22 +141,22 @@ namespace askap
       void makeSensitivityImage(const std::string &wtImage) const;
 
       /// @brief Helper method to zero all model images
-      /// @details We need this for dirty solver only, as otherwise restored image 
+      /// @details We need this for dirty solver only, as otherwise restored image
       /// (which is crucial for faceting) will be wrong.
       void zeroAllModelImages() const;
 
   protected:
-      
+
       /// @brief a helper method to extract peak residual
       /// @details This object actually manipulates with the normal equations. We need
-      /// to be able to stop iterations on the basis of maximum residual, which is a 
+      /// to be able to stop iterations on the basis of maximum residual, which is a
       /// data vector of the normal equations. This helper method is designed to extract
-      /// peak residual. It is then added to a model as a parameter (the model is 
+      /// peak residual. It is then added to a model as a parameter (the model is
       /// shipped around).
       /// @return absolute value peak of the residuals corresponding to the current normal
       /// equations
       double getPeakResidual() const;
-      
+
       /// @brief helper method to indentify model parameters to broadcast
       /// @details We use itsModel to buffer some derived images like psf, weights, etc
       /// which are not required for prediffers. It just wastes memory and CPU time if
@@ -167,8 +167,16 @@ namespace askap
       /// model images and the peak_residual metadata.
       /// @return a vector with parameters to broadcast
       virtual std::vector<std::string> parametersToBroadcast() const;
-      
-      
+
+      /// @brief helper method to access the solution source
+      /// @details This object is initialised by workers. It knows how to
+      /// retrieve calibration solutions (from a parset file, casa table or a database).
+      /// Uninitialised shared pointer means that no calibration is done and the data are
+      /// imaged as they are.
+      /// @return the shared_ptr
+      boost::shared_ptr<accessors::ICalSolutionConstSource> getSolutionSource() const {
+          return itsSolutionSource; }
+
   private:
 
       /// @brief check whether any preProcess advice is needed.
@@ -201,30 +209,30 @@ namespace askap
 
       /// Do we want a restored image?
       bool itsRestore;
-      
+
       /// @brief Do we want to keep scratch buffers in memory instead of writing them in a subtable?
       /// @details Turining this flag to true allows to work with a read-only dataset
       bool itsUseMemoryBuffers;
-            
+
       /// @brief solution source to get calibration data from
       /// @details This object is initialised by workers. It knows how to
       /// retrieve calibration solutions (from a parset file, casa table or a database).
       /// Uninitialised shared pointer means that no calibration is done and the data are
       /// imaged as they are.
       boost::shared_ptr<accessors::ICalSolutionConstSource> itsSolutionSource;
-            
+
       /// @brief void measurement equation
-      /// @details Does nothing, just returns calls to predict and 
+      /// @details Does nothing, just returns calls to predict and
       /// calcNormalEquations. This shared pointer is initialized at the
       /// first use and then passed as the perfect MeasurementEquation, if
       /// required. We could have created a brand new object each time.
       boost::shared_ptr<IMeasurementEquation> itsVoidME;
-      
+
       /// @brief export sensitivity image?
-      /// @details If true, the weight image is converted to sensitivity image and 
+      /// @details If true, the weight image is converted to sensitivity image and
       /// exported in addition to the original weight image.
       bool itsExportSensitivityImage;
-      
+
       /// @brief fraction of peak sensitivity to crop on
       /// @details We normally don't want to divide by small numbers when calculating
       /// sensitivity images. This field gives the fraction of the maximum weight

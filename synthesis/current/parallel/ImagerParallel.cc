@@ -1,5 +1,5 @@
 ///
-/// @file 
+/// @file
 ///
 /// Performs synthesis imaging from a data source, using any of a number of
 /// image solvers. Can run in serial or parallel (MPI) mode.
@@ -93,35 +93,35 @@ namespace askap
       itsExportSensitivityImage(false), itsExpSensitivityCutoff(0.)
     {
       if (itsComms.isMaster())
-      {      
+      {
         itsRestore=parset.getBool("restore", false);
-        
+
         bool reuseModel = parset.getBool("Images.reuse", false);
-        
+
         itsUseMemoryBuffers = parset.getBool("memorybuffers", false);
-        
+
         itsExportSensitivityImage = parset.getBool("sensitivityimage", true);
-        
+
         itsExpSensitivityCutoff = parset.getDouble("sensitivityimage.cutoff", 0.01);
-        
+
         if (itsExportSensitivityImage) {
-            ASKAPLOG_INFO_STR(logger, 
+            ASKAPLOG_INFO_STR(logger,
                "Theoretical sensitivity images will be generated in addition to weights images, cutoff="<<
                 itsExpSensitivityCutoff);
         }
-        
+
         ASKAPCHECK(itsModel, "itsModel is supposed to be initialized at this stage");
-        
+
         if (reuseModel) {
             ASKAPLOG_INFO_STR(logger, "Reusing model images stored on disk");
             SynthesisParamsHelper::loadImages(itsModel,parset.makeSubset("Images."));
         } else {
             ASKAPLOG_INFO_STR(logger, "Initializing the model images");
-      
+
             /// Create the specified images from the definition in the
             /// parameter set. We can solve for any number of images
             /// at once (but you may/will run out of memory!)
-            SynthesisParamsHelper::setUpImages(itsModel, 
+            SynthesisParamsHelper::setUpImages(itsModel,
                                       parset.makeSubset("Images."));
         }
 
@@ -135,7 +135,7 @@ namespace askap
         if (doCalib) {
             ASKAPCHECK(!parset.isDefined("gainsfile"), "Deprecated 'gainsfile' keyword is found together with calibrate=true, please remove it");
             // setup solution source from the parset directly using the factory
-            itsSolutionSource = CalibAccessFactory::roCalSolutionSource(parset);            
+            itsSolutionSource = CalibAccessFactory::roCalSolutionSource(parset);
             ASKAPASSERT(itsSolutionSource);
         } else if (parset.isDefined("gainsfile")) {
             // temporary code to support deprecated gainsfile parameter (used in various tests)
@@ -149,13 +149,13 @@ namespace askap
             tmpParset.add("calibaccess", "parset");
             // setup solution source from the temporary parset
             itsSolutionSource = CalibAccessFactory::roCalSolutionSource(tmpParset);
-            ASKAPASSERT(itsSolutionSource);            
+            ASKAPASSERT(itsSolutionSource);
         }
         if (itsSolutionSource) {
             ASKAPLOG_INFO_STR(logger, "Data will be calibrated before imaging");
         } else {
             ASKAPLOG_INFO_STR(logger, "No calibration will be performed");
-        }         
+        }
       }
     }
 
@@ -284,10 +284,10 @@ namespace askap
 
       // make a vector containing all gridders that require the wmax parameter
       vector<string> wGridders;
-      wGridders.push_back("WProject"); 
-      wGridders.push_back("WStack"); 
-      wGridders.push_back("AWProject"); 
-      wGridders.push_back("AProjectWStack"); 
+      wGridders.push_back("WProject");
+      wGridders.push_back("WStack");
+      wGridders.push_back("AWProject");
+      wGridders.push_back("AProjectWStack");
       for(vector<string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
           if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax") ) {
               return *i;
@@ -452,7 +452,7 @@ namespace askap
       casa::Timer timer;
       timer.mark();
       ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
-      // First time around we need to generate the equation 
+      // First time around we need to generate the equation
       if ((!itsEquation)||discard)
       {
         ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
@@ -463,10 +463,10 @@ namespace askap
         } else {
             ASKAPLOG_INFO_STR(logger, "Scratch data will be written to the subtable of the original dataset" );
         }
-        
-        TableDataSource ds(ms, (itsUseMemoryBuffers ? TableDataSource::MEMORY_BUFFERS : TableDataSource::DEFAULT), 
+
+        TableDataSource ds(ms, (itsUseMemoryBuffers ? TableDataSource::MEMORY_BUFFERS : TableDataSource::DEFAULT),
                            dataColumn());
-        ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());                   
+        ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
         IDataSelectorPtr sel=ds.createSelector();
         sel->chooseCrossCorrelations();
         sel << parset();
@@ -475,7 +475,7 @@ namespace askap
         conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
         // ensure that time is counted in seconds since 0 MJD
         conv->setEpochFrame();
-        
+
         IDataSharedIter it=ds.createIterator(sel, conv);
         ASKAPCHECK(itsModel, "Model not defined");
         ASKAPCHECK(gridder(), "Gridder not defined");
@@ -547,7 +547,7 @@ namespace askap
         }
       }
     }
-    
+
     /// @brief helper method to indentify model parameters to broadcast
     /// @details We use itsModel to buffer some derived images like psf, weights, etc
     /// which are not required for prediffers. It just wastes memory and CPU time if
@@ -570,7 +570,7 @@ namespace askap
        }
        return result;
     }
-    
+
 
     void ImagerParallel::solveNE()
     {
@@ -590,11 +590,11 @@ namespace askap
         itsSolver->solveNormalEquations(*itsModel,q);
         ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds "
                            );
-        
+
         // we will probably send all of them out in the future, but for now
         // let's extract the largest residual
         const std::vector<std::string> peakParams = itsModel->completions("peak_residual.",true);
-        
+
         double peak = peakParams.size() == 0 ? getPeakResidual() : -1.;
         for (std::vector<std::string>::const_iterator peakParIt = peakParams.begin();
              peakParIt != peakParams.end(); ++peakParIt) {
@@ -604,7 +604,7 @@ namespace askap
                  peak = tempval;
              }
         }
-        
+
         if (itsModel->has("peak_residual")) {
             itsModel->update("peak_residual",peak);
         } else {
@@ -613,23 +613,23 @@ namespace askap
         itsModel->fix("peak_residual");
       }
     }
-    
+
     /// @brief Helper method to zero all model images
-    /// @details We need this for dirty solver only, as otherwise restored image 
+    /// @details We need this for dirty solver only, as otherwise restored image
     /// (which is crucial for faceting) will be wrong.
-    void ImagerParallel::zeroAllModelImages() const 
+    void ImagerParallel::zeroAllModelImages() const
     {
       ASKAPCHECK(itsModel, "Model should not be empty at this stage!");
-      ASKAPLOG_INFO_STR(logger, "Dirty solver mode, setting all model images to 0."); 
+      ASKAPLOG_INFO_STR(logger, "Dirty solver mode, setting all model images to 0.");
       SynthesisParamsHelper::zeroAllModelImages(itsModel);
     }
-    
-    
+
+
     /// @brief a helper method to extract peak residual
     /// @details This object actually manipulates with the normal equations. We need
-    /// to be able to stop iterations on the basis of maximum residual, which is a 
+    /// to be able to stop iterations on the basis of maximum residual, which is a
     /// data vector of the normal equations. This helper method is designed to extract
-    /// peak residual. It is then added to a model as a parameter (the model is 
+    /// peak residual. It is then added to a model as a parameter (the model is
     /// shipped around).
     /// @return absolute value peak of the residuals corresponding to the current normal
     /// equations
@@ -641,25 +641,25 @@ namespace askap
       // We could also use the dataVector method of the interface (INormalEquations). However,
       // it is a bit cumbersome to iterate over all parameters. It is probably better to
       // leave this full case for a future as there is no immediate use case.
-      boost::shared_ptr<ImagingNormalEquations> ine = 
+      boost::shared_ptr<ImagingNormalEquations> ine =
                     boost::dynamic_pointer_cast<ImagingNormalEquations>(itsNe);
-      // we could have returned some special value (e.g. negative), but throw exception for now              
-      ASKAPCHECK(ine, "Current code to calculate peak residuals works for imaging-specific normal equations only");              
-      double peak = -1.; 
+      // we could have returned some special value (e.g. negative), but throw exception for now
+      ASKAPCHECK(ine, "Current code to calculate peak residuals works for imaging-specific normal equations only");
+      double peak = -1.;
       const std::map<string, casa::Vector<double> >& dataVector = ine->dataVector();
       const std::map<string, casa::Vector<double> >& diag = ine->normalMatrixDiagonal();
       for (std::map<string, casa::Vector<double> >::const_iterator ci = dataVector.begin();
            ci!=dataVector.end(); ++ci) {
            if (ci->first.find("image") == 0) {
                // this is an image
-               ASKAPASSERT(ci->second.nelements() != 0);               
-               std::map<std::string, casa::Vector<double> >::const_iterator diagIt = 
+               ASKAPASSERT(ci->second.nelements() != 0);
+               std::map<std::string, casa::Vector<double> >::const_iterator diagIt =
                             diag.find(ci->first);
                ASKAPDEBUGASSERT(diagIt != diag.end());
                const double maxDiag = casa::max(diagIt->second);
                // hard coded at this stage
                const double cutoff=1e-2*maxDiag;
-               ASKAPDEBUGASSERT(diagIt->second.nelements() == ci->second.nelements());               
+               ASKAPDEBUGASSERT(diagIt->second.nelements() == ci->second.nelements());
                for (casa::uInt elem = 0; elem<diagIt->second.nelements(); ++elem) {
                     const double thisDiagElement = std::abs(diagIt->second[elem]);
                     if (thisDiagElement > cutoff) {
@@ -673,7 +673,7 @@ namespace askap
       }
       return peak;
     }
-    
+
     /// @brief make sensitivity image
     /// @details This is a helper method intended to be called from writeModel. It
     /// converts the given weights image into a sensitivity image and exports it.
@@ -689,12 +689,12 @@ namespace askap
       ASKAPASSERT(wtImage.find("weights") == 0);
       ASKAPCHECK(wtImage.size()>7, "Weights image parameter name should be longer, you have "<<wtImage);
       const std::string outParName = "sensitivity" + wtImage.substr(7);
-      scimath::Axes axes = itsModel->axes(wtImage);      
+      scimath::Axes axes = itsModel->axes(wtImage);
       //
       casa::Array<double> wtArr = itsModel->value(wtImage);
       const double cutoff = casa::max(wtArr) * itsExpSensitivityCutoff;
       casa::Array<double> sensitivityArr(wtArr.shape());
-      
+
       for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
            const casa::Vector<double> wtPlane = iter.getPlaneVector(wtArr);
            casa::Vector<double> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
@@ -708,12 +708,12 @@ namespace askap
                 }
            }
       }
-      
+
       tempPar.add(outParName,sensitivityArr,axes);
       ASKAPLOG_INFO_STR(logger, "Saving " << outParName);
-      SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName);      
+      SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName);
     }
-    
+
 
     /// Write the results out
     /// @param[in] postfix this string is added to the end of each name
@@ -734,7 +734,7 @@ namespace askap
             }
         }
         if (!hasWeights) {
-            ASKAPDEBUGASSERT(itsSolver);            
+            ASKAPDEBUGASSERT(itsSolver);
             boost::shared_ptr<ImageSolver> image_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
             ASKAPDEBUGASSERT(image_solver);
             image_solver->saveWeights(*itsModel);
@@ -748,7 +748,7 @@ namespace askap
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                 if (itsExportSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
-                    makeSensitivityImage(*it); 
+                    makeSensitivityImage(*it);
                 }
             }
         }
@@ -782,7 +782,7 @@ namespace askap
         for (vector<string>::const_iterator it=resultimages2.begin(); it
             !=resultimages2.end(); it++) {
             // ASKAPLOG_INFO_STR(logger, "Checking "<<*it);
-            if ((it->find("psf") == 0) && (std::find(resultimages.begin(), 
+            if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
                  resultimages.end(),*it) == resultimages.end())) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
@@ -790,6 +790,5 @@ namespace askap
         }
       }
     }
-
   }
 }
