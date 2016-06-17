@@ -184,13 +184,13 @@ namespace askap
         // The filter is rescaling Fourier components of dirty and psf based on
         // the value of non-zero Fourier components of pcf. So set small
         // erroneous components to zero.
-        float scratchThreshold = 1e-6;
+        float scratchThreshold = 1e-6 * max(abs(real(scratch.asArray())));
     
         // Reset the threshold based on data in the zero-padding region of the uv
         // plane. Should test for the presence of zero-padding...
-        bool autoThreshold = true;
-        if (autoThreshold) {
-    
+        bool useAutoThreshold = true;
+        if (useAutoThreshold) {
+   
           // Take slices across the zero-padding-region of the image
           IPosition sliceStart(scratch.shape().nelements());
           IPosition sliceShape(scratch.shape().nelements());
@@ -203,22 +203,34 @@ namespace askap
           sliceShape(0) = scratch.shape()[0] / 2;
           sliceStart(1) = 0;
           sliceShape(1) = scratch.shape()[1] / 8;
-          scratchThreshold = max(scratchThreshold,
-              3.0 * max(abs(real(scratch.getSlice(sliceStart,sliceShape)))));
+          float thresh1 = max(abs(real(scratch.getSlice(sliceStart,sliceShape))));
           // vertical slice:
           sliceStart(0) = 0;
           sliceShape(0) = scratch.shape()[0] / 8;
           sliceStart(1) = scratch.shape()[1] / 4;
           sliceShape(1) = scratch.shape()[1] / 2;
-          scratchThreshold = max(scratchThreshold,
-              3.0 * max(abs(real(scratch.getSlice(sliceStart,sliceShape)))));
+          float thresh2 = max(abs(real(scratch.getSlice(sliceStart,sliceShape))));
     
-          ASKAPLOG_INFO_STR(logger,
-              "Thresholding the input uv sampling function at " <<
-              scratchThreshold << " (" <<
-              100.0*scratchThreshold/max(abs(real(scratch.asArray()))) <<
-              "% of max)");
+          float autoThreshold = 3.0 * max(thresh1,thresh2);
+
+          // test that the threshold is at a low level. If this fails, then
+          // it is likely that visibilities have been gridded to the edge of
+          // the uv plane. In this case, just set to something sensible.
+          if (autoThreshold > scratchThreshold) {
+            ASKAPLOG_INFO_STR(logger, "Auto-threshold seems too high. Using default.");
+          } else {
+            scratchThreshold = autoThreshold;
+          }
+ 
+        }
+
+        ASKAPLOG_INFO_STR(logger,
+            "Thresholding the input uv sampling function at " <<
+            scratchThreshold << " (" <<
+            100.0*scratchThreshold/max(abs(real(scratch.asArray()))) <<
+            "% of max)");
     
+        if (scratchThreshold > 0.0) {
           for (int x=0; x<scratch.shape()[0]; ++x) {
             for (int y=0; y<scratch.shape()[1]; ++y) {
               pos(0) = x;
@@ -228,9 +240,8 @@ namespace askap
               }
             }
           }
-
-        } // if (autoThreshold)
- 
+        }
+   
         if (newFilter) {
        
           // The PCF should be set up to have nearest-neighbour gridding of
