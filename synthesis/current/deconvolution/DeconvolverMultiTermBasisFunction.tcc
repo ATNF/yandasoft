@@ -47,9 +47,6 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 #include <deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <deconvolution/MultiScaleBasisFunction.h>
 
-// DAM
-#include <utils/ImageUtils.h>
-
 namespace askap {
 
     namespace synthesis {
@@ -243,34 +240,6 @@ namespace askap {
             }
 
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
-            // Calculate transform of PSF(0)
-// DAM if we do an extra convolution with the PSF, only the inner part should be used.
-/*
-            Array<FT> xfrZero(this->psf(0).shape().nonDegenerate());
-            xfrZero.set(FT(0.0));
-            // Only transform a central sub portion of the PSF, and xero pad the rest
-            Int Fsub = 4;
-            casa::IPosition pos0(xfrZero.shape().nelements());
-            casa::IPosition pos1(xfrZero.shape().nelements());
-            casa::IPosition shape(xfrZero.shape().nelements());
-            for (uInt k=0; k<xfrZero.shape().nelements(); ++k) {
-                shape(k) = xfrZero.shape()[k] / Fsub;
-                pos0(k) = xfrZero.shape()[k] / 2 - shape(k) / 2;
-                pos1(k) = xfrZero.shape()[k] / 2 + shape(k) / 2 - 1;
-            }
-            Array<FT> xfrSub(shape);
-            casa::setReal(xfrSub, this->psf(0).nonDegenerate()(pos0,pos1));
-            xfrZero(pos0,pos1) = xfrSub;
-            scimath::fft2d(xfrZero, true);
-            //casa::setReal(xfrZero, this->psf(0).nonDegenerate());
-            T normPSF;
-// DAM
-// If we remove conj(xfrZero) from "work" below, what should be used here?
-            //normPSF = casa::sum(casa::real(xfrZero * conj(xfrZero))) / xfrZero.nelements();
-            normPSF = casa::sum(casa::real(xfrZero)) / xfrZero.nelements();
-            ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
-            xfrZero = xfrZero / FT(normPSF);
-*/
 
             ASKAPLOG_DEBUG_STR(decmtbflogger,
                                "Calculating convolutions of residual images with basis functions");
@@ -293,28 +262,11 @@ namespace askap {
                     // Calculate product and transform back
                     Array<FT> work(this->dirty(term).nonDegenerate().shape());
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-// DAM
+                    // Removing the extra convolution with PSF0. Leave text here temporarily.
                     //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
                     work = conj(basisFunctionFFT) * residualFFT;
-bool DAM_DUMP = false;
-if (DAM_DUMP) scimath::saveAsCasaImage("work.uv",real(work));
                     scimath::fft2d(work, false);
 
-if (DAM_DUMP) {
-  scimath::saveAsCasaImage("work.lm",real(work));
-  scimath::saveAsCasaImage("psf.lm",this->psf(0).nonDegenerate());
-  scimath::saveAsCasaImage("dirty.lm",this->dirty(0).nonDegenerate());
-  scimath::saveAsCasaImage("bf.uv",real(basisFunctionFFT));
-  scimath::saveAsCasaImage("psf.uv",real(residualFFT));
-  //scimath::saveAsCasaImage("dirty.uv",real(xfrZero));
-  exit(0);
-}
-
-                    // basis function * psf
-// DAM
-                    //ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
-                    //                       << ")*PSF(0)*Residual(" << term << "): max = " << max(real(work))
-                    //                       << " min = " << min(real(work)));
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
                                            << ")*Residual(" << term << "): max = " << max(real(work))
                                            << " min = " << min(real(work)));
@@ -402,8 +354,7 @@ if (DAM_DUMP) {
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
             // Calculate transform of PSF(0)
             T normPSF;
-// DAM
-// If we remove subXFRVec(0) from "work" below, what should be used here?
+            // Removing the extra convolution with PSF0. Leave text here temporarily.
             //normPSF = casa::sum(casa::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
             normPSF = casa::sum(casa::real(subXFRVec(0))) / subXFRVec(0).nelements();
             ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
@@ -426,20 +377,12 @@ if (DAM_DUMP) {
                 for (uInt base2 = base1; base2 < nBases; base2++) {
                     for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
                         for (uInt term2 = term1; term2 < this->itsNumberTerms; term2++) {
-                            //          ASKAPLOG_DEBUG_STR(decmtbflogger, "Calculating convolutions of PSF("
-                            //                << term1 << "+" << term2 << ") with basis functions");
-// DAM
+                            // Removing the extra convolution with PSF0. Leave text here temporarily.
                             //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
                             //       subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
                             work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
                                    conj(subXFRVec(term1 + term2)) / normPSF;
                             scimath::fft2d(work, false);
-// DAM
-                            //ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
-                            //                       << ")*PSF(" << term1 + term2
-                            //                       << ")*PSF(0): max = " << max(real(work))
-                            //                       << " min = " << min(real(work))
-                            //                       << " centre = " << real(work(subPsfPeak)));
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
                                                    << ")*PSF(" << term1 + term2
                                                    << "): max = " << max(real(work))
@@ -609,12 +552,6 @@ if (DAM_DUMP) {
                             minValues(term) = coefficients(term)(minPos);
                             maxValues(term) = coefficients(term)(maxPos);
                         }
-
-//std::cout << "DAM Residual @ " << maxPos << ", dirty = " << this->dirty(0)(maxPos) << " coefficients = " <<
-//             T(this->itsInverseCouplingMatrix(base)(0,0))<<" x "<<this->itsResidualBasis(base)(0)(maxPos) << " = " << 
-//             T(this->itsInverseCouplingMatrix(base)(0,0))*this->itsResidualBasis(base)(0)(maxPos) << " (" <<
-//             coefficients(0)(maxPos) << ")" << std::endl;
-
                     }
                 }
 
