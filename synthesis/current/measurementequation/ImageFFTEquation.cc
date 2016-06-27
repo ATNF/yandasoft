@@ -422,10 +422,15 @@ namespace askap
                     #endif
                     itsPSFGridders[imageName]->grid(accBuffer);
                     if (itsUsePreconGridder) {
-                        #ifdef _OPENMP
-                        #pragma omp task
-                        #endif
-                        itsPreconGridders[imageName]->grid(accBuffer);
+                        // preconditioning of higher order terms is set from term 0
+                        bool isMFS = (imageName.find(".taylor.") != std::string::npos);
+                        bool isTT0 = (imageName.find(".taylor.0") != std::string::npos);
+                        if (isTT0 || !isMFS) {
+                            #ifdef _OPENMP
+                            #pragma omp task
+                            #endif
+                            itsPreconGridders[imageName]->grid(accBuffer);
+                        }
                     }
                     tempCounter += accBuffer.nRow();
                 }
