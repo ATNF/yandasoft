@@ -330,9 +330,14 @@ namespace askap
           }
         }
         if(itsUsePreconGridder && itsPreconGridders.count(imageName)==0) {
-           // Should this be a clone of the psf or the image?
-           //itsPreconGridders[imageName] = itsGridder->clone();
-           itsPreconGridders[imageName] = itsPSFGridders[imageName]->clone();
+           // preconditioning of higher order terms is set from term 0
+           bool isMFS = (imageName.find(".taylor.") != std::string::npos);
+           bool isTT0 = (imageName.find(".taylor.0") != std::string::npos);
+           if (isTT0 || !isMFS) {
+             // Should this be a clone of the psf or the image?
+             //itsPreconGridders[imageName] = itsGridder->clone();
+             itsPreconGridders[imageName] = itsPSFGridders[imageName]->clone();
+           }
         }
       }
       // Now we initialise appropriately
@@ -361,7 +366,7 @@ namespace askap
         itsPSFGridders[imageName]->customiseForContext(*it);
         itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);        
         // and PSF gridders, dopsf=false, dopcf=false
-        if (itsUsePreconGridder) {
+        if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
             itsPreconGridders[imageName]->customiseForContext(*it);
             itsPreconGridders[imageName]->initialiseGrid(axes, imageShape, false, true);
         }
@@ -421,16 +426,11 @@ namespace askap
                     #pragma omp task
                     #endif
                     itsPSFGridders[imageName]->grid(accBuffer);
-                    if (itsUsePreconGridder) {
-                        // preconditioning of higher order terms is set from term 0
-                        bool isMFS = (imageName.find(".taylor.") != std::string::npos);
-                        bool isTT0 = (imageName.find(".taylor.0") != std::string::npos);
-                        if (isTT0 || !isMFS) {
-                            #ifdef _OPENMP
-                            #pragma omp task
-                            #endif
-                            itsPreconGridders[imageName]->grid(accBuffer);
-                        }
+                    if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
+                        #ifdef _OPENMP
+                        #pragma omp task
+                        #endif
+                        itsPreconGridders[imageName]->grid(accBuffer);
                     }
                     tempCounter += accBuffer.nRow();
                 }
@@ -499,7 +499,7 @@ namespace askap
         casa::IPosition vecShape(1, imagePSF.nelements());
 
         casa::Vector<double> imagePreconVec;
-        if (itsUsePreconGridder) {
+        if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
           casa::Array<double> imagePrecon(imageShape);
           itsPreconGridders[imageName]->finaliseGrid(imagePrecon);
           imagePreconVec.reference(imagePrecon.reform(vecShape));
