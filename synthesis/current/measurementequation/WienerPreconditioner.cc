@@ -184,12 +184,17 @@ namespace askap
         // The filter is rescaling Fourier components of dirty and psf based on
         // the value of non-zero Fourier components of pcf. So set small
         // erroneous components to zero.
-        float scratchThreshold = 1e-6 * max(abs(real(scratch.asArray())));
+        bool useAutoThreshold = true;
+        float xfrMax = max(abs(real(scratch.asArray())));
+        // The default threshold. Will be overwritten if useAutoThreshold==true.
+        float scratchThreshold = 1e-5 * xfrMax;
     
         // Reset the threshold based on data in the zero-padding region of the uv
         // plane. Should test for the presence of zero-padding...
-        bool useAutoThreshold = true;
         if (useAutoThreshold) {
+
+          // set a test value that we expect the noise to be below
+          float thresholdTestVal = 1e-2 * xfrMax;
    
           // Take slices across the zero-padding-region of the image
           IPosition sliceStart(scratch.shape().nelements());
@@ -216,7 +221,9 @@ namespace askap
           // test that the threshold is at a low level. If this fails, then
           // it is likely that visibilities have been gridded to the edge of
           // the uv plane. In this case, just set to something sensible.
-          if (autoThreshold > scratchThreshold) {
+          // It would be better to test the maximum baseline length either here
+          // or earlier (and set a flag).
+          if (autoThreshold > thresholdTestVal) {
             ASKAPLOG_INFO_STR(logger, "Auto-threshold seems too high. Using default.");
           } else {
             scratchThreshold = autoThreshold;
@@ -225,10 +232,8 @@ namespace askap
         }
 
         ASKAPLOG_INFO_STR(logger,
-            "Thresholding the input uv sampling function at " <<
-            scratchThreshold << " (" <<
-            100.0*scratchThreshold/max(abs(real(scratch.asArray()))) <<
-            "% of max)");
+            "Thresholding the uv sampling function at " << scratchThreshold
+            << " (" << 100.0*scratchThreshold/xfrMax << "% of max)");
     
         if (scratchThreshold > 0.0) {
           for (int x=0; x<scratch.shape()[0]; ++x) {
@@ -326,7 +331,7 @@ namespace askap
                 boxShape(1) = regionWidth;
                 const int x0 = x - boxStart(0);
                 const int y0 = y - boxStart(1);
-                const casa::Array<casa::Float> localBox = abs(real(scratch.getSlice(boxStart,boxShape)));
+                const casa::Array<casa::Float> localBox = real(scratch.getSlice(boxStart,boxShape));
        
                 const float localRadiusSq = 0.25 * kernelWidth*kernelWidth;
                 const float regionRadiusSq = 0.25 * regionWidth*regionWidth;
@@ -368,7 +373,7 @@ namespace askap
           // Calc ave SNR weight-sum *over visibilities* (not pixels).
           // * do this before the taper?
           // * using the pcf or the psf? The psf may be normalised, so pcf.
-          const casa::Array<float> wgts(abs(real(scratch.asArray())));
+          const casa::Array<float> wgts(real(scratch.asArray()));
           // The following approx assumes that vis have equal SNR weights.
           // * see D. Briggs thesis
           itsAveWgtSum = sum(wgts*wgts) / sum(wgts);
@@ -407,8 +412,8 @@ namespace askap
             for (int y=0; y<scratch.shape()[1]; ++y) {
               pos(0) = x;
               pos(1) = y;
-              if (abs(real(scratch.getAt(pos))) != 0) {
-                itsWienerfilter.putAt(1.0 / (noisePower*abs(real(scratch.getAt(pos))) + 1.0), pos);
+              if (real(scratch.getAt(pos)) != 0) {
+                itsWienerfilter.putAt(1.0 / (noisePower*real(scratch.getAt(pos)) + 1.0), pos);
               }
             }
           }
@@ -432,7 +437,7 @@ namespace askap
       casa::LatticeFFT::cfft2d(scratch, casa::True);
       scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
       casa::LatticeFFT::cfft2d(scratch, casa::False);       
-      lpsf.copyData(casa::LatticeExpr<float>(abs(real(scratch))));
+      lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
       const float maxPSFAfter=casa::max(psf);
       ASKAPLOG_INFO_STR(logger,
           "Peak of PSF after Wiener filtering = " << maxPSFAfter <<
@@ -445,7 +450,7 @@ namespace askap
       casa::LatticeFFT::cfft2d(scratch, casa::True);
       scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
       casa::LatticeFFT::cfft2d(scratch, casa::False);
-      ldirty.copyData(casa::LatticeExpr<float>(abs(real(scratch))));
+      ldirty.copyData(casa::LatticeExpr<float>(real(scratch)));
       dirty *= maxPSFBefore/maxPSFAfter;
 
       return true;
