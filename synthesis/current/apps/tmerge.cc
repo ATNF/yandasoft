@@ -142,10 +142,18 @@ class TmergeApp : public askap::Application
             // get pixel units and psf beam information from a reference image
             Table tmpTable(images[0]);
             string units = tmpTable.keywordSet().asString("units");
-            Vector<Quantum<double> > psf = iacc.beamInfo(images[0]);
-            if (psf.nelements()<3) {
+            Vector<Quantum<double> > psf;
+            Vector<Quantum<double> > psftmp = iacc.beamInfo(images[0]);
+            if (psftmp.nelements()<3) {
                 ASKAPLOG_WARN_STR(logger, images[0] <<
                     ": beamInfo needs at least 3 elements. Not writing PSF");
+            }
+            else if ((psftmp[0].getValue("rad")==0) || (psftmp[1].getValue("rad")==0)) {
+                ASKAPLOG_WARN_STR(logger, images[0] <<
+                    ": beamInfo invalid. Not writing PSF");
+            }
+            else {
+                psf = psftmp;
             }
 
             // write accumulated weight image

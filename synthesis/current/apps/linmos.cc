@@ -359,9 +359,19 @@ static void merge(const LOFAR::ParameterSet &parset) {
         Table tmpTable(inImgNames[psfref]);
         string units = tmpTable.keywordSet().asString("units");
         // get psf beam information from the selected reference image
-        Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
-        if (psf.nelements()<3) 
-            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] << ": beamInfo needs at least 3 elements. Not writing PSF");
+        Vector<Quantum<double> > psf;
+        Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
+        if (psftmp.nelements()<3) {
+            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
+                ": beamInfo needs at least 3 elements. Not writing PSF");
+        }
+        else if ((psftmp[0].getValue("rad")==0) || (psftmp[1].getValue("rad")==0)) {
+            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
+                ": beamInfo invalid. Not writing PSF");
+        }
+        else {
+            psf = psftmp;
+        }
 
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
