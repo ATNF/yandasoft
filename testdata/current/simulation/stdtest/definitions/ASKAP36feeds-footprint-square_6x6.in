@@ -1,0 +1,50 @@
+# Matches beam locations obtained by running:
+#  > footprint.py -n square_6x6 -p 1
+
+feeds.names     =       [feed0, feed1, feed2, feed3, feed4, feed5, feed6, feed7, feed8, feed9, feed10, feed11, feed12, feed13, feed14, feed15, feed16, feed17, feed18, feed19, feed20, feed21, feed22, feed23, feed24, feed25, feed26, feed27, feed28, feed29, feed30, feed31, feed32, feed33, feed34, feed35]
+
+feeds.spacing        =       1deg
+
+feeds.feed0          =       [-0.5,  0.5]
+feeds.feed1          =       [0.5,   0.5]
+feeds.feed2          =       [-0.5, -0.5]
+feeds.feed3          =       [0.5,  -0.5]
+feeds.feed4          =       [-1.5,  1.5]
+feeds.feed5          =       [-0.5,  1.5]
+
+feeds.feed6          =       [0.5,  1.5]
+feeds.feed7          =       [1.5,  1.5]
+feeds.feed8          =       [1.5,  0.5]
+feeds.feed9          =       [1.5, -0.5]
+feeds.feed10         =       [1.5, -1.5]
+feeds.feed11         =       [0.5, -1.5]
+
+feeds.feed12         =       [-0.5, -1.5]
+feeds.feed13         =       [-1.5, -1.5]
+feeds.feed14         =       [-1.5, -0.5]
+feeds.feed15         =       [-1.5,  0.5]
+feeds.feed16         =       [-2.5,  2.5]
+feeds.feed17         =       [-1.5,  2.5]
+
+feeds.feed18         =       [-0.5, 2.5]
+feeds.feed19         =       [0.5,  2.5]
+feeds.feed20         =       [1.5,  2.5]
+feeds.feed21         =       [2.5,  2.5]
+feeds.feed22         =       [2.5,  1.5]
+feeds.feed23         =       [2.5,  0.5]
+
+feeds.feed24         =       [2.5, -0.5]
+feeds.feed25         =       [2.5, -1.5]
+feeds.feed26         =       [2.5, -2.5]
+feeds.feed27         =       [1.5, -2.5]
+feeds.feed28         =       [0.5, -2.5]
+feeds.feed29         =       [-0.5, -2.5]
+
+feeds.feed30         =       [-1.5, -2.5]
+feeds.feed31         =       [-2.5, -2.5]
+feeds.feed32         =       [-2.5, -1.5]
+feeds.feed33         =       [-2.5, -0.5]
+feeds.feed34         =       [-2.5,  0.5]
+feeds.feed35         =       [-2.5,  1.5]
+
+
