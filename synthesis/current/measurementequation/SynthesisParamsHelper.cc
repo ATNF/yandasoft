@@ -1234,17 +1234,27 @@ namespace askap
        }
        ASKAPCHECK(psfName != "", "Unable to find psf paramter to fit, params="<<ip);
        ASKAPLOG_INFO_STR(logger, "Fitting 2D Gaussian into PSF parameter "<<psfName);
+      
        casa::Array<double> psfArray = ip.value(psfName);
+       return fitBeam(psfArray, ip.axes(psfName), cutoff);
+
+    }
+
+    casa::Vector<casa::Quantum<double> > SynthesisParamsHelper::fitBeam(casa::Array<double> &psfArray,
+                                                                        const scimath::Axes &axes,
+                                                                        const double cutoff) {
+
        const casa::IPosition shape = psfArray.shape();
        ASKAPCHECK(shape.nelements()>=2,"PSF image is supposed to be at least 2-dimensional, shape="<<psfArray.shape());
        if (shape.product() != shape[0]*shape[1]) {
            ASKAPLOG_WARN_STR(logger, "Multi-dimensional PSF is present (shape="<<shape<<
                              "), using the first 2D plane only to fit the beam");
        }
+
        casa::Array<double> psfSlice = MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
        ASKAPDEBUGASSERT(psfSlice.shape().nelements() == 2);
        casa::Matrix<double> psfSliceMatrix = psfSlice;
-       
+ 
        // search for support to speed up beam fitting
        ASKAPLOG_INFO_STR(logger, "Searching for support with the relative cutoff of "<<cutoff<<" to speed fitting up");
        SupportSearcher ss(cutoff);
@@ -1294,7 +1304,6 @@ namespace askap
        casa::Vector<casa::Double> result = fitter.availableSolution();
        ASKAPLOG_INFO_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<<fitter.availableErrors());
        ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
-       const scimath::Axes axes(ip.axes(psfName));
        ASKAPCHECK(axes.hasDirection(), "Direction axes are missing from the PSF parameter, unable to convert pixels to angular units");
        const casa::Vector<casa::Double> increments = axes.directionAxis().increment();
        ASKAPCHECK(increments.nelements() == 2, "Expect just two elements for increments of the direction axis, you have "<<

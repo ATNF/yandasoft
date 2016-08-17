@@ -70,7 +70,7 @@ namespace askap
   namespace synthesis
   {
     ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
-	    itsBeamHelper(beamHelper), itsEqualiseNoise(false)
+	    itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true)
     {
         setIsRestoreSolver();
     }
@@ -113,16 +113,17 @@ namespace askap
             savePSF(ip);
             psfName = SynthesisParamsHelper::findPSF(ip);
             ASKAPCHECK(psfName != "", "Failed to find a PSF parameter");
-        }
-	if (itsBeamHelper.fitRequired()) {
-            itsBeamHelper.fitBeam(ip);
-        }
-	
-	casa::Vector<casa::Quantum<double> > restoringBeam = itsBeamHelper.value();
-	
-	ASKAPDEBUGASSERT(restoringBeam.size() == 3);
-    ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: "<<restoringBeam[0].getValue("arcsec")<<
-          " x "<<restoringBeam[1].getValue("arcsec")<<" arcsec at position angle "<<restoringBeam[2].getValue("deg")<<" deg");
+    }
+
+    // do this after PSF preconditioning, so different filters can be used at different times
+    //if (itsBeamHelper.fitRequired()) {
+    //    itsBeamHelper.fitBeam(ip);
+    //}
+    //casa::Vector<casa::Quantum<double> > restoringBeam = itsBeamHelper.value();
+    //ASKAPDEBUGASSERT(restoringBeam.size() == 3);
+    //ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: "<<
+    //    restoringBeam[0].getValue("arcsec")<<" x "<<restoringBeam[1].getValue("arcsec")<<
+    //    " arcsec at position angle "<<restoringBeam[2].getValue("deg")<<" deg");
 	
 	
 	// determine which images are faceted and setup parameters representing the 
@@ -150,18 +151,13 @@ namespace askap
 	      // this is not a faceting case, restore the image in situ and add residuals 
 	      ASKAPLOG_INFO_STR(logger, "Restoring " << *ci );
 
-	      // Create a temporary image
-	      boost::shared_ptr<casa::TempImage<float> > image(SynthesisParamsHelper::tempImage(ip, *ci));	      
-          askap::synthesis::Image2DConvolver<float> convolver;	
-	      const casa::IPosition pixelAxes(2, 0, 1);	
-	      convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,
-			     pixelAxes, restoringBeam, true, 1.0, false);
-          SynthesisParamsHelper::update(ip, *ci, *image);
-	      // for some reason update makes the parameter free as well
+	      // make sure this is a fixed parameter
 	      ip.fix(*ci);
-	  
-	      addResiduals(*ci,ip.value(*ci).shape(),ip.value(*ci));
-	      SynthesisParamsHelper::setBeam(ip, *ci, restoringBeam);
+
+	      addResiduals(*ci, ip.value(*ci).shape(),
+              SynthesisParamsHelper::coordinateSystem(ip,*ci), ip.axes(*ci), ip.value(*ci));
+
+	      SynthesisParamsHelper::setBeam(ip, *ci, itsBeamHelper.value());
       } else {
           // this is a single facet of a larger image, just fill in the bigger image with the model
           ASKAPLOG_INFO_STR(logger, "Inserting facet " << iph.paramName()<<" into merged image "<<name);
@@ -171,20 +167,14 @@ namespace askap
           patch = model;
       }
 	}
-	
+
 	// restore faceted images
     for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
 	     if (ci->second != 1) {
 	         // this is a multi-facet image
 	         ASKAPLOG_INFO_STR(logger, "Restoring faceted image " << ci->first );
             
-             boost::shared_ptr<casa::TempImage<float> > image(SynthesisParamsHelper::tempImage(ip, ci->first));
-             askap::synthesis::Image2DConvolver<float> convolver;	
-	         const casa::IPosition pixelAxes(2, 0, 1);	
-	         convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,
-			       pixelAxes, restoringBeam, true, 1.0, false);
-	         SynthesisParamsHelper::update(ip, ci->first, *image);
-	         // for some reason update makes the parameter free as well
+	         // make sure this is a fixed parameter
 	         ip.fix(ci->first);
 	        
 	         // add residuals
@@ -196,12 +186,14 @@ namespace askap
 	                   ImageParamsHelper iph(ci->first);	                   
 	                   iph.makeFacet(xFacet,yFacet);
 	                   addResiduals(iph.paramName(),ip.value(iph.paramName()).shape(),
+                                    SynthesisParamsHelper::coordinateSystem(ip,iph.paramName()),
+                                    ip.axes(iph.paramName()),
 	                                SynthesisParamsHelper::getFacet(ip,iph.paramName()));
 	                   
 	              }
 	         }
 	         
-	         SynthesisParamsHelper::setBeam(ip, ci->first, restoringBeam);
+	         SynthesisParamsHelper::setBeam(ip, ci->first, itsBeamHelper.value());
 	         
 	     }
 	}
@@ -238,7 +230,9 @@ namespace askap
     ///                   the case for faceting).
     /// @param[in] out output array
     void ImageRestoreSolver::addResiduals(const std::string &name, const casa::IPosition &shape,
-                         casa::Array<double> out) const
+                         const casa::CoordinateSystem &coords,
+                         const scimath::Axes &axes,
+                         casa::Array<double> out)
     {
            ASKAPTRACE("ImageRestoreSolver::addResiduals");
 	   // Axes are dof, dof for each parameter
@@ -311,7 +305,39 @@ namespace askap
 	        }
 	  
 	        // Add the residual image        
-	        // the code below involves an extra copying. We can replace it later with a copyless version
+            // First, convolve the model image to the resolution of the synthesised beam if not already done.
+            casa::Vector<casa::Quantum<double> > restoringBeam;
+            if (itsModelNeedsConvolving) {
+                if (itsBeamHelper.fitRequired()) {
+                    casa::Array<double> psfDArray(psfArray.shape());
+                    casa::convertArray<double, float>(psfDArray, psfArray);
+                    restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes);
+                    ASKAPDEBUGASSERT(restoringBeam.size() == 3);
+                    ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " <<
+                        restoringBeam[0].getValue("arcsec") << " x "<<restoringBeam[1].getValue("arcsec") <<
+                        " arcsec at position angle "<<restoringBeam[2].getValue("deg")<<" deg");
+                    itsBeamHelper.assign(restoringBeam);
+                } else {
+                    restoringBeam = itsBeamHelper.value();
+                }
+
+	            // Create a temporary image
+                boost::shared_ptr<casa::TempImage<float> >
+                    image(new casa::TempImage<float>(out.shape(),coords));
+                    //image(new casa::TempImage<float>(TiledShape(shape),coords));
+                image->setUnits("Jy/pixel");
+                casa::Array<float> fout(out.shape());
+                casa::convertArray<float, double>(fout, out);
+                casa::ArrayLattice<float> lout(fout);
+                image->copyData(lout);
+                askap::synthesis::Image2DConvolver<float> convolver;	
+                const casa::IPosition pixelAxes(2, 0, 1);	
+                convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,
+                     pixelAxes, restoringBeam, true, 1.0, false);
+                casa::convertArray<double, float>(out, image->get());
+            }
+
+	        // The code below involves an extra copying. We can replace it later with a copyless version
 	        // doing element by element adding explicitly.
 	        const casa::IPosition outSliceShape = planeIter.planeShape(out.shape());
 	        // convertedResidual contains just one plane of residuals

@@ -754,27 +754,66 @@ namespace askap
         }
         if (itsRestore && postfix == "")
         {
-          ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
-          boost::shared_ptr<ImageRestoreSolver> ir = ImageRestoreSolver::createSolver(parset().makeSubset("restore."));
-          ASKAPDEBUGASSERT(ir);
-          ASKAPDEBUGASSERT(itsSolver);
-          // configure restore solver the same way as normal imaging solver
-          boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
-          ASKAPDEBUGASSERT(template_solver);
-          ImageSolverFactory::configurePreconditioners(parset(),ir);
-          ir->configureSolver(*template_solver);
-          ir->copyNormalEquations(*template_solver);
-          Quality q;
-          ir->solveNormalEquations(*itsModel,q);
-          // merged image should be a fixed parameter without facet suffixes
-          resultimages=itsModel->fixedNames();
-          for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
-               const ImageParamsHelper iph(*ci);
-               if (!iph.isFacet() && (ci->find("image") == 0)) {
-                   ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                               << *ci+string(".restored") );
-                   SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,*ci+string(".restored"));
-               }
+          // add a second pass if a separate restore preconditioner is defined
+          LOFAR::ParameterSet tmpset = parset();
+          string restore_suffix;
+          uint n_passes = 1;
+          // if extra passes are required, save anything that is changed so it can be reset
+          std::map<string, boost::shared_ptr<casa::ImageInterface<float> > > saved_models;
+
+          // add a second pass if a separate restore preconditioner is defined
+          if (tmpset.isDefined("restore.preconditioner.Names")) {
+              n_passes += 1;
+              // save the initial values of all image model free parameters
+              vector<string> imgnames(itsModel->completions("image"));
+              for (vector<string>::iterator it=imgnames.begin(); it!=imgnames.end(); ++it)
+              {
+                  const string name="image"+*it;
+                  saved_models[name] = SynthesisParamsHelper::tempImage(*itsModel, name);
+              }
+          }
+
+          for (uint pass=0; pass<n_passes; ++pass) {
+
+              if (pass == 0) {
+                  ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
+                  restore_suffix = ".restored";
+              }
+              else {
+                  ASKAPLOG_INFO_STR(logger, "Restoring again with a second preconditioner");
+                  // replace any existing preconditioner params with the restore.* set
+                  tmpset.subtractSubset("preconditioner.");
+                  tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
+                  restore_suffix = ".alt.restored";
+                  // reset image models to be free parameters with their initial values
+                  for (std::map<string, boost::shared_ptr<casa::ImageInterface<float> > >::iterator
+                      it=saved_models.begin(); it!=saved_models.end(); ++it)
+                  {
+                      SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
+                  }
+              }
+              boost::shared_ptr<ImageRestoreSolver>
+                  ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
+              ASKAPDEBUGASSERT(ir);
+              ASKAPDEBUGASSERT(itsSolver);
+              // configure restore solver
+              boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
+              ASKAPDEBUGASSERT(template_solver);
+              ImageSolverFactory::configurePreconditioners(tmpset,ir);
+              ir->configureSolver(*template_solver);
+              ir->copyNormalEquations(*template_solver);
+              Quality q;
+              ir->solveNormalEquations(*itsModel,q);
+              // merged image should be a fixed parameter without facet suffixes
+              resultimages=itsModel->fixedNames();
+              for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+                   const ImageParamsHelper iph(*ci);
+                   if (!iph.isFacet() && (ci->find("image") == 0)) {
+                       ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                   << *ci+restore_suffix );
+                       SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                   }
+              }
           }
         }
         ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");

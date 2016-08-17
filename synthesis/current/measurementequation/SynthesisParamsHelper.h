@@ -237,9 +237,14 @@ namespace askap
         ///            is 0.05, i.e. fitting is done to pixels enclosed in a rectangular support
         ///            defined by 5% cutoff from the peak)
         /// @param[in] name full name of the parameter representing the PSF (default is to figure this out)        
-        static casa::Vector<casa::Quantum<double> > fitBeam(const askap::scimath::Params &ip, const double cutoff = 0.05,
+        static casa::Vector<casa::Quantum<double> > fitBeam(const askap::scimath::Params &ip,
+                                                            const double cutoff = 0.05,
                                                             const std::string &name = "");
-              
+        
+        static casa::Vector<casa::Quantum<double> > fitBeam(casa::Array<double> &psfArray,
+                                                            const scimath::Axes &axes,
+                                                            const double cutoff = 0.05);
+        
         /// @brief obtain an array corresponding to a single facet of a merged faceted image
         /// @details Each facet is represented by a number of independent parameters with
         /// the names containing .facet.x.y at the end. One of the add methods can add a 

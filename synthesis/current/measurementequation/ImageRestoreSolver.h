@@ -111,7 +111,9 @@ namespace askap
         ///                   the case for faceting).
         /// @param[in] out output array
         void addResiduals(const std::string &name, const casa::IPosition &shape,
-                         casa::Array<double> out) const;
+                          const casa::CoordinateSystem &coords,
+                          const scimath::Axes &axes,
+                          casa::Array<double> out);
         
         /// @brief obtain an estimate of the restoring beam
         /// @details This method fits a 2D Gaussian into the central area of the PSF
@@ -132,6 +134,10 @@ namespace askap
         /// recovered in the model, this weighting scheme potentially introduces some 
         /// direction-dependent flux error (but gives flat noise).
         bool itsEqualiseNoise; 
+
+        //mutable bool itsModelNeedsConvolving; 
+        bool itsModelNeedsConvolving; 
+
     };
 
   }
