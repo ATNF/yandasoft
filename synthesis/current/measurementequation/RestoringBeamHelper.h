@@ -78,7 +78,6 @@ public:
    /// @param[in] other other instance
    RestoringBeamHelper& operator=(const RestoringBeamHelper &other);
    
-   
    /// @brief initialise with explicitly defined beam parameters
    /// @param[in] beam beam parameters (should be 3 elements)
    void assign(const casa::Vector<casa::Quantum<double> > &beam);

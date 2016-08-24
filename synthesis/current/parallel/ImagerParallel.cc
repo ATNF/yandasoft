@@ -764,17 +764,28 @@ namespace askap
           // add a second pass if a separate restore preconditioner is defined
           if (tmpset.isDefined("restore.preconditioner.Names")) {
               n_passes += 1;
-              // save the initial values of all image model free parameters
-              vector<string> imgnames(itsModel->completions("image"));
-              for (vector<string>::iterator it=imgnames.begin(); it!=imgnames.end(); ++it)
-              {
-                  const string name="image"+*it;
+
+              // save the initial values of image model free parameters
+              vector<string> names(itsModel->completions("image"));
+              map<string,int> facetmap;
+              SynthesisParamsHelper::listFacets(names, facetmap);
+              for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
+              	  const string name="image"+ci->first;
+                  if ((ci->second != 1) && !itsModel->has(name)) {
+                      // this is a multi-facet image, add a fixed parameter representing the whole image
+                      ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter "<<name<<
+                                        " representing faceted image with "<<ci->second<<" facets");                 
+                      SynthesisParamsHelper::add(*itsModel,name,ci->second);
+                      // this isn't a free parameter, it is made from free parameters (i.e. the facets)
+                      itsModel->fix(name);
+                  }
                   saved_models[name] = SynthesisParamsHelper::tempImage(*itsModel, name);
               }
+
+
           }
 
           for (uint pass=0; pass<n_passes; ++pass) {
-
               if (pass == 0) {
                   ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
                   restore_suffix = ".restored";
@@ -791,6 +802,17 @@ namespace askap
                   {
                       SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
                   }
+
+              vector<string> names(itsModel->completions("image"));
+              map<string,int> facetmap;
+              SynthesisParamsHelper::listFacets(names, facetmap);
+              for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
+                  if (ci->second != 1) {
+                      // this isn't a free parameter, it is merged from free parameters (i.e. the facets)
+                      itsModel->fix("image"+ci->first);
+                  }
+              }
+
               }
               boost::shared_ptr<ImageRestoreSolver>
                   ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
@@ -803,6 +825,7 @@ namespace askap
               ir->configureSolver(*template_solver);
               ir->copyNormalEquations(*template_solver);
               Quality q;
+
               ir->solveNormalEquations(*itsModel,q);
               // merged image should be a fixed parameter without facet suffixes
               resultimages=itsModel->fixedNames();
@@ -815,6 +838,18 @@ namespace askap
                    }
               }
           }
+
+          // remove parts of each faceted image
+          vector<string> names(itsModel->completions("image"));
+          for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
+              const string name="image"+*ci;
+              ImageParamsHelper iph(name);
+              if (iph.isFacet()) {
+                  ASKAPLOG_INFO_STR(logger, "Remove facet patch "<<name<<" from the parameters");
+                  itsModel->remove(name);
+              }
+          }
+
         }
         ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");
         vector<string> resultimages2=itsModel->names();

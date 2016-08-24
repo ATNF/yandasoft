@@ -105,15 +105,12 @@ namespace askap
         /// to fill may not have exactly the same shape as the dirty (residual) image corresponding
         /// to the given parameter. This method assumes that the centres of both images are the same
         /// and extracts only data required.
-        /// @param[in] name name of the parameter to work with
-        /// @param[in] shape shape of the parameter (we wouldn't need it if the shape of the
-        ///                   output was always the same as the shape of the paramter. It is not
-        ///                   the case for faceting).
-        /// @param[in] out output array
-        void addResiduals(const std::string &name, const casa::IPosition &shape,
-                          const casa::CoordinateSystem &coords,
-                          const scimath::Axes &axes,
-                          casa::Array<double> out);
+        /// @param[in,out] ip param object containing all of the parameters
+        /// @param[in] imagename name of the parameter to work with
+        /// @param[in] facetname name of the current facet, if using facets
+        void addResiduals(askap::scimath::Params& ip,
+                          const std::string &imagename,
+                          const std::string facetname = "");
         
         /// @brief obtain an estimate of the restoring beam
         /// @details This method fits a 2D Gaussian into the central area of the PSF
