@@ -528,7 +528,7 @@ int main(int argc, const char** argv)
         // Declare the supported options.
         po::options_description desc("Allowed options");
         desc.add_options()
-        ("help", "produce help message") 
+        ("help,h", "produce help message") 
         ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile") 
         ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile") 
         ("input-file,i", po::value< vector<string> >(&inNames), "input file")
