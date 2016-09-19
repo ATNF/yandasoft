@@ -43,7 +43,8 @@
 #include "askap/StatReporter.h"
 #include "askap/Log4cxxLogSink.h"
 #include "boost/shared_ptr.hpp"
-#include "CommandLineParser.h"
+#include "boost/exception/all.hpp"
+#include "boost/program_options.hpp"
 #include "casacore/casa/OS/File.h"
 #include "casacore/casa/aips.h"
 #include "casacore/casa/Quanta.h"
@@ -62,12 +63,10 @@ ASKAP_LOGGER(logger, ".msmerge2");
 using namespace askap;
 using namespace casa;
 
-boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename)
+boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4, casa::uInt tileNchan = 1)
 {
     // Get configuration first to ensure all parameters are present
     casa::uInt bucketSize =  128 * 1024;
-    casa::uInt tileNcorr = 4;
-    casa::uInt tileNchan = 1;
 
     if (bucketSize < 8192) {
         bucketSize = 8192;
@@ -441,12 +440,12 @@ void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& s
     }
 }
 
-void merge(const std::vector<std::string>& inFiles, const std::string& outFile)
+void merge(const std::vector<std::string>& inFiles, const std::string& outFile, casa::uInt tileNcorr = 4, casa::uInt tileNchan = 1)
 {
     // Create the output measurement set
     ASKAPCHECK(!casa::File(outFile).exists(), "File or table "
             << outFile << " already exists!");
-    boost::shared_ptr<casa::MeasurementSet> out(create(outFile));
+    boost::shared_ptr<casa::MeasurementSet> out(create(outFile,tileNcorr,tileNchan));
 
     // Open the input measurement sets
     std::vector< boost::shared_ptr<const casa::MeasurementSet> > in;
@@ -520,46 +519,76 @@ int main(int argc, const char** argv)
 
     try {
         StatReporter stats;
+        int tileNcorr;
+        int tileNchan;
+        std::string outName;
+        std::vector<std::string> inNamesVec;
+        std::vector<std::string> inNames;
+        namespace po = boost::program_options;
+        // Declare the supported options.
+        po::options_description desc("Allowed options");
+        desc.add_options()
+        ("help", "produce help message") 
+        ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile") 
+        ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile") 
+        ("input-file,i", po::value< vector<string> >(&inNames), "input file")
+        ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output channel name");       
+        
+        po::positional_options_description p;
+        p.add("input-file", -1);
 
-        cmdlineparser::Parser parser; // a command line parser
-        // command line parameter
-        cmdlineparser::FlaggedParameter<std::string> outName("-o", "output.ms");
-        // this parameter is required
-        parser.add(outName, cmdlineparser::Parser::throw_exception);
-        if (argc < 4) {
-            throw cmdlineparser::XParser();
-        }
-        std::vector<cmdlineparser::GenericParameter<std::string> > inNames(argc-3);
-        {
-            std::vector<cmdlineparser::GenericParameter<std::string> >::iterator it;
-            for (it = inNames.begin(); it < inNames.end(); ++it) {
-                parser.add(*it);
-            }
+        po::variables_map vm;
+        po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+        po::notify(vm);    
+
+        if (vm.count("help")) {
+            cout << desc << "\n";
+            return 1;
         }
 
-        // Process command line options
-        parser.process(argc, argv);
-        if (!inNames.size()) {
-            throw cmdlineparser::XParser();
+        if (vm.count("tileNcorr")) {
+            cout << "Number of correlations per tile was set to " 
+            << vm["tileNcorr"].as<int>() << ".\n";
         } 
+        else 
+        {
+            cout << "tileNcorr was not setr, using default: " << tileNcorr << "\n";
+        }
+
+        if (vm.count("tileNchan")) {
+            cout << "Number of channels per tile  was set to " 
+            << vm["tileNchan"].as<int>() << ".\n";
+        } 
+        else 
+        {
+            cout << "tileNchan was not set, using default: " << tileNchan << "\n";
+        }
+
+        if (vm.count("input-file"))
+        {
+            cout << "Input files are: " 
+            << vm["input-file"].as< vector<string> >() << "\n";
+        }
+ 
         ASKAPLOG_INFO_STR(logger,
                 "This program merges given measurement sets and writes the output into `"
-                << outName.getValue() << "`");
+                << outName << "`" << "with a tiling: " << tileNcorr << "," << tileNchan );
 
         // Turns inNames into vector<string>
-        std::vector<std::string> inNamesVec;
-        std::vector<cmdlineparser::GenericParameter<std::string> >::iterator it;
+        std::vector<std::string>::iterator it;
         for (it = inNames.begin(); it < inNames.end(); ++it) {
-            inNamesVec.push_back(it->getValue());
+            // Check for file existence first - this array may be longer than required
+
+            if (access((*it).c_str(),F_OK) != -1)
+                inNamesVec.push_back(*it);
         }
 
-        merge(inNamesVec, outName.getValue()); 
+        merge(inNamesVec, outName, tileNcorr, tileNchan); 
 
         stats.logSummary();
         ///==============================================================================
-    } catch (const cmdlineparser::XParser &ex) {
-        ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
-        ASKAPLOG_FATAL_STR(logger, "Usage: " << argv[0] << " -o output.ms inMS1 ... inMSn");
+    } catch (boost::exception &ex) {
+        ASKAPLOG_FATAL_STR(logger, "Command line parser error, " << boost::diagnostic_information(ex));
         return 1;
     } catch (const askap::AskapError& x) {
         ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << x.what());
