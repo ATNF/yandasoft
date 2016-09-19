@@ -531,8 +531,8 @@ int main(int argc, const char** argv)
         ("help,h", "produce help message") 
         ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile") 
         ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile") 
-        ("input-file,i", po::value< vector<string> >(&inNames), "input file")
-        ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output channel name");       
+        ("input-file,i", po::value< vector<string> >(&inNames), "Input file(s) - you can also just list them after the other options")
+        ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output filename");       
         
         po::positional_options_description p;
         p.add("input-file", -1);
