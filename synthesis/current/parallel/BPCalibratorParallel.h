@@ -213,7 +213,12 @@ namespace askap
       
       /// @brief name of the parameter taken as a reference
       /// @details empty string means no referencing is required
+      //wasim was here 
+      /*
       std::string itsRefGain;
+      */
+      std::string itsRefGainXX;
+      std::string itsRefGainYY;
                                    
       /// @brief solution source to store the result
       /// @details This object is initialised by the master. It stores the solution

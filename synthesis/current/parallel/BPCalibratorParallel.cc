@@ -40,6 +40,9 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
+/// last change: Wasim Raja <Wasim.Raja@csiro.au>
+///      -> XX and YY-visibility phases are referenced independently to XX and YY 
+///         visibilities of the reference antenna. 
 
 // Include own header file first
 #include <parallel/BPCalibratorParallel.h>
@@ -192,9 +195,13 @@ void BPCalibratorParallel::run()
            
            // setup reference gain, if needed
            if (itsRefAntenna >= 0) {
-               itsRefGain = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
+               //itsRefGain = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
+	       //wasim was here
+               itsRefGainXX = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
+               itsRefGainYY = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::YY);
            } else {
-               itsRefGain = "";
+               itsRefGainXX = "";
+               itsRefGainYY = "";
            }
            
            for (int cycle = 0; cycle < nCycles; ++cycle) {
@@ -342,8 +349,22 @@ void BPCalibratorParallel::solveNE()
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+      //wasim was here 
+      /*
       if (itsRefGain != "") {
           ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<itsRefGain<<" equal to 0");
+          rotatePhases();
+      }
+      */
+      if (itsRefGainXX != "") {
+	      if (itsRefGainXX == itsRefGainYY){
+		       ASKAPLOG_INFO_STR(logger, "Rotating both XX and YY phases to have that of "<<
+                  itsRefGainXX<<" equal to 0");
+	      } else{
+		       ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<
+                  itsRefGainXX<<" equal to 0 and YY phases to have that of "<<
+                  itsRefGainYY<<" equal to 0");
+	      }
           rotatePhases();
       }
   }
@@ -429,16 +450,30 @@ void BPCalibratorParallel::rotatePhases()
   // the intention is to rotate phases in worker (for this class)
   ASKAPDEBUGASSERT(itsComms.isWorker());
   ASKAPDEBUGASSERT(itsModel);
-  
+  //wasim was here
+ /* 
   ASKAPCHECK(itsModel->has(itsRefGain), "phase rotation to `"<<itsRefGain<<
              "` is impossible because this parameter is not present in the model");
   casa::Complex  refPhaseTerm = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGain)));
-                       
+ */                      
+  ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
+             "` is impossible because this parameter is not present in the model");
+  ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
+             "` is impossible because this parameter is not present in the model");
+  casa::Complex  refPhaseTermXX = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
+  casa::Complex  refPhaseTermYY = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
   std::vector<std::string> names(itsModel->freeNames());
   for (std::vector<std::string>::const_iterator it=names.begin(); it!=names.end();++it)  {
        const std::string parname = *it;
-       if (parname.find("gain") != std::string::npos) {
+       //wasim was here 
+       /*if (parname.find("gain") != std::string::npos) {
            itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
+       } */
+       if (parname.find("gain.g11") != std::string::npos) {
+           itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTermXX);
+       } 
+       else if (parname.find("gain.g22") != std::string::npos) {
+           itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTermYY);
        } 
   }
 }
