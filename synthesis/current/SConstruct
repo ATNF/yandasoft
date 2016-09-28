@@ -1,4 +1,4 @@
-# @file
+#@file
 # SConstruct build script for this module.
 # This is currently a test case, please edit this comment when deemed stable
 #
@@ -35,6 +35,7 @@ pkg = env.AskapPackage("synthesis")
 env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
 
 # add sub packages 
+pkg.AddSubPackage("utils")
 pkg.AddSubPackage("measurementequation")
 pkg.AddSubPackage("gridding")
 pkg.AddSubPackage("parallel")
