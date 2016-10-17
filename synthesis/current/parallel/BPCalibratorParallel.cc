@@ -174,6 +174,21 @@ LOFAR::ParameterSet BPCalibratorParallel::emptyDatasetKeyword(const LOFAR::Param
 /// then sends the result to master for writing.
 void BPCalibratorParallel::run()
 {
+  if (itsComms.isMaster()) {                        
+    ASKAPLOG_DEBUG_STR(logger, "About to set the solution accessor");
+    if (!itsSolutionIDValid) {
+        // obtain solution ID only once, the results can come in random order and the
+        // accessor is responsible for aggregating all of them together. This is done based on this ID.
+        //@todo Can probably get rid of this
+        itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
+        itsSolutionIDValid = true;
+    }
+    ASKAPLOG_DEBUG_STR(logger, "Have set solutionID");
+    itsSolAcc = itsSolutionSource->rwSolution(itsSolutionID);
+    ASKAPLOG_DEBUG_STR(logger, "Have set solution accessor");
+    ASKAPASSERT(itsSolAcc);
+  }
+  
   if (itsComms.isWorker()) {
       ASKAPDEBUGASSERT(itsModel);
       const int nCycles = parset().getInt32("ncycles", 1);
@@ -232,6 +247,10 @@ void BPCalibratorParallel::run()
            writeModel();
       } 
   }
+
+  // Destroy the accessor, which should call syncCache and write the table out.
+  ASKAPLOG_INFO_STR(logger, "Syncing the cached bandpass table to disk");
+  itsSolAcc.reset();
 } 
 
 /// @brief extract current beam/channel pair from the iterator
@@ -378,19 +397,11 @@ void BPCalibratorParallel::writeModel(const std::string &)
   
   const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
   
-  ASKAPLOG_INFO_STR(logger, "Writing results of the calibration for beam="<<indices.first<<" channel="<<indices.second);
+  ASKAPLOG_DEBUG_STR(logger, "Writing results of the calibration for beam="<<indices.first<<" channel="<<indices.second);
   
   ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
 
-  if (!itsSolutionIDValid) {
-      // obtain solution ID only once, the results can come in random order and the
-      // accessor is responsible for aggregating all of them together. This is done based on this ID.
-      itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
-      itsSolutionIDValid = true;
-  }    
-  
-  boost::shared_ptr<accessors::ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(itsSolutionID);
-  ASKAPASSERT(solAcc);
+  ASKAPASSERT(itsSolAcc);
         
   ASKAPDEBUGASSERT(itsModel); 
   std::vector<std::string> parlist = itsModel->freeNames();
@@ -401,7 +412,7 @@ void BPCalibratorParallel::writeModel(const std::string &)
        // beam is also coded in the parameters, although we don't need it because the data are partitioned
        // just cross-check it  
        ASKAPDEBUGASSERT(static_cast<casa::uInt>(paramType.first.beam()) == indices.first);             
-       solAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
+       itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
   }
 }
 
