@@ -315,9 +315,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             int from = comms.rank() - 1;
             comms.receive((void *) &buf,sizeof(int),from);
         }
-        casa::IPosition loc(outShape.nelements());
+        casa::IPosition loc(outShape.nelements(),0);
         loc[3] = comms.rank()*originalNchan/comms.nProcs();
-
+        ASKAPLOG_INFO_STR(logger, " - location " << loc);
         iacc.write(outImgName,outPix,loc);
         iacc.setUnits(outImgName,units);
 
