@@ -96,7 +96,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
 
-            blc[3] = comms.rank();
+            blc[3] = comms.rank()*(trc[3]/comms.nProcs());
             trc[3] = trc[3]/comms.nProcs();
 
             ASKAPCHECK(blc[3]>=0 && blc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
@@ -162,7 +162,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             else {
                 ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
             }
-            blc[3] = comms.rank();
+            blc[3] = comms.rank()*(trc[3]/comms.nProcs());
             trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
 
             casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
@@ -183,7 +183,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank();
+                blc[3] = comms.rank()*(trc[3]/comms.nProcs()); 
                 trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
 
                 casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
@@ -199,7 +199,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank();
+                blc[3] = comms.rank()*(trc[3]/comms.nProcs()); 
                 trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
 
                 casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
