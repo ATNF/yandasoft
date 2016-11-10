@@ -87,6 +87,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     // set the output coordinate system and shape, based on the overlap of input images
         vector<IPosition> inShapeVec;
         vector<CoordinateSystem> inCoordSysVec;
+        int myAllocationSize = 0;
+
+
         for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
             casa::PagedImage<casa::Float> img(*it);
             ASKAPCHECK(img.ok(),"Error loading "<< *it);
@@ -95,9 +98,27 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             ASKAPLOG_INFO_STR(logger," - Shape " << shape);
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
+            if (comms.rank() >= trc[3]) {
+                ASKAPLOG_WARN_STR(logger,"Rank " << comms.rank() << " has no work to merge");
+                return;
+            }
+            if (trc[3] % comms.nProcs() != 0) {
+                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< trc[3]);
+            }
+            if (comms.nProcs() >= trc[3]) {
+                myAllocationSize = 1;
+            }
+            else {
+                myAllocationSize = trc[3]/comms.nProcs();
+                // unless last rank
+                if (comms.rank() == comms.nProcs()-1) {
+                    myAllocationSize = trc[3] - comms.rank()*myAllocationSize;
+                }
+            }
 
-            blc[3] = comms.rank()*(trc[3]/comms.nProcs());
-            trc[3] = trc[3]/comms.nProcs();
+
+            blc[3] = comms.rank()*myAllocationSize;
+            trc[3] = myAllocationSize;
 
             ASKAPCHECK(blc[3]>=0 && blc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
             ASKAPCHECK(trc[3]<=shape[3], "Subcube extends beyond the original cube, shape:"<<shape);
@@ -162,8 +183,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             else {
                 ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
             }
-            blc[3] = comms.rank()*(trc[3]/comms.nProcs());
-            trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
+
+            blc[3] = comms.rank()*myAllocationSize;
+            trc[3] = myAllocationSize;
+
+
 
             casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
 
@@ -183,8 +207,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank()*(trc[3]/comms.nProcs()); 
-                trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
+                blc[3] = comms.rank()*myAllocationSize;
+                trc[3] = myAllocationSize;
+
 
                 casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
 
@@ -199,8 +224,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank()*(trc[3]/comms.nProcs()); 
-                trc[3] = trc[3]/comms.nProcs(); // this could be nchan/nWorkers ...
+                blc[3] = comms.rank()*myAllocationSize;
+                trc[3] = myAllocationSize;
+
 
                 casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
 
