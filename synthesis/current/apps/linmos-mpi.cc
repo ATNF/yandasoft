@@ -88,7 +88,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         vector<IPosition> inShapeVec;
         vector<CoordinateSystem> inCoordSysVec;
         int myAllocationSize = 0;
-
+        int myAllocationStart = 0;
 
         for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
             casa::PagedImage<casa::Float> img(*it);
@@ -110,16 +110,21 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             }
             else {
                 myAllocationSize = trc[3]/comms.nProcs();
-                // unless last rank
-                if (comms.rank() == comms.nProcs()-1) {
-                    myAllocationSize = trc[3] - comms.rank()*myAllocationSize;
-                }
             }
 
+            myAllocationStart = comms.rank()*myAllocationSize;
+    
+                // unless last rank
+            if (comms.rank() == comms.nProcs()-1) {
+                myAllocationSize = trc[3] - myAllocationStart - 1; // we are using End is length
+            }
+            
 
-            blc[3] = comms.rank()*myAllocationSize;
+            blc[3] = myAllocationStart;
             trc[3] = myAllocationSize;
 
+            ASKAPLOG_INFO_STR(logger,"Allocation starts at " << myAllocationStart << " and is " << myAllocationSize << " in size");
+ 
             ASKAPCHECK(blc[3]>=0 && blc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
             ASKAPCHECK(trc[3]<=shape[3], "Subcube extends beyond the original cube, shape:"<<shape);
 
@@ -184,7 +189,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
             }
 
-            blc[3] = comms.rank()*myAllocationSize;
+            blc[3] = myAllocationStart;
             trc[3] = myAllocationSize;
 
 
@@ -207,7 +212,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank()*myAllocationSize;
+                blc[3] = myAllocationStart;
                 trc[3] = myAllocationSize;
 
 
@@ -224,7 +229,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
-                blc[3] = comms.rank()*myAllocationSize;
+                blc[3] = myAllocationStart;
                 trc[3] = myAllocationSize;
 
 
