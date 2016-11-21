@@ -113,18 +113,18 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             }
 
             myAllocationStart = comms.rank()*myAllocationSize;
-    
+
                 // unless last rank
             if (comms.rank() == comms.nProcs()-1) {
-                myAllocationSize = trc[3] - myAllocationStart - 1; // we are using End is length
+                myAllocationSize = trc[3] - myAllocationStart; // we are using End is length
             }
-            
+
 
             blc[3] = myAllocationStart;
             trc[3] = myAllocationSize;
 
             ASKAPLOG_INFO_STR(logger,"Allocation starts at " << myAllocationStart << " and is " << myAllocationSize << " in size");
- 
+
             ASKAPCHECK(blc[3]>=0 && blc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
             ASKAPCHECK(trc[3]<=shape[3], "Subcube extends beyond the original cube, shape:"<<shape);
 
@@ -139,7 +139,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
             // get the shape of a single channel slice based upon rank
             // not sure where this is used
+            ASKAPLOG_INFO_STR(logger, " - Shape " << si.shape());
             inShapeVec.push_back(si.shape());
+
             inCoordSysVec.push_back(si.coordinates());
 
         }
@@ -347,7 +349,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             comms.receive((void *) &buf,sizeof(int),from);
         }
         casa::IPosition loc(outShape.nelements(),0);
-        loc[3] = comms.rank()*originalNchan/comms.nProcs();
+        loc[3] = myAllocationStart;
         ASKAPLOG_INFO_STR(logger, " - location " << loc);
         iacc.write(outImgName,outPix,loc);
         iacc.setUnits(outImgName,units);
