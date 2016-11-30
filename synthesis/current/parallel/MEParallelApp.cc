@@ -1,6 +1,6 @@
 /// @file
 ///
-/// MEParallelApp: Support for parallel applications using the measurement 
+/// MEParallelApp: Support for parallel applications using the measurement
 /// equation classes. This code implements common behavior for imaging, calibration and
 /// continuum subtraction. Unlike MEParallel it has some application-specific code in
 /// addition to parallelism.
@@ -47,13 +47,13 @@ ASKAP_LOGGER(logger, ".parallel");
 using namespace askap;
 using namespace askap::synthesis;
 
-/// @brief constructor 
+/// @brief constructor
 /// @details sets communication object and parameter set
 /// @param[in] comms communication object
 /// @param[in] parset parameter set
-MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) : 
-   MEParallel(comms,parset),   
-   itsUVWMachineCacheSize(1), itsUVWMachineCacheTolerance(1e-6)   
+MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
+   MEParallel(comms,parset),
+   itsUVWMachineCacheSize(1), itsUVWMachineCacheTolerance(1e-6)
 {
    // set up image handler, needed for both master and worker
    SynthesisParamsHelper::setUpImageHandler(parset);
@@ -65,10 +65,10 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
        /// Get the list of measurement sets and the column to use.
        itsDataColName = parset.getString("datacolumn", "DATA");
        itsMs = parset.getStringVector("dataset");
-        
+
        ASKAPCHECK(itsMs.size()>0, "Need dataset specification");
        const int nProcs = itsComms.nProcs();
-       
+
        if (itsMs.size() == 1) {
            const string tmpl=itsMs[0];
            if (nProcs>2) {
@@ -86,27 +86,27 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
               "Skip measurment set substitution, names are given explicitly: "<<itsMs);
        }
        if (nProcs>1) {
-           ASKAPCHECK(int(itsMs.size()) == (nProcs-1),
-              "When running in parallel, need one data set per node");
-       } 
-       
+          if (int(itsMs.size()) != (nProcs-1)) {
+              ASKAPLOG_WARN_STR(logger,"Running in parallel, data set per node usually required");
+          }
+       }
+
        // configure uvw-machine cache parameters (to be set up via Data Source)
        const int cacheSize = parset.getInt32("nUVWMachines",1);
        ASKAPCHECK(cacheSize > 0 ,
            "Cache size is supposed to be a positive number, you have "<<cacheSize);
        itsUVWMachineCacheSize = size_t(cacheSize);
-       itsUVWMachineCacheTolerance = 
-           SynthesisParamsHelper::convertQuantity(parset.getString("uvwMachineDirTolerance", 
+       itsUVWMachineCacheTolerance =
+           SynthesisParamsHelper::convertQuantity(parset.getString("uvwMachineDirTolerance",
                                                    "1e-6rad"),"rad");
-         
+
        ASKAPLOG_DEBUG_STR(logger, "UVWMachine cache will store "<<
            itsUVWMachineCacheSize<<" machines");
        ASKAPLOG_DEBUG_STR(logger, "Tolerance on the directions is "<<
            itsUVWMachineCacheTolerance/casa::C::pi*180.*3600.<<" arcsec");
-        
+
        // Create the gridder using a factory acting on a parameterset
        itsGridder = createGridder(comms, parset);
-       ASKAPCHECK(itsGridder, "Gridder is not defined correctly");              
+       ASKAPCHECK(itsGridder, "Gridder is not defined correctly");
    }
 }
-
