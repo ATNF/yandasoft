@@ -219,7 +219,7 @@ void BPCalibratorParallel::run()
                itsRefGainYY = "";
            }
            
-           for (int cycle = 0; cycle < nCycles; ++cycle) {
+           for (int cycle = 0; (cycle < nCycles) && validSolution(); ++cycle) {
                 ASKAPLOG_INFO_STR(logger, "*** Starting calibration iteration " << cycle + 1 << " for beam="<<
                               indices.first<<" and channel="<<indices.second<<" ***");                    
                 // iterator is used to access the current work unit inside calcNE
@@ -235,7 +235,9 @@ void BPCalibratorParallel::run()
                sendModelToMaster();                
            } else {
                // serial operation, just write the result
-               writeModel();
+               if (validSolution()) {
+                   writeModel();
+               }
            }
       }     
   }
@@ -244,7 +246,9 @@ void BPCalibratorParallel::run()
       for (casa::uInt chunk = 0; chunk < numberOfWorkUnits; ++chunk) {
            // asynchronously receive result from workers
            receiveModelFromWorker();
-           writeModel();
+           if (validSolution()) {
+               writeModel();
+           }
       } 
   }
 
@@ -252,6 +256,20 @@ void BPCalibratorParallel::run()
   ASKAPLOG_INFO_STR(logger, "Syncing the cached bandpass table to disk");
   itsSolAcc.reset();
 } 
+
+/// @brief verify that the current solution is valid
+/// @details We use a special keywork 'invalid' in the model to 
+/// signal that a particular solution failed. for whatever reason. 
+/// This flag is checked to avoid writing the solution (which would 
+/// automatically set validity flag
+/// @return true, if the current solution is valid
+bool BPCalibratorParallel::validSolution() const 
+{
+   if (itsModel) {
+       return !itsModel->has("invalid");
+   }
+   return false;
+}
 
 /// @brief extract current beam/channel pair from the iterator
 /// @details This method encapsulates interpretation of the output of itsWorkUnitIterator.cursor() for workers and
@@ -352,22 +370,45 @@ void BPCalibratorParallel::calcNE()
   calcOne(ms, indices.second, indices.first);  
 }
 
+/// @brief helper method to invalidate curremt solution
+void BPCalibratorParallel::invalidateSolution() {
+   ASKAPDEBUGASSERT(itsModel);
+   itsModel->add("invalid",1.);
+   itsModel->fix("invalid");
+}
+
+
 /// @brief Solve the normal equations (runs in workers)
 /// @details Parameters of the calibration problem are solved for here
 void BPCalibratorParallel::solveNE()
 {
   if (itsComms.isWorker()) {        
       ASKAPLOG_INFO_STR(logger, "Solving normal equations");
+      ASKAPDEBUGASSERT(itsNe);
+      if (itsNe->unknowns().size() == 0) {
+          ASKAPLOG_WARN_STR(logger, "Normal equations are empty - no valid data found, flagging the solution as bad");
+          invalidateSolution();
+          return;
+      }
       casa::Timer timer;
       timer.mark();
       scimath::Quality q;
       ASKAPDEBUGASSERT(itsSolver);
+      ASKAPDEBUGASSERT(itsModel);
       itsSolver->init();
       itsSolver->addNormalEquations(*itsNe);
       itsSolver->setAlgorithm("SVD");     
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+      
+      const unsigned int minRank = parset().getUint32("minrank",15u);
+      if (q.rank() < minRank) {
+          ASKAPLOG_WARN_STR(logger, "Solution failed - minimum rank is "<<minRank<<", normal matrix has rank = "<<q.rank());
+          invalidateSolution();
+          return;
+      }
+
       //wasim was here 
       /*
       if (itsRefGain != "") {

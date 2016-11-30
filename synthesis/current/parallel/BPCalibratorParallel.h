@@ -186,6 +186,17 @@ namespace askap
       /// way of knowing what iteration in the worker they correspond to without looking at the data.
       /// @return pair of beam (first) and channel (second) indices
       std::pair<casa::uInt, casa::uInt> currentBeamAndChannel() const; 
+
+      /// @brief helper method to invalidate curremt solution
+      void invalidateSolution(); 
+
+      /// @brief verify that the current solution is valid
+      /// @details We use a special keywork 'invalid' in the model to 
+      /// signal that a particular solution failed. for whatever reason. 
+      /// This flag is checked to avoid writing the solution (which would 
+      /// automatically set validity flag
+      /// @return true, if the current solution is valid
+      bool validSolution() const;
  
       /// Calculate normal equations for one data set, channel and beam
       /// @param[in] ms Name of data set
