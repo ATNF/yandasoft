@@ -367,6 +367,7 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        scimath::PhaseUnwrapper<double> unwrapper;
        const std::string spcfilename = "phase.z.ant"+utility::toString(ant)+".dat";
        std::ofstream os(spcfilename.c_str());
+       casa::uInt counter = 0;
        for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
@@ -376,6 +377,19 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
                                    casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
             const double sd = sin(hadec.getLat());
             const double phase = unwrapper(arg(caldata(scanIndices[cnt],ant).gain()));
+            /*
+            // the following code can be useful is unwrapper fails to do a decent job
+            // due to gaps in declination coverage and large Z correction
+            if ((ant == 8) && (sd > -0.5)) {
+                phase += 2.*casa::C::pi;
+            }
+            
+
+            // the following code is useful to exclude sources based on sin(dec)
+            if (sd > 0.2) {
+                continue;
+            }
+            */
             os<<cnt<<" "<<sd<<" "<<phase / casa::C::pi * 180.<<std::endl;
             // build normal equations
             sx += sd;
@@ -383,12 +397,14 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
             sy += phase;
             sy2 += phase*phase;
             sxy += sd*phase;            
+            ++counter;
        }
-       sx /= double(scans.size());
-       sy /= double(scans.size());
-       sx2 /= double(scans.size());
-       sy2 /= double(scans.size());
-       sxy /= double(scans.size());
+       ASKAPCHECK(counter > 0, "Too few points to do the fit for ant="<<ant);
+       sx /= double(counter);
+       sy /= double(counter);
+       sx2 /= double(counter);
+       sy2 /= double(counter);
+       sxy /= double(counter);
        const double denominator = sx2 - sx * sx;
        ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
        const double coeff = (sxy - sx * sy) / denominator;
