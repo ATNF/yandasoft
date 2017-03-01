@@ -70,18 +70,18 @@ namespace askap
   namespace synthesis
   {
     ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
-	    itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true)
+	    itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true), itsResidualNeedsUpdating(true)
     {
         setIsRestoreSolver();
     }
-    
+
     void ImageRestoreSolver::init()
     {
 	    resetNormalEquations();
     }
 
     /// @brief Solve for parameters, updating the values kept internally
-    /// The solution is constructed from the normal equations. The parameters named 
+    /// The solution is constructed from the normal equations. The parameters named
     /// image* are interpreted as images and solved for.
     /// @param[in] ip current model (to be updated)
     /// @param[in] quality Solution quality information
@@ -89,7 +89,7 @@ namespace askap
     {
         ASKAPTRACE("ImageRestoreSolver::solveNormalEquations");
 	// Solving A^T Q^-1 V = (A^T Q^-1 A) P
-	
+
 	// Find all the free parameters beginning with image
 	vector<string> names(ip.completions("image"));
 	uint nParameters=0;
@@ -114,7 +114,7 @@ namespace askap
             psfName = SynthesisParamsHelper::findPSF(ip);
             ASKAPCHECK(psfName != "", "Failed to find a PSF parameter");
     }
-	
+
 	// determine which images are faceted and, if need be, setup parameters
     // representing the result of a merge.
 	map<string,int> facetmap;
@@ -123,13 +123,13 @@ namespace askap
 	     if ((ci->second != 1) && !ip.has(ci->first)) {
 	         // this is a multi-facet image, add a fixed parameter representing the whole image
 	         ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter " << ci->first<<
-                           " representing faceted image with "<<ci->second<<" facets");                 
+                           " representing faceted image with "<<ci->second<<" facets");
 	         SynthesisParamsHelper::add(ip,ci->first,ci->second);
 	         ip.fix(ci->first);
 	     }
 	}
 	//
-		
+
 	// iterate over all free parameters (i.e. parts of the image for faceted case)
 	for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
       ImageParamsHelper iph(*ci);
@@ -137,7 +137,7 @@ namespace askap
       const std::string name = iph.taylorName();
 
 	  if (facetmap[name] == 1) {
-	      // this is not a faceting case, restore the image in situ and add residuals 
+	      // this is not a faceting case, restore the image in situ and add residuals
 	      ASKAPLOG_INFO_STR(logger, "Restoring " << *ci );
 
           // convolve with restoring beam before adding residuals, but wait until after
@@ -168,33 +168,33 @@ namespace askap
              // preconditioning to calculate restoring beam size. This is done once for
              // the set of facets.
              itsModelNeedsConvolving = true;
-	        
+
 	         // add residuals
 	         for (int xFacet = 0; xFacet<ci->second; ++xFacet) {
 	              for (int yFacet = 0; yFacet<ci->second; ++yFacet) {
 	                   ASKAPLOG_INFO_STR(logger, "Adding residuals for facet ("<<xFacet<<","
 	                        <<yFacet<<")");
 	                   // ci->first may have taylor suffix defined, load it first and then add facet indices
-	                   ImageParamsHelper iph(ci->first);	                   
+	                   ImageParamsHelper iph(ci->first);
 	                   iph.makeFacet(xFacet,yFacet);
 	                   addResiduals(ip, ci->first, iph.paramName());
-	                   
+
 	              }
 	         }
-	         
+
 	         SynthesisParamsHelper::setBeam(ip, ci->first, itsBeamHelper.value());
-	         
+
 	     }
 	}
-	
+
 	quality.setDOF(nParameters);
 	quality.setRank(0);
 	quality.setCond(0.0);
 	quality.setInfo("Restored image calculated");
-	
+
 	return true;
     };
-    
+
     /// @brief solves for and adds residuals
     /// @details Restore solver convolves the current model with the beam and adds the
     /// residual image. The latter has to be "solved for" with a proper preconditioning and
@@ -232,7 +232,7 @@ namespace askap
 	   // Axes are dof, dof for each parameter
 	   //casa::IPosition vecShape(1, out.shape().product());
 	   for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
-	   
+
 	        ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
                 "Diagonal not present " << name);
 	        casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
@@ -245,28 +245,28 @@ namespace askap
 	        ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
                 "Preconditioner fuction Slice not present for " << name);
 	        casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(name)->second);
- 
+
             if (planeIter.tag()!="") {
                 // it is not a single plane case, there is something to report
                 ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
                                        " tagged as "<<planeIter.tag());
             }
-  
+
 	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casa::max(dv));
 
             casa::Array<float> dirtyArray(planeIter.planeShape());
 	        casa::convertArray<float, double>(dirtyArray,planeIter.getPlane(dv));
-	        
+
 	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" and plane "<<
 	                 planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
-	                 	        
+
             casa::Array<float> psfArray(planeIter.planeShape());
             casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
 
 	        // send an anternative preconditioner function, if it isn't empty.
 	        casa::Array<float> pcfArray;
             if (pcf.shape() > 0) {
-	          ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
+	          ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
               pcfArray.resize(planeIter.planeShape());
 	          casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
             }
@@ -280,13 +280,13 @@ namespace askap
             } else {
                 ASKAPLOG_INFO_STR(logger, "Restored image will have primary beam corrected noise (no equalisation)");
             }
-       
+
             // Do the preconditioning
             doPreconditioning(psfArray,dirtyArray,pcfArray);
-	   
+
             // Normalize by the diagonal
             doNormalization(planeIter.getPlaneVector(diag),tol(),psfArray,dirtyArray,mask);
-	  
+
 	        // we have to do noise equalisation for final residuals after preconditioning
 	        if (itsEqualiseNoise) {
 	            const casa::IPosition vecShape(1,dirtyArray.nelements());
@@ -297,8 +297,16 @@ namespace askap
 	                 dirtyVector[i] *= maskVector[i];
 	            }
 	        }
-	  
-	        // Add the residual image        
+            if (itsResidualNeedsUpdating) {
+            // Store the current dirtyImage parameter class to be saved to disk later
+                ASKAPLOG_INFO_STR(logger, "Saving current residual image to model parameter");
+                saveArrayIntoParameter(ip,name,dirtyArray.shape(),"residual",
+                dirtyArray,planeIter.position());
+            }
+            // Store the new PSF in parameter class to be saved to disk later
+  	        saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
+  				     planeIter.position());
+	        // Add the residual image
             // First, convolve the model image to the resolution of the synthesised beam if not already done.
             casa::Vector<casa::Quantum<double> > restoringBeam;
             if (itsModelNeedsConvolving) {
@@ -354,7 +362,7 @@ namespace askap
 	        outSlice += convertedResidual;
 	   }
     }
-    
+
     /// @brief obtain an estimate of the restoring beam
     /// @details This method fits a 2D Gaussian into the central area of the PSF
     /// (a support is searched assuming 50% cutoff) if the appropriate option
@@ -365,12 +373,12 @@ namespace askap
     {
         return itsBeamHelper.value();
     }
-	
+
     Solver::ShPtr ImageRestoreSolver::clone() const
     {
 	    return Solver::ShPtr(new ImageRestoreSolver(*this));
     }
-    
+
     /// @brief static method to create solver
     /// @details Each solver should have a static factory method, which is
     /// able to create a particular type of the solver and initialise it with
@@ -384,13 +392,13 @@ namespace askap
        RestoringBeamHelper rbh;
        const vector<string> beam = parset.getStringVector("beam");
        if (beam.size() == 1) {
-           ASKAPCHECK(beam[0] == "fit", 
+           ASKAPCHECK(beam[0] == "fit",
                "beam parameter should be either equal to 'fit' or contain 3 elements defining the beam size. You have "
                <<beam[0]);
            rbh.configureFit(parset.getDouble("beam.cutoff",0.05));
        } else {
           ASKAPCHECK(beam.size() == 3, "Need three elements for beam or a single word 'fit'. You have "<<beam);
-          casa::Vector<casa::Quantum<double> > qBeam(3);          
+          casa::Vector<casa::Quantum<double> > qBeam(3);
           for (int i=0; i<3; ++i) {
                casa::Quantity::read(qBeam(i), beam[i]);
           }
@@ -400,31 +408,31 @@ namespace askap
        boost::shared_ptr<ImageRestoreSolver> result(new ImageRestoreSolver(rbh));
        const bool equalise = parset.getBool("equalise",false);
        result->equaliseNoise(equalise);
+       const bool update = parset.getBool("updateresiduals",true);
+       result->updateResiduals(update);
+
        return result;
     }
 
     /// @brief configure basic parameters of the restore solver
     /// @details This method configures basic parameters of this restore solver the same way as
     /// they are configured for normal imaging solver. We want to share the same parameters between
-    /// these two types of solvers (e.g. weight cutoff tolerance, preconditioning, etc), but the 
-    /// appropriate parameters are given in a number of places of the parset, sometimes with 
+    /// these two types of solvers (e.g. weight cutoff tolerance, preconditioning, etc), but the
+    /// appropriate parameters are given in a number of places of the parset, sometimes with
     /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
     /// does the job and encapsulates all related code.
     /// @param[in] ts template solver (to take parameters from)
-    void ImageRestoreSolver::configureSolver(const ImageSolver &ts) 
+    void ImageRestoreSolver::configureSolver(const ImageSolver &ts)
     {
       setThreshold(ts.threshold());
       setVerbose(ts.verbose());
-      setTol(ts.tol());    
-      
+      setTol(ts.tol());
+
       // behavior in the weight cutoff area
       zeroWeightCutoffMask(ts.zeroWeightCutoffMask());
       zeroWeightCutoffArea(ts.zeroWeightCutoffArea());
     }
-    
+
 
   } // namespace synthesis
 } // namespace askap
-
-
-

@@ -59,6 +59,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <utils/MultiDimArrayPlaneIter.h>
 
 #include <measurementequation/ImageSolverFactory.h>
+#include <measurementequation/ImageCleaningSolver.h>
 #include <calibaccess/CalibAccessFactory.h>
 #include <measurementequation/CalibrationApplicatorME.h>
 #include <profile/AskapProfiler.h>
@@ -95,6 +96,8 @@ namespace askap
       if (itsComms.isMaster())
       {
         itsRestore=parset.getBool("restore", false);
+
+        itsResidual=parset.getBool("residuals",true);
 
         bool reuseModel = parset.getBool("Images.reuse", false);
 
@@ -740,129 +743,140 @@ namespace askap
             image_solver->saveWeights(*itsModel);
             resultimages=itsModel->names();
         }
+
         for (vector<string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
-            if ((it->find("image") == 0) || (it->find("psf") == 0) ||
-                (it->find("weights") == 0) || (it->find("mask") == 0) ||
-                (it->find("residual")==0)) {
+            if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) || (it->find("psf") == 0))
+            {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                 if (itsExportSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
             }
-        }
-        if (itsRestore && postfix == "")
-        {
-          // add a second pass if a separate restore preconditioner is defined
-          LOFAR::ParameterSet tmpset = parset();
-          string restore_suffix;
-          uint n_passes = 1;
-          // if extra passes are required, save anything that is changed so it can be reset
-          std::map<string, boost::shared_ptr<casa::ImageInterface<float> > > saved_models;
-
-          // add a second pass if a separate restore preconditioner is defined
-          if (tmpset.isDefined("restore.preconditioner.Names")) {
-              n_passes += 1;
-
-              // save the initial values of image model free parameters
-              vector<string> names(itsModel->completions("image"));
-              map<string,int> facetmap;
-              SynthesisParamsHelper::listFacets(names, facetmap);
-              for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
-              	  const string name="image"+ci->first;
-                  if ((ci->second != 1) && !itsModel->has(name)) {
-                      // this is a multi-facet image, add a fixed parameter representing the whole image
-                      ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter "<<name<<
-                                        " representing faceted image with "<<ci->second<<" facets");                 
-                      SynthesisParamsHelper::add(*itsModel,name,ci->second);
-                      // this isn't a free parameter, it is made from free parameters (i.e. the facets)
-                      itsModel->fix(name);
-                  }
-                  saved_models[name] = SynthesisParamsHelper::tempImage(*itsModel, name);
-              }
-
-
-          }
-
-          for (uint pass=0; pass<n_passes; ++pass) {
-              if (pass == 0) {
-                  ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
-                  restore_suffix = ".restored";
-              }
-              else {
-                  ASKAPLOG_INFO_STR(logger, "Restoring again with a second preconditioner");
-                  // replace any existing preconditioner params with the restore.* set
-                  tmpset.subtractSubset("preconditioner.");
-                  tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
-                  restore_suffix = ".alt.restored";
-                  // reset image models to be free parameters with their initial values
-                  for (std::map<string, boost::shared_ptr<casa::ImageInterface<float> > >::iterator
-                      it=saved_models.begin(); it!=saved_models.end(); ++it)
-                  {
-                      SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
-                  }
-
-              vector<string> names(itsModel->completions("image"));
-              map<string,int> facetmap;
-              SynthesisParamsHelper::listFacets(names, facetmap);
-              for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
-                  if (ci->second != 1) {
-                      // this isn't a free parameter, it is merged from free parameters (i.e. the facets)
-                      itsModel->fix("image"+ci->first);
-                  }
-              }
-
-              }
-              boost::shared_ptr<ImageRestoreSolver>
-                  ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
-              ASKAPDEBUGASSERT(ir);
-              ASKAPDEBUGASSERT(itsSolver);
-              // configure restore solver
-              boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
-              ASKAPDEBUGASSERT(template_solver);
-              ImageSolverFactory::configurePreconditioners(tmpset,ir);
-              ir->configureSolver(*template_solver);
-              ir->copyNormalEquations(*template_solver);
-              Quality q;
-
-              ir->solveNormalEquations(*itsModel,q);
-              // merged image should be a fixed parameter without facet suffixes
-              resultimages=itsModel->fixedNames();
-              for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
-                   const ImageParamsHelper iph(*ci);
-                   if (!iph.isFacet() && (ci->find("image") == 0)) {
-                       ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                                   << *ci+restore_suffix );
-                       SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                   }
-              }
-          }
-
-          // remove parts of each faceted image
-          vector<string> names(itsModel->completions("image"));
-          for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
-              const string name="image"+*ci;
-              ImageParamsHelper iph(name);
-              if (iph.isFacet()) {
-                  ASKAPLOG_INFO_STR(logger, "Remove facet patch "<<name<<" from the parameters");
-                  itsModel->remove(name);
-              }
-          }
-
-        }
-        ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");
-        vector<string> resultimages2=itsModel->names();
-        for (vector<string>::const_iterator it=resultimages2.begin(); it
-            !=resultimages2.end(); it++) {
-            // ASKAPLOG_INFO_STR(logger, "Checking "<<*it);
-            if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
-                 resultimages.end(),*it) == resultimages.end())) {
-                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+            if ((it->find("residual") == 0)) {
+                if (!itsRestore && itsResidual) {
+                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                }
             }
         }
-      }
+
+
+        if (itsRestore && postfix == "")
+        {
+            // add a second pass if a separate restore preconditioner is defined
+            LOFAR::ParameterSet tmpset = parset();
+            string restore_suffix;
+            uint n_passes = 1;
+            // if extra passes are required, save anything that is changed so it can be reset
+            std::map<string, boost::shared_ptr<casa::ImageInterface<float> > > saved_models;
+
+            // add a second pass if a separate restore preconditioner is defined
+            if (tmpset.isDefined("restore.preconditioner.Names")) {
+                n_passes += 1;
+
+                // save the initial values of image model free parameters
+                vector<string> names(itsModel->completions("image"));
+                map<string,int> facetmap;
+                SynthesisParamsHelper::listFacets(names, facetmap);
+                for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
+                    const string name="image"+ci->first;
+                    if ((ci->second != 1) && !itsModel->has(name)) {
+                        // this is a multi-facet image, add a fixed parameter representing the whole image
+                        ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter "<<name<<
+                        " representing faceted image with "<<ci->second<<" facets");
+                        SynthesisParamsHelper::add(*itsModel,name,ci->second);
+                        // this isn't a free parameter, it is made from free parameters (i.e. the facets)
+                        itsModel->fix(name);
+                    }
+                    saved_models[name] = SynthesisParamsHelper::tempImage(*itsModel, name);
+                }
+
+
+            }
+
+            for (uint pass=0; pass<n_passes; ++pass) {
+                if (pass == 0) {
+                    ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
+                    restore_suffix = ".restored";
+                }
+                else {
+                    ASKAPLOG_INFO_STR(logger, "Restoring again with a second preconditioner");
+                    // replace any existing preconditioner params with the restore.* set
+                    tmpset.subtractSubset("preconditioner.");
+                    tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
+                    restore_suffix = ".alt.restored";
+                    // reset image models to be free parameters with their initial values
+                    for (std::map<string, boost::shared_ptr<casa::ImageInterface<float> > >::iterator
+                        it=saved_models.begin(); it!=saved_models.end(); ++it)
+                        {
+                            SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
+                        }
+
+                        vector<string> names(itsModel->completions("image"));
+                        map<string,int> facetmap;
+                        SynthesisParamsHelper::listFacets(names, facetmap);
+                        for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
+                            if (ci->second != 1) {
+                                // this isn't a free parameter, it is merged from free parameters (i.e. the facets)
+                                itsModel->fix("image"+ci->first);
+                            }
+                        }
+
+                    }
+                    boost::shared_ptr<ImageRestoreSolver>
+                    ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
+                    ASKAPDEBUGASSERT(ir);
+                    ASKAPDEBUGASSERT(itsSolver);
+                    // configure restore solver
+                    boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
+                    ASKAPDEBUGASSERT(template_solver);
+                    ImageSolverFactory::configurePreconditioners(tmpset,ir);
+                    ir->configureSolver(*template_solver);
+                    ir->copyNormalEquations(*template_solver);
+                    Quality q;
+
+                    ir->solveNormalEquations(*itsModel,q);
+                    // merged image should be a fixed parameter without facet suffixes
+                    resultimages=itsModel->names();
+                    for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+                        const ImageParamsHelper iph(*ci);
+                        if (!iph.isFacet() && ((ci->find("image") == 0)))  {
+                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                            << *ci+restore_suffix );
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                        }
+                        if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
+                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                            << *ci+restore_suffix );
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                        }
+                        if (!iph.isFacet() && ((ci->find("residual") == 0)))  {
+                            if (itsResidual) {
+                                ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
+                                << *ci+restore_suffix );
+                                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                            }
+                        }
+                    }
+                }
+
+                // remove parts of each faceted image
+                vector<string> names(itsModel->completions("image"));
+                for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
+                    const string name="image"+*ci;
+                    ImageParamsHelper iph(name);
+                    if (iph.isFacet()) {
+                        ASKAPLOG_INFO_STR(logger, "Remove facet patch "<<name<<" from the parameters");
+                        itsModel->remove(name);
+                    }
+                }
+
+            }
+
+
+        }
     }
-  }
+}
 }

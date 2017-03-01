@@ -61,16 +61,16 @@ namespace askap
         virtual void init();
 
         /// @brief Solve for parameters, updating the values kept internally
-        /// The solution is constructed from the normal equations. The parameters named 
+        /// The solution is constructed from the normal equations. The parameters named
         /// image* are interpreted as images and solved for.
         /// @param[in] ip current model (to be updated)
         /// @param[in] quality Solution quality information
         virtual bool solveNormalEquations(askap::scimath::Params& ip, askap::scimath::Quality& quality);
-        
+
         /// @brief Clone this object
         /// @return a shared pointer to a cloned object
         virtual askap::scimath::Solver::ShPtr clone() const;
-    
+
         /// @brief static method to create solver
         /// @details Each solver should have a static factory method, which is
         /// able to create a particular type of the solver and initialise it with
@@ -80,22 +80,28 @@ namespace askap
         /// @param[in] parset input parset file
         /// @return a shared pointer to the solver instance
         static boost::shared_ptr<ImageRestoreSolver> createSolver(const LOFAR::ParameterSet &parset);
-                   
+
         /// @brief configure basic parameters of the restore solver
         /// @details This method configures basic parameters of this restore solver the same way as
         /// they are configured for normal imaging solver. We want to share the same parameters between
-        /// these two types of solvers (e.g. weight cutoff tolerance, preconditioning, etc), but the 
-        /// appropriate parameters are given in a number of places of the parset, sometimes with 
+        /// these two types of solvers (e.g. weight cutoff tolerance, preconditioning, etc), but the
+        /// appropriate parameters are given in a number of places of the parset, sometimes with
         /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
         /// does the job and encapsulates all related code.
         /// @param[in] ts template solver (to take parameters from)
         void configureSolver(const ImageSolver &ts);
-        
+
+
+
       protected:
         /// @brief set noise equalisation flag
         /// @param[in] flag true, to switch noise equalisation on
         inline void equaliseNoise(bool flag) { itsEqualiseNoise = flag; }
-      
+
+        /// @brief set the solver to update residuals to the current model in the params
+        /// @param[in] flag true, to switch updating on
+        inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
+
         /// @brief solves for and adds residuals
         /// @details Restore solver convolves the current model with the beam and adds the
         /// residual image. The latter has to be "solved for" with a proper preconditioning and
@@ -111,7 +117,7 @@ namespace askap
         void addResiduals(askap::scimath::Params& ip,
                           const std::string &imagename,
                           const std::string facetname = "");
-        
+
         /// @brief obtain an estimate of the restoring beam
         /// @details This method fits a 2D Gaussian into the central area of the PSF
         /// (a support is searched assuming 50% cutoff) if the appropriate option
@@ -119,21 +125,23 @@ namespace askap
         /// (i.e. user override).
         /// @param[in] name name of the parameter to work with
         casa::Vector<casa::Quantum<double> > getBeam(const std::string &name) const;
-        
+
       private:
         /// @brief proxy for beam parameters
         RestoringBeamHelper itsBeamHelper;
-        
+
         /// @brief true if the mosaicing weight is to be equalised
         /// @details We optionally can multiply the residual to the weight before
         /// adding to the model convolved with the restoring beam. As per Sault et al.
         /// (1996) this gives aesthetically pleasing images. However, as not all flux is
-        /// recovered in the model, this weighting scheme potentially introduces some 
+        /// recovered in the model, this weighting scheme potentially introduces some
         /// direction-dependent flux error (but gives flat noise).
-        bool itsEqualiseNoise; 
+        bool itsEqualiseNoise;
 
-        //mutable bool itsModelNeedsConvolving; 
-        bool itsModelNeedsConvolving; 
+        //mutable bool itsModelNeedsConvolving;
+        bool itsModelNeedsConvolving;
+
+        bool itsResidualNeedsUpdating;
 
     };
 

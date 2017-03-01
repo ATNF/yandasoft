@@ -37,6 +37,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 #include <measurementequation/ImageCleaningSolver.h>
 #include <askap/AskapError.h>
 #include <utils/PaddingUtils.h>
+#include <utils/MultiDimArrayPlaneIter.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 
@@ -48,14 +49,14 @@ namespace synthesis {
 /// @brief default constructor
 ImageCleaningSolver::ImageCleaningSolver() :
    itsFractionalThreshold(0.), itsMaskingThreshold(-1.), itsPaddingFactor(1.) {}
-   
+
 /// @brief access to a fractional threshold
 /// @return current fractional threshold
 double ImageCleaningSolver::fractionalThreshold() const
 {
   return itsFractionalThreshold;
 }
-   
+
 /// @brief set a new fractional threshold
 /// @param[in] fThreshold new fractional threshold
 /// @note Assign 0. to switch this option off.
@@ -70,7 +71,7 @@ double ImageCleaningSolver::maskingThreshold() const
 {
   return itsMaskingThreshold;
 }
-   
+
 /// @brief set a new masking threshold
 /// @param[in] mThreshold new masking threshold
 /// @note Assign -1. or any negative number to revert to a default behavior of the
@@ -94,15 +95,15 @@ void ImageCleaningSolver::setPaddingFactor(float padding)
 
 /// @brief helper method to pad an image
 /// @details This method encapsulates all padding logic. In addition double to float conversion happens
-/// here. 
-/// @param[in] image input image (to be padded, with double precision at the moment) 
+/// here.
+/// @param[in] image input image (to be padded, with double precision at the moment)
 /// @return padded image converted to floats
 casa::Array<float> ImageCleaningSolver::padImage(const casa::Array<double> &image) const
 {
   casa::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.);
   casa::Array<float> subImage = scimath::PaddingUtils::extract(result,paddingFactor());
   casa::convertArray<float, double>(subImage, image);
-  return result;  
+  return result;
 }
 
 /// @brief helper method to clip the edges of padded image
@@ -134,11 +135,11 @@ casa::Vector<double> ImageCleaningSolver::padDiagonal(const casa::Array<double> 
   return casa::Vector<double>(result.reform(casa::IPosition(1,result.nelements())));
 }
 
-   
+
 /// @brief helper method to pad an image
 /// @details This method encapsulates all padding logic. In addition double to float conversion happens
-/// here. 
-/// @param[in] image input padded image (with single precision at the moment) 
+/// here.
+/// @param[in] image input padded image (with single precision at the moment)
 /// @return image of original (unpadded) shape converted to double precision
 casa::Array<double> ImageCleaningSolver::unpadImage(const casa::Array<float> &image) const
 {
@@ -156,11 +157,9 @@ void ImageCleaningSolver::configure(const LOFAR::ParameterSet &parset)
 {
   ImageSolver::configure(parset);
   setPaddingFactor(parset.getFloat("padding",1.));
-  ASKAPLOG_INFO_STR(logger,"Solver padding of "<<paddingFactor()<<" will be used");       
+  ASKAPLOG_INFO_STR(logger,"Solver padding of "<<paddingFactor()<<" will be used");
 }
-
 
 } // namespace synthesis
 
 } // namespace askap
-

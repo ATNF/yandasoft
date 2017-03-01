@@ -210,6 +210,9 @@ namespace askap
       /// Do we want a restored image?
       bool itsRestore;
 
+      /// Do we want a residual image
+      bool itsResidual;
+      
       /// @brief Do we want to keep scratch buffers in memory instead of writing them in a subtable?
       /// @details Turining this flag to true allows to work with a read-only dataset
       bool itsUseMemoryBuffers;
