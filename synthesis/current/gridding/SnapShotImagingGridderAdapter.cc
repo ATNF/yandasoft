@@ -83,7 +83,8 @@ SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const boost::shared
      itsAccessorAdapter(tolerance), itsDoPSF(false), itsDoPCF(false), itsCoeffA(0.), itsCoeffB(0.),
      itsFirstAccessor(true), itsBuffersFinalised(false), itsNumOfImageRegrids(0), itsTimeImageRegrid(0.),
      itsNumOfInitialisations(0), itsLastFitTimeStamp(0.), itsShortestIntervalBetweenFits(3e7),
-     itsLongestIntervalBetweenFits(-1.), itsModelIsEmpty(false), itsClippingFactor(0.), itsNoPSFReprojection(true),
+     itsLongestIntervalBetweenFits(-1.), itsModelIsEmpty(false), itsClippingFactor(0.),
+     itsWeightsClippingFactor(0.), itsNoPSFReprojection(true),
      itsDecimationFactor(decimate), itsInterpolationMethod(method), itsPredictWPlane(doPredictWPlane)
 {
   ASKAPCHECK(gridder, "SnapShotImagingGridderAdapter should only be initialised with a valid gridder");
@@ -103,7 +104,8 @@ SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const SnapShotImagi
     itsNumOfInitialisations(other.itsNumOfInitialisations), itsLastFitTimeStamp(other.itsLastFitTimeStamp),
     itsShortestIntervalBetweenFits(other.itsShortestIntervalBetweenFits), 
     itsLongestIntervalBetweenFits(other.itsLongestIntervalBetweenFits), 
-    itsTempInImg(), itsTempOutImg(), itsModelIsEmpty(other.itsModelIsEmpty), itsClippingFactor(other.itsClippingFactor),
+    itsTempInImg(), itsTempOutImg(), itsModelIsEmpty(other.itsModelIsEmpty),
+    itsClippingFactor(other.itsClippingFactor), itsWeightsClippingFactor(other.itsWeightsClippingFactor),
     itsNoPSFReprojection(other.itsNoPSFReprojection), itsDecimationFactor(other.itsDecimationFactor),
     itsInterpolationMethod(other.itsInterpolationMethod), itsPredictWPlane(other.itsPredictWPlane)
 {
@@ -129,6 +131,8 @@ SnapShotImagingGridderAdapter::~SnapShotImagingGridderAdapter()
       ASKAPLOG_INFO_STR(logger, "   or "<<double(itsNumOfImageRegrids)/double(itsNumOfInitialisations)<<
                         " times per grid/degrid pass");      
       ASKAPLOG_INFO_STR(logger, "   Image clipping factor (clipping during regrids) is "<< itsClippingFactor);
+      ASKAPLOG_INFO_STR(logger, "   Weights clipping factor (in addition to any image clipping) is "<<
+                        itsWeightsClippingFactor);
       if (itsNumOfImageRegrids > 0) {
           ASKAPLOG_INFO_STR(logger, "   Average time spent per image plane regridding is "<<
                       itsTimeImageRegrid/double(itsNumOfImageRegrids)<<" (s)");
@@ -438,7 +442,7 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   if (!isPCFGridder()) {
     ASKAPLOG_DEBUG_STR(logger, "Finalising current weights");
     itsGridder->finaliseWeights(scratch);
-    imageRegrid(scratch, itsWeightsBuffer, true);  
+    imageRegrid(scratch, itsWeightsBuffer, true, true);  
   }
   itsBuffersFinalised = true;
 }
@@ -487,7 +491,7 @@ casa::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirectionCo
 /// buffers. An exception is raised if input and output arrays have different 
 /// shapes
 void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input, 
-           casa::Array<double> &output, bool toTarget) const
+           casa::Array<double> &output, bool toTarget, bool isWeights) const
 {
    ASKAPTRACE("SnapShotImagingGridderAdapter::imageRegrid");    
  
@@ -576,7 +580,11 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
           tempOutputLattice.copyData(itsTempOutImg);
         }
         // optional clipping
-        imageClip(outRef);
+        if (isWeights and (itsWeightsClippingFactor != 0.)) {
+          imageClip(outRef, itsWeightsClippingFactor);
+        } else {
+          imageClip(outRef, itsClippingFactor);
+        }
    }
    itsTimeImageRegrid += timer.real();
 }
@@ -679,16 +687,28 @@ void SnapShotImagingGridderAdapter::setClippingFactor(const float factor)
   itsClippingFactor = factor;
 }
 
+/// @brief set clipping factor
+/// @details The image could be optionally clipped during regridding (to avoid edge effects). 
+/// This parameter represents the fraction of the image size (on each directional axis) which is
+/// zeroed (equally from both sides). It should be a non-negative number less than 1. Set to zero to avoid
+/// any clipping (this is the default behavior)
+/// @param[in] factor clipping factor
+void SnapShotImagingGridderAdapter::setWeightsClippingFactor(const float factor) 
+{
+  ASKAPCHECK((factor >= 0.) && (factor < 1), "Clipping factor should be a non-negative number less than 1, you have "<<factor);
+  itsWeightsClippingFactor = factor;
+}
+
 /// @brief clip image 
 /// @details This method clips the image by zeroing the edges according to the
 /// assigned clipping factor.
 /// @param[in] img array to modify
-void SnapShotImagingGridderAdapter::imageClip(casa::Array<double> &img) const
+void SnapShotImagingGridderAdapter::imageClip(casa::Array<double> &img, const float factor) const
 {
   ASKAPDEBUGTRACE("SnapShotImagingGridderAdapter::imageClip");
 
-  ASKAPDEBUGASSERT(itsClippingFactor < 1.);
-  const float unpaddingFactor = 1. - itsClippingFactor;
+  ASKAPDEBUGASSERT(factor < 1.);
+  const float unpaddingFactor = 1. - factor;
   ASKAPDEBUGASSERT(unpaddingFactor <= 1.);
   const casa::IPosition shapeToPreserve = scimath::PaddingUtils::paddedShape(img.shape(), unpaddingFactor);
   if (shapeToPreserve != img.shape()) {

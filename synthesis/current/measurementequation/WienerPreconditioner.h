@@ -108,6 +108,15 @@ namespace askap
       /// @param[in] other object to copy from
       /// @return reference to itself
       WienerPreconditioner& operator=(const WienerPreconditioner &other); 
+
+      /// @brief calculate a threshold to use to clean up the PCF
+      /// @details The preconditioner function can have a rumble of low-level 
+      /// Fourier components due to various issues (sharp edges in the image,
+      /// tapering, de-warping). These need to be dealt with before forming the
+      /// Wiener filter. One approach to this is thresholding out small values.
+      /// @param[in] input array from which to determine threshold
+      /// @return threshold value
+      float pcfThreshold(casa::ArrayLattice<casa::Complex>& pcf) const;
       
       /// @brief Parameter of the filter
       /// @details Depending on the mode, it can either be the noise power value directly or the 

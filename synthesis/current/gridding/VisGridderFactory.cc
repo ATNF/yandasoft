@@ -213,6 +213,9 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         const double clippingFactor = parset.getDouble("gridder.snapshotimaging.clipping", 0.);
         ASKAPLOG_INFO_STR(logger, "Clipping factor is "<<clippingFactor);
         adapter->setClippingFactor(float(clippingFactor));
+        const double weightsClippingFactor = parset.getDouble("gridder.snapshotimaging.weightsclipping", 0.);
+        ASKAPLOG_INFO_STR(logger, "extra weights clipping factor is "<<weightsClippingFactor);
+        adapter->setWeightsClippingFactor(float(weightsClippingFactor));
         const bool doPSFReprojection = parset.getBool("gridder.snapshotimaging.reprojectpsf", false);
         adapter->setPSFReprojection(doPSFReprojection);
         // possible additional configuration comes here

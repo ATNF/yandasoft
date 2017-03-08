@@ -155,6 +155,14 @@ public:
    /// @param[in] factor clipping factor
    void setClippingFactor(const float factor);
 
+   /// @brief set weights clipping factor
+   /// @details The weights image could be optionally clipped during regridding (to avoid edge effects). 
+   /// This parameter represents the fraction of the image size (on each directional axis) which is
+   /// zeroed (equally from both sides). It should be a non-negative number less than 1. Set to zero to avoid
+   /// any clipping (this is the default behavior)
+   /// @param[in] factor clipping factor
+   void setWeightsClippingFactor(const float factor);
+
    /// @brief control whether to do image reprojection for PSF
    /// @details By default we bypass image reprojection for the PSF. It can be changed with this configuration method.
    /// @param[in] doIt if true, image reprojection will be done for PSF the same way dirty image and weight are processed,
@@ -215,7 +223,7 @@ protected:
    /// buffers. An exception is raised if input and output arrays have different 
    /// shapes
    void imageRegrid(const casa::Array<double> &input, casa::Array<double> &output,
-                    bool toTarget) const;
+                    bool toTarget, bool isWeights = false) const;
    
    void pcfRegrid(casa::ImageRegrid<double>& regridder) const;
    
@@ -223,7 +231,7 @@ protected:
    /// @details This method clips the image by zeroing the edges according to the
    /// assigned clipping factor.
    /// @param[in] img array to modify
-   void imageClip(casa::Array<double> &img) const;
+   void imageClip(casa::Array<double> &img, const float factor) const;
    
    /// @brief obtain the tangent point
    /// @details This method extracts the tangent point (reference position) from the
@@ -358,6 +366,12 @@ private:
    /// This parameter represents the fraction of the image size (on each directional axis) which is
    /// zeroed (equally from both sides). It should be a non-negative number less than 1.
    float itsClippingFactor;
+
+   /// @brief clipping factor for the weights image
+   /// @details The weights image could be optionally clipped during regridding (to avoid edge effects). 
+   /// This parameter represents the fraction of the image size (on each directional axis) which is
+   /// zeroed (equally from both sides). It should be a non-negative number less than 1.
+   float itsWeightsClippingFactor;
    
    /// @brief if true, skip image reprojection for PSF
    /// @details By default we bypass image reprojection for the PSF. Although it is an approximation, the

@@ -159,6 +159,8 @@ namespace askap
       }
 
       float maxPSFBefore = casa::max(psf);
+      ASKAPCHECK(maxPSFBefore > 0.0, "Peak of PSF before Wiener filtering, " <<
+          maxPSFBefore << ", is less than or equal to zero");
       ASKAPLOG_INFO_STR(logger, "Peak of PSF before Wiener filtering = " << maxPSFBefore);
 
       if (itsDoNormalise) {
@@ -184,63 +186,15 @@ namespace askap
         // The filter is rescaling Fourier components of dirty and psf based on
         // the value of non-zero Fourier components of pcf. So set small
         // erroneous components to zero.
-        bool useAutoThreshold = true;
-        float xfrMax = max(abs(real(scratch.asArray())));
-        // The default threshold. Will be overwritten if useAutoThreshold==true.
-        float scratchThreshold = 1e-5 * xfrMax;
-    
-        // Reset the threshold based on data in the zero-padding region of the uv
-        // plane. Should test for the presence of zero-padding...
-        if (useAutoThreshold) {
-
-          // set a test value that we expect the noise to be below
-          float thresholdTestVal = 1e-2 * xfrMax;
-   
-          // Take slices across the zero-padding-region of the image
-          IPosition sliceStart(scratch.shape().nelements());
-          IPosition sliceShape(scratch.shape().nelements());
-          for (uInt k=0; k<sliceStart.nelements(); ++k) {
-            sliceStart(k) = 0;
-            sliceShape(k) = 1;
-          }
-          // horizontal slice:
-          sliceStart(0) = scratch.shape()[0] / 4;
-          sliceShape(0) = scratch.shape()[0] / 2;
-          sliceStart(1) = 0;
-          sliceShape(1) = scratch.shape()[1] / 8;
-          float thresh1 = max(abs(real(scratch.getSlice(sliceStart,sliceShape))));
-          // vertical slice:
-          sliceStart(0) = 0;
-          sliceShape(0) = scratch.shape()[0] / 8;
-          sliceStart(1) = scratch.shape()[1] / 4;
-          sliceShape(1) = scratch.shape()[1] / 2;
-          float thresh2 = max(abs(real(scratch.getSlice(sliceStart,sliceShape))));
-    
-          float autoThreshold = 3.0 * max(thresh1,thresh2);
-
-          // test that the threshold is at a low level. If this fails, then
-          // it is likely that visibilities have been gridded to the edge of
-          // the uv plane. In this case, just set to something sensible.
-          // It would be better to test the maximum baseline length either here
-          // or earlier (and set a flag).
-          if (autoThreshold > thresholdTestVal) {
-            ASKAPLOG_INFO_STR(logger, "Auto-threshold seems too high. Using default.");
-          } else {
-            scratchThreshold = autoThreshold;
-          }
- 
-        }
-
-        ASKAPLOG_INFO_STR(logger,
-            "Thresholding the uv sampling function at " << scratchThreshold
-            << " (" << 100.0*scratchThreshold/xfrMax << "% of max)");
+        float scratchThreshold = pcfThreshold(scratch);
     
         if (scratchThreshold > 0.0) {
-          for (int x=0; x<scratch.shape()[0]; ++x) {
-            for (int y=0; y<scratch.shape()[1]; ++y) {
+          // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
+          for (int y=0; y<scratch.shape()[1]; ++y) {
+            pos(1) = y;
+            for (int x=0; x<scratch.shape()[0]; ++x) {
               pos(0) = x;
-              pos(1) = y;
-              if (abs(real(scratch.getAt(pos))) < scratchThreshold) {
+              if (real(scratch.getAt(pos)) < scratchThreshold) {
                 scratch.putAt(0.0, pos);
               }
             }
@@ -258,16 +212,17 @@ namespace askap
           // get weighted sum of kernel size from imaginary part of the data
           casa::ArrayLattice<casa::Float> kernelWidthArray(shape);
           kernelWidthArray.set(0.0);
-          for (int x=0; x<scratch.shape()[0]; ++x) {
-            for (int y=0; y<scratch.shape()[1]; ++y) {
+          // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
+          for (int y=0; y<scratch.shape()[1]; ++y) {
+            pos(1) = y;
+            for (int x=0; x<scratch.shape()[0]; ++x) {
               pos(0) = x;
-              pos(1) = y;
               if (abs(real(scratch.getAt(pos))) > scratchThreshold) {
                 kernelWidthArray.putAt(abs(imag(scratch.getAt(pos)))/abs(real(scratch.getAt(pos))), pos);
               }
             }
           }
-       
+ 
           // for debugging - to export kernel widths
           //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthArray.asArray());
           //throw 1;
@@ -280,7 +235,8 @@ namespace askap
           //   where "near by" can be different to the kernel width.
        
           const int maxKernelWidth = ceil(max(kernelWidthArray.asArray()));
-          ASKAPDEBUGASSERT(maxKernelWidth>0);
+          ASKAPCHECK(maxKernelWidth > 0, "Maximum kernel width in the Wiener filter, " <<
+              maxPSFBefore << ", is less than or equal to zero");
           const int boxWidth = maxKernelWidth;
           ASKAPDEBUGASSERT(boxWidth>0);
        
@@ -305,8 +261,8 @@ namespace askap
           // note that it is going from the image domain to the uv domain.
           itsPcf = 0.0;
        
-          for (int x=extra*boxWidth/2; x<scratch.shape()[0]-extra*boxWidth/2; ++x) {
-            for (int y=extra*boxWidth/2; y<scratch.shape()[1]-extra*boxWidth/2; ++y) {
+          for (int y=extra*boxWidth/2; y<scratch.shape()[1]-extra*boxWidth/2; ++y) {
+            for (int x=extra*boxWidth/2; x<scratch.shape()[0]-extra*boxWidth/2; ++x) {
        
               boxStart(0) = x - boxWidth/2;
               boxStart(1) = y - boxWidth/2;
@@ -338,12 +294,12 @@ namespace askap
        
                 // check max(localBox) > 0 before continuing?
                 // there are efficient ways of doing a running mean, but with a varying box size?
-                for (int xb=0; xb<boxShape(0); ++xb) {
-                  pos(0) = xb;
-                  const int dx = xb - x0;
-                  for (int yb=0; yb<boxShape(1); ++yb) {
-                    pos(1) = yb;
-                    const int dy = yb - y0;
+                for (int yb=0; yb<boxShape(1); ++yb) {
+                  pos(1) = yb;
+                  const int dy = yb - y0;
+                  for (int xb=0; xb<boxShape(0); ++xb) {
+                    pos(0) = xb;
+                    const int dx = xb - x0;
                     if (localBox(pos) > scratchThreshold) {
                       const float rsq = dx*dx + dy*dy;
                       if (rsq<=regionRadiusSq) {
@@ -371,9 +327,9 @@ namespace askap
           } // x
       
           // Calc ave SNR weight-sum *over visibilities* (not pixels).
-          // * do this before the taper?
-          // * using the pcf or the psf? The psf may be normalised, so pcf.
-          const casa::Array<float> wgts(real(scratch.asArray()));
+          // const casa::Array<float> wgts(real(scratch.asArray()));
+          casa::Array<double> wgts(scratch.shape());
+          casa::convertArray<double,float>(wgts, real(scratch.asArray()));
           // The following approx assumes that vis have equal SNR weights.
           // * see D. Briggs thesis
           itsAveWgtSum = sum(wgts*wgts) / sum(wgts);
@@ -389,29 +345,62 @@ namespace askap
 
       if (!useCachedFilter) {
 
-        // Apply Gaussian taper to the preconditioner function (in the image domain)
-        // this needs to happen after the weights are set up
+        double aveWgtSum = itsAveWgtSum;
+
         if (itsTaperCache) {
+          // Apply Gaussian taper to the preconditioner function (in the image domain)
+          // The resulting uv convolution has various effects:
+          // 1. it averages over neighbouring pixels, and as such has similarities with super-uniform weighting,
+          // 2. it smears the PCF sampling fn out into unsampled regions, ending will small values,
+          // 3. it can result in extra low-level rumble across the uv plane.
+          // Effect #1 is useful, the others are not, particularly when robustness is set towards uniform
+          // weighting. The latter two effects can be removed by reapplying the original thresholding.
+          // So, save the original thresholding
+          casa::Array<casa::Bool> scratch_mask(scratch.shape(), casa::True);
+          for (int y=0; y<scratch.shape()[1]; ++y) {
+            pos(1) = y;
+            for (int x=0; x<scratch.shape()[0]; ++x) {
+              pos(0) = x;
+              if (real(scratch.getAt(pos)) == 0.0) {
+                scratch_mask(pos) = casa::False;
+              }
+            }
+          }
           ASKAPLOG_INFO_STR(logger, "Applying Gaussian taper to the preconditioner function in the image domain");
           casa::LatticeFFT::cfft2d(scratch, casa::False);
           casa::Array<casa::Complex> taperArray(itsTaperCache->taper(shape));
           casa::ArrayLattice<casa::Complex> taperLattice(taperArray);
           scratch.copyData(casa::LatticeExpr<casa::Complex>(scratch * taperLattice));
           casa::LatticeFFT::cfft2d(scratch, casa::True);
+          // Redo thresholding
+          for (int y=0; y<scratch.shape()[1]; ++y) {
+            pos(1) = y;
+            for (int x=0; x<scratch.shape()[0]; ++x) {
+              pos(0) = x;
+              if (!scratch_mask(pos)) {
+                scratch.putAt(0.0, pos);
+              }
+            }
+          }
+          // Recalculate ave SNR weight-sum
+          // const casa::Array<float> wgts(real(scratch.asArray()));
+          casa::Array<double> wgts(scratch.shape());
+          casa::convertArray<double,float>(wgts, real(scratch.asArray()));
+          aveWgtSum = sum(wgts*wgts) / sum(wgts);
         }
 
         // Calculate the Wiener filter
         if (newFilter) {
           const float noisePower = itsUseRobustness ?
-              (1.0/itsAveWgtSum)*25.0*std::pow(10., -2.0*itsParameter) : itsParameter;
+              (1.0/aveWgtSum)*25.0*std::pow(10., -2.0*itsParameter) : itsParameter;
           ASKAPLOG_INFO_STR(logger, "Effective noise power of the Wiener filter = " << noisePower);
-          // the filter should turn itself off as wgt->0, however we don't trust those
+          // The filter should turn itself off as wgt->0, however we don't trust those
           // regions and will explicitly set them to zero.
           itsWienerfilter.set(0.0);
-          for (int x=0; x<scratch.shape()[0]; ++x) {
-            for (int y=0; y<scratch.shape()[1]; ++y) {
+          for (int y=0; y<scratch.shape()[1]; ++y) {
+            pos(1) = y;
+            for (int x=0; x<scratch.shape()[0]; ++x) {
               pos(0) = x;
-              pos(1) = y;
               if (real(scratch.getAt(pos)) != 0) {
                 itsWienerfilter.putAt(1.0 / (noisePower*real(scratch.getAt(pos)) + 1.0), pos);
               }
@@ -454,6 +443,64 @@ namespace askap
       dirty *= maxPSFBefore/maxPSFAfter;
 
       return true;
+
+    }
+
+    /// @brief calculate a threshold to use to clean up the PCF
+    /// @details The preconditioner function can have a rumble of low-level 
+    /// Fourier components due to various issues (sharp edges in the image,
+    /// tapering, de-warping). These need to be dealt with before forming the
+    /// Wiener filter. One approach to this is thresholding out small values.
+    /// @param[in] input array from which to determine threshold
+    /// @return threshold value
+    float WienerPreconditioner::pcfThreshold(casa::ArrayLattice<casa::Complex>& pcf) const
+    {
+
+      float xfrMax = max(abs(real(pcf.asArray())));
+      // The default threshold. Will be overwritten if useAutoThreshold==true.
+      float scratchThreshold = 1e-5 * xfrMax;
+   
+      // set a test value that we expect the noise to be below
+      float thresholdTestVal = 1e-2 * xfrMax;
+   
+      // Take slices across the zero-padding-region of the image
+      IPosition sliceStart(pcf.shape().nelements());
+      IPosition sliceShape(pcf.shape().nelements());
+      for (uInt k=0; k<sliceStart.nelements(); ++k) {
+        sliceStart(k) = 0;
+        sliceShape(k) = 1;
+      }
+      // horizontal slice:
+      sliceStart(0) = pcf.shape()[0] / 4;
+      sliceShape(0) = pcf.shape()[0] / 2;
+      sliceStart(1) = 0;
+      sliceShape(1) = pcf.shape()[1] / 8;
+      float thresh1 = max(abs(real(pcf.getSlice(sliceStart,sliceShape))));
+      // vertical slice:
+      sliceStart(0) = 0;
+      sliceShape(0) = pcf.shape()[0] / 8;
+      sliceStart(1) = pcf.shape()[1] / 4;
+      sliceShape(1) = pcf.shape()[1] / 2;
+      float thresh2 = max(abs(real(pcf.getSlice(sliceStart,sliceShape))));
+    
+      float autoThreshold = 3.0 * max(thresh1,thresh2);
+ 
+      // test that the threshold is at a low level. If this fails, then
+      // it is likely that visibilities have been gridded to the edge of
+      // the uv plane. In this case, just set to something sensible.
+      // It would be better to test the maximum baseline length either here
+      // or earlier (and set a flag).
+      if (autoThreshold > thresholdTestVal) {
+        ASKAPLOG_INFO_STR(logger, "Auto-threshold seems too high. Using default.");
+      } else {
+        scratchThreshold = autoThreshold;
+      }
+
+      ASKAPLOG_INFO_STR(logger,
+          "Thresholding the uv sampling function at " << scratchThreshold
+          << " (" << 100.0*scratchThreshold/xfrMax << "% of max)");
+
+      return scratchThreshold;
 
     }
 
