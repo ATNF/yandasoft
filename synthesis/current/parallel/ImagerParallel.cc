@@ -761,10 +761,8 @@ namespace askap
                 }
             }
             if (it->find("psf") == 0) {
-                if (!itsRestore) {
-                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
-                }
+                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
             }
         }
 
