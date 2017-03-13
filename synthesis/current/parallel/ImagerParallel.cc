@@ -746,7 +746,7 @@ namespace askap
 
         for (vector<string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
-            if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) || (it->find("psf") == 0))
+            if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
@@ -756,6 +756,12 @@ namespace askap
             }
             if ((it->find("residual") == 0)) {
                 if (!itsRestore && itsResidual) {
+                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                }
+            }
+            if (it->find("psf") == 0) {
+                if (!itsRestore) {
                     ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                     SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                 }
@@ -799,84 +805,84 @@ namespace askap
             for (uint pass=0; pass<n_passes; ++pass) {
                 if (pass == 0) {
                     ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
-                    restore_suffix = ".restored";
+                    restore_suffix = "";
                 }
                 else {
                     ASKAPLOG_INFO_STR(logger, "Restoring again with a second preconditioner");
                     // replace any existing preconditioner params with the restore.* set
                     tmpset.subtractSubset("preconditioner.");
                     tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
-                    restore_suffix = ".alt.restored";
+                    restore_suffix = ".alt";
                     // reset image models to be free parameters with their initial values
                     for (std::map<string, boost::shared_ptr<casa::ImageInterface<float> > >::iterator
                         it=saved_models.begin(); it!=saved_models.end(); ++it)
-                        {
-                            SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
-                        }
-
-                        vector<string> names(itsModel->completions("image"));
-                        map<string,int> facetmap;
-                        SynthesisParamsHelper::listFacets(names, facetmap);
-                        for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
-                            if (ci->second != 1) {
-                                // this isn't a free parameter, it is merged from free parameters (i.e. the facets)
-                                itsModel->fix("image"+ci->first);
-                            }
-                        }
-
+                    {
+                        SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
                     }
-                    boost::shared_ptr<ImageRestoreSolver>
+
+                    vector<string> names(itsModel->completions("image"));
+                    map<string,int> facetmap;
+                    SynthesisParamsHelper::listFacets(names, facetmap);
+                    for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
+                       if (ci->second != 1) {
+                           // this isn't a free parameter, it is merged from free parameters (i.e. the facets)
+                           itsModel->fix("image"+ci->first);
+                       }
+                    }
+
+                }
+                boost::shared_ptr<ImageRestoreSolver>
                     ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
-                    ASKAPDEBUGASSERT(ir);
-                    ASKAPDEBUGASSERT(itsSolver);
+                ASKAPDEBUGASSERT(ir);
+                ASKAPDEBUGASSERT(itsSolver);
                     // configure restore solver
-                    boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
-                    ASKAPDEBUGASSERT(template_solver);
-                    ImageSolverFactory::configurePreconditioners(tmpset,ir);
-                    ir->configureSolver(*template_solver);
-                    ir->copyNormalEquations(*template_solver);
-                    Quality q;
+                boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
+                ASKAPDEBUGASSERT(template_solver);
+                ImageSolverFactory::configurePreconditioners(tmpset,ir);
+                ir->configureSolver(*template_solver);
+                ir->copyNormalEquations(*template_solver);
+                Quality q;
 
-                    ir->solveNormalEquations(*itsModel,q);
-                    // merged image should be a fixed parameter without facet suffixes
-                    resultimages=itsModel->names();
-                    for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
-                        const ImageParamsHelper iph(*ci);
-                        if (!iph.isFacet() && ((ci->find("image") == 0)))  {
-                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                            << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                        }
-                        if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
-                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                            << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                        }
-                        if (!iph.isFacet() && ((ci->find("residual") == 0)))  {
-                            if (itsResidual) {
-                                ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
+                ir->solveNormalEquations(*itsModel,q);
+                // merged image should be a fixed parameter without facet suffixes
+                resultimages=itsModel->names();
+                for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+                    const ImageParamsHelper iph(*ci);
+                    if (!iph.isFacet() && ((ci->find("image") == 0)))  {
+                        ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                << *ci+restore_suffix+".restored" );
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
+                    }
+                    if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
+                        ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
                                 << *ci+restore_suffix );
-                                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                            }
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                    }
+                    if (!iph.isFacet() && ((ci->find("residual") == 0)))  {
+                        if (itsResidual) {
+                            ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
+                                    << *ci+restore_suffix );
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
                         }
                     }
                 }
-
-                // remove parts of each faceted image
-                vector<string> names(itsModel->completions("image"));
-                for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
-                    const string name="image"+*ci;
-                    ImageParamsHelper iph(name);
-                    if (iph.isFacet()) {
-                        ASKAPLOG_INFO_STR(logger, "Remove facet patch "<<name<<" from the parameters");
-                        itsModel->remove(name);
-                    }
-                }
-
             }
 
+            // remove parts of each faceted image
+            vector<string> names(itsModel->completions("image"));
+            for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
+                const string name="image"+*ci;
+                ImageParamsHelper iph(name);
+                if (iph.isFacet()) {
+                    ASKAPLOG_INFO_STR(logger, "Remove facet patch "<<name<<" from the parameters");
+                    itsModel->remove(name);
+                }
+            }
 
         }
+
+
+      }
     }
-}
+  }
 }
