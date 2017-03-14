@@ -746,6 +746,7 @@ namespace askap
 
         for (vector<string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
+            const ImageParamsHelper iph(*it);
             if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
@@ -755,10 +756,19 @@ namespace askap
                 }
             }
             if ((it->find("residual") == 0)) {
-                if (!itsRestore && itsResidual) {
-                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                if (!iph.isFacet()) {
+                    if (!itsRestore && itsResidual) {
+                        ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                    }
                 }
+                else {
+                    if (itsResidual) {
+                        ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                    }
+                }
+
             }
             if (it->find("psf") == 0) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
