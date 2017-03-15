@@ -853,8 +853,8 @@ namespace askap
 
                 ir->solveNormalEquations(*itsModel,q);
                 // merged image should be a fixed parameter without facet suffixes
-                resultimages=itsModel->names();
-                for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+                vector<string> resultimages2=itsModel->names();
+                for (vector<string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
                     const ImageParamsHelper iph(*ci);
                     if (!iph.isFacet() && ((ci->find("image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
@@ -886,10 +886,24 @@ namespace askap
                     itsModel->remove(name);
                 }
             }
+            ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");
+            vector<string> resultimages2=itsModel->names();
+            for (vector<string>::const_iterator it=resultimages2.begin(); it !=resultimages2.end(); it++) {
+                ASKAPLOG_INFO_STR(logger, "Checking "<<*it);
+                if ((it->find("psf") == 0)) {
+                    ASKAPLOG_INFO_STR(logger, "Found " <<*it);
 
+                    if (std::find(resultimages.begin(),resultimages.end(),*it) == resultimages.end()) {
+
+                        ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                    }
+                    else {
+                        ASKAPLOG_INFO_STR(logger, "Not Saving as " << *it << " is in the original params list");
+                    }
+                }
+            }
         }
-
-
       }
     }
   }
