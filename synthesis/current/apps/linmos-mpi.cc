@@ -323,10 +323,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         uint psfref = 0;
         if (parset.isDefined("psfref")) psfref = parset.getUint("psfref");
 
-        ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
+        ASKAPLOG_INFO_STR(logger, "Getting brightness info for the output image from input number " << psfref);
         // get pixel units from the selected reference image
 
         string units = iacc.getUnits(inImgNames[psfref]);
+        ASKAPLOG_INFO_STR(logger, "Got units as " << units);
+        
+        ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf;
         Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
