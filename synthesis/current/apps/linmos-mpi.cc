@@ -14,6 +14,7 @@
 #include <casacore/images/Images/ImageInterface.h>
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/SubImage.h>
+#include <casacore/images/Images/ImageProxy.h>
 
 ///3rd party
 #include <Common/ParameterSet.h>
@@ -85,17 +86,23 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
 
     // set the output coordinate system and shape, based on the overlap of input images
+
         vector<IPosition> inShapeVec;
         vector<CoordinateSystem> inCoordSysVec;
         int myAllocationSize = 0;
         int myAllocationStart = 0;
 
         for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
-            casa::PagedImage<casa::Float> img(*it);
+
+
+
+            casa::Array<casa::Float> img = iacc.read(*it);
             ASKAPCHECK(img.ok(),"Error loading "<< *it);
             ASKAPCHECK(img.shape().nelements()>=3,"Work with at least 3D cubes!");
             const casa::IPosition shape = img.shape();
-            ASKAPLOG_INFO_STR(logger," - Shape " << shape);
+            ASKAPLOG_INFO_STR(logger," - ImageAccess Shape " << shape);
+
+
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
             if (comms.rank() >= trc[3]) {
@@ -116,37 +123,36 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
                 // unless last rank
             if (comms.rank() == comms.nProcs()-1) {
-                myAllocationSize = trc[3] - myAllocationStart; // we are using End is length
+                myAllocationSize = trc[3] - myAllocationStart; // we are using End is Last
             }
 
 
             blc[3] = myAllocationStart;
-            trc[3] = myAllocationSize;
+            trc[0] = trc[0]-1;
+            trc[1] = trc[1]-1;
+            trc[2] = trc[2]-1;
+            trc[3] = myAllocationStart + myAllocationSize-1;
+
 
             ASKAPLOG_INFO_STR(logger,"Allocation starts at " << myAllocationStart << " and is " << myAllocationSize << " in size");
 
             ASKAPCHECK(blc[3]>=0 && blc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
             ASKAPCHECK(trc[3]<=shape[3], "Subcube extends beyond the original cube, shape:"<<shape);
 
-
             ASKAPLOG_INFO_STR(logger, " - Corners " << "blc  = " << blc << ", trc = " << trc << "\n");
+            inCoordSysVec.push_back(iacc.coordSysSlice(*it,blc,trc));
+            // reset the shape to be the size ...
+            trc[0] = trc[0]+1;
+            trc[1] = trc[1]+1;
+            trc[2] = trc[2]+1;
+            trc[3] = myAllocationSize;
+            const casa::IPosition shape3(trc);
+            ASKAPLOG_INFO_STR(logger, " - Calculated Shape " << shape3);
+            inShapeVec.push_back(shape3);
 
-
-            casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
-            ASKAPLOG_INFO_STR(logger, " - Slicer " << slc);
-
-            casa::SubImage<casa::Float> si = casa::SubImage<casa::Float>(img,slc,casa::AxesSpecifier(casa::True));
-
-            // get the shape of a single channel slice based upon rank
-            // not sure where this is used
-            ASKAPLOG_INFO_STR(logger, " - Shape " << si.shape());
-            inShapeVec.push_back(si.shape());
-
-            inCoordSysVec.push_back(si.coordinates());
 
         }
         accumulator.setOutputParameters(inShapeVec, inCoordSysVec);
-
         // set up the output pixel arrays
         Array<float> outPix(accumulator.outShape(),0.);
         Array<float> outWgtPix(accumulator.outShape(),0.);
@@ -180,64 +186,66 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
             }
 
-            casa::PagedImage<casa::Float> inImg(inImgName);
-            const casa::IPosition shape = inImg.shape();
+            //casa::PagedImage<casa::Float> inImg(inImgName);
+            const casa::IPosition shape = iacc.shape(inImgName);
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
+
+
             if (originalNchan < 0) {
                 originalNchan = trc[3];
             }
             else {
                 ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
             }
-
+            // this assumes all allocations
             blc[3] = myAllocationStart;
-            trc[3] = myAllocationSize;
+            trc[0] = trc[0]-1;
+            trc[1] = trc[1]-1;
+            trc[2] = trc[2]-1;
+            trc[3] = myAllocationStart + myAllocationSize-1;
 
 
 
-            casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
+            accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
 
-            casa::SubImage<casa::Float> si = casa::SubImage<casa::Float>(inImg,slc,casa::AxesSpecifier(casa::True));
-
-            accumulator.setInputParameters(si.shape(), si.coordinates(), img);
-
-            Array<float> inPix = inImg.getSlice(slc);
+            Array<float> inPix = iacc.read(inImgName,blc,trc);
 
             Array<float> inWgtPix;
             Array<float> inSenPix;
 
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
 
-                casa::PagedImage<casa::Float> inImg(inWgtName);
-                const casa::IPosition shape = inImg.shape();
+                //casa::PagedImage<casa::Float> inImg(inWgtName);
+                const casa::IPosition shape = iacc.shape(inWgtName);
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
                 blc[3] = myAllocationStart;
-                trc[3] = myAllocationSize;
+                trc[0] = trc[0]-1;
+                trc[1] = trc[1]-1;
+                trc[2] = trc[2]-1;
+                trc[3] = myAllocationStart + myAllocationSize-1;
 
-
-                casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
-
-                inWgtPix = inImg.getSlice(slc);
+                inWgtPix = iacc.read(inWgtName,blc,trc);
 
                 ASKAPASSERT(inPix.shape() == inWgtPix.shape());
             }
             if (accumulator.doSensitivity()) {
 
-                casa::PagedImage<casa::Float> inImg(inSenName);
-                const casa::IPosition shape = inImg.shape();
+                // casa::PagedImage<casa::Float> inImg(inSenName);
+                const casa::IPosition shape = iacc.shape(inSenName);
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape);
 
                 blc[3] = myAllocationStart;
-                trc[3] = myAllocationSize;
+                trc[0] = trc[0]-1;
+                trc[1] = trc[1]-1;
+                trc[2] = trc[2]-1;
+                trc[3] = myAllocationStart + myAllocationSize-1;
 
 
-                casa::Slicer slc(blc,trc,casa::Slicer::endIsLength);
-
-                inSenPix = inImg.getSlice(slc);
+                inSenPix = iacc.read(inSenName,blc,trc);
 
                 ASKAPASSERT(inPix.shape() == inSenPix.shape());
             }
@@ -317,8 +325,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get pixel units from the selected reference image
-        Table tmpTable(inImgNames[psfref]);
-        string units = tmpTable.keywordSet().asString("units");
+
+        string units = iacc.getUnits(inImgNames[psfref]);
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf;
         Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
