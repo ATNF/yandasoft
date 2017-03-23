@@ -152,7 +152,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
 
         }
+
         accumulator.setOutputParameters(inShapeVec, inCoordSysVec);
+        ASKAPLOG_INFO_STR(logger, " - Output Shape " << accumulator.outShape());
         // set up the output pixel arrays
         Array<float> outPix(accumulator.outShape(),0.);
         Array<float> outWgtPix(accumulator.outShape(),0.);
@@ -328,7 +330,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         string units = iacc.getUnits(inImgNames[psfref]);
         ASKAPLOG_INFO_STR(logger, "Got units as " << units);
-        
+
         ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf;
@@ -348,10 +350,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         casa::IPosition outShape = accumulator.outShape();
 
-        ASKAPLOG_INFO_STR(logger, " - Shape " << outShape << " OriginalNchan " << originalNchan);
-        outShape[3] = originalNchan;
+
 
         if (comms.isMaster()) {
+            outShape[3] = originalNchan;
+            ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " OriginalNchan " << originalNchan);
             iacc.create(outImgName, outShape, accumulator.outCoordSys());
         }
         else {
