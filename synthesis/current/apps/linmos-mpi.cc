@@ -158,6 +158,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         // set up the output pixel arrays
         Array<float> outPix(accumulator.outShape(),0.);
         Array<float> outWgtPix(accumulator.outShape(),0.);
+        Array<bool> outMask(accumulator.outShape(),0.);
+
         Array<float> outSenPix;
         if (accumulator.doSensitivity()) {
             outSenPix = Array<float>(accumulator.outShape(),0.);
@@ -215,6 +217,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
             Array<float> inWgtPix;
             Array<float> inSenPix;
+
 
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
 
@@ -311,6 +314,41 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
             }
         }
+        //build the mask
+        //use the outWgtPix to define the mask
+        //i dont care about planes etc ... just going to run through
+
+        float itsCutoff = 0.01;
+
+        if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
+        Array<bool>::iterator iterMask = outMask.begin();
+        Array<float>::iterator iterWgt = outWgtPix.begin();
+
+
+
+        /// This logic is in addition to the mask in the accumulator
+        /// which works on an individual beam weight
+        /// this is masking the output mosaick - it therefore has slightly
+        /// different criteria. In this case the final weight has to be equal to
+        /// or bigger than the cutoff.
+        /// There is a possible failure mode where due to rounding a pixel maybe
+        /// have been masked by the accumulator but missed here.
+        /// The first time I implemented this I just used a looser conditional:
+        /// > instead of >= - but in the second attempt I decided to replace all
+        /// masked pixels by NaN - which has the nice secondary effect of implementing
+        /// the FITS mask.
+
+        float wgtCutoff = itsCutoff * itsCutoff;
+        for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
+            if (*iterWgt >= wgtCutoff) {
+                *iterMask = casa::True;
+            } else {
+                *iterMask = casa::False;
+                setNaN(*iterWgt);
+            }
+            iterMask++;
+        }
+
 
         // deweight the image pixels
         // use another iterator to loop over planes
@@ -320,7 +358,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             curpos = deweightIter.position();
             accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);
         }
-
         // set one of the input images as a reference for metadata (the first by default)
         uint psfref = 0;
         if (parset.isDefined("psfref")) psfref = parset.getUint("psfref");
@@ -354,8 +391,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         if (comms.isMaster()) {
             outShape[3] = originalNchan;
+
             ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " OriginalNchan " << originalNchan);
             iacc.create(outImgName, outShape, accumulator.outCoordSys());
+            iacc.makeDefaultMask(outImgName);
+
         }
         else {
             int buf;
@@ -366,6 +406,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         loc[3] = myAllocationStart;
         ASKAPLOG_INFO_STR(logger, " - location " << loc);
         iacc.write(outImgName,outPix,loc);
+        iacc.writeMask(outImgName,outMask,loc);
         iacc.setUnits(outImgName,units);
 
         if (psf.nelements()>=3)
@@ -377,8 +418,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             if (comms.isMaster()) {
                 ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
                 iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+                iacc.makeDefaultMask(outWgtName);
             }
             iacc.write(outWgtName,outWgtPix,loc);
+            iacc.writeMask(outWgtName,outMask,loc);
             iacc.setUnits(outWgtName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
@@ -388,8 +431,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             if (comms.isMaster()) {
                 ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
                 iacc.create(outSenName, outShape, accumulator.outCoordSys());
+                iacc.makeDefaultMask(outSenName);
             }
             iacc.write(outSenName,outSenPix,loc);
+            iacc.writeMask(outSenName,outMask,loc);
             iacc.setUnits(outSenName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
