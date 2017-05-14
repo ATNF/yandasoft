@@ -88,6 +88,9 @@ def getConfigs():
     config["ASKAP18_ORIG"]             = AntennaConfig("ASKAP18_ORIG",             ( 2, 4, 5,14,10,12,24,27,30,13,16,28,31,33,35,19,23,26), datafile)
     config["ASKAP18"]                  = AntennaConfig("ASKAP18",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,25,17,26,18,34,19), datafile)
     #
+    # 24-antenna array, using rollout sequence from V2.0, Draft F of the ASKAP Commissioning plan
+    config["ASKAP24"]                  = AntennaConfig("ASKAP24",                  ( 2, 4, 5,14,10,12,24,27,30,13,16,28,25,17,26,18,34,19,20,22, 8,23, 1, 3), datafile)
+    #
     # An alternative ADE12 config with AK34 replacing AK30 (to test the long fibre run)
     config["ADE12_AK34"]               = AntennaConfig("ADE12_AK34",               ( 2, 4, 5,14,10,12,24,27,34,13,16,28), datafile)
     #
