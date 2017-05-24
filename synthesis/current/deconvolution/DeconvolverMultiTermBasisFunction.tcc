@@ -450,7 +450,48 @@ namespace askap {
 
             return True;
         }
+        template<class T, class FT>
+        void DeconvolverMultiTermBasisFunction<T, FT>::getCoupledResidual(T& absPeakRes) {
+            ASKAPTRACE("DeconvolverMultiTermBasisFunction:::getCoupledResidual");
+            const uInt nBases(this->itsResidualBasis.nelements());
+            const uInt nTerms(this->itsNumberTerms);
+            bool isWeighted((this->itsWeight.nelements() > 0) &&
+                (this->itsWeight(0).shape().nonDegenerate().conform(this->itsResidualBasis(0)(0).shape())));
 
+            Vector<T> maxTermVals(nTerms);
+            Vector<T> maxBaseVals(nBases);
+
+            for (uInt term = 0; term < nTerms; term++) {
+                for (uInt base = 0; base < nBases; base++) {
+                    casa::IPosition minPos(2, 0);
+                    casa::IPosition maxPos(2, 0);
+                    T minVal(0.0), maxVal(0.0);
+                    if (isWeighted) {
+                        casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(term),
+                                           this->itsWeight(0).nonDegenerate());
+                    } else {
+                        casa::minMax(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(term));
+                    }
+                    if (abs(minVal) > abs(maxVal)) {
+                        maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(minPos));
+                    }
+                    else {
+                        maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(maxPos));
+                    }
+
+                }
+                casa::IPosition minPos(1, 0);
+                casa::IPosition maxPos(1, 0);
+                T minVal(0.0), maxVal(0.0);
+                casa::minMax(minVal, maxVal, minPos, maxPos,maxBaseVals);
+                maxTermVals(term) = maxVal;
+            }
+            casa::IPosition minPos(1, 0);
+            casa::IPosition maxPos(1, 0);
+            T minVal(0.0), maxVal(0.0);
+            casa::minMax(minVal, maxVal, minPos, maxPos,maxTermVals);
+            absPeakRes = maxVal;
+        }
         // This contains the heart of the Multi-Term BasisFunction Clean algorithm
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::chooseComponent(uInt& optimumBase,
@@ -584,6 +625,10 @@ namespace askap {
             if (this->itsSolutionType == "MAXCHISQ") {
                 absPeakVal = sqrt(max(T(0.0), absPeakVal));
             }
+            // Not sure I agree with the this I think the absPeakVal should
+            // be the absolute value of the peak residual
+            getCoupledResidual(absPeakVal);
+
         }
 
         template<class T, class FT>
@@ -605,7 +650,9 @@ namespace askap {
 
             // Report on progress
             // We want the worst case residual
-            T absPeakRes = max(abs(peakValues));
+            // T absPeakRes = max(abs(peakValues));
+
+
 
             //      ASKAPLOG_INFO_STR(decmtbflogger, "All terms: absolute max = " << absPeakRes << " at " << absPeakPos);
             //      ASKAPLOG_INFO_STR(decmtbflogger, "Optimum base = " << optimumBase);
@@ -613,7 +660,7 @@ namespace askap {
             if (this->state()->initialObjectiveFunction() == 0.0) {
                 this->state()->setInitialObjectiveFunction(abs(absPeakVal));
             }
-            this->state()->setPeakResidual(abs(absPeakRes));
+            this->state()->setPeakResidual(abs(absPeakVal));
             this->state()->setObjectiveFunction(abs(absPeakVal));
             this->state()->setTotalFlux(sum(this->model(0)));
 

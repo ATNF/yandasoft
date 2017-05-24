@@ -155,6 +155,8 @@ namespace askap {
 
                 void chooseComponent(uInt& optimumBase, casa::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues);
 
+                void getCoupledResidual(T& absPeakRes);
+                
                 // Long vector of PSFs
                 casa::Vector<casa::Array<T> > itsPsfLongVec;
 
