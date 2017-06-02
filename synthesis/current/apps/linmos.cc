@@ -241,8 +241,10 @@ static void merge(const LOFAR::ParameterSet &parset) {
         if (parset.isDefined("psfref")) psfref = parset.getUint("psfref");
         ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get pixel units from the selected reference image
-        Table tmpTable(inImgNames[psfref]);
-        string units = tmpTable.keywordSet().asString("units");
+
+        string units = iacc.getUnits(inImgNames[psfref]);
+        ASKAPLOG_INFO_STR(logger, "Got units as " << units);
+        
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf;
         Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
