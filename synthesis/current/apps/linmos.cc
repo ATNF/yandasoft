@@ -122,6 +122,8 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // set up the output pixel arrays
         Array<float> outPix(accumulator.outShape(),0.);
         Array<float> outWgtPix(accumulator.outShape(),0.);
+        Array<bool> outMask(accumulator.outShape(),0.);
+
         Array<float> outSenPix;
         if (accumulator.doSensitivity()) {
             outSenPix = Array<float>(accumulator.outShape(),0.);
@@ -226,6 +228,40 @@ static void merge(const LOFAR::ParameterSet &parset) {
             }
 
         } // img loop (over input images)
+        //build the mask
+        //use the outWgtPix to define the mask
+        //i dont care about planes etc ... just going to run through
+
+        float itsCutoff = 0.01;
+
+        if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
+        Array<bool>::iterator iterMask = outMask.begin();
+        Array<float>::iterator iterWgt = outWgtPix.begin();
+
+
+
+        /// This logic is in addition to the mask in the accumulator
+        /// which works on an individual beam weight
+        /// this is masking the output mosaick - it therefore has slightly
+        /// different criteria. In this case the final weight has to be equal to
+        /// or bigger than the cutoff.
+        /// There is a possible failure mode where due to rounding a pixel maybe
+        /// have been masked by the accumulator but missed here.
+        /// The first time I implemented this I just used a looser conditional:
+        /// > instead of >= - but in the second attempt I decided to replace all
+        /// masked pixels by NaN - which has the nice secondary effect of implementing
+        /// the FITS mask.
+
+        float wgtCutoff = itsCutoff * itsCutoff;
+        for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
+            if (*iterWgt >= wgtCutoff) {
+                *iterMask = casa::True;
+            } else {
+                *iterMask = casa::False;
+                setNaN(*iterWgt);
+            }
+            iterMask++;
+        }
 
         // deweight the image pixels
         // use another iterator to loop over planes
@@ -244,7 +280,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
         string units = iacc.getUnits(inImgNames[psfref]);
         ASKAPLOG_INFO_STR(logger, "Got units as " << units);
-        
+
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf;
         Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
@@ -264,6 +300,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         iacc.create(outImgName, accumulator.outShape(), accumulator.outCoordSys());
         iacc.write(outImgName,outPix);
+        iacc.writeMask(outImgName,outMask);
         iacc.setUnits(outImgName,units);
         if (psf.nelements()>=3)
             iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
@@ -274,6 +311,8 @@ static void merge(const LOFAR::ParameterSet &parset) {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
             iacc.create(outWgtName, accumulator.outShape(), accumulator.outCoordSys());
             iacc.write(outWgtName,outWgtPix);
+            iacc.writeMask(outWgtName,outMask);
+
             iacc.setUnits(outWgtName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
@@ -283,6 +322,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
             iacc.create(outSenName, accumulator.outShape(), accumulator.outCoordSys());
             iacc.write(outSenName,outSenPix);
+            iacc.writeMask(outSenName,outMask);
             iacc.setUnits(outSenName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
