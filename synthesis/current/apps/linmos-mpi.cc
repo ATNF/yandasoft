@@ -70,7 +70,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         // get input files for this mosaic
         inImgNames = accumulator.inImgNameVecs()[outImgName];
-        ASKAPLOG_INFO_STR(logger, " - input images: "<<inImgNames);
+        ASKAPLOG_INFO_STR(logger, "output mosaic " <<outImgName << " has input images: "<<inImgNames);
 
         if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
             inWgtNames = accumulator.inWgtNameVecs()[outImgName];

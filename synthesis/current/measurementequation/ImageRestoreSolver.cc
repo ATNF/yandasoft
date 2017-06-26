@@ -231,6 +231,8 @@ namespace askap
 
 	   // Axes are dof, dof for each parameter
 	   //casa::IPosition vecShape(1, out.shape().product());
+       bool saveNewPSFRequired = true;
+
 	   for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
 
 	        ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
@@ -241,6 +243,7 @@ namespace askap
 	        casa::Vector<double> dv = normalEquations().dataVector(name);
 	        ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0,
                 "PSF Slice not present " << name);
+
             casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(name)->second);
 	        ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
                 "Preconditioner fuction Slice not present for " << name);
@@ -250,6 +253,7 @@ namespace askap
                 // it is not a single plane case, there is something to report
                 ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
                                        " tagged as "<<planeIter.tag());
+
             }
 
 	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casa::max(dv));
@@ -300,19 +304,34 @@ namespace askap
             if (itsResidualNeedsUpdating) {
             // Store the current dirtyImage parameter class to be saved to disk later
                 ASKAPLOG_INFO_STR(logger, "Saving current residual image to model parameter");
+                ASKAPLOG_INFO_STR(logger, "Shape is " << dirtyArray.shape() << " position is " << planeIter.position());
                 saveArrayIntoParameter(ip,name,dirtyArray.shape(),"residual",
                 dirtyArray,planeIter.position());
             }
             // Store the new PSF in parameter class to be saved to disk later
-  	        saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
-  				     planeIter.position());
+
+
+            if (saveNewPSFRequired == true) {
+                ASKAPLOG_INFO_STR(logger, "Saving new PSF parameter as model NEW parameter -- needs full shape");
+                saveArrayIntoParameter(ip, name, shape, "psf.image", psfArray,
+      				     planeIter.position());
+                saveNewPSFRequired = false;
+            } else {
+                ASKAPLOG_INFO_STR(logger, "Saving new PSF parameter as model EXISTING parameter -- using plane shape");
+  	            saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
+  				           planeIter.position());
+            }
+
 	        // Add the residual image
             // First, convolve the model image to the resolution of the synthesised beam if not already done.
             casa::Vector<casa::Quantum<double> > restoringBeam;
             if (itsModelNeedsConvolving) {
+
                 if (itsBeamHelper.fitRequired()) {
+                    ASKAPLOG_INFO_STR(logger, "Fitting of Restoring beam required");
                     casa::Array<double> psfDArray(psfArray.shape());
                     casa::convertArray<double, float>(psfDArray, psfArray);
+                    ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
                     restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes);
                     ASKAPDEBUGASSERT(restoringBeam.size() == 3);
                     ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " <<
@@ -322,7 +341,7 @@ namespace askap
                 } else {
                     restoringBeam = itsBeamHelper.value();
                 }
-
+                ASKAPLOG_INFO_STR(logger, "Convolving the model image to the resolution of the synthesised beam");
 	            // Create a temporary image
                 boost::shared_ptr<casa::TempImage<float> >
                     image(SynthesisParamsHelper::tempImage(ip, imagename));
