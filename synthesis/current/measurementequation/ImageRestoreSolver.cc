@@ -332,7 +332,7 @@ namespace askap
                     casa::Array<double> psfDArray(psfArray.shape());
                     casa::convertArray<double, float>(psfDArray, psfArray);
                     ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
-                    restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes);
+                    restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes, itsBeamHelper.cutoff());
                     ASKAPDEBUGASSERT(restoringBeam.size() == 3);
                     ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " <<
                         restoringBeam[0].getValue("arcsec") << " x "<<restoringBeam[1].getValue("arcsec") <<

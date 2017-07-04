@@ -89,7 +89,13 @@ void RestoringBeamHelper::configureFit(const double cutoff) {
   itsCutoff = cutoff;
   itsBeam.resize(0);
 }
-   
+
+///@return the value of the relative cutoff
+double RestoringBeamHelper::cutoff() const
+{
+    return itsCutoff;
+}
+
 /// @return true, if the class is initialised
 bool RestoringBeamHelper::valid() const 
 {

@@ -85,6 +85,9 @@ public:
    /// @brief initialise for a delayed fit
    /// @param[in] cutoff relative cutoff to determine which pixels are included in the fit
    void configureFit(const double cutoff);
+
+    /// @return the value of the relative cutoff
+    double cutoff() const;
    
    /// @return true, if the class is initialised
    bool valid() const;
