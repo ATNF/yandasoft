@@ -1,22 +1,22 @@
 
-///local includes
+/// local includes
 #include <askap_synthesis.h>
 #include <utils/LinmosUtils.h>
 #include <measurementequation/SynthesisParamsHelper.h>
-///ASKAP includes
+/// ASKAP includes
 #include <askap/Application.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
 #include <askap/StatReporter.h>
 #include <askapparallel/AskapParallel.h>
 
-///CASA includes
+/// CASA includes
 #include <casacore/images/Images/ImageInterface.h>
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/SubImage.h>
 #include <casacore/images/Images/ImageProxy.h>
 
-///3rd party
+/// 3rd party
 #include <Common/ParameterSet.h>
 
 
@@ -85,9 +85,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             ASKAPLOG_INFO_STR(logger, " - input sensitivity images: " << inSenNames);
         }
 
-
-
-
     // set the output coordinate system and shape, based on the overlap of input images
 
         vector<IPosition> inShapeVec;
@@ -100,11 +97,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
             const casa::IPosition shape = iacc.shape(*it);
 
-
             ASKAPCHECK(shape.nelements()>=3,"Work with at least 3D cubes!");
 
             ASKAPLOG_INFO_STR(logger," - ImageAccess Shape " << shape);
-
 
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
@@ -162,8 +157,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         Array<float> outPix(accumulator.outShape(),0.);
         Array<float> outWgtPix(accumulator.outShape(),0.);
         Array<bool> outMask(accumulator.outShape(),0.);
-
         Array<float> outSenPix;
+        //
         if (accumulator.doSensitivity()) {
             outSenPix = Array<float>(accumulator.outShape(),0.);
         }
@@ -198,7 +193,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
 
-
             if (originalNchan < 0) {
                 originalNchan = trc[3];
             }
@@ -212,15 +206,104 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             trc[2] = trc[2]-1;
             trc[3] = myAllocationStart + myAllocationSize-1;
 
-
-
             accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
-
             Array<float> inPix = iacc.read(inImgName,blc,trc);
+
+
+            ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
+
+            if (parset.isDefined("removebeam")) {
+
+                Array<float> taylor0;
+                Array<float> taylor1;
+                Array<float> taylor2;
+
+                ASKAPLOG_INFO_STR(linmoslogger, "Scaling Taylor terms -- inImage = " << inImgNames[img]);
+                    // need to get all the taylor terms for this image
+                string ImgName = inImgName;
+                int inPixIsTaylor = 0;
+                for (int n = 0; n < accumulator.numTaylorTerms(); ++n) {
+                    const string taylorN = "taylor." + boost::lexical_cast<string>(n);
+                    // find the taylor.0 image for this image
+                    size_t pos0 = ImgName.find(taylorN);
+                    if (pos0!=string::npos) {
+                        ImgName.replace(pos0, taylorN.length(), accumulator.taylorTag());
+                        ASKAPLOG_INFO_STR(linmoslogger, "This is a Taylor " << n << " image");
+                        inPixIsTaylor = n;
+                        break;
+                    }
+
+                    // now go through each taylor term
+
+                }
+
+
+                ASKAPLOG_INFO_STR(linmoslogger, "To avoid altering images on disk re-reading the Taylor terms");
+                for (int n = 0; n < accumulator.numTaylorTerms(); ++n) {
+
+                    size_t pos0 = ImgName.find(accumulator.taylorTag());
+                    if (pos0!=string::npos) {
+                        const string taylorN = "taylor." + boost::lexical_cast<string>(n);
+                        ImgName.replace(pos0, taylorN.length(), taylorN);
+
+
+                        switch (n)
+                        {
+                            case 0:
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor0");
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                                taylor0 = iacc.read(ImgName,blc,trc);
+                                ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor0.shape());
+                                break;
+                            case 1:
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor1");
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                                taylor1 = iacc.read(ImgName,blc,trc);
+                                ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor1.shape());
+                                break;
+                            case 2:
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor2");
+                                ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                                taylor2 = iacc.read(ImgName,blc,trc);
+                                ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor2.shape());
+                                break;
+
+                        }
+                        ImgName.replace(pos0, accumulator.taylorTag().length(), accumulator.taylorTag());
+                    }
+
+                    // now go through each taylor term
+
+                }
+
+
+                casa::IPosition thispos(taylor0.shape().nelements(),0);
+                ASKAPLOG_INFO_STR(logger, " removing Beam for Taylor terms - slice " << thispos);
+                accumulator.removeBeamFromTaylorTerms(taylor0,taylor1,taylor2,thispos,iacc.coordSys(inImgName));
+
+
+                // now we need to set the inPix to be the scaled version
+                // Note this means we are reading the Taylor terms 3 times for every
+                // read. But I'm not sure this matters.
+
+                switch (inPixIsTaylor)
+                {
+                    case 0:
+                        inPix = taylor0.copy();
+                        break;
+                    case 1:
+                        inPix = taylor1.copy();
+                        break;
+                    case 2:
+                        inPix = taylor2.copy();
+                        break;
+                }
+
+            }
+
 
             Array<float> inWgtPix;
             Array<float> inSenPix;
-
 
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
 
@@ -251,7 +334,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 trc[1] = trc[1]-1;
                 trc[2] = trc[2]-1;
                 trc[3] = myAllocationStart + myAllocationSize-1;
-
 
                 inSenPix = iacc.read(inSenName,blc,trc);
 
@@ -328,7 +410,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         Array<float>::iterator iterWgt = outWgtPix.begin();
 
 
-
         /// This logic is in addition to the mask in the accumulator
         /// which works on an individual beam weight
         /// this is masking the output mosaick - it therefore has slightly
@@ -351,7 +432,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             }
             iterMask++;
         }
-
 
         // deweight the image pixels
         // use another iterator to loop over planes
@@ -389,8 +469,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         casa::IPosition outShape = accumulator.outShape();
-
-
 
         if (comms.isMaster()) {
             outShape[3] = originalNchan;
