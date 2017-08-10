@@ -457,8 +457,9 @@ namespace askap {
         {
             IPosition subPsfShape(2, this->model().shape()(0), this->model().shape()(1));
             // Only use the specified psfWidth if it makes sense
-            if (this->control()->psfWidth() > 0) {
-                uInt psfWidth = this->control()->psfWidth();
+            // Also make sure it is even, otherwise the fft of the PSF is incorrect and the clean diverges
+            if (this->control()->psfWidth() > 1) {
+                uInt psfWidth = (this->control()->psfWidth()/2)*2;
                 if ((psfWidth < uInt(this->model().shape()(0))) && (psfWidth < uInt(this->model().shape()(1)))) {
                     subPsfShape(0) = psfWidth;
                     subPsfShape(1) = psfWidth;
@@ -469,5 +470,3 @@ namespace askap {
     } // namespace synthesis
 
 } // namespace askap
-
-
