@@ -41,6 +41,9 @@ ASKAP_LOGGER(logger, ".deconvolution");
 
 int main(int argc, char *argv[])
 {
+#ifdef __PGI
+    std::cout << "PGI BUILD" << std::endl; 
+#endif
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
     runner.addTest( askap::synthesis::DeconvolverBaseTest::suite());
