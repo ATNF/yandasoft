@@ -33,8 +33,12 @@ env["ENV"]["PATH"] = os.environ['PATH']
 
 # create build object with library name
 env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
-env["ENV"]["CC"] = os.environ['CC']
-env["ENV"]["CXX"] = os.environ['CXX']
+
+if 'CC' in os.environ:
+    env["ENV"]["CC"] = os.environ['CC']
+if 'CXX' in os.environ:
+
+    env["ENV"]["CXX"] = os.environ['CXX']
 
 pkg = env.AskapPackage("synthesis")
 # add sub packages 
