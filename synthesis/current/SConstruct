@@ -29,12 +29,16 @@ else:
     env.AppendUnique(LINKFLAGS=['-llapack'])
 
 env.AppendUnique(CCFLAGS=['-Wno-unused-local-typedefs'])
+env["ENV"]["PATH"] = os.environ['PATH']
 
 # create build object with library name
-pkg = env.AskapPackage("synthesis")
 env["ENV"]["AIPSPATH"] = os.environ['AIPSPATH']
+env["ENV"]["CC"] = os.environ['CC']
+env["ENV"]["CXX"] = os.environ['CXX']
 
+pkg = env.AskapPackage("synthesis")
 # add sub packages 
+#
 pkg.AddSubPackage("utils")
 pkg.AddSubPackage("measurementequation")
 pkg.AddSubPackage("gridding")
