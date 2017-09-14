@@ -23,12 +23,15 @@ env.AppendUnique(CCFLAGS=['-DASKAP_GRID_WITH_POINTERS'])
 # by clang, so don't use it on Mac
 # On Mac use the inbuilt Accelerate framework so no longer get the linker flag from
 # dependency analysis so need to make it explict here.
-if sys.platform != 'darwin':
-    env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
-else:
-    env.AppendUnique(LINKFLAGS=['-llapack'])
+if env['usepgi']==0:
+    if sys.platform != 'darwin':
+        env.AppendUnique(CCFLAGS=['-fcx-limited-range'])
+    else:
+        env.AppendUnique(LINKFLAGS=['-llapack'])
 
-env.AppendUnique(CCFLAGS=['-Wno-unused-local-typedefs'])
+    env.AppendUnique(CCFLAGS=['-Wno-unused-local-typedefs'])
+else:
+        env.AppendUnique(LINKFLAGS=['-latomic'])
 env["ENV"]["PATH"] = os.environ['PATH']
 
 # create build object with library name
