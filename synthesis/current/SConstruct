@@ -29,7 +29,6 @@ if env['usepgi']==0:
     else:
         env.AppendUnique(LINKFLAGS=['-llapack'])
 
-    env.AppendUnique(CCFLAGS=['-Wno-unused-local-typedefs'])
 else:
         env.AppendUnique(LINKFLAGS=['-latomic'])
 env["ENV"]["PATH"] = os.environ['PATH']
