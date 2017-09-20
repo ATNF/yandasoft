@@ -1292,8 +1292,8 @@ namespace askap
        // actual fitting
        casa::Vector<casa::Double> initialEstimate(6,0.);
        initialEstimate[0]=1.; // PSF peak is always 1
-       initialEstimate[1]=newShape[0]/2.; // centre
-       initialEstimate[2]=newShape[1]/2.; // centre
+       initialEstimate[1]=newShape[0]/2; // centre
+       initialEstimate[2]=newShape[1]/2; // centre
        initialEstimate[3]=1;  // 1 pixel wide
        initialEstimate[4]=0.9;  // 1 pixel wide
        initialEstimate[5]=casa::C::pi/4.; // quire arbitrary  pa.
