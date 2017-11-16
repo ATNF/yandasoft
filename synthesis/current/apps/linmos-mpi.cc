@@ -72,11 +72,12 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         inImgNames = accumulator.inImgNameVecs()[outImgName];
         ASKAPLOG_INFO_STR(logger, "output mosaic " <<outImgName << " has input images: "<<inImgNames);
 
-        if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+        if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED ) {
             inWgtNames = accumulator.inWgtNameVecs()[outImgName];
             ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
         }
-        else if (accumulator.weightType() == FROM_BP_MODEL) {
+
+        if (accumulator.weightType() == FROM_BP_MODEL) {
             accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
         }
 
@@ -179,7 +180,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             string inWgtName, inSenName;
 
             ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
-            if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+            if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
                 inWgtName = inWgtNames[img];
                 ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
             }
@@ -305,7 +306,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             Array<float> inWgtPix;
             Array<float> inSenPix;
 
-            if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+            if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
 
                 //casa::PagedImage<casa::Float> inImg(inWgtName);
                 const casa::IPosition shape = iacc.shape(inWgtName);
