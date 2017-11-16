@@ -423,7 +423,18 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         /// masked pixels by NaN - which has the nice secondary effect of implementing
         /// the FITS mask.
 
-        float wgtCutoff = itsCutoff * itsCutoff;
+        /// Since I added the scheme to incorporate a variance weight in the mosaicking
+        /// I can no longer assume max weight is 1.
+
+        float minVal, maxVal;
+        IPosition minPos, maxPos;
+
+        minMax(minVal,maxVal,minPos,maxPos,outWgtPix);
+        ASKAPLOG_INFO_STR(logger, "Maximum pixel weight is " << maxVal);
+        ASKAPLOG_INFO_STR(logger, "Power fraction cutoff is " << itsCutoff*itsCutoff);
+        
+
+        float wgtCutoff = itsCutoff * itsCutoff * maxVal;
         for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
             if (*iterWgt >= wgtCutoff) {
                 *iterMask = casa::True;
