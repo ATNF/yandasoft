@@ -287,13 +287,15 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             const double time = 0.5*(scan.startTime() + scan.endTime());
             const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
             casa::MeasFrame frame(mroPos, epoch);    
-            casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+            const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
                                    casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
             hangles[cnt] = hadec.getLong() - mroPos.getValue().getLong(); // Hour angle at latitude 0
             const double cd = cos(hadec.getLat()); 
             ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
+            const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
             phases[cnt] = unwrapper(arg(caldata(scanIndices[cnt],ant).gain())) / cd;
-            os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<std::endl;
+            os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<azel.getLong() / casa::C::pi * 180.<<std::endl;
        }
        casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
@@ -390,7 +392,11 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
                 continue;
             }
             */
-            os<<cnt<<" "<<sd<<" "<<phase / casa::C::pi * 180.<<std::endl;
+            const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+
+            os<<cnt<<" "<<sd<<" "<<phase / casa::C::pi * 180.<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<
+                     azel.getLong() / casa::C::pi * 180.<<std::endl;
             // build normal equations
             sx += sd;
             sx2 += sd*sd;
