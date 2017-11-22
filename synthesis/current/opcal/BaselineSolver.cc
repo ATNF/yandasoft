@@ -287,10 +287,33 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             const double time = 0.5*(scan.startTime() + scan.endTime());
             const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
             casa::MeasFrame frame(mroPos, epoch);    
+            /*
             const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
                                    casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+            
             hangles[cnt] = hadec.getLong() - mroPos.getValue().getLong(); // Hour angle at latitude 0
-            const double cd = cos(hadec.getLat()); 
+            */
+            // Phase centre in the apparent topocentric frame
+            casa::MVDirection fpc = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::TOPO,frame))().getValue();
+            const double gastDayFrac = casa::MEpoch::Convert(epoch,casa::MEpoch::Ref(casa::MEpoch::GAST))().get("d").getValue("d");
+            const double gast = (gastDayFrac - casa::Int(gastDayFrac)) * casa::C::_2pi; // in radians
+            hangles[cnt] = gast - fpc.getLong();
+            // to ensure corresponding local hour angle is contiguous without the need to unwrap
+            if (hangles[cnt] + mroPos.getValue().getLong() > casa::C::pi) {
+                hangles[cnt] -= 2.*casa::C::pi;
+            }
+            if (hangles[cnt] + mroPos.getValue().getLong() < -casa::C::pi) {
+                hangles[cnt] += 2.*casa::C::pi;
+            }
+            /*
+            ASKAPLOG_DEBUG_STR(logger, "cnt = "<<cnt<<" newH: "<<hangles[cnt]*180./casa::C::pi<<
+                     " oldH:"<<(hadec.getLong() - mroPos.getValue().getLong())*180./casa::C::pi<<" diff: "<<
+                      (hangles[cnt] - hadec.getLong() + mroPos.getValue().getLong()) / casa::C::pi * 648000.<<" "
+                     <<" decDiff: "<<(fpc.getLat() - hadec.getLat()) / casa::C::pi * 648000.);
+            */
+
+            const double cd = cos(fpc.getLat()); 
             ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
             const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
                                    casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
@@ -301,8 +324,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
        casa::Vector<double> err = fitter.errors();
        ASKAPCHECK(err.nelements() == 3, "Expect 3 uncertainties out of the fitter, you have size="<<err.nelements());
-       //const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do: get it from scan's frequency)
-       const double wavelength = casa::C::c / 939.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
+       // for our test setup of 888.5 MHz central freq
+       const double wavelength = casa::C::c / 936.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
        double ampl = param[0] / 2. / casa::C::pi * wavelength;
        // fit can converge with either sign of the first coefficient, but we like to always have a positive amplitude
        if (ampl < 0) {
@@ -375,9 +398,9 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
             const double time = 0.5*(scan.startTime() + scan.endTime());
             const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
             casa::MeasFrame frame(mroPos, epoch);    
-            casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
-            const double sd = sin(hadec.getLat());
+            casa::MVDirection topoPos = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::TOPO,frame))().getValue();
+            const double sd = sin(topoPos.getLat());
             const double phase = unwrapper(arg(caldata(scanIndices[cnt],ant).gain()));
             /*
             // the following code can be useful is unwrapper fails to do a decent job
@@ -415,8 +438,8 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
        const double coeff = (sxy - sx * sy) / denominator;
  
-       //const double wavelength = casa::C::c / 672e6; // effective wavelength in metres (to do get it from scan's frequency)
-       const double wavelength = casa::C::c / 939.5e6; // effective wavelength in metres (to do get it from scan's frequency)
+       // for our test setup of 888.5 MHz central freq
+       const double wavelength = casa::C::c / 936.5e6; // effective wavelength in metres (to do get it from scan's frequency)
        // the formula for phase has -sin(dec)*dZ therefore, we have to swap the sign here
        const double dZ = -coeff / 2. / casa::C::pi * wavelength;
        ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
