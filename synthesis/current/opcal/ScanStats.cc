@@ -121,6 +121,12 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                           "Pointing direction is different for different baselines of the same integration, unsupported scenario");
                 ASKAPCHECK(obs.direction().separation(it->pointingDir2()[row]) < dirTolerance, 
                           "Pointing direction is different for two antennas, unsupported scenario");                
+
+                const casa::Vector<casa::Stokes::StokesTypes>& stokes = obs.stokes();
+                ASKAPCHECK(stokes.nelements() == it->nPol(), "Number of polarisations appears to have changed");
+                for (casa::uInt pol = 0; pol < stokes.nelements(); ++pol) {
+                     ASKAPCHECK(stokes[pol] == it->stokes()[pol], "Polarisation product "<<pol+1<<" appears to have changed type");
+                }
             } else {
                 // brand new element in the map
                 obs.set(name, cycle, it->time(), beam, it->pointingDir1()[row],freq);
@@ -130,7 +136,10 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                     // fill implementation-specific fields (scan and field IDs)
                     obs.setScanAndFieldIDs(tableIt->currentScanID(), tableIt->currentFieldID());
                 }          
+                obs.setStokes(it->stokes());
             }        
+            // now process flagging information for the given row
+            obs.processBaselineFlags(antenna1[row], antenna2[row], flags.row(row));
        } // loop over row
        // aggregate the map into the final buffer
        for (std::map<casa::uInt, ObservationDescription>::const_iterator ci = currentObs.begin(); ci != currentObs.end(); ++ci) {

@@ -214,6 +214,70 @@ const casa::Vector<casa::Stokes::StokesTypes>& ObservationDescription::stokes() 
 void ObservationDescription::setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes)
 {
    itsStokes.reference(stokes.copy());
+   ASKAPCHECK(itsAntennasWithValidData.size() == 0, 
+        "Flagging information can only be set after initialisation of the stokes vector");
+   itsAntennasWithValidData.resize(itsStokes.nelements());
+}
+
+/// @brief update antennas with valid data
+/// @details This method processes a flag vector for the given baseline and updates
+///          the list of antennas with valid data.
+/// @param[in] ant1 first antenna of the baseline
+/// @param[in] ant2 second antenna of the baseline
+/// @param[in] flags per-polarisation flags for the given baseline (should match the 
+///                  length of stokes vector)
+/// @note This method is not supposed to be called by the reader, it is called when
+///       the structure is populated
+void ObservationDescription::processBaselineFlags(casa::uInt ant1, casa::uInt ant2, 
+                              const casa::Vector<casa::Bool> &flags)
+{
+   // note, a better performance implementation is possible if we iterate over row for
+   // each polarisation. But it is not a bottleneck at the moment
+   ASKAPCHECK(flags.nelements() == itsStokes.nelements(), "Flag vector should have the same dimension as the Stokes vector. Most likely attempting to process baseline flags before initialisation of Stokes vector");
+   ASKAPDEBUGASSERT(flags.nelements() == itsAntennasWithValidData.size());
+   for (size_t i=0; i<itsAntennasWithValidData.size(); ++i) {
+        if (!flags[i]) {
+            // good data for this product
+            itsAntennasWithValidData[i].insert(ant1);
+            itsAntennasWithValidData[i].insert(ant2);
+        }
+   }
+}
+
+// access to the valid antenna information - we can add other methods if necessary
+  
+/// @brief obtain a set of flagged antennas
+/// @details This method returns a set of antenna indices corresponding to antennas completely
+/// flagged in the data 'scan' described by this structure for the given polarisation. It is 
+/// handy to have bad antennas listed rather than good ones because by the nature of this tool,
+/// little input data should be flagged. The total number of antennas is a parameter (antennas with
+/// higher indices may be present but completely flagged). The returned set may contain indices up to
+/// the total number of antennas minus 1.
+/// @param[in] stokes polarisation product of interest
+/// @param[in] nAnt total number of antennas, indices probed go from 0 to nAnt-1
+/// @return set flagged antennas represented by their indices
+std::set<casa::uInt> ObservationDescription::flaggedAntennas(casa::Stokes::StokesTypes stokes, casa::uInt nAnt) const
+{
+   ASKAPCHECK(isValid(), "An attempt to get stokes vector for an undefined observation structure");
+   ASKAPCHECK(itsAntennasWithValidData.size() > 0, "Perhaps, the Stokes vector is uninitialised");
+   ASKAPDEBUGASSERT(itsStokes.nelements() == itsAntennasWithValidData.size());
+   size_t pol = 0;
+   for (; pol < itsStokes.nelements(); ++pol) {
+        if (itsStokes[pol] == stokes) {
+            break;
+        }
+   }
+   ASKAPCHECK(pol < itsStokes.nelements(), "Requested stokes type has not been observed");
+   
+   // now check all antennas from 0 to nAnt-1
+   std::set<casa::uInt> result;
+   const std::set<casa::uInt> flags = itsAntennasWithValidData[pol];
+   for (casa::uInt ant = 0; ant < nAnt; ++ant) {
+        if (flags.find(ant) == flags.end()) {
+            result.insert(ant);
+        }       
+   }
+   return result;
 }
   
 

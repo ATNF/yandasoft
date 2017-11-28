@@ -40,6 +40,8 @@
 
 // std includes
 #include <string>
+#include <set>
+#include <vector>
 
 namespace askap {
 
@@ -151,6 +153,31 @@ struct ObservationDescription {
   /// @brief initialise the stokes vector
   /// @param[in] stokes vector with polarisation descriptors for each recorded product
   void setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes);
+
+  /// @brief update antennas with valid data
+  /// @details This method processes a flag vector for the given baseline and updates
+  ///          the list of antennas with valid data.
+  /// @param[in] ant1 first antenna of the baseline
+  /// @param[in] ant2 second antenna of the baseline
+  /// @param[in] flags per-polarisation flags for the given baseline (should match the 
+  ///                  length of stokes vector)
+  /// @note This method is not supposed to be called by the reader, it is called when
+  ///       the structure is populated
+  void processBaselineFlags(casa::uInt ant1, casa::uInt ant2, const casa::Vector<casa::Bool> &flags);
+
+  // access to the valid antenna information - we can add other methods if necessary
+  
+  /// @brief obtain a set of flagged antennas
+  /// @details This method returns a set of antenna indices corresponding to antennas completely
+  /// flagged in the data 'scan' described by this structure for the given polarisation. It is 
+  /// handy to have bad antennas listed rather than good ones because by the nature of this tool,
+  /// little input data should be flagged. The total number of antennas is a parameter (antennas with
+  /// higher indices may be present but completely flagged). The returned set may contain indices up to
+  /// the total number of antennas minus 1.
+  /// @param[in] stokes polarisation product of interest
+  /// @param[in] nAnt total number of antennas, indices probed go from 0 to nAnt-1
+  /// @return set flagged antennas represented by their indices
+  std::set<casa::uInt> flaggedAntennas(casa::Stokes::StokesTypes stokes, casa::uInt nAnt) const;
   
 private:  
   /// @brief file name or other string key defined by the user
@@ -192,6 +219,11 @@ private:
   /// product is where. Largely added for an extra consistency check - we don't expect this code to be
   /// used for polarisation work
   casa::Vector<casa::Stokes::StokesTypes> itsStokes;
+
+  /// @brief set of antennas with valid data for each polarisation
+  /// @details If a given antenna has some unflagged data for the given polarisation it will be
+  /// added to the apppropriate set. Antennas are referred to by their indices.
+  std::vector<std::set<casa::uInt> > itsAntennasWithValidData;
 };
 
 } // namespace synthesis

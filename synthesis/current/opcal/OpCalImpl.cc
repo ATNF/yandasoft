@@ -318,7 +318,7 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
   const casa::uInt nIter = parset().getUint("niter",20);
   scimath::LinearSolver solver;
   for (casa::uInt iter = 0; iter < nIter; ++iter) {
-       ASKAPLOG_INFO_STR(logger, "Calibration iteration "<<(iter+1));
+       ASKAPLOG_DEBUG_STR(logger, "Calibration iteration "<<(iter+1));
        itsME->setParameters(*itsModel);
        scimath::GenericNormalEquations gne;
        itsME->calcEquations(gne);
@@ -327,7 +327,11 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
        solver.setAlgorithm("SVD");
        scimath::Quality q;
        solver.solveNormalEquations(*itsModel,q);
-       ASKAPLOG_INFO_STR(logger, "Solved normal equations, quality: "<<q);
+       if (iter == 0) {
+           ASKAPLOG_INFO_STR(logger, "Solved normal equations, quality: "<<q);
+       } else {
+           ASKAPLOG_DEBUG_STR(logger, "Solved normal equations, quality: "<<q);
+       }
        // phase rotation
        for (std::map<casa::uInt, size_t>::const_iterator beamIt = beammap.begin(); beamIt != beammap.end(); ++beamIt) {
             const std::string refGain = accessors::CalParamNameHelper::paramName(refAnt, beamIt->first, casa::Stokes::XX);
