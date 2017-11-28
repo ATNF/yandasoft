@@ -89,6 +89,8 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
   for (accessors::IConstDataSharedIter it = iter; it!=it.end(); ++it,++cycle) {
        const casa::Vector<casa::uInt>& beam1 = it->feed1();
        const casa::Vector<casa::uInt>& beam2 = it->feed2();
+       const casa::Vector<casa::uInt>& antenna1 = it->antenna1();
+       const casa::Vector<casa::uInt>& antenna2 = it->antenna2();
        
        // buffer for observations of the current integration, one per beam
        std::map<casa::uInt, ObservationDescription> currentObs;
@@ -98,6 +100,10 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
        const casa::uInt centreChan = it->nChannel() / 2;
        ASKAPDEBUGASSERT(it->frequency().nelements() > centreChan);
        const double freq = it->frequency()[centreChan];
+       const casa::Matrix<casa::Bool> flags = allChannelsFlagged(it->flag());
+       const casa::Vector<casa::Stokes::StokesTypes> stokes = it->stokes();
+       ASKAPDEBUGASSERT(flags.ncolumn() == stokes.nelements());
+       ASKAPDEBUGASSERT(flags.nrow() == it->nRow());
        // go through all rows and aggregate baselines
        for (casa::uInt row=0; row<it->nRow(); ++row) {
             const casa::uInt beam = beam1[row];
@@ -158,6 +164,28 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
        } // loop over existing scans
        
   }
+}
+
+/// @brief helper method to compact flags across frequency axis
+/// @details Each row each polarisation is considered flagged if all corresponding frequency channels
+/// are flagged
+/// @param[in] flags nRow x nChan x nPol cube as provided by the accessor
+/// @return nRow x nPol matrix with aggregated flags 
+casa::Matrix<casa::Bool> ScanStats::allChannelsFlagged(const casa::Cube<casa::Bool> &flags)
+{
+   ASKAPDEBUGASSERT(flags.nelements() > 0);
+   casa::Matrix<casa::Bool> result(flags.nrow(), flags.nplane(), true);
+   for (casa::uInt row = 0; row < flags.nrow(); ++row) {
+        for (casa::uInt pol = 0; pol < flags.nplane(); ++pol) {
+             for (casa::uInt chan = 0; chan < flags.ncolumn(); ++chan) {
+                  if (!flags(row,chan,pol)) {
+                      result(row,pol) = false;
+                      break;
+                  }
+             }
+        }
+   }
+   return result;
 }
 
 /// @brief access to the selected scan

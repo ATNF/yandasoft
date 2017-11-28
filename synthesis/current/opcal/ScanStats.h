@@ -109,6 +109,13 @@ public:
    /// @return limit on the scan duration in cycles, a negative value means no limit is imposed
    inline int cycleLimit() const { return itsCycleLimit; }
    
+protected:
+   /// @brief helper method to compact flags across frequency axis
+   /// @details Each row each polarisation is considered flagged if all corresponding frequency channels
+   /// are flagged
+   /// @param[in] flags nRow x nChan x nPol cube as provided by the accessor
+   /// @return nRow x nPol matrix with aggregated flags 
+   static casa::Matrix<casa::Bool> allChannelsFlagged(const casa::Cube<casa::Bool> &flags);
    
 private:
    /// collection of individual observations

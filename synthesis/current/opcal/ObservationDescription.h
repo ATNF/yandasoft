@@ -35,6 +35,8 @@
 
 // casa includes
 #include <casacore/measures/Measures/MDirection.h>
+#include <casacore/measures/Measures/Stokes.h>
+#include <casacore/casa/Arrays/Vector.h>
 
 // std includes
 #include <string>
@@ -139,6 +141,16 @@ struct ObservationDescription {
   /// @return frequency corresponding to the centre of the band (in units used in the accessor)
   /// @note an exception is thrown if the structure is uninitialised 
   double frequency() const;
+
+
+  /// @brief stokes vector
+  /// @return vector with polarisation descriptors for each recorded product
+  /// @note an exception is thrown if the structure is uninitialised
+  const casa::Vector<casa::Stokes::StokesTypes>& stokes() const;
+
+  /// @brief initialise the stokes vector
+  /// @param[in] stokes vector with polarisation descriptors for each recorded product
+  void setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes);
   
 private:  
   /// @brief file name or other string key defined by the user
@@ -174,6 +186,12 @@ private:
   /// catering for different bandwidth/resolution, etc. It can be changed in the future if there is
   /// a different use case on the horizon
   double itsFreq;  
+
+  /// @brief measured polarisations
+  /// @details The size of the vector is the number of polarisations, content describes frame and which
+  /// product is where. Largely added for an extra consistency check - we don't expect this code to be
+  /// used for polarisation work
+  casa::Vector<casa::Stokes::StokesTypes> itsStokes;
 };
 
 } // namespace synthesis

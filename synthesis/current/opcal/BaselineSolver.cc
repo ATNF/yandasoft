@@ -322,6 +322,10 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             phases[cnt] = unwrapper(arg(caldata(scanIndices[cnt],ant).gain())) / cd;
             os<<cnt<<" "<<hangles[cnt] / casa::C::pi * 180<<" "<<phases[cnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<azel.getLong() / casa::C::pi * 180.<<std::endl;
        }
+       // hack to exclude flagged values
+       //ASKAPDEBUGASSERT(hangles.nelements() > 7);
+       //casa::Slice slicer(0, ant == 1 ? hangles.nelements() - 7 : hangles.nelements());
+       //casa::Vector<double> param = fitter.fit(hangles(slicer),phases(slicer),sigma(slicer));
        casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
        casa::Vector<double> err = fitter.errors();

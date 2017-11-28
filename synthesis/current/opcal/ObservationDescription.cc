@@ -200,6 +200,23 @@ double ObservationDescription::frequency() const
   return itsFreq;
 }
 
+/// @brief stokes vector
+/// @return vector with polarisation descriptors for each recorded product
+/// @note an exception is thrown if the structure is uninitialised
+const casa::Vector<casa::Stokes::StokesTypes>& ObservationDescription::stokes() const
+{
+   ASKAPCHECK(isValid(), "An attempt to get stokes vector for an undefined observation structure");
+   return itsStokes;
+}
+
+/// @brief initialise the stokes vector
+/// @param[in] stokes vector with polarisation descriptors for each recorded product
+void ObservationDescription::setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes)
+{
+   itsStokes.reference(stokes.copy());
+}
+  
+
 } // namespace synthesis
 
 } // namespace askap
