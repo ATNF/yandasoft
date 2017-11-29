@@ -122,7 +122,12 @@ void OpCalImpl::run()
                   utility::toString<casa::uInt>(itsScanStats[row].scanID());
        
            for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
-                result += " " + utility::toString<double>(std::abs(itsCalData(row,ant).gain())) + " " + utility::toString<double>(std::arg(itsCalData(row,ant).gain())/casa::C::pi*180.);
+                if (itsCalData(row,ant).gainDefined()) {
+                    const casa::Complex thisAntGain = itsCalData(row,ant).gain();
+                    result += " " + utility::toString<double>(std::abs(thisAntGain)) + " " + utility::toString<double>(std::arg(thisAntGain)/casa::C::pi*180.);
+                } else {
+                    result += " flagged flagged";
+                }
            }
            ASKAPLOG_INFO_STR(logger, "result: "<<result);
       }
@@ -253,9 +258,21 @@ void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &be
           itsModel->reset();
           casa::uInt maxBeamID = 0;
           for (std::map<casa::uInt,size_t>::const_iterator ci = thisChunkBeams.begin(); ci!=thisChunkBeams.end(); ++ci) {
+               const std::set<casa::uInt> flaggedAntsXX = itsScanStats[ci->second].flaggedAntennas(casa::Stokes::XX, itsCalData.ncolumn());
+               const std::set<casa::uInt> flaggedAntsYY = itsScanStats[ci->second].flaggedAntennas(casa::Stokes::YY, itsCalData.ncolumn());
                for (casa::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::XX), casa::Complex(1., 0.));
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::YY), casa::Complex(1., 0.));            
+                    const std::string xxParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::XX);
+                    itsModel->add(xxParam, casa::Complex(1., 0.));
+                    const std::string yyParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::YY);
+                    itsModel->add(yyParam, casa::Complex(1., 0.));            
+                    if (flaggedAntsXX.find(ant) != flaggedAntsXX.end()) {
+                        itsModel->fix(xxParam);
+                        ASKAPLOG_INFO_STR(logger, "No data for XX polarisation for antenna "<<ant);
+                    }
+                    if (flaggedAntsYY.find(ant) != flaggedAntsYY.end()) {
+                        itsModel->fix(yyParam);
+                        ASKAPLOG_INFO_STR(logger, "No data for YY polarisation for antenna "<<ant);
+                    }
                }
                if (maxBeamID < ci->first) {
                    maxBeamID = ci->first;
@@ -281,7 +298,7 @@ void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &be
 /// @return shared pointer to the measurement equation
 boost::shared_ptr<IMeasurementEquation> OpCalImpl::makePerfectME() const
 {
-   ASKAPLOG_INFO_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
+   ASKAPLOG_DEBUG_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
    boost::shared_ptr<scimath::Params> perfectModel(new scimath::Params);
    readModels(perfectModel);
    ASKAPCHECK(perfectModel, "Uncorrupted model don't seem to be defined");
@@ -339,7 +356,13 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
             
             for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
                  const std::string parname = accessors::CalParamNameHelper::paramName(ant, beamIt->first, casa::Stokes::XX);
-                 itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
+                 if (itsModel->isFree(parname)) {
+                     itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
+                 } else {
+                     if (iter+1 == nIter) {
+                         ASKAPLOG_INFO_STR(logger, "Parameter "<<parname<<" is fixed - not rotating");
+                     }
+                 }
             }
        }
   }

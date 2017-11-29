@@ -271,7 +271,7 @@ std::set<casa::uInt> ObservationDescription::flaggedAntennas(casa::Stokes::Stoke
    
    // now check all antennas from 0 to nAnt-1
    std::set<casa::uInt> result;
-   const std::set<casa::uInt> flags = itsAntennasWithValidData[pol];
+   const std::set<casa::uInt>& flags = itsAntennasWithValidData[pol];
    for (casa::uInt ant = 0; ant < nAnt; ++ant) {
         if (flags.find(ant) == flags.end()) {
             result.insert(ant);
