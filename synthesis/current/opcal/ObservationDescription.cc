@@ -279,6 +279,41 @@ std::set<casa::uInt> ObservationDescription::flaggedAntennas(casa::Stokes::Stoke
    }
    return result;
 }
+
+/// @brief copy constructor
+/// @details casa arrays use reference semantics, so need a copy constructor
+/// @param[in] src input object
+ObservationDescription::ObservationDescription(const ObservationDescription &src) :
+    itsName(src.itsName), itsStartCycle(src.itsStartCycle), itsEndCycle(src.itsEndCycle),
+    itsStartTime(src.itsStartTime), itsEndTime(src.itsEndTime), itsBeam(src.itsBeam),
+    itsScanID(src.itsScanID), itsFieldID(src.itsFieldID), 
+    itsDirection(casa::MVDirection(src.itsDirection)), itsFreq(src.itsFreq),
+    itsStokes(src.itsStokes.copy()), itsAntennasWithValidData(src.itsAntennasWithValidData)
+{
+}
+
+/// @brief assignment operator
+/// @details casa arrays use reference semantics, so need a copy constructor
+/// @param[in] src input object
+ObservationDescription& ObservationDescription::operator=(const ObservationDescription &src)
+{
+   if (this != &src) {
+    itsName=src.itsName;
+    itsStartCycle=src.itsStartCycle;
+    itsEndCycle=src.itsEndCycle;
+    itsStartTime=src.itsStartTime;
+    itsEndTime=src.itsEndTime; 
+    itsBeam=src.itsBeam;
+    itsScanID = src.itsScanID;
+    itsFieldID = src.itsFieldID; 
+    itsDirection = casa::MVDirection(src.itsDirection);
+    itsFreq = src.itsFreq;
+    itsStokes.reference(src.itsStokes.copy());
+    itsAntennasWithValidData = src.itsAntennasWithValidData;
+   }
+   return *this;
+}
+
   
 
 } // namespace synthesis

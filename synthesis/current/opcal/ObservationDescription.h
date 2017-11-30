@@ -65,6 +65,17 @@ struct ObservationDescription {
   ObservationDescription(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, 
                          const casa::MVDirection &dir, double freq);
   
+  
+  /// @brief copy constructor
+  /// @details casa arrays use reference semantics, so need a copy constructor
+  /// @param[in] src input object
+  ObservationDescription(const ObservationDescription &src);
+
+  /// @brief assignment operator
+  /// @details casa arrays use reference semantics, so need a copy constructor
+  /// @param[in] src input object
+  ObservationDescription& operator=(const ObservationDescription &src);
+
   /// @brief check whether the structure has been initialised
   /// @return true, if the structure has data, false otherwise
   /// @note the convention is that non-negative beam ID is a signature of initialised structure
