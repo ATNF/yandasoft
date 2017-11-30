@@ -180,6 +180,30 @@ void ObservationDescription::update(casa::uInt cycle, double time)
   itsEndTime = time;
 }
 
+/// @brief extend exsting observation by merging in another structure
+/// @details Unlike update, it also processes flagging informaton.
+/// @param[in] other structure to merge in
+/// @note an exception is thrown if added structure does not follow in time or cycle
+void ObservationDescription::merge(const ObservationDescription &other)
+{
+  ASKAPCHECK(isValid(), "An attempt to extend an undefined observation");
+  ASKAPCHECK(other.isValid(), "An attempt merge in an undefined observation");
+  ASKAPCHECK(other.itsStartCycle > itsEndCycle, "Merged in structure should start with tje cycle number which is greater than the previous value");
+  ASKAPCHECK(other.itsStartTime > itsEndTime, "New chunk is supposed to be later in time than the previous one");
+  ASKAPCHECK(other.itsStokes.nelements() == itsStokes.nelements(), "Merged observations are supposed to have matching polarisations");
+  ASKAPDEBUGASSERT(other.itsEndCycle > itsEndCycle);
+  ASKAPDEBUGASSERT(other.itsEndTime > itsEndTime);
+  // could've also double check directions, fequencies, etc 
+  itsEndCycle = other.itsEndCycle;
+  itsEndTime = other.itsEndTime;
+  // now aggregate flags
+  for (size_t pol=0; pol<itsAntennasWithValidData.size(); ++pol) {
+       ASKAPDEBUGASSERT(pol < itsStokes.nelements());
+       ASKAPCHECK(itsStokes[pol] == other.itsStokes[pol], "Merged observations are supposed to have matcing polarisations, product "<<pol+1<<" is different");
+       itsAntennasWithValidData[pol].insert(other.itsAntennasWithValidData[pol].begin(),other.itsAntennasWithValidData[pol].end());
+  }
+}
+
   
 /// @brief observed direction
 /// @return phase centre of the observation (same frame as used in the accessor)

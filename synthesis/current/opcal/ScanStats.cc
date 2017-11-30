@@ -165,7 +165,8 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
             if (sameScan) {
                 // continuing the same scan
                 ASKAPDEBUGASSERT(lastObsThisBeam != itsObs.rend());
-                lastObsThisBeam->update(ci->second.endCycle(), ci->second.endTime());
+                //lastObsThisBeam->update(ci->second.endCycle(), ci->second.endTime());
+                lastObsThisBeam->merge(ci->second);
             } else {
                 // start a new scan
                 itsObs.push_back(ci->second);

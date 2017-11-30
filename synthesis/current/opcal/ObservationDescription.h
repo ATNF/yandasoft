@@ -93,8 +93,14 @@ struct ObservationDescription {
   /// @brief extend existing observation for additional cycle(s)  
   /// @param[in] cycle current cycle (i.e. iteration number)
   /// @param[in] time current time (in accessor units)
-  /// @note an exception is thrown if the structure is uninitialised
+  /// @note an exception is thrown if the structure is uninitialised. The flags are not updated!
   void update(casa::uInt cycle, double time);
+
+  /// @brief extend exsting observation by merging in another structure
+  /// @details Unlike update, it also processes flagging informaton.
+  /// @param[in] other structure to merge in
+  /// @note an exception is thrown if added structure does not follow in time or cycle
+  void merge(const ObservationDescription &other);
   
   /// @brief set scan and field IDs
   /// @details This information can only be obtained for table-based datasets. Therefore, we deal with these misc fields
