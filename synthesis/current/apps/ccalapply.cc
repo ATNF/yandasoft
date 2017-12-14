@@ -45,6 +45,8 @@
 #include "dataaccess/ParsetInterface.h"
 #include "calibaccess/ICalSolutionConstSource.h"
 #include "calibaccess/CalibAccessFactory.h"
+#include "calibaccess/ServiceCalSolutionSourceStub.h"
+#include "calserviceaccessor/ServiceCalSolutionSource.h"
 #include "dataaccess/OnDemandNoiseAndFlagDA.h"
 #include "boost/shared_ptr.hpp"
 
@@ -75,7 +77,7 @@ class CcalApplyApp : public askap::Application
 
                 // Get Measurement Set accessor
                 IDataSharedIter it = getDataIterator(subset);
-                
+
                 ASKAPDEBUGASSERT(it);
                 ASKAPDEBUGASSERT(calME);
 
@@ -114,13 +116,13 @@ class CcalApplyApp : public askap::Application
         }
 
     private:
-        
+
         /// @brief this flag indicates whether the underlying code needs to update flags or noise
         /// @details For now - quick and dirty fix to allow MRO tests to proceed. The ASKAP model
         /// is to apply calibration on the fly, so table accessor classes are unable to modify noise or flag
-        /// information. 
+        /// information.
         bool itsNoiseAndFlagDANeeded;
-    
+
         static casa::MFrequency::Ref getFreqRefFrame(const LOFAR::ParameterSet& parset)
         {
             const string freqFrame = parset.getString("freqframe", "topo");
@@ -146,12 +148,28 @@ class CcalApplyApp : public askap::Application
                 CalibAccessFactory::roCalSolutionSource(parset);
             ASKAPASSERT(solutionSource);
 
+            // This is sloppy but I need to test whether this is likely to be a service
+            // source as I need to reinstantiate the full implementation - as all we get from the factory
+            // is a stub.
+
+            const std::string calAccType = parset.getString("calibaccess","parset");
+
+            if (calAccType == "service") {
+              solutionSource.reset(new ServiceCalSolutionSource(parset));
+              ASKAPLOG_INFO_STR(logger,"Yay I am a service source");
+
+            }
+            else {
+              ASKAPLOG_INFO_STR(logger,"Boo I am not a service source");
+            
+            }
+
             // Create applicator
             boost::shared_ptr<ICalibrationApplicator> calME(new CalibrationApplicatorME(solutionSource));
             ASKAPASSERT(calME);
             const bool scaleNoise = parset.getBool("calibrate.scalenoise", false);
             const bool allowFlag = parset.getBool("calibrate.allowflag", false);
-            itsNoiseAndFlagDANeeded = scaleNoise || allowFlag;  
+            itsNoiseAndFlagDANeeded = scaleNoise || allowFlag;
             calME->scaleNoise(scaleNoise);
             calME->allowFlag(allowFlag);
             calME->beamIndependent(parset.getBool("calibrate.ignorebeam", false));

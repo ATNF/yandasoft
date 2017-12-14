@@ -6,7 +6,7 @@
 ///      * solves for bandpass only
 ///      * works only with preaveraging calibration approach
 ///      * does not support multiple chunks in time (i.e. only one solution is made for the whole dataset)
-///      * does not support data distribution except per beam 
+///      * does not support data distribution except per beam
 ///      * does not support a distributed model (e.h. with individual workers dealing with individual Taylor terms)
 ///      * does not require exact match between number of workers and number of channel chunks, data are dealt with
 ///        serially by each worker with multiple iterations over data, if required.
@@ -14,7 +14,7 @@
 ///
 /// This specialised tool matches closely BETA needs and will be used for BETA initially (at least until we converge
 /// on the best approach to do bandpass calibration). The lifetime of this tool is uncertain at present. In many
-/// instances the code is quick and dirty, just to suit our immediate needs.  
+/// instances the code is quick and dirty, just to suit our immediate needs.
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -41,8 +41,8 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 /// last change: Wasim Raja <Wasim.Raja@csiro.au>
-///      -> XX and YY-visibility phases are referenced independently to XX and YY 
-///         visibilities of the reference antenna. 
+///      -> XX and YY-visibility phases are referenced independently to XX and YY
+///         visibilities of the reference antenna.
 
 // Include own header file first
 #include <parallel/BPCalibratorParallel.h>
@@ -85,6 +85,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Common/ParameterSet.h>
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
+#include "calibaccess/ServiceCalSolutionSourceStub.h"
+#include "calserviceaccessor/ServiceCalSolutionSource.h"
 
 
 // casa includes
@@ -101,26 +103,42 @@ namespace synthesis {
 /// @param[in] comms communication object
 /// @param[in] parset ParameterSet for inputs
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
-          const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset)), 
+          const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset)),
       itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false)
 {
   ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for using a specialised pipeline");
-  if (itsComms.isMaster()) {                        
+  if (itsComms.isMaster()) {
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = accessors::CalibAccessFactory::rwCalSolutionSource(parset);
       ASKAPASSERT(itsSolutionSource);
-      
+
       if (itsComms.isParallel()) {
           ASKAPLOG_INFO_STR(logger, "The work will be distributed between "<<itsComms.nProcs() - 1<<" workers");
       } else {
           ASKAPLOG_INFO_STR(logger, "The work will be done in the serial by the current process");
       }
+
+      // This is sloppy but I need to test whether this is likely to be a service
+      // source as I need to reinstantiate the full implementation - as all we get from the factory
+      // is a stub.
+
+      const std::string calAccType = parset.getString("calibaccess","parset");
+
+      if (calAccType == "service") {
+        itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
+        ASKAPLOG_INFO_STR(logger,"Yay I am a service source");
+
+      }
+      else {
+        ASKAPLOG_INFO_STR(logger,"Boo I am not a service source");
+
+      }
   }
   if (itsComms.isWorker()) {
       // set datasets (we cannot rely on the code in base classes because we don't distribute by node here
       setMeasurementSets(parset.getStringVector("dataset"));
-  
-      /// Create solver in workers  
+
+      /// Create solver in workers
       itsSolver.reset(new scimath::LinearSolver(1e3));
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
       ASKAPCHECK(!parset.isDefined("refgain"), "usage of refgain is deprecated, define reference antenna instead");
@@ -131,7 +149,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       } else {
           ASKAPLOG_INFO_STR(logger, "No phase rotation will be done between iterations");
       }
-  
+
       // load sky model, populate itsPerfectModel
       readModels();
       if (itsComms.isParallel()) {
@@ -140,26 +158,26 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
           ASKAPLOG_INFO_STR(logger, "Work for "<<nBeam()<<" beams and "<<nChan()<<" channels will be split between "<<
                    (itsComms.nProcs() - 1)<<" ranks, this one handles chunk "<<(itsComms.rank() - 1));
           itsWorkUnitIterator.init(casa::IPosition(2, nBeam(), nChan()), itsComms.nProcs() - 1, itsComms.rank() - 1);
-      } 
+      }
 
-      ASKAPCHECK((measurementSets().size() == 1) || (measurementSets().size() == nBeam()), 
+      ASKAPCHECK((measurementSets().size() == 1) || (measurementSets().size() == nBeam()),
           "Number of measurement sets given in the parset ("<<measurementSets().size()<<
-          ") should be either 1 or equal the number of beams ("<<nBeam()<<")");      
-  } 
+          ") should be either 1 or equal the number of beams ("<<nBeam()<<")");
+  }
   if (!itsComms.isParallel()) {
       // setup work units in the serial case - all work to be done here
       ASKAPLOG_INFO_STR(logger, "All work for "<<nBeam()<<" beams and "<<nChan()<<" channels will be handled by this rank");
       itsWorkUnitIterator.init(casa::IPosition(2, nBeam(), nChan()));
   }
 
-}          
+}
 
 /// @brief helper method to remove the dataset name from a parset
 /// @details We deal with multiple measurement sets in a dit different
 /// way from the other synthesis applications (they are not per worker
 /// here). This method allows to remove the string with measurement sets
 /// in the parset passed to base classes and replace it by empty string
-/// @param[in] parset input parset 
+/// @param[in] parset input parset
 /// @return a copy without the dataset keyword
 LOFAR::ParameterSet BPCalibratorParallel::emptyDatasetKeyword(const LOFAR::ParameterSet &parset)
 {
@@ -174,7 +192,7 @@ LOFAR::ParameterSet BPCalibratorParallel::emptyDatasetKeyword(const LOFAR::Param
 /// then sends the result to master for writing.
 void BPCalibratorParallel::run()
 {
-  if (itsComms.isMaster()) {                        
+  if (itsComms.isMaster()) {
     ASKAPLOG_DEBUG_STR(logger, "About to set the solution accessor");
     if (!itsSolutionIDValid) {
         // obtain solution ID only once, the results can come in random order and the
@@ -183,31 +201,31 @@ void BPCalibratorParallel::run()
         itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
         itsSolutionIDValid = true;
     }
-    ASKAPLOG_DEBUG_STR(logger, "Have set solutionID");
+    ASKAPLOG_INFO_STR(logger, "Have set solutionID");
     itsSolAcc = itsSolutionSource->rwSolution(itsSolutionID);
-    ASKAPLOG_DEBUG_STR(logger, "Have set solution accessor");
+    ASKAPLOG_INFO_STR(logger, "Have set solution accessor");
     ASKAPASSERT(itsSolAcc);
   }
-  
+
   if (itsComms.isWorker()) {
       ASKAPDEBUGASSERT(itsModel);
       const int nCycles = parset().getInt32("ncycles", 1);
       ASKAPCHECK(nCycles >= 0, " Number of calibration iterations should be a non-negative number, you have " <<
-                       nCycles);                                             
+                       nCycles);
       for (itsWorkUnitIterator.origin(); itsWorkUnitIterator.hasMore(); itsWorkUnitIterator.next()) {
            // this will force creation of the new measurement equation for this beam/channel pair
            itsEquation.reset();
-            
+
            const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
-           
+
            ASKAPLOG_INFO_STR(logger, "Initialise bandpass (unknowns) for "<<nAnt()<<" antennas for beam="<<indices.first<<
                              " and channel="<<indices.second);
-           itsModel->reset();                             
+           itsModel->reset();
            for (casa::uInt ant = 0; ant<nAnt(); ++ant) {
                 itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::XX), casa::Complex(1.,0.));
-                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::YY), casa::Complex(1.,0.));                
-           }       
-           
+                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::YY), casa::Complex(1.,0.));
+           }
+
            // setup reference gain, if needed
            if (itsRefAntenna >= 0) {
                //itsRefGain = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
@@ -218,10 +236,10 @@ void BPCalibratorParallel::run()
                itsRefGainXX = "";
                itsRefGainYY = "";
            }
-           
+
            for (int cycle = 0; (cycle < nCycles) && validSolution(); ++cycle) {
                 ASKAPLOG_INFO_STR(logger, "*** Starting calibration iteration " << cycle + 1 << " for beam="<<
-                              indices.first<<" and channel="<<indices.second<<" ***");                    
+                              indices.first<<" and channel="<<indices.second<<" ***");
                 // iterator is used to access the current work unit inside calcNE
                 calcNE();
                 solveNE();
@@ -232,14 +250,14 @@ void BPCalibratorParallel::run()
                itsModel->add("channel",static_cast<double>(indices.second));
                itsModel->fix("beam");
                itsModel->fix("channel");
-               sendModelToMaster();                
+               sendModelToMaster();
            } else {
                // serial operation, just write the result
                if (validSolution()) {
                    writeModel();
                }
            }
-      }     
+      }
   }
   if (itsComms.isMaster() && itsComms.isParallel()) {
       const casa::uInt numberOfWorkUnits = nBeam() * nChan();
@@ -249,21 +267,21 @@ void BPCalibratorParallel::run()
            if (validSolution()) {
                writeModel();
            }
-      } 
+      }
   }
 
   // Destroy the accessor, which should call syncCache and write the table out.
   ASKAPLOG_INFO_STR(logger, "Syncing the cached bandpass table to disk");
   itsSolAcc.reset();
-} 
+}
 
 /// @brief verify that the current solution is valid
-/// @details We use a special keywork 'invalid' in the model to 
-/// signal that a particular solution failed. for whatever reason. 
-/// This flag is checked to avoid writing the solution (which would 
+/// @details We use a special keywork 'invalid' in the model to
+/// signal that a particular solution failed. for whatever reason.
+/// This flag is checked to avoid writing the solution (which would
 /// automatically set validity flag
 /// @return true, if the current solution is valid
-bool BPCalibratorParallel::validSolution() const 
+bool BPCalibratorParallel::validSolution() const
 {
    if (itsModel) {
        return !itsModel->has("invalid");
@@ -280,7 +298,7 @@ bool BPCalibratorParallel::validSolution() const
 std::pair<casa::uInt, casa::uInt> BPCalibratorParallel::currentBeamAndChannel() const
 {
   if (itsComms.isMaster() && itsComms.isParallel()) {
-      ASKAPDEBUGASSERT(itsModel); 
+      ASKAPDEBUGASSERT(itsModel);
       ASKAPDEBUGASSERT(itsModel->has("beam") && itsModel->has("channel"));
       const double beam = itsModel->scalarValue("beam");
       const double channel = itsModel->scalarValue("channel");
@@ -288,7 +306,7 @@ std::pair<casa::uInt, casa::uInt> BPCalibratorParallel::currentBeamAndChannel() 
       const std::pair<casa::uInt,casa::uInt> result(static_cast<casa::uInt>(beam), static_cast<casa::uInt>(channel));
       ASKAPDEBUGASSERT(result.first < nBeam());
       ASKAPDEBUGASSERT(result.second < nChan());
-      return result;            
+      return result;
   } else {
       const casa::IPosition cursor = itsWorkUnitIterator.cursor();
       ASKAPDEBUGASSERT(cursor.nelements() == 2);
@@ -311,28 +329,28 @@ void BPCalibratorParallel::sendModelToMaster() const
    ASKAPLOG_DEBUG_STR(logger, "Sending results to the master");
    itsComms.notifyMaster();
    ASKAPDEBUGASSERT(itsModel);
-   
+
    askapparallel::BlobOBufMW bobmw(itsComms, 0);
    LOFAR::BlobOStream out(bobmw);
    out.putStart("calmodel", BPCALIBRATOR_PARALLEL_BLOB_STREAM_VERSION);
    out << *itsModel;
    out.putEnd();
-   bobmw.flush();   
+   bobmw.flush();
 }
-      
+
 /// @brief asynchronously receive model from one of the workers
 /// @details This method is supposed to be used in the master rank in the parallel mode. It
-/// waits until the result becomes available from any of the workers and then stores it 
-/// in itsModel. 
+/// waits until the result becomes available from any of the workers and then stores it
+/// in itsModel.
 void BPCalibratorParallel::receiveModelFromWorker()
 {
    ASKAPDEBUGTRACE("BPCalibratorParallel::receiveModelFromWorker");
    itsModel.reset(new scimath::Params);
-   
+
    // wait for the notification
    const int source = itsComms.waitForNotification().first;
    ASKAPLOG_DEBUG_STR(logger, "Receiving results from rank "<<source);
-  
+
    askapparallel::BlobIBufMW bibmw(itsComms, source);
    LOFAR::BlobIStream in(bibmw);
    const int version = in.getStart("calmodel");
@@ -344,30 +362,30 @@ void BPCalibratorParallel::receiveModelFromWorker()
 
 
 /// @brief Calculate the normal equations (runs in workers)
-/// @details Model, either image-based or component-based, is used in conjunction with 
-/// CalibrationME to calculate the generic normal equations. 
+/// @details Model, either image-based or component-based, is used in conjunction with
+/// CalibrationME to calculate the generic normal equations.
 void BPCalibratorParallel::calcNE()
 {
   ASKAPDEBUGASSERT(itsComms.isWorker());
-  
+
   // create a new instance of the normal equations class
   boost::shared_ptr<scimath::GenericNormalEquations> gne(new scimath::GenericNormalEquations);
   itsNe = gne;
-        
+
   ASKAPDEBUGASSERT(itsNe);
-      
+
   // obtain details on the current iteration, i.e. beam and channel
   ASKAPDEBUGASSERT(itsWorkUnitIterator.hasMore());
-  
+
   // first is beam, second is channel
   const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
-  
+
   ASKAPDEBUGASSERT((measurementSets().size() == 1) || (indices.first < measurementSets().size()));
-              
+
   const std::string ms = (measurementSets().size() == 1 ? measurementSets()[0] : measurementSets()[indices.first]);
-        
-  // actual computation   
-  calcOne(ms, indices.second, indices.first);  
+
+  // actual computation
+  calcOne(ms, indices.second, indices.first);
 }
 
 /// @brief helper method to invalidate curremt solution
@@ -382,7 +400,7 @@ void BPCalibratorParallel::invalidateSolution() {
 /// @details Parameters of the calibration problem are solved for here
 void BPCalibratorParallel::solveNE()
 {
-  if (itsComms.isWorker()) {        
+  if (itsComms.isWorker()) {
       ASKAPLOG_INFO_STR(logger, "Solving normal equations");
       ASKAPDEBUGASSERT(itsNe);
       if (itsNe->unknowns().size() == 0) {
@@ -397,11 +415,11 @@ void BPCalibratorParallel::solveNE()
       ASKAPDEBUGASSERT(itsModel);
       itsSolver->init();
       itsSolver->addNormalEquations(*itsNe);
-      itsSolver->setAlgorithm("SVD");     
+      itsSolver->setAlgorithm("SVD");
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
-      
+
       const unsigned int minRank = parset().getUint32("minrank",15u);
       if (q.rank() < minRank) {
           ASKAPLOG_WARN_STR(logger, "Solution failed - minimum rank is "<<minRank<<", normal matrix has rank = "<<q.rank());
@@ -409,7 +427,7 @@ void BPCalibratorParallel::solveNE()
           return;
       }
 
-      //wasim was here 
+      //wasim was here
       /*
       if (itsRefGain != "") {
           ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<itsRefGain<<" equal to 0");
@@ -435,24 +453,24 @@ void BPCalibratorParallel::solveNE()
 void BPCalibratorParallel::writeModel(const std::string &)
 {
   ASKAPDEBUGASSERT(itsComms.isMaster());
-  
+
   const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
-  
+
   ASKAPLOG_DEBUG_STR(logger, "Writing results of the calibration for beam="<<indices.first<<" channel="<<indices.second);
-  
+
   ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
 
   ASKAPASSERT(itsSolAcc);
-        
-  ASKAPDEBUGASSERT(itsModel); 
+
+  ASKAPDEBUGASSERT(itsModel);
   std::vector<std::string> parlist = itsModel->freeNames();
   for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
-       const casa::Complex val = itsModel->complexValue(*it);           
-       const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
+       const casa::Complex val = itsModel->complexValue(*it);
+       const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
              accessors::CalParamNameHelper::parseParam(*it);
        // beam is also coded in the parameters, although we don't need it because the data are partitioned
-       // just cross-check it  
-       ASKAPDEBUGASSERT(static_cast<casa::uInt>(paramType.first.beam()) == indices.first);             
+       // just cross-check it
+       ASKAPDEBUGASSERT(static_cast<casa::uInt>(paramType.first.beam()) == indices.first);
        itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
   }
 }
@@ -460,16 +478,16 @@ void BPCalibratorParallel::writeModel(const std::string &)
 /// @brief create measurement equation
 /// @details This method initialises itsEquation with shared pointer to a proper type.
 /// It uses internal flags to create a correct type (i.e. polarisation calibration or
-/// just antenna-based gains). Parameters are passed directly to the constructor of 
+/// just antenna-based gains). Parameters are passed directly to the constructor of
 /// CalibrationME template.
-/// @param[in] dsi data shared iterator 
+/// @param[in] dsi data shared iterator
 /// @param[in] perfectME uncorrupted measurement equation
-void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter &dsi, 
+void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter &dsi,
                 const boost::shared_ptr<IMeasurementEquation const> &perfectME)
 {
    ASKAPDEBUGASSERT(itsModel);
    ASKAPDEBUGASSERT(perfectME);
-   
+
    // it is handy to have a shared pointer to the base type because it is
    // not templated
    boost::shared_ptr<PreAvgCalMEBase> preAvgME;
@@ -477,18 +495,18 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    // this also opens a possibility to use several (e.g. 54 = coarse resolution) channels to get one gain
    // solution which is then replicated to all channels involved. We can also add frequency-dependent leakage, if
    // tests show it is required (currently it is not in the calibration model)
-   preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());           
+   preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
    ASKAPDEBUGASSERT(preAvgME);
-   
-   ASKAPDEBUGASSERT(dsi.hasMore());  
+
+   ASKAPDEBUGASSERT(dsi.hasMore());
    preAvgME->accumulate(dsi,perfectME);
    itsEquation = preAvgME;
-           
+
    // this is just because we bypass setting the model for the first major cycle
    // in the case without pre-averaging
    itsEquation->setParameters(*itsModel);
-}                
-  
+}
+
 /// @brief helper method to rotate all phases
 /// @details This method rotates the phases of all gains in itsModel
 /// to have the phase of itsRefGain exactly 0. This operation does
@@ -503,11 +521,11 @@ void BPCalibratorParallel::rotatePhases()
   ASKAPDEBUGASSERT(itsComms.isWorker());
   ASKAPDEBUGASSERT(itsModel);
   //wasim was here
- /* 
+ /*
   ASKAPCHECK(itsModel->has(itsRefGain), "phase rotation to `"<<itsRefGain<<
              "` is impossible because this parameter is not present in the model");
   casa::Complex  refPhaseTerm = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGain)));
- */                      
+ */
   ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
              "` is impossible because this parameter is not present in the model");
   ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
@@ -517,24 +535,24 @@ void BPCalibratorParallel::rotatePhases()
   std::vector<std::string> names(itsModel->freeNames());
   for (std::vector<std::string>::const_iterator it=names.begin(); it!=names.end();++it)  {
        const std::string parname = *it;
-       //wasim was here 
+       //wasim was here
        /*if (parname.find("gain") != std::string::npos) {
            itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
        } */
        if (parname.find("gain.g11") != std::string::npos) {
            itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTermXX);
-       } 
+       }
        else if (parname.find("gain.g22") != std::string::npos) {
            itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTermYY);
-       } 
+       }
   }
 }
-      
+
 /// @brief helper method to extract solution time from NE.
 /// @details To be able to time tag the calibration solutions we add
 /// start and stop times extracted from the dataset as metadata to normal
 /// equations. It allows us to send these times to the master, which
-/// ultimately writes the calibration solution. Otherwise, these times 
+/// ultimately writes the calibration solution. Otherwise, these times
 /// could only be obtained in workers who deal with the actual data.
 /// @return solution time (seconds since 0 MJD)
 /// @note if no start/stop time metadata are present in the normal equations
@@ -542,10 +560,10 @@ void BPCalibratorParallel::rotatePhases()
 double BPCalibratorParallel::solutionTime() const
 {
   // use the earliest time corresponding to the data used to make this calibration solution
-  // to tag the solution. A request for any latest time than this would automatically 
+  // to tag the solution. A request for any latest time than this would automatically
   // extract this solution as most recent.
   ASKAPASSERT(itsNe);
-  
+
   boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
   if (gne) {
       const scimath::Params& metadata = gne->metadata();
@@ -565,11 +583,11 @@ void BPCalibratorParallel::calcOne(const std::string& ms, const casa::uInt chan,
   casa::Timer timer;
   timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms <<" channel "<<chan<<" beam "<<beam);
-  // First time around we need to generate the equation 
+  // First time around we need to generate the equation
   if (!itsEquation) {
       ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
       accessors::TableDataSource ds(ms, accessors::TableDataSource::DEFAULT, dataColumn());
-      ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());      
+      ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
       accessors::IDataSelectorPtr sel=ds.createSelector();
       sel << parset();
       sel->chooseChannels(1,chan);
@@ -581,35 +599,35 @@ void BPCalibratorParallel::calcOne(const std::string& ms, const casa::uInt chan,
       conv->setEpochFrame();
       accessors::IDataSharedIter it=ds.createIterator(sel, conv);
       ASKAPCHECK(it.hasMore(), "No data seem to be available for channel "<<chan<<" and beam "<<beam);
-      
+
       ASKAPCHECK(itsModel, "Initial assumption of parameters is not defined");
-      
+
       if (!itsPerfectME) {
           ASKAPLOG_INFO_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
           ASKAPCHECK(itsPerfectModel, "Uncorrupted model not defined");
           if (SynthesisParamsHelper::hasImage(itsPerfectModel)) {
               ASKAPCHECK(!SynthesisParamsHelper::hasComponent(itsPerfectModel),
                          "Image + component case has not yet been implemented");
-              // have to create an image-specific equation        
+              // have to create an image-specific equation
               boost::shared_ptr<ImagingEquationAdapter> ieAdapter(new ImagingEquationAdapter);
               ASKAPCHECK(gridder(), "Gridder not defined");
               ieAdapter->assign<ImageFFTEquation>(*itsPerfectModel, gridder());
               itsPerfectME = ieAdapter;
           } else {
               // model is a number of components, don't need an adapter here
-         
+
               // it doesn't matter which iterator is passed below. It is not used
-              boost::shared_ptr<ComponentEquation> 
+              boost::shared_ptr<ComponentEquation>
                   compEq(new ComponentEquation(*itsPerfectModel,it));
               itsPerfectME = compEq;
           }
       }
       // now we could've used class data members directly instead of passing them to createCalibrationME
-      createCalibrationME(it,itsPerfectME);         
+      createCalibrationME(it,itsPerfectME);
       ASKAPCHECK(itsEquation, "Equation is not defined");
   } else {
       ASKAPLOG_INFO_STR(logger, "Reusing measurement equation" );
-      // we need to update the model held by measurement equation 
+      // we need to update the model held by measurement equation
       // because it has been cloned at construction
       ASKAPCHECK(itsEquation, "Equation is not defined");
       ASKAPCHECK(itsModel, "Model is not defined");
@@ -625,4 +643,3 @@ void BPCalibratorParallel::calcOne(const std::string& ms, const casa::uInt chan,
 } // namespace synthesis
 
 } // namespace askap
-
