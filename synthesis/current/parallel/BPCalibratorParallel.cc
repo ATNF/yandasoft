@@ -85,8 +85,9 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Common/ParameterSet.h>
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
-#include "calibaccess/ServiceCalSolutionSourceStub.h"
-#include "calserviceaccessor/ServiceCalSolutionSource.h"
+#include <calibaccess/ServiceCalSolutionSourceStub.h>
+#include <calserviceaccessor/ServiceCalSolutionSource.h>
+
 
 
 // casa includes
@@ -126,13 +127,15 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
 
       if (calAccType == "service") {
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
-        ASKAPLOG_INFO_STR(logger,"Yay I am a service source");
+        ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
+        ASKAPLOG_INFO_STR(logger,"SolutionID determined by ServiceSource");
+        itsSolutionIDValid=true;
+        // we are only solving for bandpass
+        boost::shared_ptr<ServiceCalSolutionSource> src = boost::dynamic_pointer_cast<ServiceCalSolutionSource>(itsSolutionSource);
+        src->solveBandpass();
 
       }
-      else {
-        ASKAPLOG_INFO_STR(logger,"Boo I am not a service source");
 
-      }
   }
   if (itsComms.isWorker()) {
       // set datasets (we cannot rely on the code in base classes because we don't distribute by node here

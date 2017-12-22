@@ -1,12 +1,12 @@
 /// @file
 ///
-/// CalibratorParallel: Support for parallel applications using the measurement 
+/// CalibratorParallel: Support for parallel applications using the measurement
 /// equation classes. This code applies to calibration. I expect that this part
 /// will be redesigned in the future for a better separation of the algorithm
 /// from the parallel framework middleware. Current version is basically an
 /// adapted ImagerParallel class
 ///
-/// Performs calibration on a data source. Can run in serial or 
+/// Performs calibration on a data source. Can run in serial or
 /// parallel (MPI) mode.
 ///
 /// The data are accessed from the DataSource. This is and will probably remain
@@ -82,6 +82,9 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Common/ParameterSet.h>
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
+#include <calibaccess/ServiceCalSolutionSourceStub.h>
+#include <calserviceaccessor/ServiceCalSolutionSource.h>
+#include <calserviceaccessor/ServiceCalSolutionAccessor.h>
 
 
 // casa includes
@@ -102,12 +105,12 @@ using namespace askap::askapparallel;
 /// @param[in] parset ParameterSet for inputs
 CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset), 
+      MEParallelApp(comms,parset),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
-      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u)
-{  
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false)
+{
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
       ASKAPLOG_INFO_STR(logger, "Gains will be solved for (solve='"<<what2solve<<"')");
@@ -126,22 +129,22 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"')");
       itsSolveLeakage = true;
   }
-  
+
   if (what2solve.find("bandpass") != std::string::npos) {
       ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for (solve='"<<what2solve<<"')");
       itsSolveBandpass = true;
-      ASKAPCHECK(!itsSolveGains && !itsSolveLeakage, 
-         "Combination of frequency-dependent and frequency-independent effects is not supported at the moment for simplicity");               
+      ASKAPCHECK(!itsSolveGains && !itsSolveLeakage,
+         "Combination of frequency-dependent and frequency-independent effects is not supported at the moment for simplicity");
   }
-  
-  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass, 
+
+  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass,
       "Nothing to solve! Either gains or leakages (or both) or bandpass have to be solved for, you specified solve='"<<
       what2solve<<"'");
-  
+
   init(parset);
   if (itsComms.isMaster()) {
-                  
-      /// Create the solver  
+
+      /// Create the solver
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
 
@@ -164,10 +167,48 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = CalibAccessFactory::rwCalSolutionSource(parset);
+
+      // Now we have to decide whether we are a Service or a Table.
+
       ASKAPASSERT(itsSolutionSource);
+
+      const std::string calAccType = parset.getString("calibaccess","parset");
+
+      if (calAccType == "service") {
+        itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
+        ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
+        itsSolutionIDValid = true;
+
+        // get the string vector of solutions we are going to solve for ....
+        const vector<string> willSolve = parset.getStringVector("solve", false);
+        string leakages("leakages");
+        string gains("gains");
+        string bandpass("bandpass");
+
+        boost::shared_ptr<ServiceCalSolutionSource> src = boost::dynamic_pointer_cast<ServiceCalSolutionSource>(itsSolutionSource);
+        for (size_t sol = 0; sol < willSolve.size(); ++sol) {
+          ASKAPLOG_INFO_STR(logger,"Will solve for :" << willSolve[sol]);
+          if (gains.compare(willSolve[sol]) == 0) {
+            src->solveGains();
+            ASKAPLOG_INFO_STR(logger,"Solving for and will push gains");
+          }
+          if (leakages.compare(willSolve[sol]) == 0) {
+            ASKAPLOG_INFO_STR(logger,"Solving for and will push leakages");
+            src->solveLeakages();
+          }
+
+          if (bandpass.compare(willSolve[sol]) == 0) {
+              ASKAPLOG_INFO_STR(logger,"Solving for and will push bandpass");
+              src->solveBandpass();
+          }
+
+        }
+
+      }
+
   }
   if (itsComms.isWorker()) {
-  
+
       const int chunkSize = parset.getInt32("chanperworker",0);
       ASKAPCHECK(chunkSize >= 0, "Number of channels per worker cannot be negative, you have "<<chunkSize);
       itsChannelsPerWorker = static_cast<casa::uInt>(chunkSize);
@@ -176,7 +217,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
           ASKAPCHECK(chunk >= 0, "Chunk number is supposed to be non-negative, you have "<<chunk);
           itsStartChan = itsChannelsPerWorker * chunk;
           ASKAPLOG_INFO_STR(logger, "This worker at rank = "<<itsComms.rank()<<" will process "<<itsChannelsPerWorker<<
-                                    " spectral channels starting from "<<itsStartChan<<" (chunk="<<chunk<<")");                                    
+                                    " spectral channels starting from "<<itsStartChan<<" (chunk="<<chunk<<")");
       }
       // load sky model, populate itsPerfectModel
       readModels();
@@ -222,8 +263,8 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       itsModel->reset();
 
       // initial assumption of the parameters
-      const casa::uInt nAnt = parset.getInt32("nAnt",36);  
-      const casa::uInt nBeam = parset.getInt32("nBeam",1); 
+      const casa::uInt nAnt = parset.getInt32("nAnt",36);
+      const casa::uInt nBeam = parset.getInt32("nBeam",1);
       if (itsSolveGains) {
           ASKAPLOG_INFO_STR(logger, "Initialise gains (unknowns) for "<<nAnt<<" antennas and "<<nBeam<<" beam(s).");
           if (itsBeamIndependentGains) {
@@ -265,14 +306,14 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
                                    nChan<<" spectral channels");
           for (casa::uInt ant = 0; ant<nAnt; ++ant) {
                for (casa::uInt beam = 0; beam<nBeam; ++beam) {
-                    const std::string xxParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XX); 
-                    const std::string yyParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YY); 
+                    const std::string xxParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XX);
+                    const std::string yyParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YY);
                     for (casa::uInt chan = 0; chan<nChan; ++chan) {
                          itsModel->add(accessors::CalParamNameHelper::addChannelInfo(xxParName, chan), casa::Complex(1.,0.));
                          itsModel->add(accessors::CalParamNameHelper::addChannelInfo(yyParName, chan), casa::Complex(1.,0.));
                     }
                }
-          }          
+          }
           updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
       }
   }
@@ -289,13 +330,13 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
   casa::Timer timer;
   timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
-  // First time around we need to generate the equation 
+  // First time around we need to generate the equation
   if ((!itsEquation) || discard) {
       ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
       if (!itsIteratorAdapter) {
           ASKAPLOG_INFO_STR(logger, "Creating iterator over data" );
           TableDataSource ds(ms, TableDataSource::DEFAULT, dataColumn());
-          ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());      
+          ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
           IDataSelectorPtr sel=ds.createSelector();
           if (itsChannelsPerWorker > 0) {
               ASKAPLOG_INFO_STR(logger, "Setting up selector for "<<itsChannelsPerWorker<<" channels starting from "<<itsStartChan);
@@ -321,33 +362,33 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
       IDataSharedIter it(itsIteratorAdapter);
 
       ASKAPCHECK(itsModel, "Initial assumption of parameters is not defined");
-      
+
       if (!itsPerfectME) {
           ASKAPLOG_INFO_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
           ASKAPCHECK(itsPerfectModel, "Uncorrupted model not defined");
           if (SynthesisParamsHelper::hasImage(itsPerfectModel)) {
               ASKAPCHECK(!SynthesisParamsHelper::hasComponent(itsPerfectModel),
                          "Image + component case has not yet been implemented");
-              // have to create an image-specific equation        
+              // have to create an image-specific equation
               boost::shared_ptr<ImagingEquationAdapter> ieAdapter(new ImagingEquationAdapter);
               ASKAPCHECK(gridder(), "Gridder not defined");
               ieAdapter->assign<ImageFFTEquation>(*itsPerfectModel, gridder());
               itsPerfectME = ieAdapter;
           } else {
               // model is a number of components, don't need an adapter here
-         
+
               // it doesn't matter which iterator is passed below. It is not used
-              boost::shared_ptr<ComponentEquation> 
+              boost::shared_ptr<ComponentEquation>
                   compEq(new ComponentEquation(*itsPerfectModel,it));
               itsPerfectME = compEq;
           }
       }
       // now we could've used class data members directly instead of passing them to createCalibrationME
-      createCalibrationME(it,itsPerfectME);         
+      createCalibrationME(it,itsPerfectME);
       ASKAPCHECK(itsEquation, "Equation is not defined");
   } else {
       ASKAPLOG_INFO_STR(logger, "Reusing measurement equation" );
-      // we need to update the model held by measurement equation 
+      // we need to update the model held by measurement equation
       // because it has been cloned at construction
       ASKAPCHECK(itsEquation, "Equation is not defined");
       ASKAPCHECK(itsModel, "Model is not defined");
@@ -364,69 +405,69 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
 /// @brief create measurement equation
 /// @details This method initialises itsEquation with shared pointer to a proper type.
 /// It uses internal flags to create a correct type (i.e. polarisation calibration or
-/// just antenna-based gains). Parameters are passed directly to the constructor of 
+/// just antenna-based gains). Parameters are passed directly to the constructor of
 /// CalibrationME template.
-/// @param[in] dsi data shared iterator 
+/// @param[in] dsi data shared iterator
 /// @param[in] perfectME uncorrupted measurement equation
-void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi, 
+void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
                 const boost::shared_ptr<IMeasurementEquation const> &perfectME)
 {
    ASKAPDEBUGASSERT(itsModel);
    ASKAPDEBUGASSERT(perfectME);
-   // temporary logic while preaveraging is being debugged for polarisation 
+   // temporary logic while preaveraging is being debugged for polarisation
    // calibration
    //const bool doPreAveraging = false;
    const bool doPreAveraging = true;
    //const bool doPreAveraging = !itsSolveLeakage;
   if (!doPreAveraging)  {
-   
+
    ASKAPCHECK(itsSolutionInterval < 0, "Time-dependent solutions are supported only with pre-averaging, you have interval = "<<
               itsSolutionInterval<<" seconds");
-   ASKAPCHECK(!itsSolveBandpass, "Bandpass solution is only supported for pre-averaging at the moment (for simplicity)");           
-              
+   ASKAPCHECK(!itsSolveBandpass, "Bandpass solution is only supported for pre-averaging at the moment (for simplicity)");
+
    // the old code without pre-averaging
    if (itsSolveGains && !itsSolveLeakage) {
        if (itsBeamIndependentGains) {
-          itsEquation.reset(new CalibrationME<NoXPolBeamIndependentGain>(*itsModel,dsi,perfectME));           
+          itsEquation.reset(new CalibrationME<NoXPolBeamIndependentGain>(*itsModel,dsi,perfectME));
        } else {
-          itsEquation.reset(new CalibrationME<NoXPolGain>(*itsModel,dsi,perfectME));           
+          itsEquation.reset(new CalibrationME<NoXPolGain>(*itsModel,dsi,perfectME));
        }
    } else if (itsSolveLeakage && !itsSolveGains) {
-       itsEquation.reset(new CalibrationME<LeakageTerm>(*itsModel,dsi,perfectME));           
+       itsEquation.reset(new CalibrationME<LeakageTerm>(*itsModel,dsi,perfectME));
    } else if (itsSolveLeakage && itsSolveGains) {
        if (itsBeamIndependentGains) {
-           itsEquation.reset(new CalibrationME<Product<NoXPolBeamIndependentGain,LeakageTerm> >(*itsModel,dsi,perfectME));           
-       } else {   
-           itsEquation.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm> >(*itsModel,dsi,perfectME));           
+           itsEquation.reset(new CalibrationME<Product<NoXPolBeamIndependentGain,LeakageTerm> >(*itsModel,dsi,perfectME));
+       } else {
+           itsEquation.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm> >(*itsModel,dsi,perfectME));
        }
    } else {
-       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");       
+       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
    }
- 
+
   } else {
-   
+
    // code with pre-averaging
    // it is handy to have a shared pointer to the base type because it is
    // not templated
    boost::shared_ptr<PreAvgCalMEBase> preAvgME;
    if (itsSolveGains && !itsSolveLeakage) {
        if (itsBeamIndependentGains) {
-          preAvgME.reset(new CalibrationME<NoXPolBeamIndependentGain, PreAvgCalMEBase>());           
+          preAvgME.reset(new CalibrationME<NoXPolBeamIndependentGain, PreAvgCalMEBase>());
        } else {
-          preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());           
+          preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
        }
    } else if (itsSolveLeakage && !itsSolveGains) {
-       preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());           
+       preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
    } else if (itsSolveLeakage && itsSolveGains) {
        if (itsBeamIndependentGains) {
-          preAvgME.reset(new CalibrationME<Product<NoXPolBeamIndependentGain,LeakageTerm>, PreAvgCalMEBase>());       
+          preAvgME.reset(new CalibrationME<Product<NoXPolBeamIndependentGain,LeakageTerm>, PreAvgCalMEBase>());
        } else {
-          preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());       
+          preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());
        }
    } else if (itsSolveBandpass) {
-       preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase>()); 
+       preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase>());
    } else {
-       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");       
+       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
    }
    ASKAPDEBUGASSERT(preAvgME);
    // without the following lines of code, the buffer initialisation will be performed based on the first sighted
@@ -444,10 +485,10 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    preAvgME->beamIndependent(itsBeamIndependentGains);
    preAvgME->accumulate(dsi,perfectME);
    itsEquation = preAvgME;
- 
+
    // set helper parameter controlling which part of bandpass is solved for (ignored in all other cases)
    setChannelOffsetInModel();
-          
+
    // this is just because we bypass setting the model for the first major cycle
    // in the case without pre-averaging
    itsEquation->setParameters(*itsModel);
@@ -458,7 +499,7 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
 
 /// @brief helper method to update channel offset
 /// @details To be able to process a subset of channels we specify the offset
-/// in the model. However, this offset needs to be reset per worker in the 
+/// in the model. However, this offset needs to be reset per worker in the
 /// parallel case for the correct operation. This method encapsulates the required
 /// code of setting the channel offset to the value of itsStartChan
 void CalibratorParallel::setChannelOffsetInModel() const {
@@ -466,7 +507,7 @@ void CalibratorParallel::setChannelOffsetInModel() const {
        itsModel->update("chan_offset",double(itsStartChan));
    } else {
        itsModel->add("chan_offset",double(itsStartChan));
-   } 
+   }
    itsModel->fix("chan_offset");
 }
 
@@ -475,7 +516,7 @@ void CalibratorParallel::setChannelOffsetInModel() const {
 void CalibratorParallel::calcNE()
 {
   // Now we need to recreate the normal equations
-  
+
   // we need to preserve at least one metadata item which is a flag whether we have more
   // data available. This flag is filled at the first iteration and would be overwritten by reset
   // unless we do something. The following code looks ugly, but it is probably the easiest way to
@@ -492,7 +533,7 @@ void CalibratorParallel::calcNE()
   itsNe = gne;
 
   if (itsComms.isWorker()) {
-        
+
       ASKAPDEBUGASSERT(itsNe);
 
       if (itsComms.isParallel()) {
@@ -502,7 +543,7 @@ void CalibratorParallel::calcNE()
           ASKAPCHECK(itsSolver, "Solver not defined correctly");
           // just throw exception for now, although we could've maintained a map of dataset names/iterators
           // to allow reuse of the right iterator
-          ASKAPCHECK((itsSolutionInterval < 0) || (measurementSets().size() < 2), 
+          ASKAPCHECK((itsSolutionInterval < 0) || (measurementSets().size() < 2),
               "The code currently doesn't support time-dependent solutions for a number of measurement sets in the serial mode");
           //
           itsSolver->init();
@@ -515,19 +556,19 @@ void CalibratorParallel::calcNE()
 }
 
 void CalibratorParallel::solveNE()
-{ 
+{
   if (itsComms.isMaster()) {
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
       }
-        
+
       ASKAPLOG_INFO_STR(logger, "Solving normal equations");
       casa::Timer timer;
       timer.mark();
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
-      itsSolver->setAlgorithm("SVD");     
+      itsSolver->setAlgorithm("SVD");
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
@@ -559,7 +600,7 @@ void CalibratorParallel::rotatePhases()
   ASKAPDEBUGASSERT(itsModel);
   // by default assume frequency-independent case
   std::vector<std::string> names(itsModel->freeNames());
-  casa::Array<casa::Complex> refPhaseTerms;  
+  casa::Array<casa::Complex> refPhaseTerms;
   const casa::uInt refPols = 2;
   if (itsSolveBandpass) {
       // first find the required dimensionality
@@ -585,8 +626,8 @@ void CalibratorParallel::rotatePhases()
               "` is impossible because this parameter is not present in the model, channel = "<<chan);
            refPhaseTerms(casa::IPosition(2,chan,0)) = casa::polar(1.f,-arg(itsModel->complexValue(xRefPar)));
            refPhaseTerms(casa::IPosition(2,chan,1)) = casa::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
-      }                      
-  } else {   
+      }
+  } else {
       ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
               "` is impossible because this parameter is not present in the model");
       ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
@@ -596,7 +637,7 @@ void CalibratorParallel::rotatePhases()
       refPhaseTerms(casa::IPosition(2,0,1)) = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
   }
   ASKAPDEBUGASSERT(refPhaseTerms.nelements() > 1);
-                       
+
   for (std::vector<std::string>::const_iterator it=names.begin();
                it!=names.end();++it)  {
        const std::string parname = *it;
@@ -627,7 +668,7 @@ void CalibratorParallel::rotatePhases()
 /// @details To be able to time tag the calibration solutions we add
 /// start and stop times extracted from the dataset as metadata to normal
 /// equations. It allows us to send these times to the master, which
-/// ultimately writes the calibration solution. Otherwise, these times 
+/// ultimately writes the calibration solution. Otherwise, these times
 /// could only be obtained in workers who deal with the actual data.
 /// @return solution time (seconds since 0 MJD)
 /// @note if no start/stop time metadata are present in the normal equations
@@ -635,10 +676,10 @@ void CalibratorParallel::rotatePhases()
 double CalibratorParallel::solutionTime() const
 {
   // use the earliest time corresponding to the data used to make this calibration solution
-  // to tag the solution. A request for any latest time than this would automatically 
+  // to tag the solution. A request for any latest time than this would automatically
   // extract this solution as most recent.
   ASKAPASSERT(itsNe);
-  
+
   boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
   if (gne) {
       scimath::Params& metadata = gne->metadata();
@@ -654,7 +695,7 @@ double CalibratorParallel::solutionTime() const
 /// However, maser needs to make the decision whether more iterations are required,
 /// i.e. whether a new chunk of the data is available. We carry this information from
 /// worker to master with the normal equations using metadata. This method encodes the
-/// given value of the flag in the normal equations class. 
+/// given value of the flag in the normal equations class.
 /// @note Nothing is done if the normal equations object does not support metadata.
 /// An exception is thrown if this method is called from the master. We could've join
 /// this method and nextChunk, but it would require making this method non-const
@@ -662,7 +703,7 @@ double CalibratorParallel::solutionTime() const
 void CalibratorParallel::setNextChunkFlag(const bool flag)
 {
   ASKAPCHECK(itsComms.isWorker(), "setNextChunkFlag is supposed to be used in workers");
-  if (itsNe) {  
+  if (itsNe) {
       const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           scimath::Params& metadata = gne->metadata();
@@ -679,14 +720,14 @@ void CalibratorParallel::setNextChunkFlag(const bool flag)
 
 /// @brief helper method to extract next chunk flag
 /// @details This method is a reverse operation to that of setNextChunkFlag. It
-/// extracts the flag from the metadata attached to the normal equations and 
-/// returns it. 
+/// extracts the flag from the metadata attached to the normal equations and
+/// returns it.
 /// @note false is returned if no appropriate metadata element is found or the normal
-/// equations object does not support metadata. 
+/// equations object does not support metadata.
 /// @return true, if the flag is set
 bool CalibratorParallel::getNextChunkFlag() const
 {
-  if (itsNe) {  
+  if (itsNe) {
       const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           const scimath::Params& metadata = gne->metadata();
@@ -694,7 +735,7 @@ bool CalibratorParallel::getNextChunkFlag() const
           if (metadata.has(parName)) {
               const double encodedVal = metadata.scalarValue(parName);
               return encodedVal > 0;
-          } 
+          }
       }
   }
   return false;
@@ -703,7 +744,7 @@ bool CalibratorParallel::getNextChunkFlag() const
 /// @brief Helper method to remove the next chunk flag
 void CalibratorParallel::removeNextChunkFlag()
 {
-  if (itsNe) {  
+  if (itsNe) {
       const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           scimath::Params& metadata = gne->metadata();
@@ -725,15 +766,15 @@ bool CalibratorParallel::nextChunk() const
   ASKAPCHECK(itsIteratorAdapter, "Iterator adapter is not defined in nextChunk!");
   const bool result = itsIteratorAdapter->moreDataAvailable();
   if (result) {
-      ASKAPDEBUGASSERT(!itsIteratorAdapter->hasMore());  
-      itsIteratorAdapter->resume();      
+      ASKAPDEBUGASSERT(!itsIteratorAdapter->hasMore());
+      itsIteratorAdapter->resume();
   }
   return result;
 }
 
 
 /// @brief Write the results (runs in the solver)
-/// @details The solution (calibration parameters) is written into 
+/// @details The solution (calibration parameters) is written into
 /// an external file in the parset file format.
 /// @param[in] postfix a string to be added to the file name
 void CalibratorParallel::writeModel(const std::string &postfix)
@@ -743,30 +784,36 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
+      if (!itsSolutionIDValid) {
+          // obtain solution ID only once, the results can come in random order and the
+          // accessor is responsible for aggregating all of them together. This is done based on this ID.
+          //@todo Can probably get rid of this
+          itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
+          itsSolutionIDValid = true;
+      }
 
-      const long solutionID = itsSolutionSource->newSolutionID(solutionTime());
-      boost::shared_ptr<ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(solutionID);
+      boost::shared_ptr<ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(itsSolutionID);
       ASKAPASSERT(solAcc);
-      
+
       ASKAPDEBUGASSERT(itsModel);
       std::vector<std::string> parlist = itsModel->freeNames();
-      for (std::vector<std::string>::const_iterator it = parlist.begin(); 
+      for (std::vector<std::string>::const_iterator it = parlist.begin();
            it != parlist.end(); ++it) {
            casa::Complex val = itsModel->complexValue(*it);
            if (itsSolveBandpass) {
-               ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0, 
+               ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
                        " for the bandpass calibration, you have "<<*it);
-               const std::pair<casa::uInt, std::string> parsedParam = 
+               const std::pair<casa::uInt, std::string> parsedParam =
                        accessors::CalParamNameHelper::extractChannelInfo(*it);
-               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
+               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
                     accessors::CalParamNameHelper::parseParam(parsedParam.second);
-               solAcc->setBandpassElement(paramType.first, paramType.second, parsedParam.first, val);                 
+               solAcc->setBandpassElement(paramType.first, paramType.second, parsedParam.first, val);
            } else {
-               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
+               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
                     accessors::CalParamNameHelper::parseParam(*it);
                if ( itsNormaliseGains ) {
-                   if ( casa::fabs(val) > 0.0 && 
+                   if ( casa::fabs(val) > 0.0 &&
                         ((paramType.second == casa::Stokes::XX) ||
                          (paramType.second == casa::Stokes::YY)) ) {
                        val /= casa::fabs(val);
@@ -777,4 +824,3 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       }
   }
 }
-
