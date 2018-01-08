@@ -48,7 +48,7 @@ namespace synthesis {
 
 /// @brief default constructor
 ImageCleaningSolver::ImageCleaningSolver() :
-   itsFractionalThreshold(0.), itsMaskingThreshold(-1.), itsPaddingFactor(1.) {}
+   itsFractionalThreshold(0.), itsDeepThreshold(0.), itsMaskingThreshold(-1.), itsPaddingFactor(1.) {}
 
 /// @brief access to a fractional threshold
 /// @return current fractional threshold
@@ -63,6 +63,21 @@ double ImageCleaningSolver::fractionalThreshold() const
 void ImageCleaningSolver::setFractionalThreshold(double fThreshold)
 {
   itsFractionalThreshold = fThreshold;
+}
+
+/// @brief access to the deep threshold
+/// @return current deep threshold
+double ImageCleaningSolver::deepThreshold() const
+{
+  return itsDeepThreshold;
+}
+
+/// @brief set a new deep threshold
+/// @param[in] dThreshold new deep threshold
+/// @note Assign 0. to switch this option off.
+void ImageCleaningSolver::setDeepThreshold(double dThreshold)
+{
+  itsDeepThreshold = dThreshold;
 }
 
 /// @brief access to a masking threshold

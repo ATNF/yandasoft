@@ -112,6 +112,12 @@ namespace askap {
                 /// @brief Get the type of solution used in finding the optimum component
                 const casa::String solutionType();
 
+                /// @brief Set the deep cleaning switch for component finding
+                void setDeepCleanMode(casa::Bool deep);
+
+                /// @brief Get the deep cleaning switch for component finding
+                const casa::Bool deepCleanMode();
+
                 /// @brief Perform the deconvolution
                 /// @detail This is the main deconvolution method.
                 virtual bool deconvolve();
@@ -150,18 +156,23 @@ namespace askap {
 
                 void initialiseResidual();
 
+                void initialiseMask();
+
                 // Initialise the PSFs - only need to do this once per change in basis functions
                 virtual void initialiseForBasisFunction(bool force);
 
                 void chooseComponent(uInt& optimumBase, casa::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues);
 
                 void getCoupledResidual(T& absPeakRes);
-                
+
                 // Long vector of PSFs
                 casa::Vector<casa::Array<T> > itsPsfLongVec;
 
                 /// Residual images convolved with basis functions, [nx,ny][nterms][nbases]
                 casa::Vector<casa::Vector<casa::Array<T> > > itsResidualBasis;
+
+                /// Mask images giving the location of all components per bases
+                casa::Vector<casa::Array<T> > itsMask;
 
                 /// Point spread functions convolved with cross terms
                 // [nx,ny][nterms,nterms][nbases,nbases]
@@ -187,6 +198,8 @@ namespace askap {
                 casa::Bool itsBasisFunctionChanged;
 
                 casa::String itsSolutionType;
+
+                casa::Bool itsDeep;
         };
 
     } // namespace synthesis

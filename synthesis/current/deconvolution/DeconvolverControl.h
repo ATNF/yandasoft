@@ -167,6 +167,22 @@ namespace askap {
                     return itsTargetObjectiveFunction;
                 }
 
+                /// @brief Set the second level target objective function
+                /// @detail Algorithms can be monitored for an objective
+                /// function that decreases e.g. maximum absolute residual
+                /// or L1 norm. If the target objective function is set then
+                /// control will stop the algorithm when the actual objective
+                /// function is below the target. This function allows for
+                /// a second stage of iteration to a lowel level.
+                /// @param[in] objectivefunction Desired value of objective function
+                void setTargetObjectiveFunction2(T objectiveFunction) {
+                    itsTargetObjectiveFunction2 = objectiveFunction;
+                }
+
+                T targetObjectiveFunction2() const {
+                    return itsTargetObjectiveFunction2;
+                }
+
                 /// @brief Set the desired target flux
                 /// @detail Some algorithms can work with a target flux (increasing
                 /// with iteration). If the target flux is set then
@@ -211,6 +227,7 @@ namespace askap {
                 TerminationCause itsTerminationCause;
                 casa::Int itsTargetIter;
                 T itsTargetObjectiveFunction;
+                T itsTargetObjectiveFunction2;
                 T itsTargetFlux;
                 casa::Float itsFractionalThreshold;
                 casa::Float itsGain;
@@ -228,5 +245,3 @@ namespace askap {
 #include <deconvolution/DeconvolverControl.tcc>
 
 #endif
-
-

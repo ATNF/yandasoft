@@ -58,6 +58,15 @@ public:
    /// @note Assign 0. to switch this option off.
    void setFractionalThreshold(double fThreshold);
 
+   /// @brief access to a deep threshold
+   /// @return current deep threshold
+   double deepThreshold() const;
+
+   /// @brief set a new deep threshold
+   /// @param[in] dThreshold new deep threshold
+   /// @note Assign 0. to switch this option off.
+   void setDeepThreshold(double dThreshold);
+
    /// @brief access to a masking threshold
    /// @return current masking threshold
    double maskingThreshold() const;
@@ -118,10 +127,15 @@ protected:
 
 
 private:
-   /// @brief Fractional cleaning threshold
-   /// @details it means it is defined with respect to the peak flux (i.e. 0.2 from the peak flux).
-   /// Assign zero (default) if you don't want any fractional threshold applied.
-   double itsFractionalThreshold;
+  /// @brief Fractional cleaning threshold
+  /// @details it means it is defined with respect to the peak flux (i.e. 0.2 from the peak flux).
+  /// Assign zero (default) if you don't want any fractional threshold applied.
+  double itsFractionalThreshold;
+
+  /// @brief Deep cleaning threshold
+  /// @details Threshold for a second level of deep cleaning with model as mask
+  /// Assign zero (default) if you don't want any deep threshold applied.
+  double itsDeepThreshold;
 
    /// @brief threshold for cleaning mask
    /// @details This value is passed in the setMask call to the LatticeCleaner. Negative

@@ -63,7 +63,7 @@ namespace askap {
                 Vector<Array<T> >& psf,
                 Vector<Array<T> >& psfLong)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ")
+                itsSolutionType("MAXCHISQ"), itsDeep(False)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There are " << this->itsNumberTerms << " terms to be solved");
 
@@ -81,7 +81,7 @@ namespace askap {
         DeconvolverMultiTermBasisFunction<T, FT>::DeconvolverMultiTermBasisFunction(Array<T>& dirty,
                 Array<T>& psf)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ")
+                itsSolutionType("MAXCHISQ"), itsDeep(False)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There is only one term to be solved");
             this->itsPsfLongVec.resize(1);
@@ -103,6 +103,18 @@ namespace askap {
         const String DeconvolverMultiTermBasisFunction<T, FT>::solutionType()
         {
             return itsSolutionType;
+        };
+
+        template<class T, class FT>
+        void DeconvolverMultiTermBasisFunction<T, FT>::setDeepCleanMode(Bool deep)
+        {
+            itsDeep = deep;
+        };
+
+        template<class T, class FT>
+        const Bool DeconvolverMultiTermBasisFunction<T, FT>::deepCleanMode()
+        {
+            return itsDeep;
         };
 
         template<class T, class FT>
@@ -211,6 +223,9 @@ namespace askap {
             // Initialise residuals
             initialiseResidual();
 
+            // Initialise masks
+            initialiseMask();
+
             // Force change in basis function
             initialiseForBasisFunction(true);
 
@@ -273,6 +288,28 @@ namespace askap {
 
                     this->itsResidualBasis(base)(term) = real(work);
                 }
+            }
+        }
+        template<class T, class FT>
+        void DeconvolverMultiTermBasisFunction<T, FT>::initialiseMask()
+        {
+            ASKAPTRACE("DeconvolverMultiTermBasisFunction::initialiseMask");
+            ASKAPLOG_DEBUG_STR(decmtbflogger, "initialiseMask called");
+
+            // check if we need the masks
+            if (this->control()->targetObjectiveFunction2()==0) return;
+            // check if we've already done this
+            if (this->itsMask.nelements()>0) return;
+            ASKAPLOG_DEBUG_STR(decmtbflogger, "Initialising deep clean masks");
+
+            ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
+
+            uInt nBases(this->itsBasisFunction->numberBases());
+
+            this->itsMask.resize(nBases);
+            for (uInt base = 0; base < nBases; base++) {
+                this->itsMask(base).resize(this->dirty(0).shape().nonDegenerate());
+                this->itsMask(base).set(T(0.0));
             }
         }
 
@@ -450,6 +487,7 @@ namespace askap {
 
             return True;
         }
+
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::getCoupledResidual(T& absPeakRes) {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction:::getCoupledResidual");
@@ -498,6 +536,7 @@ namespace askap {
                 casa::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues)
         {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction:::chooseComponent");
+
             const uInt nBases(this->itsResidualBasis.nelements());
 
             absPeakVal = 0.0;
@@ -514,6 +553,16 @@ namespace askap {
             Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
 
+            // Set the mask - we need it for weighted search and deep clean
+            Array<T> mask;
+            if (isWeighted) {
+                mask = this->itsWeight(0).nonDegenerate();
+                if  (this->itsSolutionType == "MAXCHISQ") {
+                    // square weights for MAXCHISQ
+                    mask*=mask;
+                }
+            }
+
             for (uInt base = 0; base < nBases; base++) {
 
                 // Find peak in residual image cube
@@ -521,14 +570,32 @@ namespace askap {
                 casa::IPosition maxPos(2, 0);
                 T minVal(0.0), maxVal(0.0);
 
+                if (deepCleanMode()) {
+                    if (isWeighted) {
+                        // recompute mask*weight for each new base
+                        if (base>0) {
+                            mask = this->itsWeight(0).nonDegenerate();
+                            if  (this->itsSolutionType == "MAXCHISQ") {
+                                // square weights for MAXCHISQ
+                                mask*=mask;
+                            }
+                        }
+                        mask*=this->itsMask(base);
+                    } else {
+                        mask=this->itsMask(base);
+                    }
+                }
+
+                Bool haveMask=mask.nelements()>0;
+
                 // We implement various approaches to finding the peak. The first is the cheapest
                 // and evidently the best (according to Urvashi).
 
                 // Look for the maximum in term=0 for this base
                 if (this->itsSolutionType == "MAXBASE") {
-                    if (isWeighted) {
+                    if (haveMask) {
                         casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),
-                                           this->itsWeight(0).nonDegenerate());
+                                           mask);
                     } else {
                         casa::minMax(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0));
                     }
@@ -557,9 +624,9 @@ namespace askap {
                     }
 
                     if (this->itsSolutionType == "MAXTERM0") {
-                        if (isWeighted) {
+                        if (haveMask) {
                             casa::minMaxMasked(minVal, maxVal, minPos, maxPos, coefficients(0),
-                                               this->itsWeight(0).nonDegenerate());
+                                               mask);
                         } else {
                             casa::minMax(minVal, maxVal, minPos, maxPos, coefficients(0));
                         }
@@ -583,9 +650,9 @@ namespace askap {
                         //            SynthesisParamsHelper::saveAsCasaImage("coefficients1.img",coefficients(1));
                         //            ASKAPTHROW(AskapError, "Written debug images");
                         // Remember that the weights must be squared.
-                        if (isWeighted) {
+                        if (haveMask) {
                             casa::minMaxMasked(minVal, maxVal, minPos, maxPos, negchisq,
-                                               this->itsWeight(0).nonDegenerate()*this->itsWeight(0).nonDegenerate());
+                                               mask);
                         } else {
                             casa::minMax(minVal, maxVal, minPos, maxPos, negchisq);
                         }
@@ -621,13 +688,18 @@ namespace askap {
                 }
             }
 
+            // Record location of peak in mask
+            if (this->itsMask.nelements()) this->itsMask(optimumBase)(absPeakPos)=T(1.0);
+
             // Take square root to get value comparable to peak residual
             if (this->itsSolutionType == "MAXCHISQ") {
                 absPeakVal = sqrt(max(T(0.0), absPeakVal));
             }
             // Not sure I agree with the this I think the absPeakVal should
             // be the absolute value of the peak residual
-            getCoupledResidual(absPeakVal);
+            // For deep cleaning we want to restrict the abspeakval to the mask
+            // so we just use the value determined above
+            if (!deepCleanMode()) getCoupledResidual(absPeakVal);
 
         }
 
@@ -663,6 +735,14 @@ namespace askap {
             this->state()->setPeakResidual(abs(absPeakVal));
             this->state()->setObjectiveFunction(abs(absPeakVal));
             this->state()->setTotalFlux(sum(this->model(0)));
+
+            //  Check if we should enter deep cleaning mode
+            if (abs(absPeakVal) < this->control()->targetObjectiveFunction() &&
+                this->control()->targetObjectiveFunction2()>0 &&
+                abs(absPeakVal) > this->control()->targetObjectiveFunction2()) {
+              if (!deepCleanMode()) ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
+              setDeepCleanMode(True);
+            }
 
             uInt nx(this->psf(0).shape()(0));
             uInt ny(this->psf(0).shape()(1));

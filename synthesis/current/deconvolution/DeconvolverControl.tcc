@@ -49,8 +49,8 @@ namespace askap {
         template<class T>
         DeconvolverControl<T>::DeconvolverControl() :
                 itsAlgorithm(""), itsTerminationCause(NOTTERMINATED), itsTargetIter(1),
-                itsTargetObjectiveFunction(T(0)), itsTargetFlux(T(0.0)),
-                itsGain(1.0), itsTolerance(1e-4),
+                itsTargetObjectiveFunction(T(0)),itsTargetObjectiveFunction2(T(0)),
+                itsTargetFlux(T(0.0)),itsGain(1.0), itsTolerance(1e-4),
                 itsPSFWidth(0), itsLambda(T(100.0))
         {
             // Install a signal handler to count signals so receipt of a signal
@@ -70,10 +70,20 @@ namespace askap {
         {
             // Check for convergence
             if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction) {
-                ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
-                                      << " less than target " << itsTargetObjectiveFunction);
-                itsTerminationCause = CONVERGED;
-                return True;
+                // Now check if we want to enter deep cleaning mode
+                if (this->itsTargetObjectiveFunction2>0) {
+                    if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction2) {
+                        ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
+                                            << " less than 2nd target " << itsTargetObjectiveFunction2);
+                        itsTerminationCause = CONVERGED;
+                        return True;
+                    }
+                } else {
+                  ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
+                                        << " less than target " << itsTargetObjectiveFunction);
+                  itsTerminationCause = CONVERGED;
+                  return True;
+                }
             }
             //
             if (abs(state.objectiveFunction()) < this->itsFractionalThreshold*state.initialObjectiveFunction()) {
