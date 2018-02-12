@@ -424,6 +424,17 @@ namespace askap
       // Apply the Wiener filter to the xfr and transform to the filtered PSF
       scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpsf)));
       casa::LatticeFFT::cfft2d(scratch, casa::True);
+
+      // Estimate the normalised point source sensitivity (AKA the normalised thermal RMS)
+      // * see D. Briggs thesis
+      if (!useCachedFilter) {
+          ASKAPLOG_INFO_STR(logger,
+              "Theoretical normalised point source sensitivity (image thermal RMS) for new filter = " <<
+              sqrt( sum( real(scratch.asArray()) * real(itsWienerfilter.asArray())*real(itsWienerfilter.asArray()) ) *
+                    sum( real(scratch.asArray()) ) ) /
+              sum( real(scratch.asArray()) * real(itsWienerfilter.asArray()) ) << " Jy");
+      }
+
       scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
       casa::LatticeFFT::cfft2d(scratch, casa::False);       
       lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
