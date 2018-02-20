@@ -429,10 +429,10 @@ namespace askap
       // * see D. Briggs thesis
       if (!useCachedFilter) {
           ASKAPLOG_INFO_STR(logger,
-              "Theoretical normalised point source sensitivity (image thermal RMS) for new filter = " <<
+              "Normalisation factor for the point source sensitivity (theorectical image RMS / naturally weighted RMS): " <<
               sqrt( sum( real(scratch.asArray()) * real(itsWienerfilter.asArray())*real(itsWienerfilter.asArray()) ) *
                     sum( real(scratch.asArray()) ) ) /
-              sum( real(scratch.asArray()) * real(itsWienerfilter.asArray()) ) << " Jy");
+              sum( real(scratch.asArray()) * real(itsWienerfilter.asArray()) ) );
       }
 
       scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
