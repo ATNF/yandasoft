@@ -189,6 +189,13 @@ class CcalApplyApp : public askap::Application
             // ensure that time is counted in seconds since 0 MJD
             conv->setEpochFrame();
 
+            if (parset.isDefined("maxchunkrows")) {
+                const casa::uInt maxChunkSize = parset.getUint32("maxchunkrows");
+                ASKAPCHECK(maxChunkSize > 0, "maxchunkrows parameter should be positive");
+                ASKAPLOG_INFO_STR(logger, "Restricting the chunk size to at most "<<maxChunkSize<<" rows for each iteration");
+                ds.configureMaxChunkSize(maxChunkSize);
+            }
+
             return ds.createIterator(sel, conv);
         }
 };
