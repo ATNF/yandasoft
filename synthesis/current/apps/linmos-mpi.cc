@@ -345,7 +345,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
 
             // test whether to simply add weighted pixels, or whether a regrid is required
-            bool regridRequired = !accumulator.coordinatesAreEqual();
+            bool regridRequired = (!accumulator.coordinatesAreEqual()) ;
 
             // if regridding is required, set up buffer some images
             if ( regridRequired ) {
@@ -360,10 +360,12 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                     // set up regridder
                     accumulator.initialiseRegridder();
                 }
-
                 // set up temp images required for regridding
                 // need to do this here if some do and some do not have sensitivity images
+
                 accumulator.initialiseOutputBuffers();
+
+
 
                 // set up temp images required for regridding
                 // are those of the previous iteration correctly freed?
@@ -374,6 +376,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             else {
                 ASKAPLOG_INFO_STR(logger, " - not regridding -- input pixel grid is the same as the output");
             }
+
+
+
             // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
             for (; planeIter.hasMore(); planeIter.next()) {
 
@@ -432,7 +437,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         minMax(minVal,maxVal,minPos,maxPos,outWgtPix);
         ASKAPLOG_INFO_STR(logger, "Maximum pixel weight is " << maxVal);
         ASKAPLOG_INFO_STR(logger, "Power fraction cutoff is " << itsCutoff*itsCutoff);
-        
+
 
         float wgtCutoff = itsCutoff * itsCutoff * maxVal;
         for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
