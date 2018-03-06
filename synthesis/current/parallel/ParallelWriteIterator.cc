@@ -264,12 +264,16 @@ void ParallelWriteIterator::advance()
 void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter)
 {
   ASKAPDEBUGASSERT(comms.isMaster());
+  ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);
   bool contFlag = true;
   do {
     ParallelIteratorStatus status;
     status.itsHasMore = it.hasMore();
     if (status.itsHasMore) {
+       ASKAPCHECK(it->nChannel() >= static_cast<casa::uInt>(comms.nProcs() - 1), 
+                  "Idle workers are not currently supported. Number of spectral channels("<<it->nChannel()<<
+                  ") should not be less than the number of workers ("<<(comms.nProcs() - 1)<<")");
        status.itsNChan = it->nChannel() / (comms.nProcs() - 1);
        if (it->nChannel() % (comms.nProcs() - 1) != 0) {
            ++status.itsNChan;
