@@ -41,6 +41,7 @@
 #include <askap_synthesis.h>
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
+#include <askap/RangePartition.h>
 
 #include <Blob/BlobString.h>
 #include <Blob/BlobIBufString.h>
@@ -274,13 +275,11 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
        ASKAPCHECK(it->nChannel() >= static_cast<casa::uInt>(comms.nProcs() - 1), 
                   "Idle workers are not currently supported. Number of spectral channels("<<it->nChannel()<<
                   ") should not be less than the number of workers ("<<(comms.nProcs() - 1)<<")");
-       status.itsNChan = it->nChannel() / (comms.nProcs() - 1);
-       if (it->nChannel() % (comms.nProcs() - 1) != 0) {
-           ++status.itsNChan;
-       }    
-       if (status.itsNChan == 0) {
-           status.itsNChan = 1;
-       }                                
+       
+       // broadcast the total number of channels, use RangePartition at both master and workers to estimate
+       // the number of channels handled by this rank (as it is deterministic)
+       status.itsNChan = it->nChannel();
+
        status.itsNRow = it->nRow();
        status.itsNPol = it->nPol();
     } else {
@@ -330,15 +329,12 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
              // start and stop of the slice
              casa::IPosition start(3,0);
              ASKAPDEBUGASSERT((it->nRow()!=0) && (it->nChannel()!=0) && (it->nPol()));
-             casa::IPosition end(3,int(it->nRow()) - 1, int(it->nChannel()) - 1, int(it->nPol()) - 1);
-             start(1) = status.itsNChan * worker;
-             end(1) = status.itsNChan * (worker + 1) - 1;
-             if (worker + 2 < comms.nProcs()) {
-                 ASKAPASSERT(end(1) < int(it->nChannel()));
-             }
-             if (end(1) >= int(it->nChannel())) {
-                 end(1) = int(it->nChannel()) - 1;
-             }
+
+             utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
+
+             casa::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             start(1) = static_cast<int>(rp.first(worker));
+             ASKAPASSERT(end(1) < int(it->nChannel()));
              ASKAPDEBUGASSERT(start(1)<=end(1));
              const casa::IPosition vecStart(1, start(1));
              const casa::IPosition vecEnd(1, end(1));
@@ -364,15 +360,13 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
              // start and stop of the slice
              casa::IPosition start(3,0);
              ASKAPDEBUGASSERT((it->nRow()!=0) && (it->nChannel()!=0) && (it->nPol()));
-             casa::IPosition end(3,int(it->nRow()) - 1, int(it->nChannel()) - 1, int(it->nPol()) - 1);
-             start(1) = status.itsNChan * worker;
-             end(1) = status.itsNChan * (worker + 1) - 1;
-             if (worker + 2 < comms.nProcs()) {
-                 ASKAPASSERT(end(1) < int(it->nChannel()));
-             }
-             if (end(1) >= int(it->nChannel())) {
-                 end(1) = int(it->nChannel()) - 1;
-             }
+
+             utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
+
+             casa::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             start(1) = static_cast<int>(rp.first(worker));
+             ASKAPASSERT(end(1) < int(it->nChannel()));
+
              ASKAPDEBUGASSERT(start(1)<=end(1));
              // receive a slice of visibility
              {
