@@ -185,6 +185,7 @@ void ParallelWriteIterator::advance()
     itsAccessorValid = status.itsHasMore;
     //ASKAPLOG_INFO_STR(logger, "Received status "<<itsAccessorValid<<" (rank "<<itsComms.rank()<<")");
   }
+  const bool readVis = ((status.itsMode | READ) == READ);
         
   if (itsAccessorValid) {
       // receive common metadata
@@ -242,11 +243,20 @@ void ParallelWriteIterator::advance()
         LOFAR::BlobIBufString bib(bs);
         LOFAR::BlobIStream in(bib);
         const int version = in.getStart("AccessorVariableMetadata");
-        ASKAPCHECK(version == 1, "Version mismatch receiving rank-specific metadata");
+        ASKAPCHECK(version == (readVis ? 2 : 1), "Version mismatch receiving rank-specific metadata");
         in>>itsAccessor.itsFlag>>itsAccessor.itsNoise>>itsAccessor.itsFrequency;
+        if (readVis) {
+            in>>itsAccessor.itsVisibility;
+        }
         in.getEnd();
-        itsAccessor.itsVisibility.resize(itsAccessor.itsFlag.nrow(), itsAccessor.itsFlag.ncolumn(), itsAccessor.itsFlag.nplane());
-        itsAccessor.itsVisibility.set(0.);    
+        if (readVis) {
+            ASKAPASSERT(itsAccessor.itsVisibility.nrow() == itsAccessor.itsFlag.nrow());
+            ASKAPASSERT(itsAccessor.itsVisibility.ncolumn() == itsAccessor.itsFlag.ncolumn());
+            ASKAPASSERT(itsAccessor.itsVisibility.nplane() == itsAccessor.itsFlag.nplane());
+        } else {
+            itsAccessor.itsVisibility.resize(itsAccessor.itsFlag.nrow(), itsAccessor.itsFlag.ncolumn(), itsAccessor.itsFlag.nplane());
+            itsAccessor.itsVisibility.set(0.);    
+        }
         // consistency checks
         ASKAPASSERT(itsAccessor.nRow() == itsAccessor.itsVisibility.nrow());
         ASKAPASSERT(itsAccessor.nChannel() == itsAccessor.itsVisibility.ncolumn());
@@ -272,7 +282,7 @@ void ParallelWriteIterator::advance()
 /// all workers via MPI.
 void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, ParallelWriteIterator::OpExtension mode)
 {
-  ASKAPCHECK(mode == NONE, "Requested extension mode is not supported at the moment");
+  ASKAPCHECK(mode > READ, "Requested extension mode is not supported at the moment");
   ASKAPDEBUGASSERT(comms.isMaster());
   ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);
@@ -344,17 +354,22 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
              ASKAPDEBUGASSERT(start(1)<=end(1));
              const casa::IPosition vecStart(1, start(1));
              const casa::IPosition vecEnd(1, end(1));
-             // send slices of flags, noise and frequency. Assuming that visibility is zero (can be changed here).
+             // send slices of flags, noise and frequency. Visibility can be assumed to be zero or read as well.
              {
+               const bool readVis = ((mode | READ) == READ);
                LOFAR::BlobString bs;
                bs.resize(0);
                LOFAR::BlobOBufString bob(bs);
                LOFAR::BlobOStream out(bob);
-               out.putStart("AccessorVariableMetadata", 1);
+               out.putStart("AccessorVariableMetadata", readVis ? 2 : 1);
                casa::Cube<casa::Bool> flagBuf(it->flag());
                casa::Cube<casa::Complex> noiseBuf(it->noise());
                casa::Vector<casa::Double> freqBuf(it->frequency());
                out<<flagBuf(start,end)<<noiseBuf(start,end)<<freqBuf(vecStart,vecEnd);
+               if (readVis) {
+                   casa::Cube<casa::Complex> visBuf(it->visibility());
+                   out<<visBuf(start,end);
+               }
                out.putEnd();
                comms.sendBlob(bs, worker + 1);
              }
