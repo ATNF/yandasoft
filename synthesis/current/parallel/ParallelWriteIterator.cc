@@ -262,8 +262,17 @@ void ParallelWriteIterator::advance()
 /// to client iterators and combines visibilities in a single cube.
 /// @param comms communication object
 /// @param iter shared iterator to use
-void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter)
+/// @param mode operating mode, a flag or flags allowing extensions to be enabled
+/// Supported modes are:  NONE is the write-only operation as envisaged in the original design,
+/// READ enables reading (and distributing) visivilities before update, otherwise 
+/// the visiibility cube is initialised with zeros for all workers, SYNCFLAGANDNOISE 
+/// enables synchronisation of flag and noise cubes back to the master. Finally,
+/// ALL enables all such extensions
+/// @note The mode of operations is controlled by the master (i.e. this method) and is distributed to
+/// all workers via MPI.
+void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, ParallelWriteIterator::OpExtension mode)
 {
+  ASKAPCHECK(mode == NONE, "Requested extension mode is not supported at the moment");
   ASKAPDEBUGASSERT(comms.isMaster());
   ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);
@@ -276,12 +285,9 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
                   "Idle workers are not currently supported. Number of spectral channels("<<it->nChannel()<<
                   ") should not be less than the number of workers ("<<(comms.nProcs() - 1)<<")");
        
-       // broadcast the total number of channels, use RangePartition at both master and workers to estimate
-       // the number of channels handled by this rank (as it is deterministic)
-       status.itsNChan = it->nChannel();
-
        status.itsNRow = it->nRow();
        status.itsNPol = it->nPol();
+       status.itsMode = mode;
     } else {
       contFlag = false;
     }

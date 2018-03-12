@@ -66,11 +66,12 @@ struct ParallelIteratorStatus {
   /// @brief number of rows
   casa::uInt itsNRow;
   
-  /// @brief number of channels
-  casa::uInt itsNChan;
-  
   /// @brief number of polarisations
   casa::uInt itsNPol;
+
+  /// @brief operations mode
+  /// @details Basically, an additional integer the meaning of which depends on the user
+  int itsMode;
 };
 
 } // namespace synthesis

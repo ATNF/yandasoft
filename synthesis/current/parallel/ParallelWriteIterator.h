@@ -59,103 +59,125 @@ namespace synthesis {
 /// @ingroup parallel
 class ParallelWriteIterator : public accessors::IDataIterator {
 public:
+   /// @brief optional extensions to operation intended to be or'ed
+   /// @details NONE is the write-only operation as envisaged in the original design,
+   /// READ enables reading (and distributing) visivilities before update, otherwise 
+   /// the visiibility cube is initialised with zeros for all workers, SYNCFLAGANDNOISE 
+   /// enables synchronisation of flag and noise cubes back to the master. Finally,
+   /// ALL enables all such extensions
+   /// @note The mode of operations is controlled by the master and is distributed to
+   /// all workers via MPI.
+   enum OpExtension {
+       NONE = 0,
+       READ = 1,
+       SYNCFLAGANDNOISE = 2,
+       ALL = 3
+   };
         
-    /// @brief constructor
-    /// @details 
-    /// @param comms communication object
-    /// @param[in] cacheSize uvw-machine cache size
-    /// @param[in] tolerance pointing direction tolerance in radians, exceeding
-    /// which leads to initialisation of a new UVW machine and recompute of the rotated uvws/delays  
-    explicit ParallelWriteIterator(askap::askapparallel::AskapParallel& comms, size_t cacheSize = 1, double tolerance = 1e-6);
+   /// @brief constructor
+   /// @details 
+   /// @param comms communication object
+   /// @param[in] cacheSize uvw-machine cache size
+   /// @param[in] tolerance pointing direction tolerance in radians, exceeding
+   /// which leads to initialisation of a new UVW machine and recompute of the rotated uvws/delays  
+   explicit ParallelWriteIterator(askap::askapparallel::AskapParallel& comms, size_t cacheSize = 1, double tolerance = 1e-6);
     
     
-	// Return the data accessor (current chunk) in various ways	
+   // Return the data accessor (current chunk) in various ways	
 
-	/// @brief reference to data accessor (current chunk)
-	/// @return a reference to the current chunk
-	/// @note constness of the return type is changed to allow read/write
-	/// operations.
-	virtual accessors::IDataAccessor& operator*() const;
-		
-	/// Switch the output of operator* and operator-> to one of 
-	/// the buffers. This is meant to be done to provide the same 
-	/// interface for a buffer access as exists for the original 
-	/// visibilities (e.g. it->visibility() to get the cube).
-	/// It can be used for an easy substitution of the original 
-	/// visibilities to ones stored in a buffer, when the iterator is
-	/// passed as a parameter to mathematical algorithms. 
-	/// 
-	/// The operator* and operator-> will refer to the chosen buffer
-	/// until a new buffer is selected or the chooseOriginal() method
-	/// is executed to revert operators to their default meaning
-	/// (to refer to the primary visibility data).
-	///
-	/// @param[in] bufferID  the name of the buffer to choose
-	///
-	virtual void chooseBuffer(const std::string &bufferID);
+   /// @brief reference to data accessor (current chunk)
+   /// @return a reference to the current chunk
+   /// @note constness of the return type is changed to allow read/write
+   /// operations.
+   virtual accessors::IDataAccessor& operator*() const;
+	
+   /// Switch the output of operator* and operator-> to one of 
+   /// the buffers. This is meant to be done to provide the same 
+   /// interface for a buffer access as exists for the original 
+   /// visibilities (e.g. it->visibility() to get the cube).
+   /// It can be used for an easy substitution of the original 
+   /// visibilities to ones stored in a buffer, when the iterator is
+   /// passed as a parameter to mathematical algorithms. 
+   /// 
+   /// The operator* and operator-> will refer to the chosen buffer
+   /// until a new buffer is selected or the chooseOriginal() method
+   /// is executed to revert operators to their default meaning
+   /// (to refer to the primary visibility data).
+   ///
+   /// @param[in] bufferID  the name of the buffer to choose
+   ///
+   virtual void chooseBuffer(const std::string &bufferID);
 
-	/// Switch the output of operator* and operator-> to the original
-	/// state (present after the iterator is just constructed) 
-	/// where they point to the primary visibility data. This method
-	/// is indended to cancel the results of chooseBuffer(casa::uInt)
-	///
-	virtual void chooseOriginal();
+   /// Switch the output of operator* and operator-> to the original
+   /// state (present after the iterator is just constructed) 
+   /// where they point to the primary visibility data. This method
+   /// is indended to cancel the results of chooseBuffer(casa::uInt)
+   ///
+   virtual void chooseOriginal();
 
-	/// return any associated buffer for read/write access. The 
-	/// buffer is identified by its bufferID. The method 
-	/// ignores a chooseBuffer/chooseOriginal setting.
-	/// 
-	/// @param[in] bufferID the name of the buffer requested
-	/// @return a reference to writable data accessor to the
-	///         buffer requested
-	///
-	/// Because IDataAccessor has both const and non-const visibility()
-	/// methods defined separately, it is possible to detect when a
-	/// write operation took place and implement a delayed writing
-	virtual accessors::IDataAccessor& buffer(const std::string &bufferID) const;
-	
-	/// Restart the iteration from the beginning
-	virtual void init();
-	
-	/// Checks whether there are more data available.
-	/// @return True if there are more data available
-	casa::Bool hasMore() const throw(); 
-	
-	/// advance the iterator one step further
-	/// @return True if there are more data (so constructions like
-	///         while(it.next()) {} are possible)
-	casa::Bool next();
-	
-	/// @brief server method
-    /// @details It iterates through the given iterator, serves metadata
-    /// to client iterators and combines visibilities in a single cube.
-    /// @param comms communication object
-    /// @param iter shared iterator to use
-    static void masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter);
+   /// return any associated buffer for read/write access. The 
+   /// buffer is identified by its bufferID. The method 
+   /// ignores a chooseBuffer/chooseOriginal setting.
+   /// 
+   /// @param[in] bufferID the name of the buffer requested
+   /// @return a reference to writable data accessor to the
+   ///         buffer requested
+   ///
+   /// Because IDataAccessor has both const and non-const visibility()
+   /// methods defined separately, it is possible to detect when a
+   /// write operation took place and implement a delayed writing
+   virtual accessors::IDataAccessor& buffer(const std::string &bufferID) const;
+
+   /// Restart the iteration from the beginning
+   virtual void init();
+
+   /// Checks whether there are more data available.
+   /// @return True if there are more data available
+   casa::Bool hasMore() const throw(); 
+
+   /// advance the iterator one step further
+   /// @return True if there are more data (so constructions like
+   ///         while(it.next()) {} are possible)
+   casa::Bool next();
+
+   /// @brief server method
+   /// @details It iterates through the given iterator, serves metadata
+   /// to client iterators and combines visibilities in a single cube.
+   /// @param comms communication object
+   /// @param iter shared iterator to use
+   /// @param mode operating mode, a flag or flags allowing extensions to be enabled
+   /// Supported modes are:  NONE is the write-only operation as envisaged in the original design,
+   /// READ enables reading (and distributing) visivilities before update, otherwise 
+   /// the visiibility cube is initialised with zeros for all workers, SYNCFLAGANDNOISE 
+   /// enables synchronisation of flag and noise cubes back to the master. Finally,
+   /// ALL enables all such extensions
+   /// @note The mode of operations is controlled by the master (i.e. this method) and is distributed to
+   /// all workers via MPI.
+   static void masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, OpExtension mode = NONE);
 	
 protected:
     
-    /// @brief obtain metadata for the next iteration
-    /// @details This is a core method of the class. It receives the
-    /// status message from the master and reads the metadata if not at
-    /// the last iteration. If not at the first iteration, it also syncronises
-    /// the visibility cube with the master before advancing to the next iteration.
-    void advance();
+   /// @brief obtain metadata for the next iteration
+   /// @details This is a core method of the class. It receives the
+   /// status message from the master and reads the metadata if not at
+   /// the last iteration. If not at the first iteration, it also syncronises
+   /// the visibility cube with the master before advancing to the next iteration.
+   void advance();
     
 private:
-    /// @brief communicator
-    askap::askapparallel::AskapParallel& itsComms;
+   /// @brief communicator
+   askap::askapparallel::AskapParallel& itsComms;
 	
-	/// @brief true, if at least one chunk of data have been received
-	/// @details We use this flag to assert that no attempts to restart
-	/// iteration have been performed.
-	bool itsNotAtOrigin;
+   /// @brief true, if at least one chunk of data have been received
+   /// @details We use this flag to assert that no attempts to restart
+   /// iteration have been performed.
+   bool itsNotAtOrigin;
 
-	/// @brief buffer for the accessor
-	mutable ParallelAccessor itsAccessor;
+   /// @brief buffer for the accessor
+   mutable ParallelAccessor itsAccessor;
 	
-	/// @brief true if current accessor contains valid data
-	bool itsAccessorValid;
+   /// @brief true if current accessor contains valid data
+   bool itsAccessorValid;
 };
 
 } // namespace synthesis
