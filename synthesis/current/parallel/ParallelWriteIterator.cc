@@ -64,7 +64,7 @@ namespace synthesis {
 /// @param[in] tolerance pointing direction tolerance in radians, exceeding
 /// which leads to initialisation of a new UVW machine and recompute of the rotated uvws/delays  
 ParallelWriteIterator::ParallelWriteIterator(askap::askapparallel::AskapParallel& comms, size_t cacheSize, double tolerance) : 
-   itsComms(comms), itsNotAtOrigin(false), itsAccessor(cacheSize, tolerance), itsAccessorValid(false)
+   itsComms(comms), itsNotAtOrigin(false), itsAccessor(cacheSize, tolerance), itsAccessorValid(false), itsChanOffset(0u)
 {
   ASKAPCHECK(itsComms.isWorker() && itsComms.isParallel(), 
       "ParallelWriteIterator class is supposed to be used only in workers in the parallel mode");
@@ -186,6 +186,13 @@ void ParallelWriteIterator::advance()
     //ASKAPLOG_INFO_STR(logger, "Received status "<<itsAccessorValid<<" (rank "<<itsComms.rank()<<")");
   }
   const bool readVis = ((status.itsMode | READ) == READ);
+  // channel distribution is static, but the number of channels in the measurement set can change.
+  // although the latter case is not supported, we have to cater for this possbility at some minimal level 
+  // to avoid nasty bugs.
+  // This functionality is only needed for high-level user, the code below is agnostic on which data it works with
+  ASKAPDEBUGASSERT(itsComms.nProcs() > 1);
+  ASKAPDEBUGASSERT(itsComms.rank() > 0);
+  itsChanOffset = utility::RangePartition(status.itsTotalNChan, static_cast<unsigned int>(itsComms.nProcs()) - 1u).first(itsComms.rank() - 1);
         
   if (itsAccessorValid) {
       // receive common metadata
@@ -282,13 +289,13 @@ void ParallelWriteIterator::advance()
 /// all workers via MPI.
 void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, ParallelWriteIterator::OpExtension mode)
 {
-  ASKAPCHECK(mode > READ, "Requested extension mode is not supported at the moment");
+  ASKAPCHECK(mode <= READ, "Requested extension mode is not supported at the moment");
   ASKAPDEBUGASSERT(comms.isMaster());
   ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);
   bool contFlag = true;
+  ParallelIteratorStatus status;
   do {
-    ParallelIteratorStatus status;
     status.itsHasMore = it.hasMore();
     if (status.itsHasMore) {
        ASKAPCHECK(it->nChannel() >= static_cast<casa::uInt>(comms.nProcs() - 1), 
@@ -298,6 +305,10 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
        status.itsNRow = it->nRow();
        status.itsNPol = it->nPol();
        status.itsMode = mode;
+       if (status.itsTotalNChan > 0) {
+           ASKAPCHECK(status.itsTotalNChan == it->nChannel(), "The current code does not support change to the spectral axis throughout the dataset");
+       }
+       status.itsTotalNChan = it->nChannel();
     } else {
       contFlag = false;
     }

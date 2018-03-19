@@ -46,14 +46,21 @@
 #include "calibaccess/ICalSolutionConstSource.h"
 #include "calibaccess/CalibAccessFactory.h"
 #include "calibaccess/ServiceCalSolutionSourceStub.h"
+#include "calibaccess/ChanAdapterCalSolutionConstSource.h"
 #include "calserviceaccessor/ServiceCalSolutionSource.h"
 #include "dataaccess/OnDemandNoiseAndFlagDA.h"
+#include "askap/RangePartition.h"
 #include "boost/shared_ptr.hpp"
 
 // Local packages includes
 #include "measurementequation/ICalibrationApplicator.h"
 #include "measurementequation/CalibrationApplicatorME.h"
 #include "measurementequation/CalibrationIterator.h"
+#include "parallel/ParallelWriteIterator.h"
+
+// casacore includes
+#include "casacore/casa/OS/Timer.h"
+
 
 ASKAP_LOGGER(logger, ".ccalapply");
 
@@ -68,39 +75,62 @@ class CcalApplyApp : public askap::Application
     public:
         virtual int run(int argc, char* argv[])
         {
+            // This class must have scope outside the main try/catch block
+            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+         
             try {
                 StatReporter stats;
                 LOFAR::ParameterSet subset(config().makeSubset("Ccalapply."));
 
-                // Setup calibration applicator
-                boost::shared_ptr<ICalibrationApplicator> calME = buildCalApplicator(subset);
-
-                // Get Measurement Set accessor
-                IDataSharedIter it = getDataIterator(subset);
-
-                ASKAPDEBUGASSERT(it);
-                ASKAPDEBUGASSERT(calME);
-
-                // Apply calibration
-                uint64_t count = 1;
-                for (it.init(); it != it.end(); it.next()) {
-                    if (count % 100 == 0) {
-                        ASKAPLOG_DEBUG_STR(logger, "Progress - Chunk " << count);
-                    }
-                    ++count;
-                    if (itsNoiseAndFlagDANeeded) {
-                        // quick and dirty for now
-                        accessors::OnDemandNoiseAndFlagDA acc(*it);
-                        acc.rwVisibility() = it->visibility();
-
-                        calME->correct(acc);
-
-                        it->rwVisibility() = acc.rwVisibility().copy();
-                    } else {
-                        calME->correct(*it);
-                    }
+                itsDistribute = comms.isParallel() ? subset.getBool("distribute", true) : false;
+  
+                if (itsDistribute) {
+                    ASKAPLOG_INFO_STR(logger, "Data will be distributed between "<<(comms.nProcs() - 1)<<" workers, master will write data");
                 }
 
+                if (comms.isWorker() || !itsDistribute) {
+
+                    // Get Measurement Set accessor
+                    // could've passed optional parameters for the parallel iterator too, but it's fine tuning
+                    IDataSharedIter it = itsDistribute ? IDataSharedIter(new ParallelWriteIterator(comms)) : getDataIterator(subset, comms);
+
+                    // Setup calibration applicator
+                    const boost::shared_ptr<ParallelWriteIterator> pwIt = it.dynamicCast<ParallelWriteIterator>();
+                    boost::shared_ptr<ICalibrationApplicator> calME = buildCalApplicator(subset, pwIt ? pwIt->chanOffset() : 0u);
+
+                    ASKAPDEBUGASSERT(it);
+                    ASKAPDEBUGASSERT(calME);
+       
+                    casa::Timer timer;
+
+                    // Apply calibration
+                    uint64_t count = 1;
+                    double calculationTime = 0.;
+                    for (it.init(); it != it.end(); it.next()) {
+                        if (count % 100 == 0) {
+                            ASKAPLOG_DEBUG_STR(logger, "Progress - Chunk " << count<< " nRows = "<<it->nRow());
+                        }
+                        ++count;
+                        timer.mark();
+                    
+                        if (itsNoiseAndFlagDANeeded) {
+                            // quick and dirty for now (mv: note, it will ignore updates to flags and noise!)
+                            accessors::OnDemandNoiseAndFlagDA acc(*it);
+                            acc.rwVisibility() = it->visibility();
+
+                            calME->correct(acc);
+
+                            it->rwVisibility() = acc.rwVisibility().copy();
+                        } else {
+                            calME->correct(*it);
+                        }
+                        calculationTime += timer.real();
+                    }
+                    ASKAPLOG_INFO_STR(logger, "Time spent in calculation and data movement (but excluding I/O): "<<calculationTime<<" seconds");
+                } else {
+                    // server code
+                    ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::READ);
+                }
                 stats.logSummary();
             } catch (const askap::AskapError& x) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << x.what());
@@ -123,6 +153,12 @@ class CcalApplyApp : public askap::Application
         /// information.
         bool itsNoiseAndFlagDANeeded;
 
+        /// @brief this flag indicates that automatic distribution of data in channel space take space
+        /// @details The logic in setting up adapters, etc depends on whether the data are already distributed or
+        /// have to be split and distributed by this class. This flag controls the approach and is on by default.
+        /// It's ignored in the serial mode.
+        bool itsDistribute;
+
         static casa::MFrequency::Ref getFreqRefFrame(const LOFAR::ParameterSet& parset)
         {
             const string freqFrame = parset.getString("freqframe", "topo");
@@ -141,7 +177,7 @@ class CcalApplyApp : public askap::Application
         }
 
         boost::shared_ptr<ICalibrationApplicator> buildCalApplicator(
-                const LOFAR::ParameterSet& parset)
+                const LOFAR::ParameterSet& parset, const casa::uInt chanOffset = 0u)
         {
             // Create solution source
             ICalSolutionConstSource::ShPtr solutionSource =
@@ -164,6 +200,12 @@ class CcalApplyApp : public askap::Application
             
             }
 
+            // wrap the solution source in an adapter, if necessary
+            if (chanOffset != 0u) {
+                ASKAPLOG_DEBUG_STR(logger, "Setup an adapter to adjust channels by "<<chanOffset);
+                solutionSource.reset(new ChanAdapterCalSolutionConstSource(solutionSource, chanOffset));
+            }
+
             // Create applicator
             boost::shared_ptr<ICalibrationApplicator> calME(new CalibrationApplicatorME(solutionSource));
             ASKAPASSERT(calME);
@@ -176,9 +218,9 @@ class CcalApplyApp : public askap::Application
             return calME;
         }
 
-        static IDataSharedIter getDataIterator(const LOFAR::ParameterSet& parset)
+        IDataSharedIter getDataIterator(const LOFAR::ParameterSet& parset, const askap::askapparallel::AskapParallel &comms) const
         {
-            const string ms = parset.getString("dataset");
+            const string ms = itsDistribute ? parset.getString("dataset") : comms.substitute(parset.getString("dataset"));
             TableDataSource ds(ms);
 
             IDataSelectorPtr sel=ds.createSelector();

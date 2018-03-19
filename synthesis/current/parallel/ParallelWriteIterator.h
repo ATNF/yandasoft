@@ -154,6 +154,14 @@ public:
    /// @note The mode of operations is controlled by the master (i.e. this method) and is distributed to
    /// all workers via MPI.
    static void masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, OpExtension mode = NONE);
+
+
+   /// @brief obtain the channel offset
+   /// @details The method is specific to this particular adapter. It is sometimes handly to get the channel offset of
+   /// the chunk dealt with by this worker to avoid re-implementing this functionality in the user code as it would require
+   /// additional communication.
+   /// @return channel offset of the first channel dealt with by this worker w.r.t. the first channel of the whole spectrum
+   casa::uInt inline chanOffset() const { return itsChanOffset; }
 	
 protected:
     
@@ -163,7 +171,7 @@ protected:
    /// the last iteration. If not at the first iteration, it also syncronises
    /// the visibility cube with the master before advancing to the next iteration.
    void advance();
-    
+
 private:
    /// @brief communicator
    askap::askapparallel::AskapParallel& itsComms;
@@ -178,6 +186,11 @@ private:
 	
    /// @brief true if current accessor contains valid data
    bool itsAccessorValid;
+
+   /// @brief current channel offset w.r.t the full axis
+   /// @details Workers may need to know which part of the full spectrum they are working with. Although ideally, we should've used
+   /// the accessor itself (e.g. the frequency axis) to figure this out.
+   casa::uInt itsChanOffset;
 };
 
 } // namespace synthesis

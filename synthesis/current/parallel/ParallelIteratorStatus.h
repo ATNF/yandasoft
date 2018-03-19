@@ -72,6 +72,12 @@ struct ParallelIteratorStatus {
   /// @brief operations mode
   /// @details Basically, an additional integer the meaning of which depends on the user
   int itsMode;
+
+  /// @brief total number of channels
+  /// @details Workers are in general agnostic of the full spectrum, but sometimes it is handy
+  /// to pass these details through iterator code to the high-level code to avoid re-implementing
+  /// the same communication pattern
+  casa::uInt itsTotalNChan;
 };
 
 } // namespace synthesis

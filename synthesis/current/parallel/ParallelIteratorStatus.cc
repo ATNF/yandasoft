@@ -35,7 +35,7 @@ namespace askap {
 namespace synthesis {
 
 /// @brief default constructor - end mark meaning no more data available
-ParallelIteratorStatus::ParallelIteratorStatus() : itsHasMore(false), itsNRow(0), itsNPol(0), itsMode(0) {}
+ParallelIteratorStatus::ParallelIteratorStatus() : itsHasMore(false), itsNRow(0), itsNPol(0), itsMode(0), itsTotalNChan(0u) {}
 
 /// @brief Output shift operator for this class
 /// @param os Output ostream
@@ -43,8 +43,8 @@ ParallelIteratorStatus::ParallelIteratorStatus() : itsHasMore(false), itsNRow(0)
 LOFAR::BlobOStream& operator<<(LOFAR::BlobOStream& os, 
                                         const ParallelIteratorStatus &status)
 {
-  os.putStart("ParallelIteratorStatus",2);
-  os<<status.itsHasMore<<status.itsNRow<<status.itsNPol<<status.itsMode;
+  os.putStart("ParallelIteratorStatus",3);
+  os<<status.itsHasMore<<status.itsNRow<<status.itsNPol<<status.itsMode<<status.itsTotalNChan;
   os.putEnd();
   return os;
 }                                        
@@ -56,8 +56,8 @@ LOFAR::BlobIStream& operator>>(LOFAR::BlobIStream& is,
                                ParallelIteratorStatus& status)
 {
   const int version = is.getStart("ParallelIteratorStatus");
-  ASKAPCHECK(version == 2, "Attempting to read a wrong version of ParallelIteratorStatus");
-  is >> status.itsHasMore>>status.itsNRow>>status.itsNPol>>status.itsMode;
+  ASKAPCHECK(version == 3, "Attempting to read a wrong version of ParallelIteratorStatus");
+  is >> status.itsHasMore>>status.itsNRow>>status.itsNPol>>status.itsMode>>status.itsTotalNChan;
   is.getEnd();
   return is;
 }                               
