@@ -791,7 +791,10 @@ void CalibratorParallel::writeModel(const std::string &postfix)
           itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
           itsSolutionIDValid = true;
       }
-
+      // if the solution time has changed - then you get a new SolutionID
+      // this should spot subsequent gain cal solution intervals
+      
+      itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
       boost::shared_ptr<ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(itsSolutionID);
       ASKAPASSERT(solAcc);
 
