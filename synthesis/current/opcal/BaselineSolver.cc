@@ -360,7 +360,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        }
        const double amplErr = err[0] / 2. / casa::C::pi * wavelength;
        ASKAPLOG_DEBUG_STR(logger, "Antenna "<<ant);
-       ASKAPLOG_DEBUG_STR(logger, "Amplitude of the error "<<ampl<<" +/- "<<amplErr<<" metres");
+       ASKAPLOG_DEBUG_STR(logger, "Amplitude of the residual "<<ampl<<" +/- "<<amplErr<<" metres");
+       ASKAPLOG_DEBUG_STR(logger, "Phase of the residual "<<param[1]/casa::C::pi*180.<<" +/- "<<err[1] / casa::C::pi * 180.<<" deg");
        const double cphi = cos(param[1]);
        const double sphi = sin(param[1]);
        const double cphiErr = abs(sphi)*err[1];
