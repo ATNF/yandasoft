@@ -240,7 +240,7 @@ namespace askap
 		   "The use of the parameter solver.Clean.threshold is deprecated, use threshold.minorcycle instead");
 
 	string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
-	casa::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
+    casa::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
 
 	if (algorithm=="MultiScale") {
 	  ASKAPLOG_INFO_STR(logger, "Constructing MultiScale Clean solver (ASKAP version)" );
@@ -248,8 +248,8 @@ namespace askap
 	  solver->setAlgorithm(algorithm);
 	}
 	else if(algorithm=="Basisfunction") {
-	  ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver" );
-	  solver.reset(new ImageBasisFunctionSolver(scales));
+	 ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver ");
+     solver.reset(new ImageBasisFunctionSolver(scales));
 	}
 	else if(algorithm=="Hogbom") {
 	  ASKAPLOG_INFO_STR(logger, "Constructing Hogbom Clean solver");

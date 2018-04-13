@@ -70,8 +70,8 @@ namespace askap
   {
 
 
-    ImageAMSMFSolver::ImageAMSMFSolver() : itsScales(3,0.), itsNumberTaylor(0),
-					   itsSolutionType("MINCHISQ"), itsOrthogonal(False)
+    ImageAMSMFSolver::ImageAMSMFSolver() : itsScales(3,0.),itsNumberTaylor(0),
+        itsSolutionType("MINCHISQ"), itsOrthogonal(False)
     {
       ASKAPDEBUGASSERT(itsScales.size() == 3);
       itsScales(1)=10;
@@ -175,7 +175,7 @@ namespace askap
 	  ASKAPLOG_INFO_STR(logger, "There are " << nOrders << " PSFs calculated for this first pass");
 	}
 	else {
-	  ASKAPLOG_INFO_STR(decmtbflogger, "There are " << itsNumberTaylor << " Taylor terms");
+	  ASKAPLOG_INFO_STR(logger, "There are " << itsNumberTaylor << " Taylor terms");
 	}
 
 	if(this->itsNumberTaylor>1) {
@@ -411,6 +411,7 @@ namespace askap
 	      itsBasisFunction->initialise(dirtyVec(0).shape());
 	      itsCleaners[imageTag]->setBasisFunction(itsBasisFunction);
 	      itsCleaners[imageTag]->setSolutionType(itsSolutionType);
+	      itsCleaners[imageTag]->setDecoupled(itsDecoupled);
 	      if (maskArray.nelements()) {
             ASKAPLOG_INFO_STR(logger, "Defining mask as weight image");
 		        itsCleaners[imageTag]->setWeight(maskArray);
@@ -547,6 +548,8 @@ namespace askap
       ASKAPASSERT(this->itsControl);
       this->itsControl->configure(parset);
 
+      ASKAPASSERT(this->itsControl);
+      this->itsControl->configure(parset);
       String solutionType=parset.getString("solutiontype", "MAXCHISQ");
       if(solutionType=="MAXBASE") {
       }
@@ -555,12 +558,20 @@ namespace askap
       else {
         solutionType="MAXCHISQ";
       }
-      ASKAPLOG_INFO_STR(decmtbflogger, "Solution type = " << solutionType);
+      ASKAPLOG_INFO_STR(logger, "Solution type = " << solutionType);
       this->itsSolutionType=solutionType;
 
-      this->itsOrthogonal=parset.getBool("orthogonal", "false");
+      this->itsOrthogonal=parset.getBool("orthogonal", false);
       if (this->itsOrthogonal) {
-        ASKAPLOG_DEBUG_STR(decmtbflogger, "Multiscale basis functions will be orthogonalised");
+          ASKAPLOG_DEBUG_STR(logger, "Multiscale basis functions will be orthogonalised");
+          // need to reset the basisFunctions
+          const BasisFunction<Float>::ShPtr bfPtr(new MultiScaleBasisFunction<Float>(itsScales,
+    										      itsOrthogonal));
+          itsBasisFunction = bfPtr;
+      }
+      this->itsDecoupled = parset.getBool("decoupled", true);
+      if (this->itsDecoupled) {
+          ASKAPLOG_DEBUG_STR(logger, "Using decoupled residuals");
       }
 
     }

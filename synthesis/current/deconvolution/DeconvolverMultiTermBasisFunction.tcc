@@ -63,7 +63,7 @@ namespace askap {
                 Vector<Array<T> >& psf,
                 Vector<Array<T> >& psfLong)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There are " << this->itsNumberTerms << " terms to be solved");
 
@@ -81,7 +81,7 @@ namespace askap {
         DeconvolverMultiTermBasisFunction<T, FT>::DeconvolverMultiTermBasisFunction(Array<T>& dirty,
                 Array<T>& psf)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There is only one term to be solved");
             this->itsPsfLongVec.resize(1);
@@ -103,6 +103,17 @@ namespace askap {
         const String DeconvolverMultiTermBasisFunction<T, FT>::solutionType()
         {
             return itsSolutionType;
+        };
+        template<class T, class FT>
+        void DeconvolverMultiTermBasisFunction<T, FT>::setDecoupled(Bool decoupled)
+        {
+            itsDecoupled=decoupled;
+        };
+
+        template<class T, class FT>
+        const Bool DeconvolverMultiTermBasisFunction<T, FT>::decoupled()
+        {
+            return itsDecoupled;
         };
 
         template<class T, class FT>
@@ -156,17 +167,21 @@ namespace askap {
             defaultScales[1] = 10.0;
             defaultScales[2] = 30.0;
             std::vector<float> scales = parset.getFloatVector("scales", defaultScales);
-
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Constructing Multiscale basis function with scales "
                                    << scales);
             Bool orthogonal = parset.getBool("orthogonal", false);
             if (orthogonal) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Multiscale basis functions will be orthogonalised");
             }
-
             itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
                                orthogonal));
+
             String solutionType = parset.getString("solutiontype", "MAXCHISQ");
+            Bool  itsDecoupled = parset.getBool("decoupled", false);
+            if (itsDecoupled) {
+                ASKAPLOG_DEBUG_STR(decmtbflogger, "Using decoupled residuals");
+            }
+
             if (solutionType == "MAXBASE") {
                 itsSolutionType = solutionType;
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Component search to maximise over bases");
@@ -695,11 +710,12 @@ namespace askap {
             if (this->itsSolutionType == "MAXCHISQ") {
                 absPeakVal = sqrt(max(T(0.0), absPeakVal));
             }
+
             // Not sure I agree with the this I think the absPeakVal should
             // be the absolute value of the peak residual
             // For deep cleaning we want to restrict the abspeakval to the mask
             // so we just use the value determined above
-            if (!deepCleanMode()) getCoupledResidual(absPeakVal);
+            if (!deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
 
         }
 

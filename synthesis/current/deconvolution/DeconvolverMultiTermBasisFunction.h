@@ -112,6 +112,12 @@ namespace askap {
                 /// @brief Get the type of solution used in finding the optimum component
                 const casa::String solutionType();
 
+                /// @brief Set whether to use decoupled residuals
+                void setDecoupled(casa::Bool decoupled);
+
+                /// @brief Get whether to use decoupled residuals
+                const casa::Bool decoupled();
+
                 /// @brief Set the deep cleaning switch for component finding
                 void setDeepCleanMode(casa::Bool deep);
 
@@ -198,6 +204,8 @@ namespace askap {
                 casa::Bool itsBasisFunctionChanged;
 
                 casa::String itsSolutionType;
+
+                casa::Bool itsDecoupled;
 
                 casa::Bool itsDeep;
         };
