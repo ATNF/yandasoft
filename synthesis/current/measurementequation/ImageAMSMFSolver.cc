@@ -569,7 +569,7 @@ namespace askap
     										      itsOrthogonal));
           itsBasisFunction = bfPtr;
       }
-      this->itsDecoupled = parset.getBool("decoupled", true);
+      this->itsDecoupled = parset.getBool("decoupled", false);
       if (this->itsDecoupled) {
           ASKAPLOG_DEBUG_STR(logger, "Using decoupled residuals");
       }
