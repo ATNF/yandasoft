@@ -38,6 +38,7 @@ ASKAP_LOGGER(logger, ".gridding.visgridderfactory");
 #include <gridding/BoxVisGridder.h>
 #include <gridding/SphFuncVisGridder.h>
 #include <gridding/WProjectVisGridder.h>
+#include <gridding/AltWProjectVisGridder.h>
 #include <gridding/AWProjectVisGridder.h>
 #include <gridding/WStackVisGridder.h>
 #include <gridding/AProjectWStackVisGridder.h>
@@ -106,17 +107,18 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         // all pre-defined gridders
         ASKAPLOG_DEBUG_STR(logger, "Filling the gridder registry with pre-defined gridders");
         addPreDefinedGridder<WProjectVisGridder>();
+        addPreDefinedGridder<AltWProjectVisGridder>();
         addPreDefinedGridder<WStackVisGridder>();
         addPreDefinedGridder<AProjectWStackVisGridder>();
         addPreDefinedGridder<AWProjectVisGridder>();
         addPreDefinedGridder<BoxVisGridder>();
-        addPreDefinedGridder<SphFuncVisGridder>();        
+        addPreDefinedGridder<SphFuncVisGridder>();
     }
 
     // buffer for the result
     IVisGridder::ShPtr gridder;
     /// @todo Better handling of string case
-    std::string prefix("gridder");	
+    std::string prefix("gridder");
     const string gridderName = parset.getString(prefix);
     prefix += "." + gridderName + ".";
     ASKAPLOG_DEBUG_STR(logger, "Attempting to greate gridder "<<gridderName);
@@ -126,11 +128,11 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
     if (parset.isDefined("gridder.padding")) {
         const float padding =parset.getFloat("gridder.padding");
         ASKAPLOG_INFO_STR(logger, "Use padding at the gridder level, padding factor = "<<padding);
-        boost::shared_ptr<VisGridderWithPadding> vg = 
+        boost::shared_ptr<VisGridderWithPadding> vg =
             boost::dynamic_pointer_cast<VisGridderWithPadding>(gridder);
         ASKAPCHECK(vg, "Gridder type ("<<parset.getString("gridder")<<
                 ") is incompatible with the padding option");
-        vg->setPaddingFactor(padding);           
+        vg->setPaddingFactor(padding);
     } else {
         ASKAPLOG_INFO_STR(logger,"No padding at the gridder level");
     }
@@ -140,15 +142,15 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
                     parset.getString("gridder.MaxPointingSeparation","-1rad"),"rad");
         ASKAPLOG_INFO_STR(logger,"MaxPointingSeparation is used, data from pointing centres further than "<<
                 threshold*180./casa::C::pi<<" deg from the image centre will be rejected");
-        boost::shared_ptr<TableVisGridder> tvg = 
+        boost::shared_ptr<TableVisGridder> tvg =
 	        boost::dynamic_pointer_cast<TableVisGridder>(gridder);
 	    ASKAPCHECK(tvg, "Gridder type ("<<gridderName<<") is incompatible with the MaxPointingSeparation option");
-	    tvg->maxPointingSeparation(threshold);        
+	    tvg->maxPointingSeparation(threshold);
     } else {
             ASKAPLOG_INFO_STR(logger,"MaxPointingSeparation is not used for gridder: "<<gridderName<<
                                      ", all data will be used");
     }
-    
+
     if (parset.isDefined("gridder.alldatapsf")) {
         const bool useAll = parset.getBool("gridder.alldatapsf");
         if (useAll) {
@@ -156,14 +158,14 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "Use representative feed and field for PSF calculation");
         }
-        boost::shared_ptr<TableVisGridder> tvg = 
+        boost::shared_ptr<TableVisGridder> tvg =
             boost::dynamic_pointer_cast<TableVisGridder>(gridder);
         ASKAPCHECK(tvg, "Gridder type ("<<parset.getString("gridder")<<
                 ") is incompatible with the alldatapsf option");
         tvg->useAllDataForPSF(useAll);
     } else {
         ASKAPLOG_INFO_STR(logger, "gridder.alldatapsf option is not used, default to representative feed and field for PSF calculation");
-    }	
+    }
 
     {
         const bool osWeight = parset.getBool("gridder.oversampleweight",false);
@@ -172,7 +174,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "First oversampling plane will always be used for weight computation");
         }
-        boost::shared_ptr<TableVisGridder> tvg = 
+        boost::shared_ptr<TableVisGridder> tvg =
             boost::dynamic_pointer_cast<TableVisGridder>(gridder);
         if (tvg) {
             tvg->trackWeightPerPlane(osWeight);
@@ -180,7 +182,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
             ASKAPLOG_WARN_STR(logger,"Gridder type ("<<parset.getString("gridder")<<
                     ") is incompatible with the oversampleweight option (trying to set it to "<<osWeight<<")");
         }
-    }	
+    }
 
     // Initialize the Visibility Weights
     if (parset.getString("visweights","")=="MFS")
@@ -198,14 +200,14 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
 
     if (parset.getBool("gridder.snapshotimaging",false)) {
         ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to do snap-shot imaging");
-        const double wtolerance = parset.getDouble("gridder.snapshotimaging.wtolerance"); 
+        const double wtolerance = parset.getDouble("gridder.snapshotimaging.wtolerance");
         ASKAPLOG_INFO_STR(logger, "w-coordinate tolerance is "<<wtolerance<<" wavelengths");
         const casa::uInt decimate = parset.getUint("gridder.snapshotimaging.coorddecimation", 3);
         const casa::Interpolate2D::Method method = interpMethod(
                 parset.getString("gridder.snapshotimaging.interpmethod", "cubic"));
 
         const bool PredictWPlane = parset.getBool("gridder.snapshotimaging.longtrack",false);
-        if (PredictWPlane) {    
+        if (PredictWPlane) {
             ASKAPLOG_INFO_STR(logger, "W-plane fitting via prediction will be used in snapshot mode");
         }
         boost::shared_ptr<SnapShotImagingGridderAdapter> adapter(
@@ -227,11 +229,11 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         const double chanBW = parset.getDouble("gridder.bwsmearing.chanbw",1e6);
         const casa::Int nSteps = parset.getInt32("gridder.bwsmearing.nsteps", 10);
         ASKAPCHECK(nSteps > 0, "Number of steps is supposed to be positive");
-        ASKAPLOG_INFO_STR(logger, "  assumed channel bandwidth = "<<chanBW/1e6<<" MHz, number of integration steps = "<<nSteps); 
+        ASKAPLOG_INFO_STR(logger, "  assumed channel bandwidth = "<<chanBW/1e6<<" MHz, number of integration steps = "<<nSteps);
         boost::shared_ptr<SmearingGridderAdapter> adapter(new SmearingGridderAdapter(gridder, chanBW, casa::uInt(nSteps)));
         ASKAPDEBUGASSERT(adapter);
-        gridder = adapter;        
-    } 
+        gridder = adapter;
+    }
 
     return gridder;
 }
@@ -258,4 +260,3 @@ casa::Interpolate2D::Method VisGridderFactory::interpMethod(casa::String str) {
 } // namespace synthesis
 
 } // namespace askap
-
