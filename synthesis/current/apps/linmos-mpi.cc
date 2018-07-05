@@ -278,91 +278,92 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
       // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
 
-      // set up an iterator for all directionCoordinate planes in the input images
-      scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
 
-      for (; planeIter.hasMore(); planeIter.next()) { // this is a loop over the polarisations as well as channels
-        // loop over the input images, reading each in an adding to the output pixel arrays
-        // remember this is for the current output mosaick
-        for (uInt img = 0; img < inImgNames.size(); ++img ) {
+      for (uInt img = 0; img < inImgNames.size(); ++img ) {
+        // set up an iterator for all directionCoordinate planes in the input images
 
-          // short cuts
-          string inImgName = inImgNames[img];
-          string inWgtName, inSenName;
 
-          ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
-          if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
-            inWgtName = inWgtNames[img];
-            ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
-          }
-          if (accumulator.doSensitivity()) {
-            inSenName = inSenNames[img];
-            ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
-          }
+        // short cuts
+        string inImgName = inImgNames[img];
+        string inWgtName, inSenName;
 
-          //casa::PagedImage<casa::Float> inImg(inImgName);
-          const casa::IPosition shape = iacc.shape(inImgName);
+        ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
+        if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
+          inWgtName = inWgtNames[img];
+          ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+        }
+        if (accumulator.doSensitivity()) {
+          inSenName = inSenNames[img];
+          ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
+        }
+
+        //casa::PagedImage<casa::Float> inImg(inImgName);
+        const casa::IPosition shape = iacc.shape(inImgName);
+        casa::IPosition blc(shape.nelements(),0);
+        casa::IPosition trc(shape);
+
+        if (originalNchan < 0) {
+          originalNchan = trc[3];
+        }
+        else {
+          ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
+        }
+        // this assumes all allocations
+        blc[3] = myAllocationStart;
+        trc[0] = trc[0]-1;
+        trc[1] = trc[1]-1;
+        trc[2] = trc[2]-1;
+        trc[3] = myAllocationStart + myAllocationSize-1;
+
+        accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
+        Array<float> inPix = iacc.read(inImgName,blc,trc);
+
+
+        ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
+
+        Array<float> inWgtPix;
+        Array<float> inSenPix;
+
+        if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
+
+        //casa::PagedImage<casa::Float> inImg(inWgtName);
+          const casa::IPosition shape = iacc.shape(inWgtName);
           casa::IPosition blc(shape.nelements(),0);
           casa::IPosition trc(shape);
 
-          if (originalNchan < 0) {
-            originalNchan = trc[3];
-          }
-          else {
-            ASKAPCHECK(originalNchan == trc[3],"Nchan missmatch in merge" );
-          }
-          // this assumes all allocations
           blc[3] = myAllocationStart;
           trc[0] = trc[0]-1;
           trc[1] = trc[1]-1;
           trc[2] = trc[2]-1;
           trc[3] = myAllocationStart + myAllocationSize-1;
 
-          accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
-          Array<float> inPix = iacc.read(inImgName,blc,trc);
+          inWgtPix = iacc.read(inWgtName,blc,trc);
 
+          ASKAPASSERT(inPix.shape() == inWgtPix.shape());
+        }
+        if (accumulator.doSensitivity()) {
 
-          ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
+        // casa::PagedImage<casa::Float> inImg(inSenName);
+          const casa::IPosition shape = iacc.shape(inSenName);
+          casa::IPosition blc(shape.nelements(),0);
+          casa::IPosition trc(shape);
 
-          Array<float> inWgtPix;
-          Array<float> inSenPix;
+          blc[3] = myAllocationStart;
+          trc[0] = trc[0]-1;
+          trc[1] = trc[1]-1;
+          trc[2] = trc[2]-1;
+          trc[3] = myAllocationStart + myAllocationSize-1;
 
-          if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
+          inSenPix = iacc.read(inSenName,blc,trc);
 
-          //casa::PagedImage<casa::Float> inImg(inWgtName);
-            const casa::IPosition shape = iacc.shape(inWgtName);
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
+          ASKAPASSERT(inPix.shape() == inSenPix.shape());
+        }
+        
+        scimath::MultiDimArrayPlaneIter planeIter(iacc.shape(inImgNames[img]));
+        // loop over the input images, reading each in an adding to the output pixel arrays
+        // remember this is for the current output mosaick
 
-            blc[3] = myAllocationStart;
-            trc[0] = trc[0]-1;
-            trc[1] = trc[1]-1;
-            trc[2] = trc[2]-1;
-            trc[3] = myAllocationStart + myAllocationSize-1;
-
-            inWgtPix = iacc.read(inWgtName,blc,trc);
-
-            ASKAPASSERT(inPix.shape() == inWgtPix.shape());
-          }
-          if (accumulator.doSensitivity()) {
-
-          // casa::PagedImage<casa::Float> inImg(inSenName);
-            const casa::IPosition shape = iacc.shape(inSenName);
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
-
-            blc[3] = myAllocationStart;
-            trc[0] = trc[0]-1;
-            trc[1] = trc[1]-1;
-            trc[2] = trc[2]-1;
-            trc[3] = myAllocationStart + myAllocationSize-1;
-
-            inSenPix = iacc.read(inSenName,blc,trc);
-
-            ASKAPASSERT(inPix.shape() == inSenPix.shape());
-          }
-
-
+        for (; planeIter.hasMore(); planeIter.next()) { // this is a loop over the polarisations as well as channels
           // test whether to simply add weighted pixels, or whether a regrid is required
           bool regridRequired = (!accumulator.coordinatesAreEqual()) ;
 
@@ -547,7 +548,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
       }
 
-      if (comms.rank() < comms.nProcs()-1) {
+      if (comms.rank() < comms.nProcs()-1) { // last rank doesnot use this method
         int buf;
         int to = comms.rank()+1;
         comms.send((void *) &buf,sizeof(int),to);
