@@ -69,7 +69,7 @@ namespace askap
                         const double cutoff, const int overSample,
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
-                        const float alpha=1.);
+                        const float alpha=1.,const bool writeOut=false);
 
                 virtual ~AltWProjectVisGridder();
 
@@ -93,7 +93,10 @@ namespace askap
                 /// @return a shared pointer to the gridder instance
                 static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
+                // This should override the default implementation
+                // I thought I had already done this.
 
+                virtual void finaliseGrid(casa::Array<double>& out);
 
 
             private:
@@ -103,6 +106,9 @@ namespace askap
                 /// @param[in] other input object
                 /// @return reference to itself
                 AltWProjectVisGridder& operator=(const AltWProjectVisGridder &other);
+
+                /// dump the Grids
+                bool itsWriteOut;
 
 
         };
