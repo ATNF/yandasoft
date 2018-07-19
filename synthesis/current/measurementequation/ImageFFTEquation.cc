@@ -70,7 +70,7 @@ namespace askap
       itsGridder = IVisGridder::ShPtr(new SphFuncVisGridder());
       init();
     }
-    
+
 
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi) :
       itsIdi(idi), itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
@@ -112,7 +112,7 @@ namespace askap
     ImageFFTEquation::~ImageFFTEquation()
     {
     }
-     
+
     /// @brief define whether to use an alternative gridder for the PSF
     /// and/or the preconditioner function
     void ImageFFTEquation::useAlternativePSF(const LOFAR::ParameterSet& parset)
@@ -144,7 +144,7 @@ namespace askap
              "The PSF will be calculated by the same gridder type as used for the model and residuals");
       }
     }
-     
+
     askap::scimath::Params ImageFFTEquation::defaultParameters()
     {
       Params ip;
@@ -176,7 +176,7 @@ namespace askap
     void ImageFFTEquation::init()
     {
     }
-    
+
     /// Clone this into a shared pointer
     /// @return shared pointer to a copy
     ImageFFTEquation::ShPtr ImageFFTEquation::clone() const
@@ -187,7 +187,7 @@ namespace askap
     /// @brief setup object function to update degridded visibilities
     /// @details For the parallel implementation of the measurement equation we need
     /// inter-rank communication. To avoid introducing cross-dependency of the measurement
-    /// equation and the MPI one can use polymorphic object function to sum degridded visibilities 
+    /// equation and the MPI one can use polymorphic object function to sum degridded visibilities
     /// across all required ranks in the distributed case and do nothing otherwise.
     /// By default, this class doesn't alter degridded visibilities.
     /// @param[in] obj new object function (or an empty shared pointer to turn this option off)
@@ -195,11 +195,11 @@ namespace askap
     {
       itsVisUpdateObject = obj;
     }
-    
-    /// @brief helper method to verify whether a parameter had been changed 
-    /// @details This method checks whether a particular parameter is tracked. If 
+
+    /// @brief helper method to verify whether a parameter had been changed
+    /// @details This method checks whether a particular parameter is tracked. If
     /// yes, its change monitor is used to verify the status since the last call of
-    /// the method, otherwise new tracking begins and true is returned (i.e. to 
+    /// the method, otherwise new tracking begins and true is returned (i.e. to
     /// update all dependent cache).
     /// @param[in] name name of the parameter
     /// @return true if parameter has been updated since the previous call
@@ -215,7 +215,7 @@ namespace askap
       }
       return result;
     }
-    
+
 
     void ImageFFTEquation::predict() const
     {
@@ -243,18 +243,18 @@ namespace askap
             casa::Array<double> imagePixels(parameters().value(imageName).copy());
             const casa::IPosition imageShape(imagePixels.shape());
             itsModelGridders[imageName]->initialiseDegrid(axes, imagePixels);
-        }              
+        }
       }
       // Loop through degridding the data
       ASKAPLOG_DEBUG_STR(logger, "Starting to degrid model" );
-      
+
       // report every 5000000 degridded rows into log in the debug mode
       #ifdef ASKAP_DEBUG
-      unsigned long report_every = 5000000; 
+      unsigned long report_every = 5000000;
       unsigned long total_rows = 0;
       unsigned long current_rows = 0;
       #endif // #ifdef ASKAP_DEBUG
-      
+
       for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
       {
         itsIdi->rwVisibility().set(0.0);
@@ -275,13 +275,13 @@ namespace askap
         current_rows += nRow;
         if (current_rows > report_every) {
             current_rows = 0;
-            ASKAPLOG_DEBUG_STR(logger, "Degridded "<<total_rows<<" rows of data"); 
+            ASKAPLOG_DEBUG_STR(logger, "Degridded "<<total_rows<<" rows of data");
         }
         #endif // #ifdef ASKAP_DEBUG
       }
       ASKAPLOG_DEBUG_STR(logger, "Finished degridding model" );
     };
-    
+
     /// @brief assign a different iterator
     /// @details This is a temporary method to assign a different iterator.
     /// All this business is a bit ugly, but should go away when all
@@ -291,7 +291,7 @@ namespace askap
     {
       itsIdi = idi;
     }
-    
+
 
     // Calculate the residual visibility and image. We transform the model on the fly
     // so that we only have to read (and write) the data once. This uses more memory
@@ -299,13 +299,13 @@ namespace askap
     void ImageFFTEquation::calcImagingEquations(askap::scimath::ImagingNormalEquations& ne) const
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
-      
+
       // We will need to loop over all completions i.e. all sources
       const vector<string> completions(parameters().completions("image"));
 
       // To minimize the number of data passes, we keep copies of the gridders in memory, and
-      // switch between these. This optimization may not be sufficient in the long run.      
-      // Set up initial gridders for model and for the residuals. This enables us to 
+      // switch between these. This optimization may not be sufficient in the long run.
+      // Set up initial gridders for model and for the residuals. This enables us to
       // do both at the same time.
 
       for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
@@ -364,7 +364,7 @@ namespace askap
         itsResidualGridders[imageName]->initialiseGrid(axes, imageShape, false);
         // and PSF gridders, dopsf=true, dopcf=false
         itsPSFGridders[imageName]->customiseForContext(*it);
-        itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);        
+        itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);
         // and PSF gridders, dopsf=false, dopcf=false
         if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
             itsPreconGridders[imageName]->customiseForContext(*it);
@@ -374,7 +374,7 @@ namespace askap
       // synchronise emtpy flag across multiple ranks if necessary
       if (itsVisUpdateObject) {
           itsVisUpdateObject->aggregateFlag(somethingHasToBeDegridded);
-      }      
+      }
       // Now we loop through all the data
       ASKAPLOG_DEBUG_STR(logger, "Starting degridding model and gridding residuals" );
       size_t counterGrid = 0, counterDegrid = 0;
@@ -383,7 +383,7 @@ namespace askap
         // buffer-accessor, used as a replacement for proper buffers held in the subtable
         // effectively, an array with the same shape as the visibility cube is held by this class
         MemBufferDataAccessor accBuffer(*itsIdi);
-         
+
         // Accumulate model visibility for all models
         accBuffer.rwVisibility().set(0.0);
         if (somethingHasToBeDegridded) {
@@ -398,18 +398,18 @@ namespace askap
                      counterDegrid+=accBuffer.nRow();
                  }
             }
-            // optional aggregation of visibilities in the case of distributed model        
+            // optional aggregation of visibilities in the case of distributed model
             // somethingHasToBeDegridded is supposed to have consistent value across all participating ranks
             if (itsVisUpdateObject) {
                 itsVisUpdateObject->update(accBuffer.rwVisibility());
             }
-            //            
+            //
         }
         accBuffer.rwVisibility() -= itsIdi->visibility();
         accBuffer.rwVisibility() *= float(-1.);
 
         /// Now we can calculate the residual visibility and image
-        size_t tempCounter = 0; 
+        size_t tempCounter = 0;
 #ifdef _OPENMP
         #pragma omp parallel default(shared)
         {
@@ -444,7 +444,7 @@ namespace askap
       ASKAPLOG_DEBUG_STR(logger, "Number of accessor rows iterated through is "<<counterGrid<<" (gridding) and "<<
                         counterDegrid<<" (degridding)");
 
-      // We have looped over all the data, so now we have to complete the 
+      // We have looped over all the data, so now we have to complete the
       // transforms and fill in the normal equations with the results from the
       // residual gridders
       if (itsUsePreconGridder) {
@@ -461,7 +461,7 @@ namespace askap
 
         casa::Array<double> imageDeriv(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
-        
+
         /*
         // for debugging/research, store grid prior to FFT
         boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(itsPSFGridders[imageName]);
@@ -477,7 +477,7 @@ namespace askap
         casa::Array<double> imageWeight(imageShape);
         itsResidualGridders[imageName]->finaliseWeights(imageWeight);
 
-        /*{ 
+        /*{
           casa::Array<double> imagePSFWeight(imageShape);
           itsPSFGridders[imageName]->finaliseWeights(imagePSFWeight);
           const double maxPSFWeight = casa::max(imagePSFWeight);
@@ -493,7 +493,7 @@ namespace askap
              }
              // do nothing for zero weight, it just means that this part of normal equations is empty. However,
              // we may still be able to have data after summing all parts of the NE
-          } 
+          }
         }*/
 
         casa::IPosition vecShape(1, imagePSF.nelements());

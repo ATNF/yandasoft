@@ -47,7 +47,7 @@
 #include <fft/FFTWrapper.h>
 // Local package includes
 #include "AltWProjectVisGridder.h"
-
+#include <boost/lexical_cast.hpp>
 
 
 ASKAP_LOGGER(logger, ".gridding.AltWProjectVisGridder");
@@ -131,10 +131,10 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
           ASKAPLOG_INFO_STR(logger, "Writing out Grids ");
           casa::Array<float> buf(scratch.shape());
           casa::convertArray<float,double>(buf,imag(scratch));
-          string name = std::to_string(passThrough) + "." + std::to_string(i) + ".prefft.imag";
+          string name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.imag";
           scimath::saveAsCasaImage(name,buf);
           casa::convertArray<float,double>(buf,real(scratch));
-          name = std::to_string(passThrough) + "." + std::to_string(i) + ".prefft.real";
+          name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.real";
           scimath::saveAsCasaImage(name,buf);
           /*
               // adjust values to extract part which gives a real symmetric FT and the remainder
