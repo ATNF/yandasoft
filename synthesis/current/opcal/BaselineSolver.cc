@@ -349,8 +349,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
        casa::Vector<double> err = fitter.errors();
        ASKAPCHECK(err.nelements() == 3, "Expect 3 uncertainties out of the fitter, you have size="<<err.nelements());
-       // for our test setup of 888.5 MHz central freq
-       const double wavelength = casa::C::c / 936.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
+       // for our test setup of 864.5 MHz central freq
+       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
        double ampl = param[0] / 2. / casa::C::pi * wavelength;
        // fit can converge with either sign of the first coefficient, but we like to always have a positive amplitude
        if (ampl < 0) {
@@ -468,8 +468,8 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
        const double coeff = (sxy - sx * sy) / denominator;
  
-       // for our test setup of 888.5 MHz central freq
-       const double wavelength = casa::C::c / 936.5e6; // effective wavelength in metres (to do get it from scan's frequency)
+       // for our test setup of 864.5 MHz central freq
+       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do get it from scan's frequency)
        // the formula for phase has -sin(dec)*dZ therefore, we have to swap the sign here
        const double dZ = -coeff / 2. / casa::C::pi * wavelength;
        ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
@@ -539,7 +539,7 @@ void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::M
             //const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
             //              siderealRate * casa::C::_2pi / casa::C::c * 672e6;
             const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
-                          siderealRate * casa::C::_2pi / casa::C::c * 939.5e6;
+                          siderealRate * casa::C::_2pi / casa::C::c * 864.5e6;
             const double amp = abs(caldata(scanIndices[cnt],ant).gain());
             
             os<<cnt<<" "<<rate<<" "<<amp<<std::endl;
