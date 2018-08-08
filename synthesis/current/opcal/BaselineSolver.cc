@@ -294,8 +294,8 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        func.parameters()[1] = 0.;
        func.parameters()[2] = 0.;
        fitter.setFunction(func);
-       fitter.setMaxIter(80);
-       fitter.setCriteria(0.001);
+       fitter.setMaxIter(180);
+       fitter.setCriteria(0.00005);
   
        // could've cached the hour angles, but for now leave as is
        scimath::PhaseUnwrapper<double> unwrapper;
