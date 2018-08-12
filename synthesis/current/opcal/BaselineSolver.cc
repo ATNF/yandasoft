@@ -458,6 +458,11 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
             sxy += sd*phase;            
             ++counter;
        }
+       if (counter == 0) {
+           os<<"No valid data for this antenna!"<<std::endl;
+           ASKAPLOG_WARN_STR(logger, "No valid data for antenna "<<ant);
+           continue;
+       }
        ASKAPCHECK(counter > 0, "Too few points to do the fit for ant="<<ant);
        sx /= double(counter);
        sy /= double(counter);
