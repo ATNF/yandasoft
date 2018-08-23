@@ -35,6 +35,8 @@
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>
 #include <complex>
+//#include <askap/AskapLogging.h>
+//ASKAP_LOGGER(gsslogger, ".gridding.supportsearcher");
 
 namespace askap {
 
@@ -84,7 +86,7 @@ inline float processAmplitudeThreshold(const casa::Matrix<float>& c, const doubl
 /// @param[in] in input 2D matrix with an image
 template<typename T>
 void SupportSearcher::findPeak(const casa::Matrix<T> &in)
-{ 
+{
   ASKAPDEBUGTRACE("SupportSearcher::findPeak");
 
   itsPeakPos.resize(in.shape().nelements(),casa::False);
@@ -96,7 +98,7 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
   #pragma omp for
   #endif
   for (int iy=0;iy<int(in.ncolumn());++iy) {
-       double tempPeakNorm = -1;      
+       double tempPeakNorm = -1;
        int tempPeakX = 0, tempPeakY = 0;
        for (int ix=0;ix<int(in.nrow());++ix) {
        const double curNorm = ampFunction(casa::DComplex(in(ix,iy)));
@@ -122,7 +124,7 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
   #ifdef _OPENMP
   }
   #endif
-#ifdef ASKAP_DEBUG  
+#ifdef ASKAP_DEBUG
   if (itsPeakVal<0) {
       ASKAPTHROW(CheckError, "An empty matrix has been passed to SupportSearcher::findPeak, please investigate. Shape="<<
                  in.shape());
@@ -134,7 +136,7 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
   ASKAPCHECK(!std::isinf(itsPeakVal), "Peak value is infinite, please investigate. itsPeakPos="<<itsPeakPos);
 #endif // #ifdef ASKAP_DEBUG
 
-  ASKAPCHECK(itsPeakVal>0.0, "Unable to find peak in the support searcher (in either making a convolution function or fitting the PSF), all values appear to be zero. itsPeakVal=" 
+  ASKAPCHECK(itsPeakVal>0.0, "Unable to find peak in the support searcher (in either making a convolution function or fitting the PSF), all values appear to be zero. itsPeakVal="
              << itsPeakVal);
 }
 
@@ -153,7 +155,7 @@ void SupportSearcher::debugStoreImage(const casa::Matrix<casa::Complex> &in);
 /// edges and progresses towards the peak. The edge of the support region
 /// is where the value first time exceeds the cutoff*peakVal, or cutoff*value
 /// if value given as a second parameter is positive
-/// @param[in] in input 2D matrix with an image 
+/// @param[in] in input 2D matrix with an image
 /// @param[in] value optional peak value, if a positive value is given it will be used
 /// instead of the peak amplitude (although the positon of the peak will still be searched for)
 template<typename T>
@@ -170,7 +172,7 @@ void SupportSearcher::search(const casa::Matrix<T> &in, const double value)
 /// @brief do actual support search
 /// @details This method assumes that peak has already been found and
 /// implements the actual search of blc and trc of the support region.
-/// @param[in] in input 2D matrix with an image 
+/// @param[in] in input 2D matrix with an image
 template<typename T>
 void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
 {
@@ -183,12 +185,12 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   itsBLC = -1;
   itsTRC = -1;
   ASKAPCHECK(itsPeakVal>0.0,
-             "A positive peak value of the convolution function is expected inside doSupportSearch, itsPeakVal=" << 
+             "A positive peak value of the convolution function is expected inside doSupportSearch, itsPeakVal=" <<
              itsPeakVal);
-  ASKAPCHECK(!std::isinf(itsPeakVal), "Peak value is infinite, this shouldn't happen. itsPeakPos="<<itsPeakPos); 
+  ASKAPCHECK(!std::isinf(itsPeakVal), "Peak value is infinite, this shouldn't happen. itsPeakPos="<<itsPeakPos);
   ASKAPCHECK(itsPeakPos[0]>0 && itsPeakPos[1]>0, "Peak position of the convolution function "<<itsPeakPos<<
              " is too close to the edge, increase maxsupport");
-  ASKAPCHECK(itsPeakPos[0] + 1 < int(in.nrow()) && itsPeakPos[1] + 1 < int(in.ncolumn()), 
+  ASKAPCHECK(itsPeakPos[0] + 1 < int(in.nrow()) && itsPeakPos[1] + 1 < int(in.ncolumn()),
              "Peak position of the convolution function "<<itsPeakPos<<" is too close to the edge, increase maxsupport");
 
   const double absCutoff = processAmplitudeThreshold(in, itsCutoff*itsPeakVal);
@@ -198,7 +200,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   {
   #pragma omp section
   {
-  #endif 
+  #endif
   for (int ix = 0; ix<=itsPeakPos(0); ++ix) {
        if (ampFunction(in(ix, itsPeakPos(1))) > absCutoff) {
            itsBLC(0) = ix;
@@ -211,7 +213,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   #pragma omp section
   {
   #endif
-  
+
   for (int iy = 0; iy<=itsPeakPos(1); ++iy) {
        if (ampFunction(in(itsPeakPos(0),iy)) > absCutoff) {
            itsBLC(1) = iy;
@@ -231,7 +233,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
            break;
        }
   }
-  
+
   #ifdef _OPENMP
   }
   #pragma omp section
@@ -249,19 +251,72 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
   }
   }
   #endif
-  
-  ASKAPCHECK((itsBLC(0)>=0) && (itsBLC(1)>=0) && (itsTRC(0)>=0) && 
+
+  ASKAPCHECK((itsBLC(0)>=0) && (itsBLC(1)>=0) && (itsTRC(0)>=0) &&
              (itsTRC(1)>=0), "Unable to find the support on one of the coordinates (try decreasing the value of .gridder.cutoff) Effective support is 0. itsBLC="<<itsBLC<<" itsTRC="<<itsTRC<<" itsPeakPos="<<itsPeakPos<<" in.shape()="<<in.shape()<<" absCutoff="<<absCutoff<<" itsPeakVal="<<itsPeakVal);
 }
 
+/// @brief extend support area to include diagonals
+/// @details This search method assumes the peak has been found
+/// and the support area has been set.
+/// It then tries to extend this area by determining the pixels furthest
+/// in x or y from the peak that are above the cutoff and connected to the peak
+/// @param[in] in input 2D matrix with an image
+template<typename T>
+void SupportSearcher::extendedSupport(const casa::Matrix<T> &in)
+{
+  const double absCutoff = processAmplitudeThreshold(in, itsCutoff*itsPeakVal);
+
+  // zig-zag to furthest point above cutoff, first in x, then find extent in y, at extreme find extent in x, etc
+  // assumes a roughly elliptical beam shape at the cutoff level
+  int x0 = itsPeakPos(0);
+  int y0 = itsPeakPos(1);
+  int x=itsTRC(0);
+  int y=y0;
+  int lastx = 0;
+  int lasty = 0;
+  int xmax = in.nrow() - 1;
+  int ymax = in.ncolumn() - 1;
+  bool pos = true;
+  while (lastx != x || lasty != y){
+      lastx = x;
+      lasty = y;
+      // find highest y still above cutoff
+      while (y < ymax && ampFunction(in(x,y+1)) > absCutoff) y++;
+      int yposstep = y - y0;
+      y = lasty;
+      // find lowest y above cutoff
+      while (y > 0 && ampFunction(in(x,y-1)) > absCutoff) y--;
+      int ynegstep = y0 - y;
+      pos = (yposstep >= ynegstep);
+      // pick largest step
+      if (pos) {
+          y = y0 + yposstep;
+      } else {
+          y = y0 - ynegstep;
+      }
+      // now find highest x above cutoff at new y value
+      while (x < xmax && ampFunction(in(x+1,y)) > absCutoff) x++;
+  }
+  //ASKAPLOG_INFO_STR(gsslogger, "Original support area: "<<itsBLC<<", "<<itsTRC);
+  // Found furthest point
+  itsTRC(0) = x;
+  if (pos) itsTRC(1) = casa::max(y,itsTRC(1));
+  if (!pos) itsBLC(1) = casa::min(y,itsBLC(1));
+  // Do we need to do the same on other side? For now just assume symmetry
+  itsBLC(0) = x0 - (itsTRC(0) - x0);
+  if (pos) itsBLC(1) = y0 - (itsTRC(1) - y0);
+  if (!pos) itsTRC(1) = y0 + (y0 - itsBLC(1));
+  //ASKAPLOG_INFO_STR(gsslogger, "Extended support area: "<<itsBLC<<", "<<itsTRC);
+}
 
 /// @brief search assuming the peak is in the centre
 /// @details This search method assumes the peak is in the centre of the
 /// image and has a given value. The search starts at the edges and
-/// terminated as soon as the absolute value higher than 
-/// cutoff*value has been found. Giving value of 1. effectively means 
+/// terminated as soon as the absolute value higher than
+/// cutoff*value has been found. Giving value of 1. effectively means
 /// that the cutoff is an absolute cutoff (default).
-/// @param[in] in input 2D matrix with an image 
+/// @param[in] in input 2D matrix with an image
 /// @param[in] value assumed peak value
 template<typename T>
 void SupportSearcher::searchCentered(const casa::Matrix<T> &in, double value)
@@ -272,7 +327,7 @@ void SupportSearcher::searchCentered(const casa::Matrix<T> &in, double value)
   itsPeakPos = in.shape();
   itsPeakPos(0)/=2;
   itsPeakPos(1)/=2;
-  doSupportSearch(in);  
+  doSupportSearch(in);
 }
 
 
@@ -282,5 +337,3 @@ void SupportSearcher::searchCentered(const casa::Matrix<T> &in, double value)
 
 
 #endif // #ifndef SUPPORT_SEARCHER_TCC
-
-

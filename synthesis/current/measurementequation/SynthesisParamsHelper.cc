@@ -1265,9 +1265,11 @@ namespace askap
        ASKAPLOG_INFO_STR(logger, "Searching for support with the relative cutoff of "<<cutoff<<" to speed fitting up");
        SupportSearcher ss(cutoff);
        ss.search(psfSliceMatrix);
+       // search only looks in x and y direction, now extend the support to diagonals
+       ss.extendedSupport(psfSliceMatrix);
        casa::uInt support = ss.symmetricalSupport(psfSlice.shape());
        support = 2 * (support/2) + 1; // if even, move up to next odd.
-       
+
        ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
        const casa::IPosition newShape(2,support,support);
        for (int dim=0; dim<2; ++dim) {
@@ -1288,7 +1290,7 @@ namespace askap
            floatPSFSlice /= maxPSF;
        }
        //
-       
+
        // actual fitting
        casa::Vector<casa::Double> initialEstimate(6,0.);
        initialEstimate[0]=1.; // PSF peak is always 1
