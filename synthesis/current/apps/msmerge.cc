@@ -49,12 +49,14 @@
 #include "casacore/casa/aips.h"
 #include "casacore/casa/Quanta.h"
 #include "casacore/casa/Arrays/Vector.h"
+#include "casacore/casa/Arrays/Cube.h"
 #include "casacore/casa/Arrays/MatrixMath.h"
 #include "casacore/tables/Tables/TableDesc.h"
 #include "casacore/tables/Tables/SetupNewTab.h"
 #include "casacore/tables/DataMan/IncrementalStMan.h"
 #include "casacore/tables/DataMan/StandardStMan.h"
 #include "casacore/tables/DataMan/TiledShapeStMan.h"
+#include "casacore/tables/DataMan/DataManAccessor.h"
 #include "casacore/ms/MeasurementSets/MeasurementSet.h"
 #include "casacore/ms/MeasurementSets/MSColumns.h"
 
@@ -63,20 +65,27 @@ ASKAP_LOGGER(logger, ".msmerge2");
 using namespace askap;
 using namespace casa;
 
-boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4, casa::uInt tileNchan = 1)
+boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4,
+    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
 {
     // Get configuration first to ensure all parameters are present
-    casa::uInt bucketSize =  128 * 1024;
+    casa::uInt bucketSize =  8 * tileNcorr * tileNchan * tileNrow;
 
-    if (bucketSize < 8192) {
-        bucketSize = 8192;
-    }
+
     if (tileNcorr < 1) {
         tileNcorr = 1;
     }
     if (tileNchan < 1) {
         tileNchan = 1;
     }
+    if (bucketSize < 8192) {
+        tileNrow = 8192 / 8 / tileNcorr / tileNchan;
+    }
+    if (tileNrow < 1) {
+        tileNrow = 1;
+    }
+    bucketSize =  8 * tileNcorr * tileNchan * tileNrow;
+
 
     ASKAPLOG_DEBUG_STR(logger, "Creating dataset " << filename);
 
@@ -94,7 +103,7 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
         newMS.bindAll(incrStMan, True);
     }
 
-    // Bind ANTENNA1, and ANTENNA2 to the standardStMan 
+    // Bind ANTENNA1, and ANTENNA2 to the standardStMan
     // as they may change sufficiently frequently to make the
     // incremental storage manager inefficient for these columns.
 
@@ -108,13 +117,15 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
     // These columns contain the bulk of the data so save them in a tiled way
     {
         // Get nr of rows in a tile.
-        const int nrowTile = std::max(1u, bucketSize / (8*tileNcorr*tileNchan));
+        //const int nrowTile = std::max(1u, bucketSize / (8*tileNcorr*tileNchan));
         TiledShapeStMan dataMan("TiledData",
-                IPosition(3, tileNcorr, tileNchan, nrowTile));
+                IPosition(3, tileNcorr, tileNchan, tileNrow));
         newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::DATA),
                 dataMan);
+        TiledShapeStMan dataManF("TiledFlag",
+                        IPosition(3, tileNcorr, tileNchan, tileNrow));
         newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::FLAG),
-                dataMan);
+                dataManF);
     }
     {
         const int nrowTile = std::max(1u, bucketSize / (4*8));
@@ -264,7 +275,7 @@ void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest
         dc.target().put(i,sc.target().get(i));
     }
     ASKAPLOG_DEBUG_STR(logger, "Finished copy of direction & target columns");
-    
+
     dc.antennaId().putColumn(sc.antennaId());
     dc.interval().putColumn(sc.interval());
     dc.name().putColumn(sc.name());
@@ -379,74 +390,77 @@ void mergeSpectralWindow(const std::vector< boost::shared_ptr<const ROMSColumns>
 }
 
 void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& srcMscs,
-                    casa::MeasurementSet& dest)
+                    casa::MeasurementSet& dest, const IPosition& tileShape)
 {
     MSColumns dc(dest);
-
     // Add rows upfront
     const ROMSColumns& sc = *(srcMscs[0]);
     const casa::uInt nRows = sc.nrow();
     dest.addRow(nRows);
+    ASKAPLOG_INFO_STR(logger,  "tileshape="<< tileShape(0) << ","<<tileShape(1)<<","<<tileShape(2) );
+    // 2: Size the matrix for data and flag
+    const uInt nPol = sc.data()(0).shape()(0);
+    const uInt nChan = sc.data()(0).shape()(1);
+    const uInt nChanTotal = nChan * srcMscs.size();
+    casa::Cube<casa::Complex> data(nPol, nChanTotal,tileShape(2));
+    casa::Cube<casa::Bool> flag(nPol, nChanTotal,tileShape(2));
 
     // For each row
-    for (uInt row = 0; row < nRows; ++row) {
-        if (row % 10000 == 0) {
+    int lastPerc = 0;
+    for (uInt row = 0; row < nRows; row+=tileShape(2)) {
+        int nRowsThisIteration = std::min(nRows-row+0l,tileShape(2));
+        const Slicer rowslicer(IPosition(1, row), IPosition(1, nRowsThisIteration),
+                Slicer::endIsLength);
+        if (10*row/nRows > lastPerc/10) {
             ASKAPLOG_INFO_STR(logger,  "Merging row " << row << " of " << nRows);
+            lastPerc = 100*row/nRows;
         }
 
         // 1: Copy over the simple cells (i.e. those not needing merging)
-        dc.scanNumber().put(row, sc.scanNumber()(row));
-        dc.fieldId().put(row, sc.fieldId()(row));
-        dc.dataDescId().put(row, 0);
-        dc.time().put(row, sc.time()(row));
-        dc.timeCentroid().put(row, sc.timeCentroid()(row));
-        dc.arrayId().put(row, sc.arrayId()(row));
-        dc.processorId().put(row, sc.processorId()(row));
-        dc.exposure().put(row, sc.exposure()(row));
-        dc.interval().put(row, sc.interval()(row));
-        dc.observationId().put(row, sc.observationId()(row));
-        dc.antenna1().put(row, sc.antenna1()(row));
-        dc.antenna2().put(row, sc.antenna2()(row));
-        dc.feed1().put(row, sc.feed1()(row));
-        dc.feed2().put(row, sc.feed2()(row));
-        dc.uvw().put(row, sc.uvw()(row));
-        dc.flagRow().put(row, sc.flagRow()(row));
-        dc.weight().put(row, sc.weight()(row));
-        dc.sigma().put(row, sc.sigma()(row));
+        dc.scanNumber().putColumnRange(rowslicer, sc.scanNumber().getColumnRange(rowslicer));
+        dc.fieldId().putColumnRange(rowslicer, sc.fieldId().getColumnRange(rowslicer));
+        dc.dataDescId().putColumnRange(rowslicer, sc.dataDescId().getColumnRange(rowslicer));
+        dc.time().putColumnRange(rowslicer, sc.time().getColumnRange(rowslicer));
+        dc.timeCentroid().putColumnRange(rowslicer, sc.timeCentroid().getColumnRange(rowslicer));
+        dc.arrayId().putColumnRange(rowslicer, sc.arrayId().getColumnRange(rowslicer));
+        dc.processorId().putColumnRange(rowslicer, sc.processorId().getColumnRange(rowslicer));
+        dc.exposure().putColumnRange(rowslicer, sc.exposure().getColumnRange(rowslicer));
+        dc.interval().putColumnRange(rowslicer, sc.interval().getColumnRange(rowslicer));
+        dc.observationId().putColumnRange(rowslicer, sc.observationId().getColumnRange(rowslicer));
+        dc.antenna1().putColumnRange(rowslicer, sc.antenna1().getColumnRange(rowslicer));
+        dc.antenna2().putColumnRange(rowslicer, sc.antenna2().getColumnRange(rowslicer));
+        dc.feed1().putColumnRange(rowslicer, sc.feed1().getColumnRange(rowslicer));
+        dc.feed2().putColumnRange(rowslicer, sc.feed2().getColumnRange(rowslicer));
+        dc.uvw().putColumnRange(rowslicer, sc.uvw().getColumnRange(rowslicer));
+        dc.flagRow().putColumnRange(rowslicer, sc.flagRow().getColumnRange(rowslicer));
+        dc.weight().putColumnRange(rowslicer, sc.weight().getColumnRange(rowslicer));
+        dc.sigma().putColumnRange(rowslicer, sc.sigma().getColumnRange(rowslicer));
 
-        // 2: Size the matrix for data and flag
-        const uInt nPol = sc.data()(row).shape()(0);
-        const uInt nChan = sc.data()(row).shape()(1);
-        const uInt nChanTotal = nChan * srcMscs.size();
-
-        casa::Matrix<casa::Complex> data(nPol, nChanTotal);
-        casa::Matrix<casa::Bool> flag(nPol, nChanTotal);
+        if (nRowsThisIteration!=tileShape(2)) {
+            // for the last set of rows we may need to resize
+            data.resize(nPol,nChanTotal,nRowsThisIteration);
+            flag.resize(nPol,nChanTotal,nRowsThisIteration);
+        }
 
         // 3: Copy the data from each input into the output matrix
         for (uInt i = 0; i < srcMscs.size(); ++i) {
-            const casa::Matrix<casa::Complex> srcData = srcMscs[i]->data()(row);
-            const casa::Matrix<casa::Bool> srcFlag = srcMscs[i]->flag()(row);
-            for (uInt pol = 0; pol < nPol; ++pol) {
-                for (uInt chan = 0; chan < nChan; ++chan) {
-                    data(pol, chan + (nChan * i)) = srcData(pol, chan);
-                    flag(pol, chan + (nChan * i)) = srcFlag(pol, chan);
-                }
+            const casa::Cube<casa::Complex> srcData = srcMscs[i]->data().getColumnRange(rowslicer);
+            const casa::Cube<casa::Bool> srcFlag = srcMscs[i]->flag().getColumnRange(rowslicer);
+            uInt destChan = nChan * i;
+            for (uInt irow = 0; irow < nRowsThisIteration; irow++) {
+                data(Slice(), Slice(destChan,nChan), irow) = srcData(Slice(), Slice(), irow);
+                flag(Slice(), Slice(destChan,nChan), irow) = srcFlag(Slice(), Slice(), irow);
             }
         }
-
         // 4: Add those merged cells
-        dc.data().put(row, data);
-        dc.flag().put(row, flag);
+        dc.data().putColumnRange(rowslicer, data);
+        dc.flag().putColumnRange(rowslicer, flag);
     }
 }
 
-void merge(const std::vector<std::string>& inFiles, const std::string& outFile, casa::uInt tileNcorr = 4, casa::uInt tileNchan = 1)
+void merge(const std::vector<std::string>& inFiles, const std::string& outFile, casa::uInt tileNcorr = 4,
+    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
 {
-    // Create the output measurement set
-    ASKAPCHECK(!casa::File(outFile).exists(), "File or table "
-            << outFile << " already exists!");
-    boost::shared_ptr<casa::MeasurementSet> out(create(outFile,tileNcorr,tileNchan));
-
     // Open the input measurement sets
     std::vector< boost::shared_ptr<const casa::MeasurementSet> > in;
     std::vector< boost::shared_ptr<const ROMSColumns> > inColumns;
@@ -456,6 +470,19 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
         in.push_back(p);
         inColumns.push_back(boost::shared_ptr<const ROMSColumns>(new ROMSColumns(*p)));
     }
+    // Set tileNrow large, but not so large that caching takes > 1GB
+    if (tileNrow==0) {
+        casa::uInt nChanOut = (**(inColumns.begin())).spectralWindow().numChan()(0) * in.size();
+        const casa::uInt nTilesPerRow = (nChanOut-1)/tileNchan+1;
+        const casa::uInt bucketSize = std::max(8192u,1024*1024*1024/nTilesPerRow);
+        tileNrow = std::max(1u,bucketSize / (8 * tileNcorr * tileNchan));
+        ASKAPLOG_INFO_STR(logger, "Setting tileNrow to " << tileNrow);
+    }
+
+    // Create the output measurement set
+    ASKAPCHECK(!casa::File(outFile).exists(), "File or table "
+            << outFile << " already exists!");
+    boost::shared_ptr<casa::MeasurementSet> out(create(outFile,tileNcorr,tileNchan,tileNrow));
 
     ASKAPLOG_INFO_STR(logger,  "First copy " << inFiles[0]<< " into " << outFile);
 
@@ -495,7 +522,11 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
 
     // Merge main table
     ASKAPLOG_INFO_STR(logger,  "Merging main table");
-    mergeMainTable(inColumns, *out);
+    mergeMainTable(inColumns, *out,IPosition(3,tileNcorr,tileNchan,tileNrow));
+    // Uncomment this to check if the caching is working
+    RODataManAccessor(**(in.begin()), "TiledData", False).showCacheStatistics (cout);
+    RODataManAccessor(*out, "TiledData", False).showCacheStatistics (cout);
+
 }
 
 // Main function
@@ -521,6 +552,7 @@ int main(int argc, const char** argv)
         StatReporter stats;
         int tileNcorr;
         int tileNchan;
+        int tileNrow;
         std::string outName;
         std::vector<std::string> inNamesVec;
         std::vector<std::string> inNames;
@@ -528,18 +560,19 @@ int main(int argc, const char** argv)
         // Declare the supported options.
         po::options_description desc("Allowed options");
         desc.add_options()
-        ("help,h", "produce help message") 
-        ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile") 
-        ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile") 
+        ("help,h", "produce help message")
+        ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile")
+        ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile")
+        ("tileNrow,r", po::value<int>(&tileNrow)->default_value(0), "Number of rows per tile")
         ("input-file,i", po::value< vector<string> >(&inNames), "Input file(s) - you can also just list them after the other options")
-        ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output filename");       
-        
+        ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output filename");
+
         po::positional_options_description p;
         p.add("input-file", -1);
 
         po::variables_map vm;
         po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
-        po::notify(vm);    
+        po::notify(vm);
 
         if (vm.count("help")) {
             cout << desc << "\n";
@@ -547,32 +580,37 @@ int main(int argc, const char** argv)
         }
 
         if (vm.count("tileNcorr")) {
-            cout << "Number of correlations per tile was set to " 
+            cout << "Number of correlations per tile was set to "
             << vm["tileNcorr"].as<int>() << ".\n";
-        } 
-        else 
+        }
+        else
         {
             cout << "tileNcorr was not setr, using default: " << tileNcorr << "\n";
         }
 
         if (vm.count("tileNchan")) {
-            cout << "Number of channels per tile  was set to " 
+            cout << "Number of channels per tile  was set to "
             << vm["tileNchan"].as<int>() << ".\n";
-        } 
-        else 
+        }
+        else
         {
             cout << "tileNchan was not set, using default: " << tileNchan << "\n";
         }
 
+        if (vm.count("tileNrow")) {
+            cout << "Number of rows per tile  was set to "
+            << vm["tileNrow"].as<int>() << ".\n";
+        }
+
         if (vm.count("input-file"))
         {
-            cout << "Input files are: " 
+            cout << "Input files are: "
             << vm["input-file"].as< vector<string> >() << "\n";
         }
- 
+
         ASKAPLOG_INFO_STR(logger,
                 "This program merges given measurement sets and writes the output into `"
-                << outName << "`" << "with a tiling: " << tileNcorr << "," << tileNchan );
+                << outName << "`" << "with a tiling: " << tileNcorr << "," << tileNchan);
 
         // Turns inNames into vector<string>
         std::vector<std::string>::iterator it;
@@ -583,7 +621,7 @@ int main(int argc, const char** argv)
                 inNamesVec.push_back(*it);
         }
 
-        merge(inNamesVec, outName, tileNcorr, tileNchan); 
+        merge(inNamesVec, outName, tileNcorr, tileNchan, tileNrow);
 
         stats.logSummary();
         ///==============================================================================
