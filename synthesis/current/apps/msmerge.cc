@@ -56,7 +56,7 @@
 #include "casacore/tables/DataMan/IncrementalStMan.h"
 #include "casacore/tables/DataMan/StandardStMan.h"
 #include "casacore/tables/DataMan/TiledShapeStMan.h"
-#include "casacore/tables/DataMan/DataManAccessor.h"
+//#include "casacore/tables/DataMan/DataManAccessor.h"
 #include "casacore/ms/MeasurementSets/MeasurementSet.h"
 #include "casacore/ms/MeasurementSets/MSColumns.h"
 
@@ -68,9 +68,7 @@ using namespace casa;
 boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4,
     casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
 {
-    // Get configuration first to ensure all parameters are present
-    casa::uInt bucketSize =  8 * tileNcorr * tileNchan * tileNrow;
-
+    casa::uInt bucketSize =  1024*1024;
 
     if (tileNcorr < 1) {
         tileNcorr = 1;
@@ -78,14 +76,9 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
     if (tileNchan < 1) {
         tileNchan = 1;
     }
-    if (bucketSize < 8192) {
-        tileNrow = 8192 / 8 / tileNcorr / tileNchan;
-    }
     if (tileNrow < 1) {
         tileNrow = 1;
     }
-    bucketSize =  8 * tileNcorr * tileNchan * tileNrow;
-
 
     ASKAPLOG_DEBUG_STR(logger, "Creating dataset " << filename);
 
@@ -116,8 +109,6 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
 
     // These columns contain the bulk of the data so save them in a tiled way
     {
-        // Get nr of rows in a tile.
-        //const int nrowTile = std::max(1u, bucketSize / (8*tileNcorr*tileNchan));
         TiledShapeStMan dataMan("TiledData",
                 IPosition(3, tileNcorr, tileNchan, tileNrow));
         newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::DATA),
@@ -470,6 +461,8 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
         in.push_back(p);
         inColumns.push_back(boost::shared_ptr<const ROMSColumns>(new ROMSColumns(*p)));
     }
+    if (tileNcorr < 1) tileNcorr = 1;
+    if (tileNchan < 1) tileNchan = 1;
     // Set tileNrow large, but not so large that caching takes > 1GB
     if (tileNrow==0) {
         casa::uInt nChanOut = (**(inColumns.begin())).spectralWindow().numChan()(0) * in.size();
@@ -477,7 +470,12 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
         const casa::uInt bucketSize = std::max(8192u,1024*1024*1024/nTilesPerRow);
         tileNrow = std::max(1u,bucketSize / (8 * tileNcorr * tileNchan));
         ASKAPLOG_INFO_STR(logger, "Setting tileNrow to " << tileNrow);
+    // Don't allow tiny size buckets
+} else if (tileNcorr * tileNchan * tileNrow * 8 < 8192u) {
+        tileNrow = 1024u / (tileNcorr * tileNchan);
+        ASKAPLOG_INFO_STR(logger, "Setting tileNrow to " << tileNrow);
     }
+
 
     // Create the output measurement set
     ASKAPCHECK(!casa::File(outFile).exists(), "File or table "
@@ -524,8 +522,8 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
     ASKAPLOG_INFO_STR(logger,  "Merging main table");
     mergeMainTable(inColumns, *out,IPosition(3,tileNcorr,tileNchan,tileNrow));
     // Uncomment this to check if the caching is working
-    RODataManAccessor(**(in.begin()), "TiledData", False).showCacheStatistics (cout);
-    RODataManAccessor(*out, "TiledData", False).showCacheStatistics (cout);
+    //RODataManAccessor(**(in.begin()), "TiledData", False).showCacheStatistics (cout);
+    //RODataManAccessor(*out, "TiledData", False).showCacheStatistics (cout);
 
 }
 
