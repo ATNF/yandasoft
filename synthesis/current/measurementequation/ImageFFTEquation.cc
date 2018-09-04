@@ -308,6 +308,7 @@ namespace askap
       // Set up initial gridders for model and for the residuals. This enables us to
       // do both at the same time.
 
+
       for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         const string imageName("image"+(*it));
@@ -338,6 +339,9 @@ namespace askap
              //itsPreconGridders[imageName] = itsGridder->clone();
              itsPreconGridders[imageName] = itsPSFGridders[imageName]->clone();
            }
+        }
+        if (itsCoordSystems.count(imageName) == 0) {
+          itsCoordSystems[imageName] = SynthesisParamsHelper::coordinateSystem(parameters(),imageName);
         }
       }
       // Now we initialise appropriately
@@ -511,7 +515,7 @@ namespace askap
           casa::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
           casa::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
           ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
-              imageDerivVec, imageShape, reference);
+              imageDerivVec, imageShape, reference,itsCoordSystems[imageName]);
         }
       }
     }

@@ -1,10 +1,10 @@
 /// @file
-/// 
+///
 /// @brief Unit tests for SynthesisParamsHelper.
 /// @details SynthesisParamsHelper class contains utilities to simplify
 /// handling of parameters representing images. This unit test is intended to
 /// test this functionality.
-/// 
+///
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -52,7 +52,7 @@ namespace askap
 {
   namespace synthesis
   {
-    
+
     class SynthesisParamsHelperTest : public CppUnit::TestFixture
     {
       CPPUNIT_TEST_SUITE(SynthesisParamsHelperTest);
@@ -63,11 +63,118 @@ namespace askap
       CPPUNIT_TEST(testClipImage);
       CPPUNIT_TEST(testGaussianPreconditioner);
       //CPPUNIT_TEST(test4Debugging);
+      CPPUNIT_TEST(testUpdateLocalModel);
       CPPUNIT_TEST_SUITE_END();
-      
+
       private:
 
       public:
+        void testUpdateLocalModel()
+        {
+          // this is the global model
+          double tol = 0.001;
+
+          std::cout << "Starting copyParameter test" << std::endl;
+          std::cout << "Building the Global Model" << std::endl;
+          askap::scimath::Params SourceParams;
+          std::vector<std::string> direction(3);
+          direction[0]="12h30m00.0";
+          direction[1]="-15.00.00.00";
+          direction[2]="J2000";
+          std::vector<int> SourceShape(2,4096);
+          std::vector<std::string> cellsize(2,"30arcsec");
+          casa::Vector<casa::Stokes::StokesTypes> stokes(1, casa::Stokes::I);
+
+          SynthesisParamsHelper::add(SourceParams,"testsrc",direction,cellsize,SourceShape,false,1.4e9,
+                                     1.4e9,1,stokes);
+
+          // lets add some thing to the Model
+
+          const casa::DirectionCoordinate csSource =
+                   SynthesisParamsHelper::directionCoordinate(SourceParams,"testsrc");
+
+          casa::Vector<double> world(2);
+
+                   // first get blc
+          casa::Vector<double> blcPixel(2);
+          blcPixel(0)=double(SourceShape[0]/2);
+          blcPixel(1)=double(SourceShape[1]/2);
+
+
+          std::cout<<"pixels: " << blcPixel << std::endl;
+
+          csSource.toWorld(world,blcPixel);
+
+          std::cout<<"world: " << world << std::endl;
+
+          // setting all the values of the "Global" model to 4.0
+          SourceParams.value("testsrc").set(4.0);
+          // will also set a particular sky position to 5.0
+          //
+          // set a pixel iterator that does not have the higher dimensions
+          casa::IPosition pos(4,int(SourceShape[0]/2),int(SourceShape[0]/2),0,0);
+          SourceParams.value("testsrc")(pos) = 5.0;
+
+          // this is the local is the local model
+          std::cout << "Building the Local Model" << std::endl;
+
+          askap::scimath::Params SinkParams;
+
+          direction[0]="12h30m00.0";
+          direction[1]="-14.00.00.00"; // different poinrinf
+          direction[2]="J2000";
+          std::vector<int> SinkShape(2,256);
+
+          SynthesisParamsHelper::add(SinkParams,"testsrc",direction,cellsize,SinkShape,false,1.4e9,
+                                     1.4e9,1,stokes);
+
+          SinkParams.value("testsrc").set(1.0);
+
+          std::cout << "copyImageParameter regidding" << std::endl;
+
+
+          SynthesisParamsHelper::copyImageParameter(SourceParams,SinkParams,"testsrc");
+
+          // now lets look at the params
+
+          casa::Array<double> arr = SinkParams.value("testsrc");
+          const casa::IPosition OutShape = arr.shape();
+
+          //std::cout << "Global Shape before " << SourceShape[0] << "," << SourceShape[1] << std::endl;
+          //std::cout << "Local Shape before " << SinkShape[0] << "," <<   SinkShape[1]  << std::endl;
+          //std::cout << "Local Shape after  " << OutShape[0] << "," << OutShape[1] << std::endl;
+
+          CPPUNIT_ASSERT(OutShape[0] == SinkShape[0]);
+          CPPUNIT_ASSERT(OutShape[1] == SinkShape[1]);
+
+          const casa::DirectionCoordinate csSink =
+                   SynthesisParamsHelper::directionCoordinate(SinkParams,"testsrc");
+
+
+          csSink.toPixel(blcPixel,world);
+
+          casa::IPosition pos2(4,int(blcPixel(0)),int(blcPixel(1)),0,0);
+
+          double before = SourceParams.value("testsrc")(pos);
+          double after = SinkParams.value("testsrc")(pos2);
+          std::cout << " Tolerance = " << tol << std::endl;
+          std::cout << " Before = " << SourceParams.value("testsrc")(pos) << std::endl;
+          std::cout << " After = " << SinkParams.value("testsrc")(pos2) << std::endl;
+          std::cout << " Before - After == " << before - after << std::endl;
+          CPPUNIT_ASSERT(before - after < tol);
+
+
+
+
+          // need to test whether the sampling has actually worked.
+          // LOFAR::ParameterSet parset;
+          // SynthesisParamsHelper::setUpImageHandler(parset);
+          // SynthesisParamsHelper::saveImageParameter(SourceParams,"testsrc","source.img");
+          // SynthesisParamsHelper::saveImageParameter(SinkParams,"testsrc","sink.img");
+
+
+
+        }
         void test4Debugging()
         {
            ifstream is("temp.dat");
@@ -100,9 +207,9 @@ namespace askap
            CPPUNIT_ASSERT(facetmap.find("image.i.src")!=facetmap.end());
            CPPUNIT_ASSERT(facetmap["image.i.src"] == 2);
            CPPUNIT_ASSERT(facetmap.find("image.i.src2")!=facetmap.end());
-           CPPUNIT_ASSERT(facetmap["image.i.src2"] == 1);           
+           CPPUNIT_ASSERT(facetmap["image.i.src2"] == 1);
         }
-        
+
         void testListTaylor()
         {
            std::vector<std::string> names;
@@ -116,11 +223,11 @@ namespace askap
            CPPUNIT_ASSERT(taylormap.find("image.src")!=taylormap.end());
            CPPUNIT_ASSERT(taylormap["image.src"] == 3);
            CPPUNIT_ASSERT(taylormap.find("image.src2")!=taylormap.end());
-           CPPUNIT_ASSERT(taylormap["image.src2"] == 1);                     
+           CPPUNIT_ASSERT(taylormap["image.src2"] == 1);
         }
-        
+
         void testGaussianPreconditioner()
-        { 
+        {
            askap::scimath::Params params;
            makeParameter(params,"psf.testsrc",1);
            const askap::scimath::Axes axes = params.axes("psf.testsrc");
@@ -136,12 +243,12 @@ namespace askap
            casa::Array<float> pcfArray(shape,0.);
            casa::Matrix<float> psf(psfArray.nonDegenerate());
            casa::Matrix<float> pcf(pcfArray.nonDegenerate());
-           psf(shape[0]/2,shape[1]/2) = 1.;           
-           pcf(shape[0]/2,shape[1]/2) = 1.;           
+           psf(shape[0]/2,shape[1]/2) = 1.;
+           pcf(shape[0]/2,shape[1]/2) = 1.;
            const double factor = 4.*log(2.) * fabs(increments[0]) * shape[0] / casa::C::pi;
            GaussianTaperPreconditioner gp(factor/SynthesisParamsHelper::convertQuantity("20arcsec","rad"));
-           gp.doPreconditioning(psfArray,dirty,pcfArray);  
-           
+           gp.doPreconditioning(psfArray,dirty,pcfArray);
+
            // update the parameter
            casa::Array<double> temp(psfArray.shape());
            casa::convertArray<double,float>(temp,psfArray);
@@ -160,7 +267,7 @@ namespace askap
            SynthesisParamsHelper::saveImageParameter(params,"psf.testsrc","test.img");
            */
         }
-        
+
         void testFacetCreationAndMerging()
         {
            askap::scimath::Params params;
@@ -173,15 +280,15 @@ namespace askap
            // adding a merged image
            SynthesisParamsHelper::add(params,"testsrc",2);
            params.fix("testsrc");
-           CPPUNIT_ASSERT(params.freeNames().size() == 4); 
-           CPPUNIT_ASSERT(params.names().size() == 5); 
+           CPPUNIT_ASSERT(params.freeNames().size() == 4);
+           CPPUNIT_ASSERT(params.names().size() == 5);
            const std::vector<std::string> &facets = params.freeNames();
            for (std::vector<std::string>::const_iterator ci = facets.begin(); ci!=facets.end(); ++ci) {
-                 CPPUNIT_ASSERT(SynthesisParamsHelper::getFacet(params,*ci).shape() == 
+                 CPPUNIT_ASSERT(SynthesisParamsHelper::getFacet(params,*ci).shape() ==
                           casa::IPosition(4,128,128,1,1));
            }
         }
-        
+
         void testClipImage()
         {
            askap::scimath::Params params;
@@ -190,27 +297,27 @@ namespace askap
            params.value("testsrc.facet.0.0").set(1.);
            SynthesisParamsHelper::clipImage(params,"testsrc.facet.0.0");
            casa::Array<double> arr = params.value("testsrc.facet.0.0");
-           const casa::IPosition shape = arr.shape(); 
+           const casa::IPosition shape = arr.shape();
            ASKAPDEBUGASSERT(shape.nelements()>=2);
-           casa::IPosition index(shape.nelements(),0);                     
+           casa::IPosition index(shape.nelements(),0);
            for (index[0]=0; index[0]<shape[0]; ++index[0]) {
                 for (index[1]=0; index[1]<shape[1]; ++index[1]) {
-                     const bool isCentre = (index[0]>=(shape[0]-facetStep)/2) && 
+                     const bool isCentre = (index[0]>=(shape[0]-facetStep)/2) &&
                                      (index[0]<(shape[0]+facetStep)/2) &&
-                                     (index[1]>=(shape[1]-facetStep)/2) && 
+                                     (index[1]>=(shape[1]-facetStep)/2) &&
                                      (index[1]<(shape[1]+facetStep)/2);
-                     CPPUNIT_ASSERT((arr(index)>0.5) == isCentre);                
+                     CPPUNIT_ASSERT((arr(index)>0.5) == isCentre);
                 }
            }
         }
-        
+
         void testCoordinates()
         {
            doCoordinateAlignmentTest(128,2);
            doCoordinateAlignmentTest(256,2);
-           doCoordinateAlignmentTest(64,3);           
+           doCoordinateAlignmentTest(64,3);
         }
-        
+
       protected:
         /// @brief actual test of coordinate alignment
         /// @details
@@ -226,34 +333,34 @@ namespace askap
            for (int facetX = 0; facetX<nFacets; ++facetX) {
                 for (int facetY = 0; facetY<nFacets; ++facetY) {
                      ImageParamsHelper iph("testsrc",facetX,facetY);
-                     
+
                      casa::IPosition blc(4,0),trc(4,0);
-                     
+
                      //std::cout<<std::endl<<"facet "<<facetX<<" "<<facetY<<std::endl;
-                     
+
                      blc[0] = iph.facetX()*facetStep;
                      trc[0] = blc[0]+facetStep-1;
                      blc[1] = iph.facetY()*facetStep;
                      trc[1] = blc[1]+facetStep-1;
-                     //std::cout<<"blc="<<blc<<" trc="<<trc<<std::endl;                     
+                     //std::cout<<"blc="<<blc<<" trc="<<trc<<std::endl;
 
                      casa::IPosition blc2,trc2;
                      getCorners(params,iph.name(),iph.paramName(),facetStep, blc2,trc2);
                      CPPUNIT_ASSERT((blc2.nelements()>=2) && (trc2.nelements()>=2));
-                     //std::cout<<"blc="<<blc2<<" trc="<<trc2<<std::endl;               
+                     //std::cout<<"blc="<<blc2<<" trc="<<trc2<<std::endl;
 
                      // there is no exact match between two images, although we're using
-                     // the same projection. Probably it is the second order effect 
+                     // the same projection. Probably it is the second order effect
                      // resulted from approximation of the sphere by a plane.
                      CPPUNIT_ASSERT(casa::abs(blc[0]-blc2[0])<=5);
                      CPPUNIT_ASSERT(casa::abs(blc[1]-blc2[1])<=5);
                      CPPUNIT_ASSERT(casa::abs(trc[0]-trc2[0])<=5);
                      CPPUNIT_ASSERT(casa::abs(trc[1]-trc2[1])<=5);
-                     
+
                 }
            }
         }
-        
+
         /// @brief a helper method to find corners of the patch in a bigger image
         /// @details
         /// If this method is proved to be useful, it can be moved to SynthesisParamsHelper.
@@ -267,11 +374,11 @@ namespace askap
         /// @param[out] blc bottom left corner of the patch inside the full image
         /// @param[out] trc top right corner of the patch inside the full image
         static void getCorners(askap::scimath::Params &params, const std::string &fullName,
-                     const std::string &patchName, const int patchSize, 
+                     const std::string &patchName, const int patchSize,
                      casa::IPosition &blc, casa::IPosition &trc)
         {
            const casa::Array<double> fullImage = params.value(fullName);
-      
+
            blc = fullImage.shape();
            trc = fullImage.shape();
            CPPUNIT_ASSERT(blc.nelements()>=2);
@@ -279,32 +386,32 @@ namespace askap
            for (size_t i=2;i<blc.nelements();++i) {
                 blc[i] = 0;
                 CPPUNIT_ASSERT(trc[i]!=0);
-                trc[i] -= 1;           
+                trc[i] -= 1;
            }
-      
+
            const casa::IPosition patchShape = params.value(patchName).shape();
            ASKAPDEBUGASSERT(patchShape.nelements()>=2);
            ASKAPDEBUGASSERT((patchSize<=patchShape[0]) && (patchSize<=patchShape[1]));
-      
+
            ASKAPDEBUGASSERT(patchSize>=1);
 
-           
-           const casa::DirectionCoordinate csPatch = 
+
+           const casa::DirectionCoordinate csPatch =
                     SynthesisParamsHelper::directionCoordinate(params,patchName);
-           const casa::DirectionCoordinate csFull = 
+           const casa::DirectionCoordinate csFull =
                     SynthesisParamsHelper::directionCoordinate(params,fullName);
            casa::Vector<double> world(2);
-      
+
            // first get blc
            casa::Vector<double> blcPixel(2);
            blcPixel(0)=double((patchShape[0]-patchSize)/2);
            blcPixel(1)=double((patchShape[1]-patchSize)/2);
-          
+
            //std::cout<<blcPixel<<endl;
-          
+
            csPatch.toWorld(world,blcPixel);
            csFull.toPixel(blcPixel,world);
-          
+
            //std::cout<<blcPixel<<endl;
 
            // now get trc
@@ -312,30 +419,30 @@ namespace askap
            trcPixel[0]=double((patchShape[0]+patchSize)/2-1);
            trcPixel[1]=double((patchShape[1]+patchSize)/2-1);
            ASKAPDEBUGASSERT((trcPixel[0]>0) && (trcPixel[1]>0));
-           
+
            //std::cout<<trcPixel<<endl;
-           
+
            csPatch.toWorld(world,trcPixel);
            csFull.toPixel(trcPixel,world);
-           
+
            //std::cout<<trcPixel<<endl;
-           
+
            for (size_t dim=0;dim<2;++dim) {
                 const int pix1 = int(blcPixel[dim]);
                 const int pix2 = int(trcPixel[dim]);
                 blc[dim] = pix1>pix2 ? pix2 : pix1;
                 trc[dim] = pix1>pix2 ? pix1 : pix2;
-           }                                                    
+           }
         }
-      
+
         /// @brief a helper method to make a parameter representing a test faceted image
         /// @details
         /// @param[in] params parameter container
         /// @param[in] name name of the parameter
         /// @param[in] nfacets number of facets
-        /// @param[in] facetstep step in pixels between facet centres          
+        /// @param[in] facetstep step in pixels between facet centres
         static void makeParameter(askap::scimath::Params &params, const std::string &name,
-                           const int nfacets, const int facetstep = 256)  
+                           const int nfacets, const int facetstep = 256)
         {
            std::vector<std::string> direction(3);
            direction[0]="12h30m00.0";
@@ -352,11 +459,10 @@ namespace askap
                                       1.4e9,1,stokes);
            }
         }
-        
+
    };
-    
+
   } // namespace synthesis
 } // namespace askap
 
 #endif // #ifndef SYNTHESIS_PARAMS_HELPER_TEST_H
-

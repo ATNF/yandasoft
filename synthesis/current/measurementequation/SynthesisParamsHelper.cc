@@ -46,6 +46,8 @@ ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/TempImage.h>
+#include <casacore/images/Images/ImageRegrid.h>
+#include <casacore/scimath/Mathematics/Interpolate2D.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/coordinates/Coordinates/LinearCoordinate.h>
@@ -915,7 +917,52 @@ namespace askap
       return axes.directionAxis();
 
     }
+    void SynthesisParamsHelper::copyImageParameters(askap::scimath::Params& sourceParam,  askap::scimath::Params& sinkParam) {
 
+    }
+    void SynthesisParamsHelper::copyImageParameter(askap::scimath::Params& sourceParam,  askap::scimath::Params& sinkParam, const string& name) {
+
+      ASKAPDEBUGTRACE("SynthesisParamsHelper::copyImageParameter");
+      ASKAPDEBUGASSERT(sourceParam.has(name));
+
+      // Stephen Ord 2018.
+
+      // the purpose of this is to produce a local sky model from a global one.
+      // in general we will be replacing the model in the local Params - with
+      // a chunk from the global model.
+
+      // we need to get a reference to the input and output Images
+      // this tempImage method is a copy of the param.value. It is not the value itself.
+      // we need to call update on this for the operation to be complete
+
+      boost::shared_ptr<casa::TempImage<float> > inRef = tempImage(sourceParam,name); // inRef
+
+      // regrid the input plane into the output one.
+
+      boost::shared_ptr<casa::TempImage<float> > outRef = tempImage(sinkParam,name); // outRef
+
+      // regridder
+      casa::ImageRegrid<float> regridder;
+
+      const casa::Interpolate2D::Method method = casa::Interpolate2D::CUBIC;
+      const casa::uInt decimate = 1;
+      casa::IPosition itsAxes = IPosition::makeAxisPath(outRef->shape().nonDegenerate().nelements());
+
+      // the regridding is taking the input array and resampling it into the coorrdinate system of the
+      // output array. I dont think it combines - I think it just replaces. The output can be empty.
+
+      regridder.regrid(*outRef, method,
+                          itsAxes, *inRef, false, decimate,true,true,true);
+
+      // now we have to insert the regridded image into the pixels of the output ...
+      update(sinkParam,name,*outRef);
+
+      // so this should pretty much do the job. I will put together a unit test to check that this is
+      // doing what I think it is doing.
+
+
+
+    }
     void SynthesisParamsHelper::update(askap::scimath::Params& ip, const string& name,
 				       const casa::ImageInterface<float>& im)
     {

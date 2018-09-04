@@ -44,6 +44,7 @@
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/casa/Arrays/Cube.h>
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 
 #include <map>
 
@@ -69,7 +70,7 @@ namespace askap
         /// @param idi Data iterator
         ImageFFTEquation(const askap::scimath::Params& ip,
           accessors::IDataSharedIter& idi);
-        
+
         /// Constructor with default parameters
         /// @param idi Data iterator
         ImageFFTEquation(accessors::IDataSharedIter& idi);
@@ -89,7 +90,7 @@ namespace askap
         ImageFFTEquation(const askap::scimath::Params& ip,
           accessors::IDataSharedIter& idi, IVisGridder::ShPtr gridder,
           const LOFAR::ParameterSet& parset);
-        
+
         /// Constructor with default parameters with specified gridder
         /// @param idi Data iterator
         /// @param gridder Shared pointer to a gridder
@@ -97,13 +98,13 @@ namespace askap
 
         /// Copy constructor
         ImageFFTEquation(const ImageFFTEquation& other);
-        
+
         /// Assignment operator
         ImageFFTEquation& operator=(const ImageFFTEquation& other);
 
 
         virtual ~ImageFFTEquation();
-        
+
         /// Return the default parameters
         static askap::scimath::Params defaultParameters();
 
@@ -130,8 +131,8 @@ namespace askap
         /// and/or the preconditioner function.
         /// @details We have an option to build the PSF using the default
         /// spheriodal function gridder or the box (nearest neighbour) gridder,
-        /// i.e. no w-term and no primary beam is simulated, as an alternative 
-        /// to the same user-defined gridder as used for the model. Apart from 
+        /// i.e. no w-term and no primary beam is simulated, as an alternative
+        /// to the same user-defined gridder as used for the model. Apart from
         /// speed, it probably makes the approximation better (i.e. removes
         /// some factors of spatial  dependence) and may lead to cleaner
         /// preconditioning. However it can filter out features of the W and AW
@@ -140,57 +141,60 @@ namespace askap
         /// @param[in] parset imager parameter set to check for PSF options.
         /// Current options: sphfuncforpsf, boxforpsf and preconditioner.preservecf.
         void useAlternativePSF(const LOFAR::ParameterSet& parset);
-       
+
         /// @brief setup object function to update degridded visibilities
         /// @details For the parallel implementation of the measurement equation we need
         /// inter-rank communication. To avoid introducing cross-dependency of the measurement
-        /// equation and the MPI one can use polymorphic object function to sum degridded visibilities 
+        /// equation and the MPI one can use polymorphic object function to sum degridded visibilities
         /// across all required ranks in the distributed case and do nothing otherwise.
         /// By default, this class doesn't alter degridded visibilities.
         /// @param[in] obj new object function (or an empty shared pointer to turn this option off)
         void setVisUpdateObject(const boost::shared_ptr<IVisCubeUpdate> &obj);
-        
+
       private:
-      
+
       /// Pointer to prototype gridder
         IVisGridder::ShPtr itsGridder;
-        
+
         /// Map of gridders for the model
         mutable std::map<string, IVisGridder::ShPtr> itsModelGridders;
-        
+
         /// Map of gridders for the residuals
         mutable std::map<string, IVisGridder::ShPtr> itsResidualGridders;
-        
+
         /// Map of PSF gridders
         mutable std::map<string, IVisGridder::ShPtr> itsPSFGridders;
-        
+
         /// Map of Wiener preconditioning gridders
         mutable std::map<string, IVisGridder::ShPtr> itsPreconGridders;
+
+        /// Map of coordinate systems
+        mutable std::map<string, casa::CoordinateSystem> itsCoordSystems;
 
         /// Iterator giving access to the data
         mutable accessors::IDataSharedIter itsIdi;
 
         /// @brief change monitors per image parameter
-        /// @details This objects are used to determine whether a new 
+        /// @details This objects are used to determine whether a new
         /// initialise degrid is necessary (i.e. image or coordinate system
         /// has been updated since the last call).
-        mutable std::map<std::string, scimath::ChangeMonitor> itsImageChangeMonitors; 
-        
-        /// @brief helper method to verify whether a parameter had been changed 
-        /// @details This method checks whether a particular parameter is tracked. If 
+        mutable std::map<std::string, scimath::ChangeMonitor> itsImageChangeMonitors;
+
+        /// @brief helper method to verify whether a parameter had been changed
+        /// @details This method checks whether a particular parameter is tracked. If
         /// yes, its change monitor is used to verify the status since the last call of
-        /// the method, otherwise new tracking begins and true is returned (i.e. to 
+        /// the method, otherwise new tracking begins and true is returned (i.e. to
         /// update all dependent cache).
         /// @param[in] name name of the parameter
         /// @return true if parameter has been updated since the previous call
         bool notYetDegridded(const std::string &name) const;
-        
+
         void init();
-        
+
         /// @brief true, if the PSF is built using the default spheroidal function gridder
         /// @details We have an option to build PSF using the default spheriodal function
-        /// gridder, i.e. no w-term and no primary beam is simulated. Apart from speed, 
-        /// it probably makes the approximation better (i.e. removes some factors of spatial 
+        /// gridder, i.e. no w-term and no primary beam is simulated. Apart from speed,
+        /// it probably makes the approximation better (i.e. removes some factors of spatial
         /// dependence). However it can filter out features of the W and AW kernels during
         /// preconditioning when robustness approaches uniform weighting.
         bool itsSphFuncPSFGridder;
@@ -207,7 +211,7 @@ namespace askap
         /// @brief if set, visibility cube will be passed through this object function
         /// @details For the parallel implementation of the measurement equation we need
         /// inter-rank communication. To avoid introducing cross-dependency of the measurement
-        /// equation and the MPI one can use polymorphic object function to sum degridded visibilities 
+        /// equation and the MPI one can use polymorphic object function to sum degridded visibilities
         /// across all required ranks in the distributed case and do nothing otherwise.
         boost::shared_ptr<IVisCubeUpdate> itsVisUpdateObject;
     };
