@@ -94,6 +94,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>
 
+#include <algorithm>
+
 namespace askap {
 
 namespace synthesis {
@@ -406,7 +408,8 @@ void BPCalibratorParallel::solveNE()
   if (itsComms.isWorker()) {
       ASKAPLOG_INFO_STR(logger, "Solving normal equations");
       ASKAPDEBUGASSERT(itsNe);
-      if (itsNe->unknowns().size() == 0) {
+      const std::vector<std::string> unknowns = itsNe->unknowns();
+      if (unknowns.size() == 0) {
           ASKAPLOG_WARN_STR(logger, "Normal equations are empty - no valid data found, flagging the solution as bad");
           invalidateSolution();
           return;
@@ -416,6 +419,18 @@ void BPCalibratorParallel::solveNE()
       scimath::Quality q;
       ASKAPDEBUGASSERT(itsSolver);
       ASKAPDEBUGASSERT(itsModel);
+      // if additional selectors are used, the shape of the MS may be such that some antennas/beams are not present at all
+      // this class uses automatic resizing of buffers and therefore may attempt solving for parameter which is not in the
+      // normal equations. The code below fixes such parameters.
+      const std::vector<std::string> freeNames = itsModel->freeNames();
+      for (std::vector<std::string>::const_iterator ci = freeNames.begin(); ci != freeNames.end(); ++ci) {
+           if (std::find(unknowns.begin(), unknowns.end(), *ci) == unknowns.end()) {
+               ASKAPLOG_INFO_STR(logger, "Parameter "<<*ci<<" is missing in the normal equations - no data");
+               itsModel->fix(*ci);
+           }
+      }
+      // now all missing parameters should be fixed
+
       itsSolver->init();
       itsSolver->addNormalEquations(*itsNe);
       itsSolver->setAlgorithm("SVD");
