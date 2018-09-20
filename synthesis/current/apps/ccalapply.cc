@@ -37,10 +37,12 @@
 // ASKAPsoft includes
 #include "askap/Application.h"
 #include "askap/AskapError.h"
+#include "askap/AskapUtil.h"
 #include "askap/AskapLogging.h"
 #include "askap/StatReporter.h"
 #include "dataaccess/TableDataSource.h"
 #include "dataaccess/IConstDataSource.h"
+#include "dataaccess/IFlagDataAccessor.h"
 #include "dataaccess/SharedIter.h"
 #include "dataaccess/ParsetInterface.h"
 #include "calibaccess/ICalSolutionConstSource.h"
@@ -114,13 +116,18 @@ class CcalApplyApp : public askap::Application
                         timer.mark();
                     
                         if (itsNoiseAndFlagDANeeded) {
-                            // quick and dirty for now (mv: note, it will ignore updates to flags and noise!)
+                            // quick and dirty for now (mv: note, it will definitely ignore updates to noise and may ignore 
+                            // updates to flags as well, if the appropriate accessor doesn't supporot write operation!)
                             accessors::OnDemandNoiseAndFlagDA acc(*it);
                             acc.rwVisibility() = it->visibility();
 
                             calME->correct(acc);
 
                             it->rwVisibility() = acc.rwVisibility().copy();
+
+                            const boost::shared_ptr<IFlagDataAccessor> fda = boost::dynamic_pointer_cast<IFlagDataAccessor>(boost::shared_ptr<IDataAccessor>(it.operator->(), utility::NullDeleter()));
+                            ASKAPCHECK(fda, "Data accessor is of type which does not support overwritting flag information"); 
+                            fda->rwFlag() = acc.rwFlag().copy();
                         } else {
                             calME->correct(*it);
                         }
