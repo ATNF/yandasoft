@@ -70,8 +70,10 @@ public:
    enum OpExtension {
        NONE = 0,
        READ = 1,
-       SYNCFLAGANDNOISE = 2,
-       ALL = 3
+       SYNCFLAG = 2,
+       SYNCNOISE = 4,
+       SYNCFLAGANDNOISE = 6,
+       ALL = 7
    };
         
    /// @brief constructor
@@ -191,6 +193,10 @@ private:
    /// @details Workers may need to know which part of the full spectrum they are working with. Although ideally, we should've used
    /// the accessor itself (e.g. the frequency axis) to figure this out.
    casa::uInt itsChanOffset;
+
+   /// @brief true if flags need to be synchronised from the current accessor
+   /// @note This field is only checked/makes sense if accessor is valid and iterator is not at origin
+   bool itsFlagNeedSync;
 };
 
 } // namespace synthesis

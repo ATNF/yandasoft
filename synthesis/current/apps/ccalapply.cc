@@ -123,6 +123,7 @@ class CcalApplyApp : public askap::Application
 
                             calME->correct(acc);
 
+                            // Note, shape should match everywhere as we don't change it in OnDemand accessor
                             it->rwVisibility() = acc.rwVisibility().copy();
 
                             const boost::shared_ptr<IFlagDataAccessor> fda = boost::dynamic_pointer_cast<IFlagDataAccessor>(boost::shared_ptr<IDataAccessor>(it.operator->(), utility::NullDeleter()));
@@ -135,8 +136,8 @@ class CcalApplyApp : public askap::Application
                     }
                     ASKAPLOG_INFO_STR(logger, "Time spent in calculation and data movement (but excluding I/O): "<<calculationTime<<" seconds");
                 } else {
-                    // server code
-                    ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::READ);
+                    // server code. Note, noise is not propagated back (as for the serial case)
+                    ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::SYNCFLAG);
                 }
                 stats.logSummary();
             } catch (const askap::AskapError& x) {

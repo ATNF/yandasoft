@@ -38,8 +38,10 @@
 
 #include <parallel/ParallelWriteIterator.h>
 #include <parallel/ParallelIteratorStatus.h>
+#include <dataaccess/IFlagDataAccessor.h>
 #include <askap_synthesis.h>
 #include <askap/AskapError.h>
+#include <askap/AskapUtil.h>
 #include <askap/AskapLogging.h>
 #include <askap/RangePartition.h>
 
@@ -64,7 +66,8 @@ namespace synthesis {
 /// @param[in] tolerance pointing direction tolerance in radians, exceeding
 /// which leads to initialisation of a new UVW machine and recompute of the rotated uvws/delays  
 ParallelWriteIterator::ParallelWriteIterator(askap::askapparallel::AskapParallel& comms, size_t cacheSize, double tolerance) : 
-   itsComms(comms), itsNotAtOrigin(false), itsAccessor(cacheSize, tolerance), itsAccessorValid(false), itsChanOffset(0u)
+   itsComms(comms), itsNotAtOrigin(false), itsAccessor(cacheSize, tolerance), itsAccessorValid(false), itsChanOffset(0u),
+   itsFlagNeedSync(false)
 {
   ASKAPCHECK(itsComms.isWorker() && itsComms.isParallel(), 
       "ParallelWriteIterator class is supposed to be used only in workers in the parallel mode");
@@ -167,7 +170,10 @@ void ParallelWriteIterator::advance()
       bs.resize(0);
       LOFAR::BlobOBufString bob(bs);
       LOFAR::BlobOStream out(bob);
-      out.putStart("AccessorVisibilities",1);
+      out.putStart("AccessorVisibilities",itsFlagNeedSync ? 2 : 1);
+      if (itsFlagNeedSync) {
+          out<<itsAccessor.itsFlag;
+      }
       out<<itsAccessor.itsVisibility;
       out.putEnd();
       itsComms.sendBlob(bs, 0);      
@@ -185,7 +191,9 @@ void ParallelWriteIterator::advance()
     itsAccessorValid = status.itsHasMore;
     //ASKAPLOG_INFO_STR(logger, "Received status "<<itsAccessorValid<<" (rank "<<itsComms.rank()<<")");
   }
-  const bool readVis = ((status.itsMode | READ) == READ);
+  const bool readVis = (status.itsMode & READ) == READ;
+  itsFlagNeedSync = (status.itsMode & SYNCFLAG) == SYNCFLAG;
+
   // channel distribution is static, but the number of channels in the measurement set can change.
   // although the latter case is not supported, we have to cater for this possbility at some minimal level 
   // to avoid nasty bugs.
@@ -289,7 +297,7 @@ void ParallelWriteIterator::advance()
 /// all workers via MPI.
 void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, ParallelWriteIterator::OpExtension mode)
 {
-  ASKAPCHECK(mode <= READ, "Requested extension mode is not supported at the moment");
+  ASKAPCHECK(mode <= SYNCFLAG, "Requested extension mode is not supported at the moment");
   ASKAPDEBUGASSERT(comms.isMaster());
   ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);
@@ -367,7 +375,7 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
              const casa::IPosition vecEnd(1, end(1));
              // send slices of flags, noise and frequency. Visibility can be assumed to be zero or read as well.
              {
-               const bool readVis = ((mode | READ) == READ);
+               const bool readVis = ((mode & READ) == READ);
                LOFAR::BlobString bs;
                bs.resize(0);
                LOFAR::BlobOBufString bob(bs);
@@ -402,13 +410,24 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
              ASKAPDEBUGASSERT(start(1)<=end(1));
              // receive a slice of visibility
              {
+               const bool recvFlags = (status.itsMode & SYNCFLAG) == SYNCFLAG;
                LOFAR::BlobString bs;
                bs.resize(0);
                comms.receiveBlob(bs, worker + 1);               
                LOFAR::BlobIBufString bib(bs);
                LOFAR::BlobIStream in(bib);
                const int version = in.getStart("AccessorVisibilities");
-               ASKAPCHECK(version == 1, "Version mismatch in serialising of visibilities");
+               ASKAPCHECK(version == recvFlags ? 2 : 1, "Version mismatch in serialising of visibilities");
+               if (recvFlags) {
+                   casa::Cube<casa::Bool> flagBuf;
+                   in>>flagBuf;
+                   const boost::shared_ptr<accessors::IFlagDataAccessor> fda = boost::dynamic_pointer_cast<accessors::IFlagDataAccessor>(boost::shared_ptr<accessors::IDataAccessor>(it.operator->(), utility::NullDeleter()));
+                   ASKAPCHECK(fda, "Flag write operation is requested, but supplied data accessor doesn't support writing flags");
+                   casa::Cube<casa::Bool> flagSlice = fda->rwFlag()(start,end);
+                   ASKAPCHECK(flagSlice.shape() == flagBuf.shape(), "Shape mismatch of the flag cube, received has shape="<<
+                        flagBuf.shape()<<" expected shape="<<flagSlice.shape());
+                   flagSlice = flagBuf;
+               }
                casa::Cube<casa::Complex> visBuf;
                in>>visBuf;
                in.getEnd();
