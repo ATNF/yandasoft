@@ -297,7 +297,7 @@ void ParallelWriteIterator::advance()
 /// all workers via MPI.
 void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel& comms, const accessors::IDataSharedIter &iter, ParallelWriteIterator::OpExtension mode)
 {
-  ASKAPCHECK(mode <= SYNCFLAG, "Requested extension mode is not supported at the moment");
+  ASKAPCHECK(mode < SYNCNOISE, "Requested extension mode is not supported at the moment");
   ASKAPDEBUGASSERT(comms.isMaster());
   ASKAPDEBUGASSERT(comms.nProcs() > 1);
   accessors::IDataSharedIter it(iter);

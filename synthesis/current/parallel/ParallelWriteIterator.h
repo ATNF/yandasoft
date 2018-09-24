@@ -75,7 +75,7 @@ public:
        SYNCFLAGANDNOISE = 6,
        ALL = 7
    };
-        
+
    /// @brief constructor
    /// @details 
    /// @param comms communication object
@@ -198,6 +198,13 @@ private:
    /// @note This field is only checked/makes sense if accessor is valid and iterator is not at origin
    bool itsFlagNeedSync;
 };
+
+/// @brief or operator for operational mode flags
+/// @param[in] a first operand
+/// @param[in] b second operand
+/// @return or'ed result
+inline ParallelWriteIterator::OpExtension operator|(const ParallelWriteIterator::OpExtension a, const ParallelWriteIterator::OpExtension b) 
+     {return static_cast<ParallelWriteIterator::OpExtension>(static_cast<int>(a) | static_cast<int>(b));}
 
 } // namespace synthesis
 

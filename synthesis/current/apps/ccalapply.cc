@@ -137,7 +137,7 @@ class CcalApplyApp : public askap::Application
                     ASKAPLOG_INFO_STR(logger, "Time spent in calculation and data movement (but excluding I/O): "<<calculationTime<<" seconds");
                 } else {
                     // server code. Note, noise is not propagated back (as for the serial case)
-                    ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::SYNCFLAG);
+                    ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::SYNCFLAG | ParallelWriteIterator::READ);
                 }
                 stats.logSummary();
             } catch (const askap::AskapError& x) {
