@@ -515,7 +515,7 @@ namespace askap
           casa::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
           casa::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
           ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
-              imageDerivVec, imageShape, reference,itsCoordSystems[imageName]);
+              imageDerivVec, imageShape, reference);
         }
       }
     }
