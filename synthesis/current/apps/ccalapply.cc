@@ -79,13 +79,13 @@ class CcalApplyApp : public askap::Application
         {
             // This class must have scope outside the main try/catch block
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
-         
+
             try {
                 StatReporter stats;
                 LOFAR::ParameterSet subset(config().makeSubset("Ccalapply."));
 
                 itsDistribute = comms.isParallel() ? subset.getBool("distribute", true) : false;
-  
+
                 if (itsDistribute) {
                     ASKAPLOG_INFO_STR(logger, "Data will be distributed between "<<(comms.nProcs() - 1)<<" workers, master will write data");
                 }
@@ -102,7 +102,7 @@ class CcalApplyApp : public askap::Application
 
                     ASKAPDEBUGASSERT(it);
                     ASKAPDEBUGASSERT(calME);
-       
+
                     casa::Timer timer;
 
                     // Apply calibration
@@ -114,21 +114,20 @@ class CcalApplyApp : public askap::Application
                         }
                         ++count;
                         timer.mark();
-                    
+
                         if (itsNoiseAndFlagDANeeded) {
-                            // quick and dirty for now (mv: note, it will definitely ignore updates to noise and may ignore 
+                            // quick and dirty for now (mv: note, it will definitely ignore updates to noise and may ignore
                             // updates to flags as well, if the appropriate accessor doesn't supporot write operation!)
                             accessors::OnDemandNoiseAndFlagDA acc(*it);
                             acc.rwVisibility() = it->visibility();
 
                             calME->correct(acc);
 
-                            // Note, shape should match everywhere as we don't change it in OnDemand accessor
-                            it->rwVisibility() = acc.rwVisibility().copy();
+                            it->rwVisibility() = acc.rwVisibility();
 
                             const boost::shared_ptr<IFlagDataAccessor> fda = boost::dynamic_pointer_cast<IFlagDataAccessor>(boost::shared_ptr<IDataAccessor>(it.operator->(), utility::NullDeleter()));
-                            ASKAPCHECK(fda, "Data accessor is of type which does not support overwritting flag information"); 
-                            fda->rwFlag() = acc.rwFlag().copy();
+                            ASKAPCHECK(fda, "Data accessor is of type which does not support overwritting flag information");
+                            fda->rwFlag() = acc.rwFlag();
                         } else {
                             calME->correct(*it);
                         }
@@ -204,8 +203,8 @@ class CcalApplyApp : public askap::Application
 
             }
             else {
-              ASKAPLOG_INFO_STR(logger,"Boo I am not a service source");
-            
+              ASKAPLOG_INFO_STR(logger,"Boo I am not a service source!");
+
             }
 
             // wrap the solution source in an adapter, if necessary
@@ -223,6 +222,8 @@ class CcalApplyApp : public askap::Application
             calME->scaleNoise(scaleNoise);
             calME->allowFlag(allowFlag);
             calME->beamIndependent(parset.getBool("calibrate.ignorebeam", false));
+            calME->channelIndependent(parset.getBool("calibrate.ignorechannel",false));
+            calME->leakageFree(parset.getBool("calibrate.ignoreleakage",false));
             return calME;
         }
 
