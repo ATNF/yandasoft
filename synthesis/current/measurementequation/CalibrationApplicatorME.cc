@@ -238,7 +238,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
             casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
             det = casa::abs(det1*det1*det2*det2);
             // Inverse of 4x4 mueller is directProduct of 2x2 jones inverses
-            if (det > detThreshold) directProduct(mueller, j1.inverse(),j2.inverse());
+            if (det > detThreshold) directProduct(mueller, j1.inverse(),conj(j2).inverse());
         }
         for (casa::uInt pol = 0; pol < nPol; ++pol) {
             vis(pol) = rwVis(row,chan,pol);
@@ -261,7 +261,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
 
         // do the actual calibration
         vis*=mueller;
-
+        
         // write back to chunk
         for (casa::uInt pol = 0; pol < nPol; ++pol) {
             rwVis(row,chan,pol) = vis(pol);
