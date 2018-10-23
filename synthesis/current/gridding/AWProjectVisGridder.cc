@@ -485,6 +485,7 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
 {
     ASKAPTRACE("AWProjectVisGridder::finaliseWeights");
     ASKAPLOG_DEBUG_STR(logger, "Calculating sum of weights image");
+    ASKAPLOG_DEBUG_STR(logger, "Shape " << itsShape);
     ASKAPDEBUGASSERT(itsShape.nelements() >= 3);
 
     const int nx = itsShape(0);

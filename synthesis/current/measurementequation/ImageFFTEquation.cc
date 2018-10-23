@@ -462,7 +462,7 @@ namespace askap
       {
         const string imageName("image"+(*it));
         const casa::IPosition imageShape(parameters().value(imageName).shape());
-
+        ASKAPLOG_INFO_STR(logger,"Name: " << imageName << " Shape: " << imageShape);
         casa::Array<double> imageDeriv(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
 
@@ -474,6 +474,9 @@ namespace askap
         }
         // end debugging code
         */
+
+
+
 
         casa::Array<double> imagePSF(imageShape);
         itsPSFGridders[imageName]->finaliseGrid(imagePSF);
@@ -514,8 +517,11 @@ namespace askap
           casa::Vector<double> imagePSFVec(imagePSF.reform(vecShape));
           casa::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
           casa::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
+
           ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
-              imageDerivVec, imageShape, reference);
+              imageDerivVec, imageShape, reference,itsCoordSystems[imageName]);
+          //ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
+          //    imageDerivVec, imageShape, reference);
         }
       }
     }

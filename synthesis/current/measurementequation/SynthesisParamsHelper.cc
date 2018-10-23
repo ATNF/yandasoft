@@ -877,6 +877,17 @@ namespace askap
       casa::CoordinateSystem imageCoords;
       imageCoords.addCoordinate(radec);
 
+
+      const casa::IPosition shape = ip.value(name).shape();
+      const int nchan = shape.nelements() >= 4 ? shape(3) : 1;
+      const double restfreq = 0.0;
+      const double crpix = double(nchan-1)/2.;
+      const double crval = (axes.start("FREQUENCY")+axes.end("FREQUENCY"))/2.0;
+      // we can't estimate increment if there is only one channel and start=stop
+      const double cdelt = nchan>1 ? (axes.end("FREQUENCY")-axes.start("FREQUENCY"))/double(nchan-1) : 1.;
+      const casa::SpectralCoordinate freq(casa::MFrequency::castType(theirFreqFrame.getType()), crval, cdelt, crpix, restfreq);
+      imageCoords.addCoordinate(freq);
+
       // default is a dummy stokes coordinate with only stokes I present
       casa::Vector<int> iquv(1);
       iquv(0) = Stokes::I;
@@ -891,16 +902,6 @@ namespace askap
 
       casa::StokesCoordinate stokes(iquv);
       imageCoords.addCoordinate(stokes);
-
-      const casa::IPosition shape = ip.value(name).shape();
-      const int nchan = shape.nelements() >= 4 ? shape(3) : 1;
-      const double restfreq = 0.0;
-      const double crpix = double(nchan-1)/2.;
-      const double crval = (axes.start("FREQUENCY")+axes.end("FREQUENCY"))/2.0;
-      // we can't estimate increment if there is only one channel and start=stop
-      const double cdelt = nchan>1 ? (axes.end("FREQUENCY")-axes.start("FREQUENCY"))/double(nchan-1) : 1.;
-      const casa::SpectralCoordinate freq(casa::MFrequency::castType(theirFreqFrame.getType()), crval, cdelt, crpix, restfreq);
-      imageCoords.addCoordinate(freq);
 
       return imageCoords;
     }
