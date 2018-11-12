@@ -78,6 +78,9 @@ class CimagerApp : public askap::Application
                 boost::scoped_ptr<askap::ProfileSingleton::Initialiser> profiler;
                 if (parameterExists("profile")) {
                     std::string profileFileName("profile.cimager");
+                    if (subset.isDefined("Images.Names")){
+                        profileFileName += "."+subset.getStringVector("Images.Names")[0];
+                    }
                     if (comms.isParallel()) {
                         profileFileName += ".rank"+utility::toString(comms.rank());
                     }
