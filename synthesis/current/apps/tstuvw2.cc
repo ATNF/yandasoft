@@ -64,7 +64,8 @@ void doReadOnlyTest(const IConstDataSource &ds) {
   //sel<<LOFAR::ParameterSet("test.in").makeSubset("TestSelection.");
   IDataConverterPtr conv=ds.createConverter();  
   conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO),"Hz");
-  conv->setEpochFrame(casa::MEpoch(casa::Quantity(58287.5,"d"),
+  const double refMJD = 58287.5;
+  conv->setEpochFrame(casa::MEpoch(casa::Quantity(refMJD,"d"),
                       casa::MEpoch::Ref(casa::MEpoch::UTC)),"s");
   conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));                    
   /*
@@ -72,13 +73,20 @@ void doReadOnlyTest(const IConstDataSource &ds) {
                                   SynthesisParamsHelper::convertQuantity("-45.00.00.000","rad"));
   const casa::MDirection tangentDir(tangent, casa::MDirection::J2000);
   */
-  for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {  
+  double firstTimeStamp = -1;
+  size_t counter = 0;
+  for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it,++counter) {  
        
        const IConstDataAccessor &acc = *it;
-       std::cout<<"time: "<<acc.time()<<std::endl;
+       if (firstTimeStamp < 0) {
+           firstTimeStamp = acc.time();
+       }
+       casa::MEpoch epoch(casa::Quantity(refMJD,"d")+casa::Quantity(acc.time(),"s"), casa::MEpoch::Ref(casa::MEpoch::UTC));
+       std::cout<<"time: "<<epoch<<" or "<<acc.time() - firstTimeStamp<<" seconds since start, cycle "<<counter + 1<<std::endl;
        for (casa::uInt row = 0; row < acc.nRow(); ++row) {
             std::cout<<row<<" "<<acc.antenna1()[row]<<" "<<acc.antenna2()[row]<<" "<<acc.feed1()[row]<<" "<<
                   acc.uvw()[row](0)<<" "<<acc.uvw()[row](1)<<" "<<acc.uvw()[row](2)<<std::endl;
+            acc.pointingDir1();
        }
   }
 }
