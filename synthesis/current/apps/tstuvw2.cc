@@ -86,7 +86,7 @@ void doReadOnlyTest(const IConstDataSource &ds) {
        for (casa::uInt row = 0; row < acc.nRow(); ++row) {
             std::cout<<row<<" "<<acc.antenna1()[row]<<" "<<acc.antenna2()[row]<<" "<<acc.feed1()[row]<<" "<<
                   acc.uvw()[row](0)<<" "<<acc.uvw()[row](1)<<" "<<acc.uvw()[row](2)<<std::endl;
-            acc.pointingDir1();
+            std::cout<<"beam="<<acc.feed1()[row]<<" phase centre: "<<printDirection(acc.pointingDir1()[row])<<std::endl;
        }
   }
 }
