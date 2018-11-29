@@ -82,9 +82,12 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Common/ParameterSet.h>
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
+
+#ifdef USE_CAL_SERVICE
 #include <calibaccess/ServiceCalSolutionSourceStub.h>
 #include <calserviceaccessor/ServiceCalSolutionSource.h>
 #include <calserviceaccessor/ServiceCalSolutionAccessor.h>
+#endif
 
 
 // casa includes
@@ -173,7 +176,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       ASKAPASSERT(itsSolutionSource);
 
       const std::string calAccType = parset.getString("calibaccess","parset");
-
+#ifdef USE_CAL_SERVICE
       if (calAccType == "service") {
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
         ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
@@ -205,6 +208,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
         }
 
       }
+#endif 
 
   }
   if (itsComms.isWorker()) {

@@ -85,9 +85,11 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Common/ParameterSet.h>
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
+
+#ifdef USE_CAL_SERVICE
 #include <calibaccess/ServiceCalSolutionSourceStub.h>
 #include <calserviceaccessor/ServiceCalSolutionSource.h>
-
+#endif
 
 
 // casa includes
@@ -126,7 +128,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       // is a stub.
 
       const std::string calAccType = parset.getString("calibaccess","parset");
-
+#ifdef USE_CAL_SERVICE
       if (calAccType == "service") {
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
         ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
@@ -137,6 +139,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
         src->solveBandpass();
 
       }
+#endif
 
   }
   if (itsComms.isWorker()) {

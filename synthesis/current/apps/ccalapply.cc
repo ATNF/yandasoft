@@ -49,7 +49,11 @@
 #include "calibaccess/CalibAccessFactory.h"
 #include "calibaccess/ServiceCalSolutionSourceStub.h"
 #include "calibaccess/ChanAdapterCalSolutionConstSource.h"
+
+#ifdef USE_CAL_SERVICE
 #include "calserviceaccessor/ServiceCalSolutionSource.h"
+#endif
+
 #include "dataaccess/OnDemandNoiseAndFlagDA.h"
 #include "askap/RangePartition.h"
 #include "boost/shared_ptr.hpp"
@@ -197,6 +201,7 @@ class CcalApplyApp : public askap::Application
 
             const std::string calAccType = parset.getString("calibaccess","parset");
 
+#ifdef USE_CAL_SERVICE
             if (calAccType == "service") {
               solutionSource.reset(new ServiceCalSolutionSource(parset));
               ASKAPLOG_INFO_STR(logger,"Yay I am a service source");
@@ -206,6 +211,7 @@ class CcalApplyApp : public askap::Application
               ASKAPLOG_INFO_STR(logger,"Boo I am not a service source!");
 
             }
+#endif
 
             // wrap the solution source in an adapter, if necessary
             if (chanOffset != 0u) {

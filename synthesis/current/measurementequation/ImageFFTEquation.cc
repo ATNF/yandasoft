@@ -354,6 +354,7 @@ namespace askap
       for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         string imageName("image"+(*it));
+        ASKAPLOG_DEBUG_STR(logger, "Initialising for " << imageName);
         const Axes axes(parameters().axes(imageName));
         casa::Array<double> imagePixels(parameters().value(imageName).copy());
         const casa::IPosition imageShape(imagePixels.shape());
