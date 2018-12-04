@@ -434,9 +434,11 @@ void BPCalibratorParallel::solveNE()
       }
       // now all missing parameters should be fixed
 
+      const std::string solverType = parset().getString("solver", "SVD");
+
       itsSolver->init();
       itsSolver->addNormalEquations(*itsNe);
-      itsSolver->setAlgorithm("SVD");
+      itsSolver->setAlgorithm(solverType);
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
