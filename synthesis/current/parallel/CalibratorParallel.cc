@@ -572,7 +572,9 @@ void CalibratorParallel::solveNE()
       timer.mark();
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
-      itsSolver->setAlgorithm("SVD");
+      const std::string solverType = parset().getString("solver", "SVD");
+
+      itsSolver->setAlgorithm(solverType);
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
