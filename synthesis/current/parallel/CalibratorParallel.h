@@ -129,6 +129,12 @@ namespace askap
       /// @param[in] parset ParameterSet for inputs
       void init(const LOFAR::ParameterSet& parset);
 
+      /// @brief Generates a map with LSQR solver parameters, from a given parset.
+      /// @param[in] parset Input parset.
+      /// @note This static method is also called from BPCalibratorParallel, thus introducing horizontal dependency.
+      /// @return Map with LSQR solver parameters.
+      static std::map<std::string, std::string> getLSQRSolverParameters(const LOFAR::ParameterSet& parset);
+
   protected:
       /// @brief initialise the class to iterate over next portion of data
       /// @details This method signals to the iterator adapter to switch to the

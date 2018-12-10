@@ -61,8 +61,6 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Blob/BlobOStream.h>
 #include <profile/AskapProfiler.h>
 
-
-
 #include <dataaccess/TableDataSource.h>
 #include <dataaccess/ParsetInterface.h>
 
@@ -86,11 +84,12 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <calibaccess/CalParamNameHelper.h>
 #include <calibaccess/CalibAccessFactory.h>
 
+#include <parallel/CalibratorParallel.h>
+
 #ifdef USE_CAL_SERVICE
 #include <calibaccess/ServiceCalSolutionSourceStub.h>
 #include <calserviceaccessor/ServiceCalSolutionSource.h>
 #endif
-
 
 // casa includes
 #include <casacore/casa/aips.h>
@@ -434,11 +433,17 @@ void BPCalibratorParallel::solveNE()
       }
       // now all missing parameters should be fixed
 
-      const std::string solverType = parset().getString("solver", "SVD");
-
       itsSolver->init();
       itsSolver->addNormalEquations(*itsNe);
+
+      const std::string solverType = parset().getString("solver", "SVD");
       itsSolver->setAlgorithm(solverType);
+
+      if (solverType == "LSQR") {
+          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset());
+          itsSolver->setParameters(params);
+      }
+
       itsSolver->solveNormalEquations(*itsModel,q);
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);

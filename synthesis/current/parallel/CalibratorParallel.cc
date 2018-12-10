@@ -328,6 +328,15 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
   }
 }
 
+std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(const LOFAR::ParameterSet& parset) {
+    std::map<std::string, std::string> params;
+    if (parset.isDefined("solver.LSQR.alpha")) params["alpha"] = parset.getString("solver.LSQR.alpha");
+    if (parset.isDefined("solver.LSQR.norm"))  params["norm"] = parset.getString("solver.LSQR.norm");
+    if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
+    if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
+    if (parset.isDefined("solver.LSQR.suppress_output")) params["suppress_output"] = parset.getString("solver.LSQR.suppress_output");
+    return params;
+}
 
 void CalibratorParallel::calcOne(const std::string& ms, bool discard)
 {
@@ -515,7 +524,6 @@ void CalibratorParallel::setChannelOffsetInModel() const {
    itsModel->fix("chan_offset");
 }
 
-
 /// Calculate the normal equations for a given measurement set
 void CalibratorParallel::calcNE()
 {
@@ -572,10 +580,17 @@ void CalibratorParallel::solveNE()
       timer.mark();
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
-      const std::string solverType = parset().getString("solver", "SVD");
 
+      const std::string solverType = parset().getString("solver", "SVD");
       itsSolver->setAlgorithm(solverType);
+
+      if (solverType == "LSQR") {
+          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset());
+          itsSolver->setParameters(params);
+      }
+
       itsSolver->solveNormalEquations(*itsModel,q);
+
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
       if (itsRefGainXX != "") {
