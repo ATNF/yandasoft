@@ -102,60 +102,70 @@ def loadParset(fname,rotate=True):
 	  
     return res
 
-spr = SynthesisProgramRunner(template_parset = 'calibratortest_template.in')
-spr.addToParset("Csimulator.corrupt = false")
-spr.runSimulator()
+def runTests(solverType):
+    """
+    Runs tests for a given calibration solver type.
+    """
+    spr = SynthesisProgramRunner(template_parset = 'calibratortest_template.in')
+    spr.addToParset("Csimulator.corrupt = false")
+    spr.runSimulator()
+    
+    spr.initParset()
+    spr.runImager()
+    analyseResult(spr)
+    
+    print "First run of ccalibrator, should get gains close to (1.,0.)"
+    
+    spr.addToParset("Ccalibrator.calibaccess = parset")
+    spr.addToParset("Ccalibrator.solver = " + solverType)
+    spr.runCalibrator()
+    # here result.dat should be close to (1.,0) within 0.03 or so
+    
+    res_gains = loadParset("result.dat")
+    for k,v in res_gains.items():
+       if abs(v-1)>0.03:
+          raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from (1,0)" % (k,v)
+    
+    # now repeat the simulation, but with corruption of visibilities
+    spr.initParset()
+    spr.addToParset("Csimulator.corrupt = true")
+    spr.runSimulator()
+    
+    print "Second run of ccalibrator, gains should be close to rndgains.in"
+    # calibrate again
+    spr.addToParset("Ccalibrator.calibaccess = parset")
+    spr.addToParset("Ccalibrator.solver = " + solverType)
+    spr.runCalibrator()
+    
+    # gains should now be close to rndgains.in
+    
+    res_gains = loadParset("result.dat")
+    orig_gains = loadParset("rndgains.in")
+    for k,v in res_gains.items():
+       if k not in orig_gains:
+          raise RintimeError, "Gain parameter %s found in the result is missing in the model!" % k
+       orig_val = orig_gains[k]
+       if abs(v-orig_val)>0.03:
+          raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val)
+    
+    # now try to obtain time-dependent solution (note, a proper analysis of the result is not done)
+    print "Third run of ccalibrator. Time-dependent solution for antennagains"
+    spr.initParset()
+    spr.addToParset("Ccalibrator.calibaccess = table")
+    spr.addToParset("Ccalibrator.interval = 600s")
+    spr.addToParset("Ccalibrator.solve = antennagains")
+    spr.addToParset("Ccalibrator.solver = " + solverType)
+    os.system("rm -rf caldata.tab")
+    spr.runCalibrator()
+    
+    print "Testing calibration application."
+    # run cimager applying time-dependent calibration
+    spr.addToParset("Cimager.calibrate = true")
+    spr.addToParset("Cimager.calibaccess = table")
+    spr.addToParset("Cimager.calibaccess.table = \"caldata.tab\"")
+    spr.addToParset("Cimager.calibrate.ignorebeam = true")
+    spr.runImager()
+    analyseResult(spr)
 
-spr.initParset()
-spr.runImager()
-analyseResult(spr)
-
-print "First run of ccalibrator, should get gains close to (1.,0.)"
-
-spr.addToParset("Ccalibrator.calibaccess = parset")
-spr.runCalibrator()
-# here result.dat should be close to (1.,0) within 0.03 or so
-
-res_gains = loadParset("result.dat")
-for k,v in res_gains.items():
-   if abs(v-1)>0.03:
-      raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from (1,0)" % (k,v)
-
-# now repeat the simulation, but with corruption of visibilities
-spr.initParset()
-spr.addToParset("Csimulator.corrupt = true")
-spr.runSimulator()
-
-print "Second run of ccalibrator, gains should be close to rndgains.in"
-# calibrate again
-spr.addToParset("Ccalibrator.calibaccess = parset")
-spr.runCalibrator()
-
-# gains should now be close to rndgains.in
-
-res_gains = loadParset("result.dat")
-orig_gains = loadParset("rndgains.in")
-for k,v in res_gains.items():
-   if k not in orig_gains:
-      raise RintimeError, "Gain parameter %s found in the result is missing in the model!" % k
-   orig_val = orig_gains[k]
-   if abs(v-orig_val)>0.03:
-      raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val)
-
-# now try to obtain time-dependent solution (note, a proper analysis of the result is not done)
-print "Third run of ccalibrator. Time-dependent solution for antennagains"
-spr.initParset()
-spr.addToParset("Ccalibrator.calibaccess = table")
-spr.addToParset("Ccalibrator.interval = 600s")
-spr.addToParset("Ccalibrator.solve = antennagains")
-os.system("rm -rf caldata.tab")
-spr.runCalibrator()
-
-print "Testing calibration application."
-# run cimager applying time-dependent calibration
-spr.addToParset("Cimager.calibrate = true")
-spr.addToParset("Cimager.calibaccess = table")
-spr.addToParset("Cimager.calibaccess.table = \"caldata.tab\"")
-spr.addToParset("Cimager.calibrate.ignorebeam = true")
-spr.runImager()
-analyseResult(spr)
+runTests("SVD")
+runTests("LSQR")
