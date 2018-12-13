@@ -86,39 +86,47 @@ def loadParset(fname):
        f.close()
     return res
 
-spr = SynthesisProgramRunner(template_parset = 'leakagecalibtest_template.in')
-spr.addToParset("Csimulator.corrupt = false")
-spr.runSimulator()
+def runTests(solverType):
+    """
+    Runs tests for a given calibration solver type.
+    """
+    spr = SynthesisProgramRunner(template_parset = 'leakagecalibtest_template.in')
+    spr.addToParset("Csimulator.corrupt = false")
+    spr.runSimulator()
+    
+    spr.initParset()
+    spr.runImager()
+    analyseResult(spr)
+    
+    spr.addToParset("Ccalibrator.solver = " + solverType)
+    spr.runCalibrator()
+    
+    # here result.dat should be close to (1.,0) within 0.03 or so
+    res_gains = loadParset("result.dat")
+    for k,v in res_gains.items():
+       if abs(v)>0.003:
+          raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from (1,0)" % (k,v)
+    
+    # now repeat the simulation, but with corruption of visibilities
+    spr.initParset()
+    spr.addToParset("Csimulator.corrupt = true")
+    spr.addToParset("Csimulator.corrupt.leakage = true")
+    spr.runSimulator()
+    
+    # calibrate again
+    spr.addToParset("Ccalibrator.solver = " + solverType)
+    spr.runCalibrator()
+    
+    # gains should now be close to rndgains.in
+    res_gains = loadParset("result.dat")
+    orig_gains = loadParset("rndgainsandleakages.in")
+    for k,v in res_gains.items():
+       if k not in orig_gains:
+          raise RintimeError, "Gain parameter %s found in the result is missing in the model!" % k
+       orig_val = orig_gains[k]
+       #print "Testing %s: has a value of %s, model value %s, difference %s" % (k,v,orig_val,abs(v-orig_val))
+       if abs(v-orig_val)>0.04:
+          raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val)
 
-spr.initParset()
-spr.runImager()
-analyseResult(spr)
-
-spr.runCalibrator()
-# here result.dat should be close to (1.,0) within 0.03 or so
-
-res_gains = loadParset("result.dat")
-for k,v in res_gains.items():
-   if abs(v)>0.003:
-      raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from (1,0)" % (k,v)
-
-# now repeat the simulation, but with corruption of visibilities
-spr.initParset()
-spr.addToParset("Csimulator.corrupt = true")
-spr.addToParset("Csimulator.corrupt.leakage = true")
-spr.runSimulator()
-
-# calibrate again
-spr.runCalibrator()
-
-# gains should now be close to rndgains.in
-
-res_gains = loadParset("result.dat")
-orig_gains = loadParset("rndgainsandleakages.in")
-for k,v in res_gains.items():
-   if k not in orig_gains:
-      raise RintimeError, "Gain parameter %s found in the result is missing in the model!" % k
-   orig_val = orig_gains[k]
-   #print "Testing %s: has a value of %s, model value %s, difference %s" % (k,v,orig_val,abs(v-orig_val))
-   if abs(v-orig_val)>0.04:
-      raise RuntimeError, "Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val)
+runTests("SVD")
+runTests("LSQR")
