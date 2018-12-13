@@ -71,7 +71,8 @@ namespace askap
       CPPUNIT_TEST(testSolvePreAvg);      
       CPPUNIT_TEST(testSolvePreAvg2);
       */
-      CPPUNIT_TEST(testSolveBPPreAvg);      
+      CPPUNIT_TEST(testSolveBPPreAvgSVD);
+      CPPUNIT_TEST(testSolveBPPreAvgLSQR);
       CPPUNIT_TEST_SUITE_END();
       
       private:
@@ -300,46 +301,14 @@ namespace askap
           checkSolution();        
         }
 
-        void testSolveBPPreAvg()
+        void testSolveBPPreAvgSVD()
         {
-          initDataAndParameters();
+            testSolveBPPreAvg("SVD");
+        }
 
-          std::vector<std::string> freeNames = params2->freeNames();
-          for (std::vector<std::string>::const_iterator it = freeNames.begin();
-               it!=freeNames.end();++it) {
-               if (it->find("gain") == 0) {
-                   for (casa::uInt chan = 0; chan < idi->nChannel(); ++chan) {
-                        params2->add(accessors::CalParamNameHelper::addChannelInfo(accessors::CalParamNameHelper::bpPrefix()+*it,chan),
-                                  params2->complexValue(*it));
-                        params2->fix(*it);
-                   }
-               }
-          }
-          
-          // with pre-averaging we have just one iteration over data, i.e. outside the loop
-          CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase> bpEq;
-          idi.init();
-          bpEq.accumulate(idi,p2);
-            
-          for (size_t iter=0; iter<5; ++iter) {
-               // Calculate gradients using "imperfect" parameters"
-               GenericNormalEquations ne;
-                           
-               bpEq.setParameters(*params2);
-               bpEq.calcEquations(ne);
-               Quality q;
-               LinearSolver solver1;
-               solver1.addNormalEquations(ne);
-               solver1.setAlgorithm("SVD");
-               solver1.solveNormalEquations(*params2,q);  
-               //std::cout<<q<<std::endl;               
-                              
-               // taking care of the absolute phase uncertainty
-               for (casa::uInt chan = 0; chan<idi->nChannel(); ++chan) {               
-                    rotatePhase(params2,int(chan));
-               }
-          }
-          checkSolution(true);                           
+        void testSolveBPPreAvgLSQR()
+        {
+            testSolveBPPreAvg("LSQR");
         }
         
         void testSolveBPNoPreAvg()
@@ -380,6 +349,49 @@ namespace askap
           checkSolution(true);                           
         }
         
+      private:
+        void testSolveBPPreAvg(const std::string& solverType)
+        {
+          initDataAndParameters();
+
+          std::vector<std::string> freeNames = params2->freeNames();
+          for (std::vector<std::string>::const_iterator it = freeNames.begin();
+               it!=freeNames.end();++it) {
+               if (it->find("gain") == 0) {
+                   for (casa::uInt chan = 0; chan < idi->nChannel(); ++chan) {
+                        params2->add(accessors::CalParamNameHelper::addChannelInfo(accessors::CalParamNameHelper::bpPrefix()+*it,chan),
+                                  params2->complexValue(*it));
+                        params2->fix(*it);
+                   }
+               }
+          }
+
+          // with pre-averaging we have just one iteration over data, i.e. outside the loop
+          CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase> bpEq;
+          idi.init();
+          bpEq.accumulate(idi,p2);
+
+          for (size_t iter=0; iter<5; ++iter) {
+               // Calculate gradients using "imperfect" parameters"
+               GenericNormalEquations ne;
+
+               bpEq.setParameters(*params2);
+               bpEq.calcEquations(ne);
+               Quality q;
+               LinearSolver solver1;
+               solver1.addNormalEquations(ne);
+               solver1.setAlgorithm(solverType);
+               solver1.solveNormalEquations(*params2,q);
+               //std::cout<<q<<std::endl;
+
+               // taking care of the absolute phase uncertainty
+               for (casa::uInt chan = 0; chan<idi->nChannel(); ++chan) {
+                    rotatePhase(params2,int(chan));
+               }
+          }
+          checkSolution(true);
+        }
+
    };
     
   } // namespace synthesis
