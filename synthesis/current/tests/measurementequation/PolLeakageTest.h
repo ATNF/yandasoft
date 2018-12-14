@@ -64,11 +64,13 @@ namespace askap
     {
       CPPUNIT_TEST_SUITE(PolLeakageTest);
       CPPUNIT_TEST(testBuildCDM);
-      CPPUNIT_TEST(testBETAMuellerMatrix);      
-      CPPUNIT_TEST(testSolve);
-      CPPUNIT_TEST(testSolvePreAvg);
+      CPPUNIT_TEST(testBETAMuellerMatrix);
+      CPPUNIT_TEST(testSolveSVD);
+      CPPUNIT_TEST(testSolveLSQR);
+      CPPUNIT_TEST(testSolvePreAvgSVD);
+      CPPUNIT_TEST(testSolvePreAvgLSQR);
       CPPUNIT_TEST(testApplication);
-      CPPUNIT_TEST(testSimulation);            
+      CPPUNIT_TEST(testSimulation);
       CPPUNIT_TEST_SUITE_END();
      
      public:
@@ -307,91 +309,23 @@ namespace askap
           }                    
       }
      
-      void testSolve() {
-          // Predict with the "perfect" parameters"
-          CPPUNIT_ASSERT(itsEq1);
-          itsEq1->predict();
-          std::vector<std::string> freeNames = itsParams2->freeNames();
-          for (std::vector<std::string>::const_iterator it = freeNames.begin();
-               it!=freeNames.end();++it) {
-               if (it->find("leakage") == std::string::npos) {
-                   itsParams2->fix(*it);
-               }
-          }
-          
-          for (size_t iter=0; iter<10; ++iter) {
-               // Calculate gradients using "imperfect" parameters"
-               GenericNormalEquations ne; //(*params2);
-            
-               itsEq2.reset(new METype(*itsParams2,itsIter,itsCE2));
-            
-               itsEq2->calcEquations(ne);
-               Quality q;
-               LinearSolver solver1;
-               solver1.addNormalEquations(ne);
-               solver1.setAlgorithm("SVD");
-               solver1.solveNormalEquations(*itsParams2,q);  
-               //std::cout<<q<<std::endl;               
-          }
-          
-          freeNames = itsParams2->freeNames();
-          for (std::vector<std::string>::const_iterator it = freeNames.begin();
-               it!=freeNames.end();++it) {
-               CPPUNIT_ASSERT(itsParams2->has(*it));
-               CPPUNIT_ASSERT(itsParams1->has(*it));       
-               CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
-                                            itsParams1->complexValue(*it)), 0., 5e-3);
-               CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
-                                            itsParams1->complexValue(*it)), 0., 5e-3);
-          }
-      } 
-      
-      void testSolvePreAvg() {
-          // Predict with the "perfect" parameters"
-          CPPUNIT_ASSERT(itsEq1);
-          itsEq1->predict();
-          std::vector<std::string> freeNames = itsParams2->freeNames();
-          for (std::vector<std::string>::const_iterator it = freeNames.begin();
-               it!=freeNames.end();++it) {
-               if (it->find("leakage") == std::string::npos) {
-                   itsParams2->fix(*it);
-               }
-          }
-    
-          typedef CalibrationME<LeakageTerm,PreAvgCalMEBase> PreAvgMEType;
-          boost::shared_ptr<PreAvgMEType> preAvgEq(new PreAvgMEType());
-          CPPUNIT_ASSERT(preAvgEq);
-          itsIter.init();          
-          preAvgEq->accumulate(itsIter,itsCE2);
+      void testSolveSVD() {
+          testSolve("SVD");
+      }
 
-          for (size_t iter=0; iter<10; ++iter) {
-               // Calculate gradients using "imperfect" parameters"
-               GenericNormalEquations ne; 
-            
-               preAvgEq->setParameters(*itsParams2);            
-               preAvgEq->calcEquations(ne);
-               
-               Quality q;
-               LinearSolver solver1;
-               solver1.addNormalEquations(ne);
-               solver1.setAlgorithm("SVD");
-               solver1.solveNormalEquations(*itsParams2,q);  
-          }
-
-          freeNames = itsParams2->freeNames();
-          for (std::vector<std::string>::const_iterator it = freeNames.begin();
-               it!=freeNames.end();++it) {
-               CPPUNIT_ASSERT(itsParams2->has(*it));
-               CPPUNIT_ASSERT(itsParams1->has(*it));                              
-               CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
-                                            itsParams1->complexValue(*it)), 0., 5e-3);
-               CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
-                                            itsParams1->complexValue(*it)), 0., 5e-3);
-          }                   
+      void testSolveLSQR() {
+          testSolve("LSQR");
       }
       
+      void testSolvePreAvgSVD() {
+          testSolvePreAvg("SVD");
+      }
       
-      void testApplication() {        
+      void testSolvePreAvgLSQR() {
+          testSolvePreAvg("LSQR");
+      }
+      
+      void testApplication() {
           // check that everything is set up for full stokes
           CPPUNIT_ASSERT(itsIter);
           accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);          
@@ -512,11 +446,94 @@ namespace askap
         }
       
      private:
-      typedef CalibrationME<LeakageTerm> METype;
-      boost::shared_ptr<ComponentEquation> itsCE1, itsCE2;
-      boost::shared_ptr<METype> itsEq1,itsEq2;
-      boost::shared_ptr<scimath::Params> itsParams1, itsParams2;
-      accessors::SharedIter<accessors::DataIteratorStub> itsIter;      
+       typedef CalibrationME<LeakageTerm> METype;
+       boost::shared_ptr<ComponentEquation> itsCE1, itsCE2;
+       boost::shared_ptr<METype> itsEq1,itsEq2;
+       boost::shared_ptr<scimath::Params> itsParams1, itsParams2;
+       accessors::SharedIter<accessors::DataIteratorStub> itsIter;
+
+       void testSolve(const std::string& solverType) {
+           // Predict with the "perfect" parameters"
+           CPPUNIT_ASSERT(itsEq1);
+           itsEq1->predict();
+           std::vector<std::string> freeNames = itsParams2->freeNames();
+           for (std::vector<std::string>::const_iterator it = freeNames.begin();
+                it!=freeNames.end();++it) {
+                if (it->find("leakage") == std::string::npos) {
+                    itsParams2->fix(*it);
+                }
+           }
+
+           for (size_t iter=0; iter<10; ++iter) {
+                // Calculate gradients using "imperfect" parameters"
+                GenericNormalEquations ne; //(*params2);
+
+                itsEq2.reset(new METype(*itsParams2,itsIter,itsCE2));
+
+                itsEq2->calcEquations(ne);
+                Quality q;
+                LinearSolver solver1;
+                solver1.addNormalEquations(ne);
+                solver1.setAlgorithm(solverType);
+                solver1.solveNormalEquations(*itsParams2,q);
+                //std::cout<<q<<std::endl;
+           }
+
+           freeNames = itsParams2->freeNames();
+           for (std::vector<std::string>::const_iterator it = freeNames.begin();
+                it!=freeNames.end();++it) {
+                CPPUNIT_ASSERT(itsParams2->has(*it));
+                CPPUNIT_ASSERT(itsParams1->has(*it));
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
+                                             itsParams1->complexValue(*it)), 0., 5e-3);
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
+                                             itsParams1->complexValue(*it)), 0., 5e-3);
+           }
+       }
+
+       void testSolvePreAvg(const std::string& solverType) {
+           // Predict with the "perfect" parameters"
+           CPPUNIT_ASSERT(itsEq1);
+           itsEq1->predict();
+           std::vector<std::string> freeNames = itsParams2->freeNames();
+           for (std::vector<std::string>::const_iterator it = freeNames.begin();
+                it!=freeNames.end();++it) {
+                if (it->find("leakage") == std::string::npos) {
+                    itsParams2->fix(*it);
+                }
+           }
+
+           typedef CalibrationME<LeakageTerm,PreAvgCalMEBase> PreAvgMEType;
+           boost::shared_ptr<PreAvgMEType> preAvgEq(new PreAvgMEType());
+           CPPUNIT_ASSERT(preAvgEq);
+           itsIter.init();
+           preAvgEq->accumulate(itsIter,itsCE2);
+
+           for (size_t iter=0; iter<10; ++iter) {
+                // Calculate gradients using "imperfect" parameters"
+                GenericNormalEquations ne;
+
+                preAvgEq->setParameters(*itsParams2);
+                preAvgEq->calcEquations(ne);
+
+                Quality q;
+                LinearSolver solver1;
+                solver1.addNormalEquations(ne);
+                solver1.setAlgorithm(solverType);
+                solver1.solveNormalEquations(*itsParams2,q);
+           }
+
+           freeNames = itsParams2->freeNames();
+           for (std::vector<std::string>::const_iterator it = freeNames.begin();
+                it!=freeNames.end();++it) {
+                CPPUNIT_ASSERT(itsParams2->has(*it));
+                CPPUNIT_ASSERT(itsParams1->has(*it));
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
+                                             itsParams1->complexValue(*it)), 0., 5e-3);
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
+                                             itsParams1->complexValue(*it)), 0., 5e-3);
+           }
+       }
     };
   } // namespace synthesis
 
