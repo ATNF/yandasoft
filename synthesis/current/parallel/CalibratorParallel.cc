@@ -334,7 +334,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.norm"))  params["norm"] = parset.getString("solver.LSQR.norm");
     if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
-    if (parset.isDefined("solver.LSQR.suppress_output")) params["suppress_output"] = parset.getString("solver.LSQR.suppress_output");
+    if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
     return params;
 }
 
