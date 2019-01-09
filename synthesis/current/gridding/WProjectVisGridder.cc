@@ -125,14 +125,16 @@ void WProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
 #endif
 
     const casa::Vector<casa::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
+    const casa::Vector<casa::Double> & chanFreq = acc.frequency();
 
     for (int i = 0; i < nSamples; ++i) {
         const double w = (rotatedUVW(i)(2)) / (casa::C::c);
         for (int chan = 0; chan < nChan; ++chan) {
+            /// Calculate the index into the convolution functions
+            const double freq = chanFreq[chan];
+            const int wPlane = getWPlane(w * freq);
             for (int pol = 0; pol < nPol; ++pol) {
-                const double freq = acc.frequency()[chan];
-                /// Calculate the index into the convolution functions
-                itsCMap(i, pol, chan) = getWPlane(w * freq);
+                itsCMap(i, pol, chan) = wPlane;
             }
         }
     }
@@ -350,7 +352,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
             if (isOffsetSupportAllowed()) {
                 setConvFuncOffset(iw, cfSupport.itsOffsetU, cfSupport.itsOffsetV);
             }
-        
+
         }
 
         ASKAPCHECK(itsConvFunc.size() > 0, "Convolution function not sized correctly");

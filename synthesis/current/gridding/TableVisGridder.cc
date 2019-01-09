@@ -37,6 +37,7 @@ ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 #include <casacore/casa/Arrays/ArrayIter.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/Slicer.h>
+#include <casacore/casa/Arrays/Slice.h>
 
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/measures/Measures/UVWMachine.h>
@@ -494,22 +495,44 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    const uint nPol = acc.nPol();
    const casa::Vector<casa::Double>& frequencyList = acc.frequency();
    itsFreqMapper.setupMapping(frequencyList);
+   // make sure the pols haven't changed, since we've made the conversions static
+   static casa::uInt nPolFirst(nPol);
+   //ASKAPASSERT(nPolFirst == nPol);
+   static casa::Vector<casa::Stokes::StokesTypes> stokesFirst(acc.stokes());
+   //ASKAPASSERT(allEQ(stokesFirst, acc.stokes()));
 
    // for now setup the converter inside this method, although it would cause a rebuild
    // of the matrices for every accessor. More intelligent caching is possible with a bit
    // more effort (i.e. one has to detect whether polarisation frames change from the
    // previous call). Need to think about parallactic angle dependence.
+   // Make static and test if we need to reinitialise the converter. OPENMP case needs work...
    #ifdef _OPENMP
-   scimath::PolConverter gridPolConv(syncHelper.copy(acc.stokes()), getStokes());
-   scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
+   scimath::PolConverter polConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
+                                                scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
+   //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
    #else
-   scimath::PolConverter gridPolConv(acc.stokes(), getStokes());
-   scimath::PolConverter degridPolConv(getStokes(),acc.stokes(), false);
+   static scimath::PolConverter polConv = (forward ? scimath::PolConverter(getStokes(),acc.stokes(), false) :
+                                                     scimath::PolConverter(acc.stokes(), getStokes()));
+   if (nPol != nPolFirst  || !allEQ(acc.stokes(), stokesFirst)) {
+     polConv = (forward ? scimath::PolConverter(getStokes(),acc.stokes(), false) :
+                          scimath::PolConverter(acc.stokes(), getStokes()));
+   }
    #endif
 
    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
-   const casa::IPosition onePlane4D(4, itsShape(0), itsShape(1), 1, 1);
-   const casa::IPosition onePlane(2, itsShape(0), itsShape(1));
+   //static const casa::IPosition onePlane4D(4, itsShape(0), itsShape(1), 1, 1);
+   static const casa::IPosition onePlane(2, itsShape(0), itsShape(1));
+   static casa::Matrix<casa::Complex> grid(onePlane);
+   static casa::IPosition ipStart(4, 0, 0, 0, 0);
+   // number of polarisation planes in the grid
+   const casa::uInt nImagePols = (shape().nelements()<=2) ? 1 : shape()[2];
+   // a buffer for the visibility vector in the polarisation frame used for the grid
+   static casa::Vector<casa::Complex> imagePolFrameVis(nImagePols,casa::Complex(0.,0.));
+   static casa::Vector<casa::Complex> polVector(nPol);
+   static casa::Vector<casa::Complex> imagePolFrameNoise(nImagePols);
+   const static casa::IPosition ignoreAxes(0);
+   int lastgInd = -1;
+   int lastimageChan = -1;
 
    // Loop over all samples adding them to the grid
    // First scale to the correct pixel location
@@ -520,6 +543,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
    ASKAPDEBUGASSERT(casa::uInt(nChan) <= frequencyList.nelements());
    ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
+   const casa::Cube<casa::Bool>& flagCube = acc.flag();
+   casa::Cube<casa::Complex>& visCube = acc.rwVisibility();
 
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
@@ -601,8 +626,10 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
            bool allPolGood=true;
            for (uint pol=0; pol<nPol; ++pol) {
-               if (acc.flag()(i, chan, pol))
+               if (flagCube(i, chan, pol)) {
                    allPolGood=false;
+                   break;
+               }
            }
 
            /*
@@ -618,23 +645,16 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            if (allPolGood && itsFreqMapper.isMapped(chan)) {
                // obtain which channel of the image this accessor channel is mapped to
                const int imageChan = itsFreqMapper(chan);
-
-               // number of polarisation planes in the grid
-               const casa::uInt nImagePols = (shape().nelements()<=2) ? 1 : shape()[2];
-
-               // a buffer for the visibility vector in the polarisation frame used for the grid
-               casa::Vector<casa::Complex> imagePolFrameVis(nImagePols,casa::Complex(0.,0.));
-               casa::Vector<casa::Complex> imagePolFrameNoise(nImagePols);
+               ipStart(3) = imageChan;
 
                if (!forward) {
                    if (!isPSFGridder() && !isPCFGridder()) {
-                       imagePolFrameVis = gridPolConv(syncHelper.zVector(acc.visibility(),i,chan));
+                       imagePolFrameVis = polConv(syncHelper.zVector(acc.visibility(),i,chan));
                    }
                    // we just don't need this quantity for the forward gridder, although there would be no
                    // harm to always compute it
-                   imagePolFrameNoise = gridPolConv.noise(syncHelper.zVector(acc.noise(),i,chan));
+                   imagePolFrameNoise = polConv.noise(syncHelper.zVector(acc.noise(),i,chan));
                }
-
                // Now loop over all image polarizations
                for (uint pol=0; pol<nImagePols; ++pol) {
                    // Lookup the portion of grid to be
@@ -642,10 +662,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    const int gInd=gIndex(i, pol, chan);
                    ASKAPCHECK(gInd>-1,"Index into image grid is less than zero");
                    ASKAPCHECK(gInd<int(itsGrid.size()), "Index into image grid exceeds number of planes");
-
-                   /// Make a slicer to extract just this plane
-                   const casa::IPosition ipStart(4, 0, 0, pol, imageChan);
-                   const casa::Slicer slicer(ipStart, onePlane4D);
 
                    // Lookup the convolution function to be
                    // used for this row, polarisation and channel
@@ -671,9 +687,16 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    ASKAPCHECK(support > 0, "Support must be greater than zero, CF["<<cInd<<"] has shape="<<
                               convFunc.shape()<<" giving a support of "<<support);
 
-                   casa::Array<casa::Complex> aGrid(itsGrid[gInd](slicer));
-                   casa::Matrix<casa::Complex> grid(aGrid.nonDegenerate());
-
+                   // This seems to be the quickest way to get a reference to the matrix we want
+                   // It assumes itsGrid is contiguous
+                   ASKAPDEBUGASSERT(itsGrid[gInd].contiguousStorage());
+                   ipStart(2) = pol;
+                   // Check if we need to update the grid reference
+                   if ( nImagePols>1 || imageChan!=lastimageChan || gInd!=lastgInd ) {
+                       grid.takeStorage(onePlane,&itsGrid[gInd](ipStart),casa::SHARE);
+                       lastimageChan = imageChan;
+                       lastgInd = gInd;
+                   }
                    // the following accounts for a possible offset of the convolution function
                    const std::pair<int,int> cfOffset = getConvFuncOffset(beforeOversamplePlaneIndex);
                    const int iuOffset = iu + cfOffset.first;
@@ -700,7 +723,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                            if (itsVisWeight) {
                                cVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
                            }
-                           imagePolFrameVis[pol] += cVis*phasor;
+                           imagePolFrameVis[pol] = cVis*phasor;
                        } else {
                            const casa::Complex visComplexNoise = imagePolFrameNoise[pol];
 
@@ -777,7 +800,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                 itsSamplesGridded+=1.0;
                                 itsNumberGridded+=double((2*support+1)*(2*support+1));
 
-                                // these aren't used. Can parobably also disable the PSF weights
+                                // these aren't used. Can probably also disable the PSF weights
                                 //itsSumWeights(sumWeightsRow, pol, imageChan) += visNoiseWt; //1.0;
                            } // end if pcf needs to be done
 
@@ -786,8 +809,11 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                } // end of pol loop
                // need to write back the result for degridding
                if (forward) {
-                   casa::Vector<casa::Complex> thisPolVector = acc.rwVisibility().yzPlane(i).row(chan);
-                   thisPolVector += degridPolConv(imagePolFrameVis);
+                   //casa::Vector<casa::Complex> thisPolVector = acc.rwVisibility().yzPlane(i).row(chan);
+                   //casa::Vector<casa::Complex> thisPolVector = acc.rwVisibility()(casa::Slice(i),casa::Slice(chan),casa::Slice());
+                   //thisPolVector += degridPolConv(imagePolFrameVis);
+                   polConv.convert(polVector,imagePolFrameVis);
+                   for (uint pol=0; pol<nPol; pol++) visCube(i,chan,pol) += polVector(pol);
                }
            } else { // if (allPolGood)
                if (!forward) {
@@ -1120,6 +1146,10 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
 
     int nPol=itsShape(2);
     int nChan=itsShape(3);
+    ASKAPDEBUGASSERT(out.shape().nelements() == 4);
+    casa::IPosition ipStart(4, 0, 0, 0, 0);
+    casa::IPosition onePlane(4, out.shape()(0), out.shape()(1), 1, 1);
+    casa::Slicer slicer(ipStart, onePlane);
 
     ASKAPCHECK(itsSumWeights.nelements()>0, "Sum of weights not yet initialised");
     int nZ=itsSumWeights.shape()(0);
@@ -1132,10 +1162,8 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
               //              ASKAPLOG_DEBUG_STR(logger, "Sum of conv func " << sumConvFunc);
                 sumwt+=itsSumWeights(iz, pol, chan);
             }
-            ASKAPDEBUGASSERT(out.shape().nelements() == 4);
-            casa::IPosition ipStart(4, 0, 0, pol, chan);
-            casa::IPosition onePlane(4, out.shape()(0), out.shape()(1), 1, 1);
-            casa::Slicer slicer(ipStart, onePlane);
+            ipStart(2) = pol; ipStart(3) = chan;
+            slicer.setStart(ipStart);
             out(slicer).set(sumwt);
         }
     }
@@ -1171,6 +1199,7 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
         itsModelIsEmpty=true;
         itsGrid[0].set(casa::Complex(0.0));
     }
+    ASKAPLOG_INFO_STR(logger,"initialiseDegrid: itsShape="<<itsShape);
 }
 
 /// @brief helper method to initialise frequency mapping

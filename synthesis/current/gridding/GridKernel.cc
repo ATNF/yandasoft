@@ -27,7 +27,7 @@
 /// Use pointers instead of casa::Matrix operators to grid
 //#define ASKAP_GRID_WITH_POINTERS 1
 
-/// Use BLAS 
+/// Use BLAS
 //#define ASKAP_GRID_WITH_BLAS 1
 
 #ifdef ASKAP_GRID_WITH_BLAS
@@ -44,7 +44,7 @@ namespace synthesis {
 std::string GridKernel::info() {
 #ifdef ASKAP_GRID_WITH_BLAS
 	return std::string("Gridding with BLAS");
-#else 
+#else
 #ifdef ASKAP_GRID_WITH_POINTERS
 	return std::string("Gridding with casa::Matrix pointers");
 #else
@@ -94,7 +94,7 @@ void GridKernel::degrid(casa::Complex& cVis,
 		const casa::Matrix<casa::Complex>& grid,
         const int iu, const int iv, const int support) {
 	/// Degridding from grid to visibility. Here we just take a weighted sum of the visibility
-	/// data using the convolution function as the weighting function. 
+	/// data using the convolution function as the weighting function.
 	cVis = 0.0;
 #if defined ( ASKAP_GRID_WITH_POINTERS ) || defined ( ASKAP_GRID_WITH_BLAS )
 	for (int suppv = -support; suppv < +support; suppv++) {
@@ -107,10 +107,14 @@ void GridKernel::degrid(casa::Complex& cVis,
 		cblas_cdotc_sub(2*support+1, gridPtr, 1, wtPtr, 1, &dot);
 		cVis+=dot;
 #else
-		for (int suppu = -support; suppu < +support; suppu++) {
-			cVis += (*wtPtr) * conj(*gridPtr);
-			wtPtr += 1;
-			gridPtr++;
+		//for (int suppu = -support; suppu < +support; suppu++) {
+		//	cVis += (*wtPtr) * conj(*gridPtr);
+		//	wtPtr += 1;
+		//	gridPtr++;
+        // Writing this in real/imag is twice as fast with gcc
+        for (int suppu = -support; suppu < +support; suppu++, wtPtr++, gridPtr++) {
+            cVis += casa::Complex( (*wtPtr).real()*(*gridPtr).real()+(*wtPtr).imag()*(*gridPtr).imag(),
+                                  -(*wtPtr).real()*(*gridPtr).imag()+(*wtPtr).imag()*(*gridPtr).real());
 		}
 #endif
 	}
