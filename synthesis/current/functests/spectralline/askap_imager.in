@@ -1,0 +1,21 @@
+imager.dataset                                = 10uJy_stdtest.ms
+#
+imager.Images.name                            = image.i.cube.spectral
+imager.Images.shape                           = [2048,2048]
+imager.Images.frequency                       = [1.420e9,1.420e9]
+imager.Images.cellsize                        = [6.0arcsec, 6.0arcsec]
+imager.Images.direction                       = [12h30m00.00, -45.00.00.00, J2000]
+#
+imager.gridder                                = WProject
+imager.gridder.WProject.wmax                  = 15000
+imager.gridder.WProject.nwplanes              = 11
+imager.gridder.WProject.oversample            = 4
+imager.gridder.WProject.maxsupport            = 512
+#
+imager.solver                                 = Dirty
+imager.solver.Dirty.tolerance                 = 0.1
+imager.solver.Dirty.verbose                   = True
+imager.ncycles                                = 0
+
+imager.preconditioner.Names                   = None
+
