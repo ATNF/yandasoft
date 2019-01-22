@@ -69,7 +69,7 @@ int main(int argc, const char** argv) {
      casa::uInt countNaNs = 0;
      for (casa::uInt i=0;i<nElements;++i) {
           float val = img(curpos);
-          if (isnan(val)) {
+          if (std::isnan(val)) {
               val = 0;
               ++countNaNs;
           }

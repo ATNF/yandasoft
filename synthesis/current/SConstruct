@@ -31,6 +31,11 @@ if env['usepgi']==0:
 
 else:
         env.AppendUnique(LINKFLAGS=['-latomic'])
+
+if sys.platform  == 'darwin':
+  env.AppendUnique(LINKFLAGS=['-framework', 'Python'])
+
+
 env["ENV"]["PATH"] = os.environ['PATH']
 
 # create build object with library name
@@ -49,6 +54,8 @@ pkg.AddSubPackage("utils")
 pkg.AddSubPackage("measurementequation")
 pkg.AddSubPackage("gridding")
 pkg.AddSubPackage("parallel")
+pkg.AddSubPackage("distributedimager")
+pkg.AddSubPackage("messages")
 pkg.AddSubPackage("simulation")
 pkg.AddSubPackage("deconvolution")
 pkg.AddSubPackage("opcal")
