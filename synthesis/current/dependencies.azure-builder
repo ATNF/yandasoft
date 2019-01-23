@@ -10,3 +10,4 @@ accessors=Code/Base/accessors/current
 #calserviceaccessor=Code/Components/Services/calibration/client-cpp/current
 cmdlineparser=3rdParty/cmdlineparser/cmdlineparser-0.1.1
 casa_components=3rdParty/casa-components/casa-components-1.6.0
+mpe2=3rdParty/mpe2/mpe2-mpich2-1.5
