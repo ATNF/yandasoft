@@ -68,7 +68,7 @@ class ImagerApp : public askap::Application
             try {
 
                 StatReporter stats;
-                
+
                 // Create a subset
 
                 LOFAR::ParameterSet subset(config().makeSubset("Cimager."));
@@ -103,7 +103,8 @@ class ImagerApp : public askap::Application
 
                 // runit
                 imager.run();
-                comms_p.barrier();
+                // comms_p.barrier(); This is failing with craypat instrumentation on.
+                MPI_Barrier(MPI_COMM_WORLD);
                 stats.logSummary();
 
             } catch (const askap::AskapError& e) {
@@ -130,5 +131,5 @@ int main(int argc, char *argv[])
     ImagerApp app;
     app.addParameter("profile", "p", "Write profiling output files", false);
     return app.main(argc, argv);
-    MPI_Barrier(MPI_COMM_WORLD);
+
 }
