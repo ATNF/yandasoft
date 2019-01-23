@@ -7,11 +7,11 @@ export AIPSPATH=${ASKAP_ROOT}/Code/Base/accessors/current
 if [ ! -x ../../apps/imager.sh ]; then
     echo imager.sh does not exit
 fi
-RESTORED=image.restored.wr.1.cont.fits
-IMAGE=image.wr.1.cont.fits
-PSF=psf.image.wr.1.cont.fits
-RESIDUAL=residual.wr.1.cont.fits
-WEIGHTS=weights.wr.1.cont.fits
+RESTORED=image.restored.cont.fits
+IMAGE=image.cont.fits
+PSF=psf.image.cont.fits
+RESIDUAL=residual.cont.fits
+WEIGHTS=weights.cont.fits
 
 
 echo -n "Removing image cubes..."

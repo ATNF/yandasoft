@@ -72,7 +72,9 @@ void ContinuumImager::run(void) {
         ContinuumWorker worker(itsParset,itsComms);
         worker.run();
     }
-    itsComms.barrier(0);
+    ASKAPLOG_INFO_STR(logger,"Reached world barrier");
+    itsComms.barrier(MPI_COMM_WORLD);
+    ASKAPLOG_INFO_STR(logger,"Passed world barrier");
 }
 
 bool ContinuumImager::isMaster(void)
