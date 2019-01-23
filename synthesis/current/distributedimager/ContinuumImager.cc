@@ -73,7 +73,7 @@ void ContinuumImager::run(void) {
         worker.run();
     }
     ASKAPLOG_INFO_STR(logger,"Reached world barrier");
-    itsComms.barrier(MPI_COMM_WORLD);
+    itsComms.barrier(0);
     ASKAPLOG_INFO_STR(logger,"Passed world barrier");
 }
 
