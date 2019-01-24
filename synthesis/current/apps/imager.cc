@@ -32,7 +32,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <mpi.h>
+// #include <mpi.h>
 
 // Boost includes
 #include <boost/scoped_ptr.hpp>
@@ -103,8 +103,7 @@ class ImagerApp : public askap::Application
 
                 // runit
                 imager.run();
-                // comms_p.barrier(); This is failing with craypat instrumentation on.
-                MPI_Barrier(MPI_COMM_WORLD);
+                comms_p.barrier(); // This is failing with craypat instrumentation on.
                 stats.logSummary();
 
             } catch (const askap::AskapError& e) {
