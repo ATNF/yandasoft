@@ -171,7 +171,7 @@ void CalcCore::doCalc()
     ASKAPCHECK(itsNe, "NormalEquations not defined");
     itsEquation->calcEquations(*itsNe);
 
-    ASKAPLOG_DEBUG_STR(logger,"Calculated normal equations in "<< timer.real()
+    ASKAPLOG_INFO_STR(logger,"Calculated normal equations in "<< timer.real()
                       << " seconds ");
 
 }
@@ -197,6 +197,11 @@ void CalcCore::zero() {
   zeroRef.zero(*itsModel);
 }
 
+void CalcCore::updateSolver() {
+  ASKAPLOG_INFO_STR(logger,"Updating the Ne in the solver with the current NE set");
+  itsSolver->init();
+  itsSolver->addNormalEquations(*itsNe);
+}
 void CalcCore::init()
 {
 
@@ -345,7 +350,19 @@ void CalcCore::restoreImage()
     ASKAPDEBUGASSERT(template_solver);
     ImageSolverFactory::configurePreconditioners(itsParset, ir);
     ir->configureSolver(*template_solver);
-    ir->copyNormalEquations(*template_solver);
+
+    try {
+      ir->copyNormalEquations(*template_solver);
+    }
+    catch (...) {
+      template_solver->addNormalEquations(*itsNe);
+      try {
+          ir->copyNormalEquations(*template_solver);
+      }
+      catch (...) {
+        throw;
+      }
+    }
 
     Quality q;
     ir->solveNormalEquations(*itsModel, q);

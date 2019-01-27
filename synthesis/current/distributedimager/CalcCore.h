@@ -79,6 +79,8 @@ namespace cp {
 
         void init();
 
+        void updateSolver();
+
         void reset();
 
         void zero();

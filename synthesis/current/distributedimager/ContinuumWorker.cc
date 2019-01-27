@@ -887,20 +887,13 @@ void ContinuumWorker::processChannels()
         /// IF dont locally then we solve - update the model and go again until we reach the majorcycle count.
 
 
-        if (localSolver) {
-          try {
-            rootImager.solveNE();
-          } catch (const askap::AskapError& e) {
-            ASKAPLOG_WARN_STR(logger, "Askap error in solver:" << e.what());
 
-            throw;
-          }
-        }
-        if (localSolver && nCycles == 0) {
+
+        if (localSolver && (majorCycleNumber == nCycles)) { // done the last cycle
           stopping = true;
-          ASKAPLOG_INFO_STR(logger,"Worker stopping");
           break;
         }
+
 
 
         else if (!localSolver){ // probably continuum mode ....
@@ -944,16 +937,22 @@ void ContinuumWorker::processChannels()
           }
 
         }
-        if (majorCycleNumber == nCycles - 1) {
-          // This stops me zeroing the NE before the restore solver runs. So we
-          ASKAPLOG_INFO_STR(logger, "Reached maximum majorcycle count will stop");
 
+        if (!localSolver && (majorCycleNumber == nCycles -1)) {
           stopping = true;
+        }
+        
+        if (!stopping && localSolver) {
+          try {
+            rootImager.solveNE();
+          } catch (const askap::AskapError& e) {
+            ASKAPLOG_WARN_STR(logger, "Askap error in solver:" << e.what());
 
-          if (localSolver) {
-            break; // should be done if I am in local solver mode.
+            throw;
           }
-
+        }
+        else if (stopping && localSolver) {
+          break; // should be done if I am in local solver mode.
         }
 
         if (!stopping && updateDir){
@@ -978,20 +977,21 @@ void ContinuumWorker::processChannels()
           // So we need to calcNE again with the latest model before the major cycle starts.
           //
           // If we are using updateDir we reprocess all the workunits - so this is not needed.
-
+          ASKAPLOG_INFO_STR(logger, "Continuuing - Reset normal equations");
           rootImager.getNE()->reset();
 
           // we have found that resetting the NE is causing some problems after r10290.
 
           try {
             rootImager.calcNE();
-
           }
           catch (const askap::AskapError& e) {
             ASKAPLOG_WARN_STR(logger, "Askap error in calcNE after majorcycle: " << e.what());
 
           }
         }
+
+
 
       }
       ASKAPLOG_INFO_STR(logger," Finished the major cycles");
@@ -1006,6 +1006,9 @@ void ContinuumWorker::processChannels()
         return;
       }
 
+      if (localSolver) {
+        rootImager.updateSolver();
+      }
 
       // At this point we have finished our last major cycle. We have the "best" model from the
       // last minor cycle. Which should be in the archive - or full coordinate system
@@ -1230,21 +1233,56 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   // Pre-conditions
   if (!params->has("model.slice")) {
     ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
-    return;
+
+  } else // Write image
+  {
+    ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
+    const casa::Array<double> imagePixels(params->value("model.slice"));
+    casa::Array<float> floatImagePixels(imagePixels.shape());
+    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    itsImageCube->writeSlice(floatImagePixels, chan);
   }
+
+
+
   if (!params->has("psf.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
-    return;
+  }
+  else {
+    // Write PSF
+
+    ASKAPLOG_INFO_STR(logger, "Writing PSF");
+    const casa::Array<double> imagePixels(params->value("psf.slice"));
+    casa::Array<float> floatImagePixels(imagePixels.shape());
+    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    itsPSFCube->writeSlice(floatImagePixels, chan);
+
   }
   if (!params->has("residual.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
-    return;
-  }
-  if (!params->has("weights.slice")) {
-    ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-    return;
+
+  } else
+  {
+    // Write residual
+    ASKAPLOG_INFO_STR(logger, "Writing Residual");
+    const casa::Array<double> imagePixels(params->value("residual.slice"));
+    casa::Array<float> floatImagePixels(imagePixels.shape());
+    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    itsResidualCube->writeSlice(floatImagePixels, chan);
   }
 
+  if (!params->has("weights.slice")) {
+    ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
+
+  }
+  else
+  {
+    ASKAPLOG_INFO_STR(logger, "Writing Weights");
+    const casa::Array<double> imagePixels(params->value("weights.slice"));
+    casa::Array<float> floatImagePixels(imagePixels.shape());
+    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    itsWeightsCube->writeSlice(floatImagePixels, chan);
+  }
 
   if (itsParset.getBool("restore", false)) {
     ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
@@ -1259,43 +1297,6 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     recordBeam(axes, chan);
     storeBeam(chan);
   }
-
-  // Write image
-  {
-    ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    const casa::Array<double> imagePixels(params->value("model.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsImageCube->writeSlice(floatImagePixels, chan);
-  }
-
-  // Write PSF
-  {
-    ASKAPLOG_INFO_STR(logger, "Writing PSF");
-    const casa::Array<double> imagePixels(params->value("psf.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsPSFCube->writeSlice(floatImagePixels, chan);
-  }
-
-  // Write residual
-  {
-    ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    const casa::Array<double> imagePixels(params->value("residual.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsResidualCube->writeSlice(floatImagePixels, chan);
-  }
-
-  // Write weights
-  {
-    ASKAPLOG_INFO_STR(logger, "Writing Weights");
-    const casa::Array<double> imagePixels(params->value("weights.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsWeightsCube->writeSlice(floatImagePixels, chan);
-  }
-
 
   if (itsParset.getBool("restore", false)) {
 
