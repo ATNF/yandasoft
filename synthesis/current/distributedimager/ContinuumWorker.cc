@@ -941,7 +941,7 @@ void ContinuumWorker::processChannels()
         if (!localSolver && (majorCycleNumber == nCycles -1)) {
           stopping = true;
         }
-        
+
         if (!stopping && localSolver) {
           try {
             rootImager.solveNE();
@@ -989,6 +989,23 @@ void ContinuumWorker::processChannels()
             ASKAPLOG_WARN_STR(logger, "Askap error in calcNE after majorcycle: " << e.what());
 
           }
+        }
+        else if (stopping && !localSolver) {
+          ASKAPLOG_INFO_STR(logger, "Not local solver but last run - Reset normal equations");
+          rootImager.getNE()->reset();
+
+          if (!updateDir) {
+
+            try {
+              rootImager.calcNE();
+            }
+            catch (const askap::AskapError& e) {
+              ASKAPLOG_WARN_STR(logger, "Askap error in calcNE after majorcycle: " << e.what());
+
+            }
+
+          }
+
         }
 
 
