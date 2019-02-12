@@ -173,7 +173,7 @@ void MEParallel::reduceNE(askap::scimath::INormalEquations::ShPtr ne)
 
     // Number of processes in the reduction
     int nProcs = itsComms.nProcs();
-    int nProcsPerGroup = nProcs;
+    int nProcsPerGroup = nProcs - 1 ;
 
     // Rank (zero-based)
     int rank = itsComms.rank();
