@@ -145,6 +145,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       what2solve<<"'");
 
   init(parset);
+
   if (itsComms.isMaster()) {
 
       /// Create the solver
@@ -213,6 +214,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
   }
   if (itsComms.isWorker()) {
 
+      // Todo: replace these with a single parameter: Channels(chanperworker,chunk) and move to init
       const int chunkSize = parset.getInt32("chanperworker",0);
       ASKAPCHECK(chunkSize >= 0, "Number of channels per worker cannot be negative, you have "<<chunkSize);
       itsChannelsPerWorker = static_cast<casa::uInt>(chunkSize);
@@ -325,6 +327,14 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       // a greater reuse of the measurement equation could probably be achieved
       // at this stage we cache just the "perfect" ME, but recreate calibration ME.
       itsEquation.reset();
+
+      const casa::uInt nChan = parset.getInt32("chanperworker",0);
+      if (nChan > 0) {
+          const casa::uInt nAnt = parset.getInt32("nAnt",36);
+          const casa::uInt nBeam = parset.getInt32("nBeam",1);
+          updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
+      }
+
   }
 }
 
