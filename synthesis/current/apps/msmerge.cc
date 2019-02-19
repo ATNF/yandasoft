@@ -391,8 +391,10 @@ void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& s
     ASKAPLOG_INFO_STR(logger,  "tileshape="<< tileShape(0) << ","<<tileShape(1)<<","<<tileShape(2) );
     // 2: Size the matrix for data and flag
     const uInt nPol = sc.data()(0).shape()(0);
-    const uInt nChan = sc.data()(0).shape()(1);
-    const uInt nChanTotal = nChan * srcMscs.size();
+    uInt nChanTotal = 0;
+    for (uInt i = 0; i < srcMscs.size(); i++) {
+        nChanTotal += srcMscs[i]->data().shape(0)(1);
+    }
     casa::Cube<casa::Complex> data(nPol, nChanTotal,tileShape(2));
     casa::Cube<casa::Bool> flag(nPol, nChanTotal,tileShape(2));
 
@@ -434,14 +436,16 @@ void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& s
         }
 
         // 3: Copy the data from each input into the output matrix
+        uInt destChan = 0;
         for (uInt i = 0; i < srcMscs.size(); ++i) {
             const casa::Cube<casa::Complex> srcData = srcMscs[i]->data().getColumnRange(rowslicer);
             const casa::Cube<casa::Bool> srcFlag = srcMscs[i]->flag().getColumnRange(rowslicer);
-            uInt destChan = nChan * i;
+            const uInt nChan = srcMscs[i]->data().shape(0)(1);
             for (uInt irow = 0; irow < nRowsThisIteration; irow++) {
                 data(Slice(), Slice(destChan,nChan), irow) = srcData(Slice(), Slice(), irow);
                 flag(Slice(), Slice(destChan,nChan), irow) = srcFlag(Slice(), Slice(), irow);
             }
+            destChan += nChan;
         }
         // 4: Add those merged cells
         dc.data().putColumnRange(rowslicer, data);
@@ -456,16 +460,17 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
     std::vector< boost::shared_ptr<const casa::MeasurementSet> > in;
     std::vector< boost::shared_ptr<const ROMSColumns> > inColumns;
     std::vector<std::string>::const_iterator it;
+    uInt nChanOut = 0;
     for (it = inFiles.begin(); it != inFiles.end(); ++it) {
         const boost::shared_ptr<const casa::MeasurementSet> p(new casa::MeasurementSet(*it));
         in.push_back(p);
         inColumns.push_back(boost::shared_ptr<const ROMSColumns>(new ROMSColumns(*p)));
+        nChanOut += inColumns.back()->data().shape(0)(1);
     }
     if (tileNcorr < 1) tileNcorr = 1;
     if (tileNchan < 1) tileNchan = 1;
     // Set tileNrow large, but not so large that caching takes > 1GB
     if (tileNrow==0) {
-        casa::uInt nChanOut = (**(inColumns.begin())).spectralWindow().numChan()(0) * in.size();
         const casa::uInt nTilesPerRow = (nChanOut-1)/tileNchan+1;
         const casa::uInt bucketSize = std::max(8192u,1024*1024*1024/nTilesPerRow);
         tileNrow = std::max(1u,bucketSize / (8 * tileNcorr * tileNchan));
