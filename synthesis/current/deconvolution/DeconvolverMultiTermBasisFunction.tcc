@@ -278,7 +278,7 @@ namespace askap {
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
 
                     // Calculate transform of residual image
-                    Array<FT> residualFFT(this->dirty(term).shape().nonDegenerate());
+                    Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate());
                     residualFFT.set(FT(0.0));
                     casa::setReal(residualFFT, this->dirty(term).nonDegenerate());
                     scimath::fft2d(residualFFT, true);
@@ -290,7 +290,7 @@ namespace askap {
                     scimath::fft2d(basisFunctionFFT, true);
 
                     // Calculate product and transform back
-                    Array<FT> work(this->dirty(term).nonDegenerate().shape());
+                    Matrix<FT> work(this->dirty(term).shape().nonDegenerate());
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
                     // Removing the extra convolution with PSF0. Leave text here temporarily.
                     //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
@@ -417,7 +417,8 @@ namespace askap {
                     itsPSFCrossTerms(base, base1).resize(this->itsNumberTerms, this->itsNumberTerms);
                     for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
                         for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
-                            itsPSFCrossTerms(base, base1)(term1, term2).resize(subPsfShape);
+                            // should not have to do this, since assigment happens below
+                            //itsPSFCrossTerms(base, base1)(term1, term2).resize(subPsfShape);
                         }
                     }
                 }
@@ -442,10 +443,12 @@ namespace askap {
                                                    << " centre = " << real(work(subPsfPeak)));
                             // Remember that casa::Array reuses the same memory where possible so this
                             // apparent redundancy does not cause any memory bloat
+                            // I don't think that is true here: simple assigment does not share memory only the copy constructor does
+                            // Need to use .reference() to get the behavior wanted
                             itsPSFCrossTerms(base1, base2)(term1, term2) = real(work);
-                            itsPSFCrossTerms(base2, base1)(term1, term2) = itsPSFCrossTerms(base1, base2)(term1, term2);
-                            itsPSFCrossTerms(base1, base2)(term2, term1) = itsPSFCrossTerms(base1, base2)(term1, term2);
-                            itsPSFCrossTerms(base2, base1)(term2, term1) = itsPSFCrossTerms(base1, base2)(term1, term2);
+                            itsPSFCrossTerms(base2, base1)(term1, term2).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
+                            itsPSFCrossTerms(base1, base2)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
+                            itsPSFCrossTerms(base2, base1)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
                             if (base1 == base2) {
                                 itsCouplingMatrix(base1)(term1, term2) = real(work(subPsfPeak));
                                 itsCouplingMatrix(base1)(term2, term1) = real(work(subPsfPeak));
@@ -503,6 +506,29 @@ namespace askap {
             return True;
         }
 
+        // Helper function to replace minMaxMasked calls when we only need the abs maximum
+        template<class T>
+        void absMaxPosMasked(T& maxVal, IPosition&  maxPos,  const Matrix<T>& im, const Matrix<T>& mask)
+        {
+            maxVal = T(0);
+            const uInt ncol = mask.ncolumn();
+            const uInt nrow = mask.nrow();
+            for (uInt j = 0; j < ncol; j++ ) {
+                const T* pIm = &im(0,j);
+                const T* pMask = &mask(0,j);
+                for (uInt i = 0; i < nrow; i++ ) {
+                    //T val = abs(mask(i,j) * im(i,j));
+                    T val = abs(*pIm++ * *pMask++);
+                    if (val > maxVal) {
+                        maxVal = val;
+                        maxPos(0) = i;
+                        maxPos(1) = j;
+                    }
+                }
+            }
+        }
+
+
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::getCoupledResidual(T& absPeakRes) {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction:::getCoupledResidual");
@@ -520,8 +546,11 @@ namespace askap {
                     casa::IPosition maxPos(2, 0);
                     T minVal(0.0), maxVal(0.0);
                     if (isWeighted) {
-                        casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(term),
-                                           this->itsWeight(0).nonDegenerate());
+                        const casa::Matrix<T> res = this->itsResidualBasis(base)(term);
+                        const casa::Matrix<T> wt = this->itsWeight(0).nonDegenerate();
+                        absMaxPosMasked(maxVal, maxPos, res, wt);
+                        //casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(term),
+                        //                   this->itsWeight(0).nonDegenerate());
                     } else {
                         casa::minMax(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(term));
                     }
@@ -569,7 +598,7 @@ namespace askap {
             Vector<T> maxValues(this->itsNumberTerms);
 
             // Set the mask - we need it for weighted search and deep clean
-            Array<T> mask;
+            Matrix<T> mask;
             if (isWeighted) {
                 mask = this->itsWeight(0).nonDegenerate();
                 if  (this->itsSolutionType == "MAXCHISQ") {
@@ -609,8 +638,10 @@ namespace askap {
                 // Look for the maximum in term=0 for this base
                 if (this->itsSolutionType == "MAXBASE") {
                     if (haveMask) {
-                        casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),
-                                           mask);
+                        const casa::Matrix<T> res = this->itsResidualBasis(base)(0);
+                        absMaxPosMasked(maxVal, maxPos, res, mask);
+//                      casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
+
                     } else {
                         casa::minMax(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0));
                     }
@@ -759,9 +790,6 @@ namespace askap {
               if (!deepCleanMode()) ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
               setDeepCleanMode(True);
             }
-
-            uInt nx(this->psf(0).shape()(0));
-            uInt ny(this->psf(0).shape()(1));
 
             // Now we adjust model and residual for this component
             const casa::IPosition residualShape(this->dirty(0).shape().nonDegenerate());
