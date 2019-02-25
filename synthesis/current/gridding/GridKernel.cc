@@ -59,19 +59,25 @@ void GridKernel::grid(casa::Matrix<casa::Complex>& grid,
 		const int iu, const int iv, const int support) {
 
 #if defined ( ASKAP_GRID_WITH_POINTERS ) || defined ( ASKAP_GRID_WITH_BLAS )
+#if defined ( ASKAP_GRID_WITH_POINTERS )
+    casa::Float rVis = cVis.real();
+    casa::Float iVis = cVis.imag();
+#endif
 	for (int suppv = -support; suppv < +support; suppv++) {
 		const int voff = suppv + support;
 		const int uoff = -support + support;
-		casa::Complex *wtPtr = &convFunc(uoff, voff);
-		casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 #ifdef ASKAP_GRID_WITH_BLAS
+        casa::Complex *wtPtr = &convFunc(uoff, voff);
+        casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 		cblas_caxpy(2*support+1, &cVis, wtPtr, 1, gridPtr, 1);
 #else
-		for (int suppu = -support; suppu < +support; suppu++) {
-			(*gridPtr) += cVis * (*wtPtr);
-			wtPtr += 1;
-			gridPtr++;
-		}
+        // Writing the multiply in real/imag is twice as fast with gcc
+        casa::Float *wtPtrF = reinterpret_cast<casa::Float *> (&convFunc(uoff, voff));
+        casa::Float *gridPtrF = reinterpret_cast<casa::Float *> (&grid(iu - support, iv + suppv));
+        for (int suppu = -support; suppu < +support; suppu++, wtPtrF+=2, gridPtrF+=2) {
+            gridPtrF[0] += rVis * wtPtrF[0] - iVis * wtPtrF[1];
+            gridPtrF[1] += rVis * wtPtrF[1] + iVis * wtPtrF[0];
+    	}
 #endif
 	}
 #else
@@ -100,18 +106,15 @@ void GridKernel::degrid(casa::Complex& cVis,
 	for (int suppv = -support; suppv < +support; suppv++) {
 		const int voff = suppv + support;
 		const int uoff = -support + support;
-		const casa::Complex *wtPtr = &convFunc(uoff, voff);
-		const casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
+        const casa::Complex *wtPtr = &convFunc(uoff, voff);
+        const casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 #ifdef ASKAP_GRID_WITH_BLAS
 		casa::Complex dot;
 		cblas_cdotc_sub(2*support+1, gridPtr, 1, wtPtr, 1, &dot);
 		cVis+=dot;
 #else
-		//for (int suppu = -support; suppu < +support; suppu++) {
-		//	cVis += (*wtPtr) * conj(*gridPtr);
-		//	wtPtr += 1;
-		//	gridPtr++;
-        // Writing this in real/imag is twice as fast with gcc
+        // Writing the multiply in real/imag is twice as fast with gcc
+        // Doing the 'reinterpret_cast' thing to avoid complex like in grid, doesn't help here.
         for (int suppu = -support; suppu < +support; suppu++, wtPtr++, gridPtr++) {
             cVis += casa::Complex( (*wtPtr).real()*(*gridPtr).real()+(*wtPtr).imag()*(*gridPtr).imag(),
                                   -(*wtPtr).real()*(*gridPtr).imag()+(*wtPtr).imag()*(*gridPtr).real());
