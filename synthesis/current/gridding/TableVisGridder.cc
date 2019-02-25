@@ -550,6 +550,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
    const casa::Cube<casa::Bool>& flagCube = acc.flag();
    casa::Cube<casa::Complex>& visCube = acc.rwVisibility();
+   const casa::Cube<casa::Complex>& roVisCube = acc.visibility();
+   const casa::Cube<casa::Complex>& roVisNoise = acc.noise();
 
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
@@ -654,11 +656,13 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
                if (!forward) {
                    if (!isPSFGridder() && !isPCFGridder()) {
-                       itsImagePolFrameVis = itsPolConv(syncHelper.zVector(acc.visibility(),i,chan));
+                       for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = roVisCube(i,chan,pol);
+                       itsPolConv.convert(itsImagePolFrameVis,itsPolVector);
                    }
                    // we just don't need this quantity for the forward gridder, although there would be no
                    // harm to always compute it
-                   itsImagePolFrameNoise = itsPolConv.noise(syncHelper.zVector(acc.noise(),i,chan));
+                   for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = roVisNoise(i,chan,pol);
+                   itsPolConv.noise(itsImagePolFrameNoise,itsPolVector);
                }
                // Now loop over all image polarizations
                for (uint pol=0; pol<nImagePols; ++pol) {
