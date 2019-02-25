@@ -194,7 +194,7 @@ namespace askap
     {
         ASKAPTRACE("ImageSolver::doPreconditioning");
 
-        casa::Array<float> oldPSF(psf.copy());
+        //casa::Array<float> oldPSF(psf.copy());
 	    bool status=false;
 	    for(std::map<int, IImagePreconditioner::ShPtr>::const_iterator pciter=itsPreconditioners.begin(); pciter!=itsPreconditioners.end(); pciter++)
 	    {
