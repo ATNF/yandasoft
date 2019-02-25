@@ -45,7 +45,7 @@ namespace askap
         /// for the w term in the full synthesis measurement equation.
         ///
         /// The convolution function is calculated straightforwardly
-        /// by constructing an image of the complex w-dependent 
+        /// by constructing an image of the complex w-dependent
         /// phasor and Fourier transforming. The calculation is
         /// done using a coarse but large grid in image space so
         /// that it is sub-sampled in uv space.
@@ -64,12 +64,13 @@ namespace askap
                 /// @param maxSupport Maximum support to be allowed
                 /// @param limitSupport Upper limit of support
                 /// @param name Name of table to save convolution function into
-                //
+                /// @param alpha spheroidal function alpha value
+                /// @param useDouble Use Double precision for the convolution functions
                 WProjectVisGridder(const double wmax, const int nwplanes,
                         const double cutoff, const int overSample,
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
-                        const float alpha=1.);
+                        const float alpha=1., const bool useDouble=true);
 
                 virtual ~WProjectVisGridder();
 
@@ -86,16 +87,16 @@ namespace askap
                 /// @details We specify parameters per gridder type in the parset file.
                 /// This method returns the gridder name which should be used to extract
                 /// a subset of parameters for createGridder method.
-                static inline std::string gridderName() { return "WProject";}				
+                static inline std::string gridderName() { return "WProject";}
 
                 /// @brief static method to create gridder
                 /// @details Each gridder should have a static factory method, which is
                 /// able to create a particular type of the gridder and initialise it with
-                /// the parameters taken form the given parset. It is assumed that the 
+                /// the parameters taken form the given parset. It is assumed that the
                 /// method receives a subset of parameters where the gridder name is already
-                /// taken out. 
+                /// taken out.
                 /// @param[in] parset input parset file
-                /// @return a shared pointer to the gridder instance					 
+                /// @return a shared pointer to the gridder instance
                 static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
             protected:
@@ -107,14 +108,21 @@ namespace askap
                 void configureGridder(const LOFAR::ParameterSet& parset);
 
                 /// @brief obtain buffer used to create convolution functions
-                /// @return a reference to the buffer held as a shared pointer   
-                casa::Matrix<casa::DComplex> getCFBuffer() const; 
+                /// @return a reference to the buffer held as a shared pointer
+                casa::Matrix<casa::DComplex> getCFBuffer() const;
+
+                /// @brief obtain buffer used to create convolution functions
+                /// @return a reference to the buffer held as a shared pointer
+                casa::Matrix<casa::Complex> getCFBufferF() const;
 
                 /// @brief initialise buffer for full-sized convolution function
                 /// @param[in] uSize size in U
                 /// @param[in] vSize size in V
-                inline void initCFBuffer(casa::uInt uSize, casa::uInt vSize) 
-                { itsCFBuffer.reset(new casa::Matrix<casa::DComplex>(uSize,vSize)); } 
+                inline void initCFBuffer(casa::uInt uSize, casa::uInt vSize)
+                {
+                    if(itsDoubleCF) itsCFBuffer.reset(new casa::Matrix<casa::DComplex>(uSize,vSize));
+                    else itsCFBufferF.reset(new casa::Matrix<casa::Complex>(uSize,vSize));
+                }
 
                 /// @brief initialise sum of weights
                 /// @details We keep track the number of times each convolution function is used per
@@ -140,7 +148,7 @@ namespace askap
 
                 /// @brief largest possible support size
                 /// @details Gridders search for support starting from the size returned by this method.
-                /// @return maximum possible support of convolution function 
+                /// @return maximum possible support of convolution function
                 inline int maxSupport() const { return itsMaxSupport; }
 
                 /// @brief truncate support, if necessary
@@ -154,7 +162,7 @@ namespace askap
                 /// @details Define the region of significant power in CF using support + offsets.
                 struct CFSupport {
                     /// @brief support size
-                    int itsSize; 
+                    int itsSize;
                     /// @brief offset in u of the centre w.r.t. the centre of the array (i.e. centred gaussian would have 0)
                     int itsOffsetU;
                     /// @brief offset in v of the centre w.r.t. the centre of the array (i.e. centred gaussian would have 0)
@@ -167,14 +175,21 @@ namespace askap
                 };
 
                 /// @brief search for support parameters
-                /// @details This method encapsulates support search operation, taking into account the 
+                /// @details This method encapsulates support search operation, taking into account the
                 /// cutoff parameter and whether or not an offset is allowed.
                 /// @param[in] cfPlane const reference to 2D plane with the convolution function
-                /// @return an instance of CFSupport with support parameters 
+                /// @return an instance of CFSupport with support parameters
                 CFSupport extractSupport(const casa::Matrix<casa::DComplex> &cfPlane) const;
 
+                /// @brief search for support parameters
+                /// @details This method encapsulates support search operation, taking into account the
+                /// cutoff parameter and whether or not an offset is allowed.
+                /// @param[in] cfPlane const reference to 2D plane with the convolution function
+                /// @return an instance of CFSupport with support parameters
+                CFSupport extractSupport(const casa::Matrix<casa::Complex> &cfPlane) const;
+
                 /// @brief support is plane-dependent?
-                /// @return true, if support should be searched individually for every CF cache plane 
+                /// @return true, if support should be searched individually for every CF cache plane
                 inline bool isSupportPlaneDependent() const { return itsPlaneDependentCFSupport; }
 
                 /// @brief configure support search
@@ -199,9 +214,9 @@ namespace askap
                 /// @param[in] flag true, if cutoff should be treated as an absolute value
                 inline void setAbsCutoffFlag(const bool flag) { itsCutoffAbs = flag; }
 
-            private:    
+            private:
                 /// @brief assignment operator
-                /// @details Defined as private, so it can't be called (to enforce usage of the 
+                /// @details Defined as private, so it can't be called (to enforce usage of the
                 /// copy constructor
                 /// @param[in] other input object
                 /// @return reference to itself
@@ -218,9 +233,9 @@ namespace askap
 
                 /// @brief true to search for plane-dependent support
                 /// @details itsSupport is the support for the first plane in this case (usually the largest)
-                bool itsPlaneDependentCFSupport;      
+                bool itsPlaneDependentCFSupport;
 
-                /// @brief true if the support can be offset        
+                /// @brief true if the support can be offset
                 /// @details If this parameter is true, offset convolution functions will be built.
                 bool itsOffsetSupportAllowed;
 
@@ -228,12 +243,18 @@ namespace askap
                 /// @details We have to calculate convolution functions on a larger grid and then cut out
                 /// a limited support out of it. Mosaicing gridders may need to compute a significant number
                 /// of convolution functions. To speed things up, the allocation of the buffer is taken
-                /// outside initConvolutionFunction method. A shared pointer to this buffer is held as a 
+                /// outside initConvolutionFunction method. A shared pointer to this buffer is held as a
                 /// data member as initialisation and usage happen in different methods of this class.
-                boost::shared_ptr<casa::Matrix<casa::DComplex> > itsCFBuffer;  
+                boost::shared_ptr<casa::Matrix<casa::DComplex> > itsCFBuffer;
+
+                /// @brief buffer for full-sized convolution function - Single precision version
+                boost::shared_ptr<casa::Matrix<casa::Complex> > itsCFBufferF;
 
                 /// @brief itsCutoff is an absolute cutoff, rather than relative to the peak of a particular CF plane
-                bool itsCutoffAbs;       
+                bool itsCutoffAbs;
+
+                /// @brief Are we using a double precision CF Buffer?
+                bool itsDoubleCF;
         };
     }
 }
