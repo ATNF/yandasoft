@@ -39,8 +39,9 @@ ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/lattices/Lattices/SubLattice.h>
-#include <casacore/lattices/Lattices/ArrayLattice.h>
-#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+//#include <casacore/lattices/Lattices/ArrayLattice.h>
+//#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+#include <fft/FFTWrapper.h>
 #include <casacore/lattices/LEL/LatticeExpr.h>
 
 // for debugging - to export intermediate images
@@ -59,17 +60,17 @@ namespace askap
 
     bool WienerPreconditioner::itsUseCachedPcf = false;
     double WienerPreconditioner::itsAveWgtSum = 0.0;
-    casa::Array<float> WienerPreconditioner::itsPcf;
+    casa::Matrix<float> WienerPreconditioner::itsPcf;
 
     WienerPreconditioner::WienerPreconditioner() :
         itsParameter(0.0), itsDoNormalise(false), itsUseRobustness(false)
     {
     }
-    
+
     /// @brief constructor with explicitly defined noise power
     /// @param[in] noisepower parameter of the
     /// @param[in] normalise if true, PSF is normalised during filter construction
-    WienerPreconditioner::WienerPreconditioner(float noisepower, bool normalise) : 
+    WienerPreconditioner::WienerPreconditioner(float noisepower, bool normalise) :
             itsParameter(noisepower), itsDoNormalise(normalise),
             itsUseRobustness(false) {}
 
@@ -78,31 +79,32 @@ namespace askap
     /// the robustness parameter
     /// @param[in] robustness robustness parameter (roughly matching Briggs' weighting)
     /// @note Normalisation of PSF is always used when noise power is defined via robustness
-    WienerPreconditioner::WienerPreconditioner(float robustness) : itsParameter(robustness), 
+    WienerPreconditioner::WienerPreconditioner(float robustness) : itsParameter(robustness),
             itsDoNormalise(true), itsUseRobustness(true) {}
-        
-        
+
+
     /// @brief copy constructor
     /// @param[in] other an opject to copy from
     WienerPreconditioner::WienerPreconditioner(const WienerPreconditioner &other) :
           IImagePreconditioner(other),
-          itsParameter(other.itsParameter), itsDoNormalise(other.itsDoNormalise), 
+          itsParameter(other.itsParameter), itsDoNormalise(other.itsDoNormalise),
           itsUseRobustness(other.itsUseRobustness)
     {
        if (other.itsTaperCache) {
            itsTaperCache.reset(new GaussianTaperCache(*(other.itsTaperCache)));
        }
-    }      
-        
+    }
+
     IImagePreconditioner::ShPtr WienerPreconditioner::clone()
     {
         return IImagePreconditioner::ShPtr(new WienerPreconditioner(*this));
     }
-    
+
     bool WienerPreconditioner::doPreconditioning(casa::Array<float>& psf,
                                                  casa::Array<float>& dirty,
                                                  casa::Array<float>& pcfIn) const
     {
+      // Note this routine uses generic arrays, but they are really always 2d Matrices, all with the same shape
       ASKAPTRACE("WienerPreconditioner::doPreconditioning");
       if (!itsUseRobustness && (itsParameter < 1e-6)) {
           return false;
@@ -112,16 +114,15 @@ namespace askap
           "Dirty image and PSF do not conform - shapes: " <<
           dirty.shape() << " & " << psf.shape());
 
-      const casa::IPosition shape = psf.shape();
+      const casa::IPosition shape(2,psf.shape()(0),psf.shape()(1));
 
       bool useCachedFilter = true;
       if (itsWienerfilter.shape() == 0) {
         useCachedFilter = false;
-        itsWienerfilter = casa::ArrayLattice<casa::Complex>(shape);
+        itsWienerfilter.resize(shape);
       }
 
       bool newFilter = true;
-      //casa::Array<float> pcf;
       if (itsUseCachedPcf) {
           // If the preconditioner function is cached, use that.
           if (useCachedFilter) {
@@ -132,18 +133,18 @@ namespace askap
       } else if (pcfIn.shape() == 0) {
           // If the preconditioner function is undefined, use the psf
           ASKAPLOG_INFO_STR(logger, "Applying old-style Wiener filter");
-          itsPcf.reference(psf);
+          itsPcf.reference(psf.nonDegenerate());
           // could also use the stored version, but leave for now.
           useCachedFilter = false;
           newFilter = false;
       } else {
-          ASKAPLOG_INFO_STR(logger, "Applying Wiener filter");
+          ASKAPLOG_INFO_STR(logger, "Applying Wiener filter " <<psf.shape() << dirty.shape() <<pcfIn.shape());
           //itsPcf.reference(pcfIn);
-          itsPcf = pcfIn.copy();
+          itsPcf = pcfIn.nonDegenerate();
       }
-      ASKAPCHECK(itsPcf.shape().conform(psf.shape()),
+      ASKAPCHECK(itsPcf.shape().conform(shape),
           "PSF and preconditioner function do not conform - shapes: " <<
-          psf.shape() << " & " << itsPcf.shape());
+          shape << " & " << itsPcf.shape());
 
       if (itsUseRobustness) {
           ASKAPLOG_INFO_STR(logger,
@@ -151,11 +152,6 @@ namespace askap
       } else {
           ASKAPLOG_INFO_STR(logger,
               "Wiener filter noise power = " << itsParameter);
-      }
-
-      IPosition pos(shape.nelements());
-      for (uInt k=0; k<pos.nelements(); ++k) {
-        pos(k) = 0;
       }
 
       float maxPSFBefore = casa::max(psf);
@@ -170,89 +166,76 @@ namespace askap
           maxPSFBefore=1.0;
       }
 
-      casa::ArrayLattice<float> lpsf(psf);
-      casa::ArrayLattice<float> ldirty(dirty);
-      casa::ArrayLattice<float> lpcf(itsPcf);
+      casa::Matrix<casa::Float> psf2D(psf.nonDegenerate());
+      casa::Matrix<casa::Float> dirty2D(dirty.nonDegenerate());
 
       // Make the scratch array into which we will calculate the Wiener filter
-      casa::ArrayLattice<casa::Complex> scratch(shape);
-      scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpcf)));
+      casa::Matrix<casa::Complex> scratch(shape);
+      convertArray<casa::Complex,casa::Float>(scratch, itsPcf);
 
       if (!itsUseCachedPcf) {
 
         // the filter has been accumulated in the image domain, so transform to uv
-        casa::LatticeFFT::cfft2d(scratch, casa::True);
+        scimath::fft2d(scratch, True);
 
         // The filter is rescaling Fourier components of dirty and psf based on
         // the value of non-zero Fourier components of pcf. So set small
         // erroneous components to zero.
         float scratchThreshold = pcfThreshold(scratch);
-    
         if (scratchThreshold > 0.0) {
           // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
-          for (int y=0; y<scratch.shape()[1]; ++y) {
-            pos(1) = y;
-            for (int x=0; x<scratch.shape()[0]; ++x) {
-              pos(0) = x;
-              if (real(scratch.getAt(pos)) < scratchThreshold) {
-                scratch.putAt(0.0, pos);
+          for (int y=0; y<shape(1); ++y) {
+            for (int x=0; x<shape(0); ++x) {
+              if (real(scratch(x,y)) < scratchThreshold) {
+                scratch(x,y) = 0.0;
               }
             }
           }
         }
-   
+
         if (newFilter) {
-       
+
           // The PCF should be set up to have nearest-neighbour gridding of
           // SNR weights in the real part and nearest-neighbour gridding of
           // weights*kernel-size (in pixels) in the imaginary part. From this
           // the idea is to build a filter that alters the local density of
           // weighted data without breaking local projections.
-       
+
           // get weighted sum of kernel size from imaginary part of the data
-          casa::ArrayLattice<casa::Float> kernelWidthArray(shape);
-          kernelWidthArray.set(0.0);
+          casa::Matrix<casa::Float> kernelWidthMatrix(shape(0),shape(1),0.0);
           // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
-          for (int y=0; y<scratch.shape()[1]; ++y) {
-            pos(1) = y;
-            for (int x=0; x<scratch.shape()[0]; ++x) {
-              pos(0) = x;
-              if (abs(real(scratch.getAt(pos))) > scratchThreshold) {
-                kernelWidthArray.putAt(abs(imag(scratch.getAt(pos)))/abs(real(scratch.getAt(pos))), pos);
+          for (int y=0; y<shape(1); ++y) {
+            for (int x=0; x<shape(0); ++x) {
+              casa::Complex c = scratch(x,y);
+              if (abs(real(c)) > scratchThreshold) {
+                kernelWidthMatrix(x,y)=abs(imag(c)/real(c));
               }
             }
           }
- 
+
           // for debugging - to export kernel widths
-          //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthArray.asArray());
+          //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthMatrix;
           //throw 1;
-       
+
           // Build the filter as follows:
           // * set a large box (maximum kernel size) around each pixel
           // * find largest local kernel size
           // * make non-zero if there is data within this radius
           // * estimate weight based on the average of near by points,
           //   where "near by" can be different to the kernel width.
-       
-          const int maxKernelWidth = ceil(max(kernelWidthArray.asArray()));
+
+          const int maxKernelWidth = ceil(max(kernelWidthMatrix));
           ASKAPCHECK(maxKernelWidth > 0, "Maximum kernel width in the Wiener filter, " <<
               maxPSFBefore << ", is less than or equal to zero");
           const int boxWidth = maxKernelWidth;
           ASKAPDEBUGASSERT(boxWidth>0);
-       
+
           // the factor for running mean (relative to the local kernel width)
           const int extra = 2;
-       
-          // Initialise a box.
-          // Are boxes faster than simply searching scratch? Test.
-          IPosition boxStart(scratch.shape().nelements());
-          IPosition boxShape(scratch.shape().nelements());
-          for (uInt k=0; k<boxStart.nelements(); ++k) {
-            boxStart(k) = 0;
-            boxShape(k) = 1;
-          }
-       
-          // As with the threshold search above, here we assume that 
+
+          // Are boxes faster than simply searching scratch? Test. - No
+
+          // As with the threshold search above, here we assume that
           // zero-padding is used to over sample the PSF, meaning that we
           // can be sure that visibilities are not gridded to the edge of
           // the uv plane. Should test for the presence of zero-padding...
@@ -260,85 +243,82 @@ namespace askap
           // set pcf to to contain the new weights, so they don't have to be regenerated.
           // note that it is going from the image domain to the uv domain.
           itsPcf = 0.0;
-       
-          for (int y=extra*boxWidth/2; y<scratch.shape()[1]-extra*boxWidth/2; ++y) {
-            for (int x=extra*boxWidth/2; x<scratch.shape()[0]-extra*boxWidth/2; ++x) {
-       
-              boxStart(0) = x - boxWidth/2;
-              boxStart(1) = y - boxWidth/2;
-              boxShape(0) = boxWidth;
-              boxShape(1) = boxWidth;
-       
-              int localCount = 0;
-              double localSum = 0.0;
-              int regionCount = 0;
-              double regionSum = 0.0;
-       
-              const int kernelWidth = ceil(max(kernelWidthArray.getSlice(boxStart,boxShape)));
-       
-              if (kernelWidth>0) {
-       
-                // reset box to the kernelWidth
-                const int regionWidth = 1 + extra*(kernelWidth-1);
-                ASKAPDEBUGASSERT(regionWidth>=kernelWidth);
-                boxStart(0) = x - regionWidth/2;
-                boxStart(1) = y - regionWidth/2;
-                boxShape(0) = regionWidth;
-                boxShape(1) = regionWidth;
-                const int x0 = x - boxStart(0);
-                const int y0 = y - boxStart(1);
-                const casa::Array<casa::Float> localBox = real(scratch.getSlice(boxStart,boxShape));
-       
-                const float localRadiusSq = 0.25 * kernelWidth*kernelWidth;
-                const float regionRadiusSq = 0.25 * regionWidth*regionWidth;
-       
-                // check max(localBox) > 0 before continuing?
-                // there are efficient ways of doing a running mean, but with a varying box size?
-                for (int yb=0; yb<boxShape(1); ++yb) {
-                  pos(1) = yb;
-                  const int dy = yb - y0;
-                  for (int xb=0; xb<boxShape(0); ++xb) {
-                    pos(0) = xb;
-                    const int dx = xb - x0;
-                    if (localBox(pos) > scratchThreshold) {
-                      const float rsq = dx*dx + dy*dy;
-                      if (rsq<=regionRadiusSq) {
-                        regionCount += 1;
-                        regionSum += localBox(pos);
-                        if (rsq<=localRadiusSq) {
-                          localCount += 1;
-                          localSum += localBox(pos);
+
+          for (int y=extra*boxWidth/2; y<shape[1]-extra*boxWidth/2; ++y) {
+              for (int x=extra*boxWidth/2; x<shape[0]-extra*boxWidth/2; ++x) {
+
+                int boxStart0 = x - boxWidth/2;
+                int boxStart1 = y - boxWidth/2;
+
+                int localCount = 0;
+                // double localSum = 0.0;
+                int regionCount = 0;
+                double regionSum = 0.0;
+
+                //const int kernelWidth = ceil(max(
+                //    kernelWidthMatrix(Slice(boxStart0,boxWidth),Slice(boxStart1,boxWidth))));
+
+                //try writing out max
+                casa::Float kernelW = 0;
+                for (int yb=boxStart1; yb < boxStart1+boxWidth; yb++) {
+                    for (int xb=boxStart0; xb < boxStart0+boxWidth; xb++) {
+                        kernelW = max(kernelW,kernelWidthMatrix(xb,yb));
+                    }
+                }
+                const int kernelWidth = ceil(kernelW);
+
+                if (kernelWidth>0) {
+
+                  // reset box to the kernelWidth
+                  const int regionWidth = 1 + extra*(kernelWidth-1);
+                  ASKAPDEBUGASSERT(regionWidth>=kernelWidth);
+                  boxStart0 = x - regionWidth/2;
+                  boxStart1 = y - regionWidth/2;
+
+                    const float localRadiusSq = 0.25 * kernelWidth*kernelWidth;
+                    const float regionRadiusSq = 0.25 * regionWidth*regionWidth;
+
+                    for (int yb=boxStart1; yb<boxStart1+regionWidth; ++yb) {
+                      const int dy = yb - boxStart1 - regionWidth/2;
+                      const int dy2 = dy * dy;
+                      for (int xb=boxStart0; xb<boxStart0+regionWidth; ++xb) {
+                        const int dx = xb - boxStart0 - regionWidth/2;
+                        const float val = real(scratch(xb,yb));
+                        if ( val > scratchThreshold) {
+                          const float rsq = dx*dx + dy2;
+                          if (rsq<=regionRadiusSq) {
+                            regionCount += 1;
+                            regionSum += val;
+                            if (rsq<=localRadiusSq) {
+                              localCount += 1;
+                              //localSum += localBox(xb,yb); // Unused, why?
+                            }
+                          }
                         }
                       }
-                    }
                   }
                 }
-       
-              }
-       
-              pos(0) = x;
-              pos(1) = y;
-       
-              if (localCount > 0) {
-                itsPcf(pos) = regionSum/double(regionCount);
-              }
-       
-            } // y
-          } // x
-      
+
+
+                if (localCount > 0) {
+                  itsPcf(x,y) = regionSum/double(regionCount);
+                }
+
+              } // x
+          } // y
           // Calc ave SNR weight-sum *over visibilities* (not pixels).
           // const casa::Array<float> wgts(real(scratch.asArray()));
-          casa::Array<double> wgts(scratch.shape());
-          casa::convertArray<double,float>(wgts, real(scratch.asArray()));
+          casa::Array<double> wgts(shape);
+          casa::convertArray<double,float>(wgts, real(scratch));
           // The following approx assumes that vis have equal SNR weights.
           // * see D. Briggs thesis
           itsAveWgtSum = sum(wgts*wgts) / sum(wgts);
- 
+
           // update the scratch array
-          scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpcf)));
+          convertArray<casa::Complex,casa::Float>(scratch, itsPcf);
 
           itsUseCachedPcf = true;
- 
+
         } // if (newFilter)
 
       } // if (!itsUseCachedPcf)
@@ -356,36 +336,31 @@ namespace askap
           // Effect #1 is useful, the others are not, particularly when robustness is set towards uniform
           // weighting. The latter two effects can be removed by reapplying the original thresholding.
           // So, save the original thresholding
-          casa::Array<casa::Bool> scratch_mask(scratch.shape(), casa::True);
-          for (int y=0; y<scratch.shape()[1]; ++y) {
-            pos(1) = y;
-            for (int x=0; x<scratch.shape()[0]; ++x) {
-              pos(0) = x;
-              if (real(scratch.getAt(pos)) == 0.0) {
-                scratch_mask(pos) = casa::False;
+          casa::Matrix<casa::Bool> scratch_mask(shape, casa::True);
+          for (int y=0; y<shape[1]; ++y) {
+            for (int x=0; x<shape[0]; ++x) {
+              if (real(scratch(x,y)) == 0.0) {
+                scratch_mask(x,y) = casa::False;
               }
             }
           }
           ASKAPLOG_INFO_STR(logger, "Applying Gaussian taper to the preconditioner function in the image domain");
-          casa::LatticeFFT::cfft2d(scratch, casa::False);
-          casa::Array<casa::Complex> taperArray(itsTaperCache->taper(shape));
-          casa::ArrayLattice<casa::Complex> taperLattice(taperArray);
-          scratch.copyData(casa::LatticeExpr<casa::Complex>(scratch * taperLattice));
-          casa::LatticeFFT::cfft2d(scratch, casa::True);
+          scimath::fft2d(scratch, False);
+          casa::Matrix<casa::Complex> taperArray(itsTaperCache->taper(shape));
+          scratch *= taperArray;
+          scimath::fft2d(scratch, True);
           // Redo thresholding
-          for (int y=0; y<scratch.shape()[1]; ++y) {
-            pos(1) = y;
-            for (int x=0; x<scratch.shape()[0]; ++x) {
-              pos(0) = x;
-              if (!scratch_mask(pos)) {
-                scratch.putAt(0.0, pos);
+          for (int y=0; y<shape[1]; ++y) {
+            for (int x=0; x<shape[0]; ++x) {
+              if (!scratch_mask(x,y)) {
+                scratch(x,y)=0.0;
               }
             }
           }
           // Recalculate ave SNR weight-sum
           // const casa::Array<float> wgts(real(scratch.asArray()));
-          casa::Array<double> wgts(scratch.shape());
-          casa::convertArray<double,float>(wgts, real(scratch.asArray()));
+          casa::Array<double> wgts(shape);
+          casa::convertArray<double,float>(wgts, real(scratch));
           aveWgtSum = sum(wgts*wgts) / sum(wgts);
         }
 
@@ -397,12 +372,10 @@ namespace askap
           // The filter should turn itself off as wgt->0, however we don't trust those
           // regions and will explicitly set them to zero.
           itsWienerfilter.set(0.0);
-          for (int y=0; y<scratch.shape()[1]; ++y) {
-            pos(1) = y;
-            for (int x=0; x<scratch.shape()[0]; ++x) {
-              pos(0) = x;
-              if (real(scratch.getAt(pos)) != 0) {
-                itsWienerfilter.putAt(1.0 / (noisePower*real(scratch.getAt(pos)) + 1.0), pos);
+          for (int y=0; y<shape[1]; ++y) {
+            for (int x=0; x<shape[0]; ++x) {
+              if (real(scratch(x,y)) != 0) {
+                itsWienerfilter(x,y)=(1.0 / (noisePower*real(scratch(x,y)) + 1.0));
               }
             }
           }
@@ -410,9 +383,9 @@ namespace askap
           const float normFactor = itsDoNormalise ? maxPSFBefore : 1.;
           const float noisePower = (itsUseRobustness ?
               std::pow(10., 4.*itsParameter) : itsParameter)*normFactor*normFactor;
-          ASKAPLOG_INFO_STR(logger, "Effective noise power of the Wiener filter = " << noisePower);     
-          itsWienerfilter.copyData(casa::LatticeExpr<casa::Complex>(
-              normFactor*conj(scratch)/(real(scratch*conj(scratch)) + noisePower)));
+          ASKAPLOG_INFO_STR(logger, "Effective noise power of the Wiener filter = " << noisePower);
+          itsWienerfilter = conj(scratch)/(real(scratch*conj(scratch)) + noisePower);
+          if (itsDoNormalise) itsWienerfilter *= normFactor;
         }
 
       }
@@ -422,80 +395,71 @@ namespace askap
       //throw 1;
 
       // Apply the Wiener filter to the xfr and transform to the filtered PSF
-      scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpsf)));
-      casa::LatticeFFT::cfft2d(scratch, casa::True);
+      convertArray(scratch, psf2D);
+      scimath::fft2d(scratch, true);
 
       // Estimate the normalised point source sensitivity (AKA the normalised thermal RMS)
       // * see D. Briggs thesis
       if (!useCachedFilter) {
+          casa::Matrix<Float> realWienerArr = real(itsWienerfilter);
+          casa::Matrix<Float> realScrArr = real(scratch);
+          casa::Float sumScr = sum(realScrArr);
+          realScrArr *= realWienerArr;
           ASKAPLOG_INFO_STR(logger,
-              "Normalisation factor for the point source sensitivity (theorectical image RMS / naturally weighted RMS): " <<
-              sqrt( sum( real(scratch.asArray()) * real(itsWienerfilter.asArray())*real(itsWienerfilter.asArray()) ) *
-                    sum( real(scratch.asArray()) ) ) /
-              sum( real(scratch.asArray()) * real(itsWienerfilter.asArray()) ) );
+              "Normalisation factor for the point source sensitivity " <<
+              "(theorectical image RMS / naturally weighted RMS): " <<
+              sqrt( sum( realScrArr * realWienerArr) * sumScr ) / sum(realScrArr) );
       }
 
-      scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
-      casa::LatticeFFT::cfft2d(scratch, casa::False);       
-      lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
-      const float maxPSFAfter=casa::max(psf);
+      scratch *= itsWienerfilter;
+      scimath::fft2d(scratch, false);
+      psf2D = real(scratch);
+      const float maxPSFAfter=casa::max(psf2D);
       ASKAPLOG_INFO_STR(logger,
           "Peak of PSF after Wiener filtering = " << maxPSFAfter <<
           " = " << 100.0*maxPSFAfter/maxPSFBefore << "%");
-      psf *= maxPSFBefore/maxPSFAfter;
+      psf2D *= maxPSFBefore/maxPSFAfter;
       ASKAPLOG_INFO_STR(logger, "Normalized to unit peak");
 
       // Apply the filter to the dirty image
-      scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(ldirty)));       
-      casa::LatticeFFT::cfft2d(scratch, casa::True);
-      scratch.copyData(casa::LatticeExpr<casa::Complex> (itsWienerfilter * scratch));
-      casa::LatticeFFT::cfft2d(scratch, casa::False);
-      ldirty.copyData(casa::LatticeExpr<float>(real(scratch)));
-      dirty *= maxPSFBefore/maxPSFAfter;
+      convertArray<casa::Complex,casa::Float>(scratch, dirty2D);
+      scimath::fft2d(scratch, true);
+      scratch *= itsWienerfilter;
+      scimath::fft2d(scratch, false);
+      dirty2D = real(scratch);
+      dirty2D *= maxPSFBefore/maxPSFAfter;
 
       return true;
 
     }
 
     /// @brief calculate a threshold to use to clean up the PCF
-    /// @details The preconditioner function can have a rumble of low-level 
+    /// @details The preconditioner function can have a rumble of low-level
     /// Fourier components due to various issues (sharp edges in the image,
     /// tapering, de-warping). These need to be dealt with before forming the
     /// Wiener filter. One approach to this is thresholding out small values.
     /// @param[in] input array from which to determine threshold
     /// @return threshold value
-    float WienerPreconditioner::pcfThreshold(casa::ArrayLattice<casa::Complex>& pcf) const
+    float WienerPreconditioner::pcfThreshold(casa::Matrix<casa::Complex>& pcf) const
     {
 
-      float xfrMax = max(abs(real(pcf.asArray())));
+      float xfrMax = max(abs(real(pcf)));
       // The default threshold. Will be overwritten if useAutoThreshold==true.
       float scratchThreshold = 1e-5 * xfrMax;
-   
+
       // set a test value that we expect the noise to be below
       float thresholdTestVal = 1e-2 * xfrMax;
-   
+
       // Take slices across the zero-padding-region of the image
-      IPosition sliceStart(pcf.shape().nelements());
-      IPosition sliceShape(pcf.shape().nelements());
-      for (uInt k=0; k<sliceStart.nelements(); ++k) {
-        sliceStart(k) = 0;
-        sliceShape(k) = 1;
-      }
+      size_t nx = pcf.shape()[0];
+      size_t ny = pcf.shape()[1];
       // horizontal slice:
-      sliceStart(0) = pcf.shape()[0] / 4;
-      sliceShape(0) = pcf.shape()[0] / 2;
-      sliceStart(1) = 0;
-      sliceShape(1) = pcf.shape()[1] / 8;
-      float thresh1 = max(abs(real(pcf.getSlice(sliceStart,sliceShape))));
+      float thresh1 = max(abs(real(pcf(Slice(nx/4,nx/2),Slice(0,ny/8)))));
       // vertical slice:
-      sliceStart(0) = 0;
-      sliceShape(0) = pcf.shape()[0] / 8;
-      sliceStart(1) = pcf.shape()[1] / 4;
-      sliceShape(1) = pcf.shape()[1] / 2;
-      float thresh2 = max(abs(real(pcf.getSlice(sliceStart,sliceShape))));
-    
+      float thresh2 = max(abs(real(pcf(Slice(0,nx/8),Slice(ny/4,ny/2)))));
+
       float autoThreshold = 3.0 * max(thresh1,thresh2);
- 
+
       // test that the threshold is at a low level. If this fails, then
       // it is likely that visibilities have been gridded to the edge of
       // the uv plane. In this case, just set to something sensible.
@@ -521,9 +485,9 @@ namespace askap
     /// @return shared pointer
     boost::shared_ptr<WienerPreconditioner>
         WienerPreconditioner::createPreconditioner(const LOFAR::ParameterSet &parset,
-                                                   const bool useCachedPcf) 
+                                                   const bool useCachedPcf)
     {
-      ASKAPCHECK(parset.isDefined("noisepower") != parset.isDefined("robustness"), 
+      ASKAPCHECK(parset.isDefined("noisepower") != parset.isDefined("robustness"),
            "Exactly one parameter, either noisepower or robustness parameter must be given. You gave either none or both of them.");
 
       boost::shared_ptr<WienerPreconditioner> result;
@@ -532,13 +496,13 @@ namespace askap
           const bool normalise = parset.getBool("normalise",false);
           result.reset(new WienerPreconditioner(noisepower,normalise));
       } else {
-      
+
           ASKAPDEBUGASSERT(parset.isDefined("robustness"));
-     
+
           const float robustness = parset.getFloat("robustness");
-          ASKAPCHECK((robustness >= -2.00001) && (robustness <= 2.0001), 
+          ASKAPCHECK((robustness >= -2.00001) && (robustness <= 2.0001),
                      "Robustness parameter is supposed to be between -2 and 2, you have = "<<robustness);
-          ASKAPCHECK(!parset.isDefined("normalise"), 
+          ASKAPCHECK(!parset.isDefined("normalise"),
                      "Normalise option of the Wiener preconditioner is not compatible with the "
                      "preconditioner definition via robustness (as normalisation of PSF is always done in this case)");
           result.reset(new WienerPreconditioner(robustness));
@@ -550,7 +514,7 @@ namespace askap
           result->enableTapering(fwhm);
       }
       //
-      
+
       if (itsPcf.shape() == 0) {
           // there is no cache, so don't change anything.
           itsUseCachedPcf = false;
@@ -565,13 +529,13 @@ namespace askap
     }
 
     /// @brief assignment operator, to ensure it is not called
-    WienerPreconditioner& WienerPreconditioner::operator=(const WienerPreconditioner &) 
+    WienerPreconditioner& WienerPreconditioner::operator=(const WienerPreconditioner &)
     {
       ASKAPTHROW(AskapError, "Assignment operator is not supposed to be used");
       return *this;
     }
-    
-    /// @brief enable Filter tapering 
+
+    /// @brief enable Filter tapering
     /// @details Wiener filter can optionally be tapered in the image domain, so it is not extended over
     /// the whole field of view.
     /// @param[in] fwhm full width at half maximum of the taper given in image cells
@@ -580,9 +544,7 @@ namespace askap
       ASKAPLOG_INFO_STR(logger, "Wiener filter will be tapered by a circular Gaussian with FWHM="<<fwhm<<
                         " pixels in the image plane");
       itsTaperCache.reset(new GaussianTaperCache(fwhm));
-    }    
+    }
 
   }
 }
-
-

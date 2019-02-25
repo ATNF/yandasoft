@@ -33,7 +33,7 @@
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Vector.h>
-#include <casacore/lattices/Lattices/ArrayLattice.h>
+//#include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <fitting/Axes.h>
 
 #include <Common/ParameterSet.h>
@@ -48,7 +48,7 @@ namespace askap
   {
     /// @brief Precondition the normal equations via a Wiener filter
     ///
-    /// @details It constructs a Wiener filter from the PSF 
+    /// @details It constructs a Wiener filter from the PSF
     /// and applies it to the PSF and current Residual image
     /// @ingroup measurementequation
     class WienerPreconditioner : public IImagePreconditioner
@@ -58,27 +58,27 @@ namespace askap
       /// @brief default constructor with zero noise power
       /// @note do we really need it?
       WienerPreconditioner();
-     
+
       /// @brief constructor with explicitly defined noise power
-      /// @param[in] noisepower parameter of the 
+      /// @param[in] noisepower parameter of the
       /// @param[in] normalise if true, PSF is normalised during filter construction
       WienerPreconditioner(float noisepower, bool normalise);
 
       /// @brief constructor with explicitly defined robustness
       /// @details In this version, the noise power is calculated from
-      /// the robustness parameter 
+      /// the robustness parameter
       /// @param[in] robustness robustness parameter (roughly matching Briggs' weighting)
       /// @note Normalisation of PSF is always used when noise power is defined via robustness
       explicit WienerPreconditioner(float robustness);
-      
+
       /// @brief copy constructor
       /// @param[in] other an opject to copy from
       WienerPreconditioner(const WienerPreconditioner &other);
-             
+
       /// @brief Clone this object
       /// @return shared pointer to a cloned copy
       virtual IImagePreconditioner::ShPtr clone();
-        
+
       /// @brief Apply preconditioning to Image Arrays
       /// @details This is the actual method, which does preconditioning.
       /// It is applied to the PSF as well as the current residual image.
@@ -92,34 +92,34 @@ namespace askap
       /// @brief static factory method to create preconditioner from a parset
       /// @details
       /// @param[in] parset subset of parset file (with preconditioner.Wiener. removed)
-      /// @return shared pointer 
+      /// @return shared pointer
       static boost::shared_ptr<WienerPreconditioner> createPreconditioner(const LOFAR::ParameterSet &parset,
                                                                           const bool useCachedPcf = false);
-    
+
     protected:
-      /// @brief enable Filter tapering 
+      /// @brief enable Filter tapering
       /// @details Wiener filter can optionally be tapered in the image domain, so it is not extended over
       /// the whole field of view.
       /// @param[in] fwhm full width at half maximum of the taper given in image cells
-      void enableTapering(double fwhm); 
-      
+      void enableTapering(double fwhm);
+
     private:
       /// @brief assignment operator, to ensure it is not called
       /// @param[in] other object to copy from
       /// @return reference to itself
-      WienerPreconditioner& operator=(const WienerPreconditioner &other); 
+      WienerPreconditioner& operator=(const WienerPreconditioner &other);
 
       /// @brief calculate a threshold to use to clean up the PCF
-      /// @details The preconditioner function can have a rumble of low-level 
+      /// @details The preconditioner function can have a rumble of low-level
       /// Fourier components due to various issues (sharp edges in the image,
       /// tapering, de-warping). These need to be dealt with before forming the
       /// Wiener filter. One approach to this is thresholding out small values.
       /// @param[in] input array from which to determine threshold
       /// @return threshold value
-      float pcfThreshold(casa::ArrayLattice<casa::Complex>& pcf) const;
-      
+      float pcfThreshold(casa::Matrix<casa::Complex>& pcf) const;
+
       /// @brief Parameter of the filter
-      /// @details Depending on the mode, it can either be the noise power value directly or the 
+      /// @details Depending on the mode, it can either be the noise power value directly or the
       /// robustness parameter roughly matching Briggs' weighting.
       float itsParameter;
 
@@ -135,14 +135,14 @@ namespace askap
       // when different frequencies are deconvolved on the same MPI rank.
       static bool itsUseCachedPcf;
       static double itsAveWgtSum;
-      static casa::Array<float> itsPcf;
+      static casa::Matrix<float> itsPcf;
 
       /// @brief cache for Wiener filter array
       // do not make this static, since in general different solvers will require different preconditioning.
-      mutable casa::ArrayLattice<casa::Complex> itsWienerfilter;
- 
+      mutable casa::Matrix<casa::Complex> itsWienerfilter;
+
       /// @brief gaussian taper in the image domain (in pixels)
-      /// @details fwhm is stored inside cache class. 
+      /// @details fwhm is stored inside cache class.
       boost::shared_ptr<GaussianTaperCache> itsTaperCache;
    };
 
