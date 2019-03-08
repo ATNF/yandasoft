@@ -26,7 +26,7 @@ foreach (module ${_modules})
 endforeach (module)
 
 
-message(STATUS ${all_sources})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(yanda_synthesis ${all_sources})
 
