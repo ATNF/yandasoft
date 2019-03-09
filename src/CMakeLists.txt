@@ -3,29 +3,6 @@
 #
 project(yanda_synthesis)
 
-set ( _modules  
-
-deconvolution
-#distributedimager
-#gridding
-#measurementequation
-#messages
-#opcal
-#parallel
-#simulation
-#utils
-
-)
-# This is not a recommended way of doing this as if I add a file to the list
-# cmake will not automatically know to rebuild. But it does save adding all the subdirectories
-# and the individual libraries
-
-foreach (module ${_modules})
-	FILE(GLOB my_list "${module}/*.cc")
-	list(APPEND all_sources ${my_list})
-endforeach (module)
-
-
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Askap REQUIRED)
 find_package(Scimath REQUIRED)
@@ -56,7 +33,29 @@ if (CASACORE_FOUND)
 	include_directories(${CASACORE_INCLUDE_DIRS})
 	add_definitions(-DHAVE_AIPSPP)
 endif()
-add_library(yanda_synthesis ${all_sources})
+
+add_subdirectory(deconvolution)
+add_subdirectory(distributedimager)
+add_subdirectory(gridding)
+add_subdirectory(measurementequation)
+add_subdirectory(messages)
+add_subdirectory(opcal)
+add_subdirectory(parallel)
+add_subdirectory(simulation)
+add_subdirectory(utils)
+
+
+add_library(yanda_synthesis SHARED
+	$<TARGET_OBJECTS:deconvolution>
+	$<TARGET_OBJECTS:distributedimager>
+	$<TARGET_OBJECTS:gridding>
+	$<TARGET_OBJECTS:measurementequation>
+	$<TARGET_OBJECTS:messages>
+	$<TARGET_OBJECTS:opcal>
+	$<TARGET_OBJECTS:parallel>
+	$<TARGET_OBJECTS:simulation>
+	$<TARGET_OBJECTS:utils>
+	)
 
 target_link_libraries(yanda_synthesis 
 	${ASKAP_LIBRARY}
