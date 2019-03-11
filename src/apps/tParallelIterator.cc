@@ -26,7 +26,6 @@
 
 
 #include <dataaccess/TableDataSource.h>
-#include <askap_accessors.h>
 #include <askap/AskapLogging.h>
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
