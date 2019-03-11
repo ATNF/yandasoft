@@ -220,14 +220,14 @@ namespace askap
     void ImageFFTEquation::predict() const
     {
       ASKAPTRACE("ImageFFTEquation::predict");
-      const vector<string> completions(parameters().completions("image"));
+      const std::vector<std::string> completions(parameters().completions("image"));
 
       // To minimize the number of data passes, we keep copies of the gridders in memory, and
       // switch between these. This optimization may not be sufficient in the long run.
 
       itsIdi.chooseOriginal();
       ASKAPLOG_DEBUG_STR(logger, "Initialising for model degridding");
-      for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
+      for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         string imageName("image"+(*it));
         SynthesisParamsHelper::clipImage(parameters(),imageName);
@@ -264,7 +264,7 @@ namespace askap
              itsIdi->rwVisibility().xyPlane(p).set(0.);
         }
         */
-        for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
+        for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
         {
           string imageName("image"+(*it));
           itsModelGridders[imageName]->degrid(*itsIdi);
@@ -301,7 +301,7 @@ namespace askap
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
 
       // We will need to loop over all completions i.e. all sources
-      const vector<string> completions(parameters().completions("image"));
+      const std::vector<std::string> completions(parameters().completions("image"));
 
       // To minimize the number of data passes, we keep copies of the gridders in memory, and
       // switch between these. This optimization may not be sufficient in the long run.
@@ -309,7 +309,7 @@ namespace askap
       // do both at the same time.
 
 
-      for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
+      for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         const string imageName("image"+(*it));
         SynthesisParamsHelper::clipImage(parameters(),imageName);
@@ -351,7 +351,7 @@ namespace askap
               "Found no free image parameters, this rank will not contribute usefully to normal equations");
       }
       bool somethingHasToBeDegridded = false;
-      for (vector<string>::const_iterator it=completions.begin();it!=completions.end();it++)
+      for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         string imageName("image"+(*it));
         ASKAPLOG_DEBUG_STR(logger, "Initialising for " << imageName);
@@ -392,7 +392,7 @@ namespace askap
         // Accumulate model visibility for all models
         accBuffer.rwVisibility().set(0.0);
         if (somethingHasToBeDegridded) {
-            for (vector<string>::const_iterator it=completions.begin();it!=completions.end();++it) {
+            for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it) {
                  const std::string imageName("image"+(*it));
                  const std::map<std::string, IVisGridder::ShPtr>::iterator grdIt = itsModelGridders.find(imageName);
                  ASKAPDEBUGASSERT(grdIt != itsModelGridders.end());
@@ -459,7 +459,7 @@ namespace askap
         ASKAPLOG_DEBUG_STR(logger,
             "Adding residual image, PSF and weights image to the normal equations" );
       }
-      for (vector<string>::const_iterator it=completions.begin();it!=completions.end();++it)
+      for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it)
       {
         const string imageName("image"+(*it));
         const casa::IPosition imageShape(parameters().value(imageName).shape());
