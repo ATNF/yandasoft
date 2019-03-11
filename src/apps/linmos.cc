@@ -54,9 +54,10 @@
 ASKAP_LOGGER(logger, ".linmos");
 
 using namespace casa;
-using namespace askap;
 using namespace askap::synthesis;
 
+
+namespace askap {
 
 /// @brief do the merge
 /// @param[in] parset subset with parameters
@@ -346,8 +347,10 @@ class LinmosApp : public askap::Application
         }
 };
 
+} // end namespace askap
+
 int main(int argc, char *argv[])
 {
-    LinmosApp app;
+    askap::LinmosApp app;
     return app.main(argc, argv);
 }

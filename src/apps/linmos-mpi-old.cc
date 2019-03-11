@@ -23,9 +23,9 @@
 ASKAP_LOGGER(logger, ".linmos");
 
 
-using namespace askap;
 using namespace askap::synthesis;
 
+namespace askap {
 
 // @brief do the merge
 /// @param[in] parset subset with parameters
@@ -579,8 +579,10 @@ class linmosMPIApp : public askap::Application
 
 };
 
+} // end namespace askap
+
 int main(int argc, char *argv[])
 {
-    linmosMPIApp app;
+    askap::linmosMPIApp app;
     return app.main(argc, argv);
 }
