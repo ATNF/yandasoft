@@ -9,6 +9,9 @@ CubeComms.cc
 MSGroupInfo.cc
 MSSplitter.cc
 )
+
+set_property(TARGET distributedimager PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 AdviseDI.h
 CalcCore.h

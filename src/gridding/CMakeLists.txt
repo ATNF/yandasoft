@@ -26,6 +26,9 @@ WDependentGridderBase.cc
 WProjectVisGridder.cc
 WStackVisGridder.cc
 )
+
+set_property(TARGET gridding PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 AProjectGridderBase.h
 AProjectGridderBase.tcc
