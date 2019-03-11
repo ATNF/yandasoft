@@ -49,7 +49,7 @@
 #include <askapparallel/AskapParallel.h>
 
 // command line parser
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 
 // std includes
 #include <stdexcept>

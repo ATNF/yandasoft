@@ -43,7 +43,7 @@
 #include "askap/StatReporter.h"
 #include "askap/Log4cxxLogSink.h"
 #include "boost/shared_ptr.hpp"
-#include "CommandLineParser.h"
+#include "utils/CommandLineParser.h"
 #include "casacore/casa/OS/File.h"
 #include "casacore/casa/aips.h"
 #include "casacore/casa/Quanta.h"

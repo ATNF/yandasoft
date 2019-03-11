@@ -1,7 +1,9 @@
 add_library( utils OBJECT 
-LinmosUtils.cc
+	CommandLineParser.cc
+	LinmosUtils.cc
 )
 install (FILES
-LinmosUtils.h
+	CommandLineParser.h
+	LinmosUtils.h
 DESTINATION include/askap/utils
 )

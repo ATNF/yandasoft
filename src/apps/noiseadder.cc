@@ -43,7 +43,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 
 #include <measurementequation/GaussianNoiseME.h>
 #include <measurementequation/IMeasurementEquation.h>

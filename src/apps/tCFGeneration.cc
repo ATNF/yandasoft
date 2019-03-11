@@ -37,7 +37,7 @@
 #include <askap/StatReporter.h>
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <measurementequation/SynthesisParamsHelper.h>

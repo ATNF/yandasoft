@@ -41,7 +41,7 @@ ASKAP_LOGGER(logger, "");
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 #include <simulation/Simulator.h>
 #include <askapparallel/MPIComms.h>
 #include <casacore/casa/Quanta/MVDirection.h>
