@@ -24,7 +24,7 @@
 
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/images/Images/PagedImage.h>
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 #include <askap/AskapError.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>

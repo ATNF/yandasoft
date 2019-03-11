@@ -10,9 +10,10 @@ find_package(AskapParallel REQUIRED)
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(FFTW)
+find_package(gsl)
 find_package(LofarCommon)
 find_package(LofarBlob)
-find_package(Boost REQUIRED COMPONENTS system filesystem)
+find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 find_package(Accessors REQUIRED)
 find_package(ImageMath REQUIRED)
 find_package(Scimath REQUIRED)
@@ -84,3 +85,4 @@ ARCHIVE DESTINATION lib
 LIBRARY PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
 
+add_subdirectory(apps)
