@@ -346,10 +346,10 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
       
   // Define AutoDiffs to buffer the output of a single call to the calculate 
   // method of the component.
-  vector<casa::AutoDiff<double> > visDerivBufferSinglePol(2*freq.nelements(),
+  std::vector<casa::AutoDiff<double> > visDerivBufferSinglePol(2*freq.nelements(),
                           casa::AutoDiff<double>(0.,nParameters));
                           
-  vector<vector<casa::AutoDiff<double> > > visDerivBuffer(nPol);
+  std::vector<std::vector<casa::AutoDiff<double> > > visDerivBuffer(nPol);
                             
   casa::Array<casa::Double> derivatives(casa::IPosition(2,nData, nParameters));
            
@@ -359,7 +359,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
   
        // initialise buffers for all polarisations
        for (casa::uInt pol = 0; pol<nPol; ++pol) {                
-            visDerivBuffer[pol] = vector<casa::AutoDiff<double> >(2*freq.nelements()*nPol,
+            visDerivBuffer[pol] = std::vector<casa::AutoDiff<double> >(2*freq.nelements()*nPol,
                           casa::AutoDiff<double>(0.,nParameters));
        }
                           

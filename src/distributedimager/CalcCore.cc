@@ -283,9 +283,9 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
 
     ASKAPLOG_DEBUG_STR(logger, "Writing out results as images");
     ASKAPDEBUGASSERT(itsModel);
-    vector<string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->names();
     bool hasWeights = false;
-    for (vector<string>::const_iterator it=resultimages.begin(); it
+    for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
         !=resultimages.end(); it++) {
         if (it->find("weights") == 0) {
             hasWeights = true;
@@ -315,7 +315,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ir->solveNormalEquations(*itsModel,q);
         // merged image should be a fixed parameter without facet suffixes
         resultimages=itsModel->fixedNames();
-        for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+        for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
             const ImageParamsHelper iph(*ci);
             if (!iph.isFacet() && (ci->find("image") == 0)) {
                 ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
@@ -325,8 +325,8 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         }
     }
     ASKAPLOG_DEBUG_STR(logger, "Writing out additional parameters made by restore solver as images");
-    vector<string> resultimages2=itsModel->names();
-    for (vector<string>::const_iterator it=resultimages2.begin(); it
+    std::vector<std::string> resultimages2=itsModel->names();
+    for (std::vector<std::string>::const_iterator it=resultimages2.begin(); it
         !=resultimages2.end(); it++) {
         ASKAPLOG_DEBUG_STR(logger, "Checking "<<*it);
         if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
@@ -366,9 +366,9 @@ void CalcCore::restoreImage()
 
     Quality q;
     ir->solveNormalEquations(*itsModel, q);
-    vector<string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->names();
 
-    for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+    for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
 
         ASKAPLOG_INFO_STR(logger, "Restored image " << *ci);
 

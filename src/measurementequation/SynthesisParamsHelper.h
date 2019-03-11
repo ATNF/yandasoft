@@ -152,13 +152,13 @@ namespace askap
         /// @param[in] centreDir strings containing [ra,dec,frame] defining direction of the image centre
         ///            empty vector defaults to the tangent point
         static void add(askap::scimath::Params& ip, const string& name,
-          const vector<string>& direction,
-          const vector<string>& cellsize,
-          const vector<int>& shape,
+          const std::vector<std::string>& direction,
+          const std::vector<std::string>& cellsize,
+          const std::vector<int>& shape,
           const bool ewprojection,
           const double freqmin, const double freqmax, const int nchan,
           const casa::Vector<casa::Stokes::StokesTypes> &stokes,
-          const vector<string>& centreDir = vector<string>());
+          const std::vector<std::string>& centreDir = std::vector<std::string>());
 
         /// @brief Add a parameter as a faceted image
         /// @param[in] ip Parameters
@@ -175,9 +175,9 @@ namespace askap
         /// @param[in] facetstep Offset in pixels between facet centres (equal to shape to
         ///            have no overlap between adjacent facets), assumed the same for both axes
         static void add(askap::scimath::Params& ip, const string& name,
-          const vector<string>& direction,
-          const vector<string>& cellsize,
-          const vector<int>& shape,
+          const std::vector<std::string>& direction,
+          const std::vector<std::string>& cellsize,
+          const std::vector<int>& shape,
           const bool ewprojection,
           const double freqmin, const double freqmax, const int nchan,
           const casa::Vector<casa::Stokes::StokesTypes> &stokes,
