@@ -62,8 +62,9 @@
 
 ASKAP_LOGGER(logger, ".msmerge2");
 
-using namespace askap;
 using namespace casa;
+
+namespace askap {
 
 boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4,
     casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
@@ -640,4 +641,11 @@ int main(int argc, const char** argv)
     }
 
     return 0;
+}
+
+} // end namespace askap
+
+int main(int argc, const char** argv)
+{
+    return askap::main(argc, argv);
 }

@@ -2,6 +2,9 @@ add_library( deconvolution OBJECT
 DeconvolverFactory.cc
 DeconvolverHelpers.cc
 )
+
+set_property(TARGET deconvolution PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 BasisFunction.h
 BasisFunction.tcc

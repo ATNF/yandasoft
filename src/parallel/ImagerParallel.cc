@@ -199,7 +199,7 @@ namespace askap
       bool shapeNeeded = false;
 
       // test for missing image-specific parameters:
-      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      const std::vector<std::string> imageNames = parset.getStringVector("Images.Names", false);
       for (size_t img = 0; img < imageNames.size(); ++img) {
           if ( !parset.isDefined("Images."+imageNames[img]+".cellsize") ) cellsizeNeeded = true;
           if ( !parset.isDefined("Images."+imageNames[img]+".shape") ) shapeNeeded = true;
@@ -239,7 +239,7 @@ namespace askap
       string param;
 
       // Use the tangent of the first image as the advise tangent (defaults to direction if no tangent is given).
-      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      const std::vector<std::string> imageNames = parset.getStringVector("Images.Names", false);
       if (imageNames.size() > 1) {
           ASKAPLOG_WARN_STR(logger, "  Multiple images. Only the first will be inspected for tangent information.");
       }
@@ -286,12 +286,12 @@ namespace askap
     string ImagerParallel::wMaxAdviceNeeded(LOFAR::ParameterSet &parset) {
 
       // make a vector containing all gridders that require the wmax parameter
-      vector<string> wGridders;
+      std::vector<std::string> wGridders;
       wGridders.push_back("WProject");
       wGridders.push_back("WStack");
       wGridders.push_back("AWProject");
       wGridders.push_back("AProjectWStack");
-      for(vector<string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
+      for(std::vector<std::string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
           if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax") ) {
               return *i;
           }
@@ -340,7 +340,7 @@ namespace askap
       int nTerms = 1;
 
       // for image specific parameters, cycle through the images and check whether any advised parameters are undefined.
-      const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+      const std::vector<std::string> imageNames = parset.getStringVector("Images.Names", false);
       for (size_t img = 0; img < imageNames.size(); ++img) {
           // could set this up to add shape if it's missing but cellsize is set, like below for the global parameters.
           if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) cellsizeNeeded = true;
@@ -728,9 +728,9 @@ namespace askap
       {
         ASKAPLOG_INFO_STR(logger, "Writing out results as images");
         ASKAPDEBUGASSERT(itsModel);
-        vector<string> resultimages=itsModel->names();
+        std::vector<std::string> resultimages=itsModel->names();
         bool hasWeights = false;
-        for (vector<string>::const_iterator it=resultimages.begin(); it
+        for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             if (it->find("weights") == 0) {
                 hasWeights = true;
@@ -744,7 +744,7 @@ namespace askap
             resultimages=itsModel->names();
         }
 
-        for (vector<string>::const_iterator it=resultimages.begin(); it
+        for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
             if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
@@ -791,7 +791,7 @@ namespace askap
                 n_passes += 1;
 
                 // save the initial values of image model free parameters
-                vector<string> names(itsModel->completions("image"));
+                std::vector<std::string> names(itsModel->completions("image"));
                 map<string,int> facetmap;
                 SynthesisParamsHelper::listFacets(names, facetmap);
                 for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
@@ -828,7 +828,7 @@ namespace askap
                         SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));
                     }
 
-                    vector<string> names(itsModel->completions("image"));
+                    std::vector<std::string> names(itsModel->completions("image"));
                     map<string,int> facetmap;
                     SynthesisParamsHelper::listFacets(names, facetmap);
                     for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
@@ -853,8 +853,8 @@ namespace askap
 
                 ir->solveNormalEquations(*itsModel,q);
                 // merged image should be a fixed parameter without facet suffixes
-                vector<string> resultimages2=itsModel->names();
-                for (vector<string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
+                std::vector<std::string> resultimages2=itsModel->names();
+                for (std::vector<std::string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
                     const ImageParamsHelper iph(*ci);
                     if (!iph.isFacet() && ((ci->find("image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
@@ -877,8 +877,8 @@ namespace askap
             }
 
             // remove parts of each faceted image
-            vector<string> names(itsModel->completions("image"));
-            for (vector<string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
+            std::vector<std::string> names(itsModel->completions("image"));
+            for (std::vector<std::string>::const_iterator ci=names.begin(); ci !=names.end(); ++ci) {
                 const string name="image"+*ci;
                 ImageParamsHelper iph(name);
                 if (iph.isFacet()) {
@@ -887,8 +887,8 @@ namespace askap
                 }
             }
             ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");
-            vector<string> resultimages2=itsModel->names();
-            for (vector<string>::const_iterator it=resultimages2.begin(); it !=resultimages2.end(); it++) {
+            std::vector<std::string> resultimages2=itsModel->names();
+            for (std::vector<std::string>::const_iterator it=resultimages2.begin(); it !=resultimages2.end(); it++) {
                 ASKAPLOG_INFO_STR(logger, "Checking "<<*it);
                 if ((it->find("psf") == 0)) {
                     ASKAPLOG_INFO_STR(logger, "Found " <<*it);

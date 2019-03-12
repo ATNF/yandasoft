@@ -106,8 +106,8 @@ namespace askap
 
     void ImageDFTEquation::predict() const
     {
-      vector<string> completions(parameters().completions("image.i"));
-      vector<string>::const_iterator it;
+      std::vector<std::string> completions(parameters().completions("image.i"));
+      std::vector<std::string>::const_iterator it;
 
       if(completions.size()==0) {
         ASKAPLOG_WARN_STR(logger, "No parameters appropriate for ImageFFTEquation");
@@ -166,8 +166,8 @@ namespace askap
     void ImageDFTEquation::calcGenericEquations(askap::scimath::GenericNormalEquations& ne) const
     {
 // Loop over all completions i.e. all sources
-      vector<string> completions(parameters().completions("image.i"));
-      vector<string>::iterator it;
+      std::vector<std::string> completions(parameters().completions("image.i"));
+      std::vector<std::string>::iterator it;
 
       if(completions.size()==0) {
         ASKAPLOG_WARN_STR(logger, "No parameters appropriate for ImageFFTEquation");

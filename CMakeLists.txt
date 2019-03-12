@@ -1,8 +1,8 @@
-project(yandasoft)
-
-cmake_minimum_required (VERSION 3.0.0)
+cmake_minimum_required (VERSION 3.2.0)
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
+
+project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
@@ -15,12 +15,6 @@ endif ()
 
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake")
 
-set(PROJECT_VERSION_MAJOR 0)
-set(PROJECT_VERSION_MINOR 0)
-set(PROJECT_VERSION_PATCH 1)
-set(PROJECT_VERSION_REVISION 1)
-set(PROJECT_VERSION
-  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 option (CXX11 "Compile as C++11 if possible" YES)
 
 # Detect if the compiler supports C++11 if we want to use it.
