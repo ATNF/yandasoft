@@ -35,6 +35,11 @@ add_definitions(-DHAVE_LOG4CXX)
 include_directories(${CASACORE_INCLUDE_DIRS})
 add_definitions(-DHAVE_AIPSPP)
 
+if (NOT CASACORE_VERSION STREQUAL trunk AND
+    CASACORE_VERSION VERSION_GREATER 2.4.0)
+	add_definitions(-DHAVE_CASACORE3)
+endif()
+
 add_subdirectory(deconvolution)
 add_subdirectory(distributedimager)
 add_subdirectory(gridding)
