@@ -53,8 +53,10 @@
 ASKAP_LOGGER(logger, ".linmos");
 
 using namespace casa;
-using namespace askap;
 using namespace askap::synthesis;
+
+namespace askap {
+
 /// @brief helper method to load beam offsets from the parset file
 /// @details shares the same format as csimulator feed definition. This is needed to support ASKAP BETA,
 ///    which initially uses the same image centre for all beams, leaving beam offsets unspecified.
@@ -171,4 +173,6 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
     return Vector<MVDirection>();
 
 }
+
+} // namespace askap
 

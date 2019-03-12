@@ -80,7 +80,7 @@ void FrequencyMapper::setupMapping(const casa::Vector<casa::Double> &freqs)
    if (itsImageNChan == 1) {
        // special case (tbd - check that assumed definition is what was intended)
        // ignore frequency axis and map everything to a single plane (same behavior as we used to have)
-       for (vector<int>::iterator it = itsMap.begin(); it!=itsMap.end(); ++it) {
+       for (std::vector<int>::iterator it = itsMap.begin(); it!=itsMap.end(); ++it) {
             *it = 0;
        }            
    } else {

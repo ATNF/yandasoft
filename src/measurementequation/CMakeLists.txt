@@ -45,6 +45,9 @@ VisMetaDataStats.cc
 VoidMeasurementEquation.cc
 WienerPreconditioner.cc
 )
+
+set_property(TARGET measurementequation PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 BlockCDMOperations.h
 BlockCDMOperations.tcc

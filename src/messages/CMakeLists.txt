@@ -5,6 +5,9 @@ IMessage.cc
 SpectralLineWorkRequest.cc
 SpectralLineWorkUnit.cc
 )
+
+set_property(TARGET messages PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 ContinuumWorkRequest.h
 ContinuumWorkUnit.h

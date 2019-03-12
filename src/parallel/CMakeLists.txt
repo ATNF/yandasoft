@@ -13,6 +13,9 @@ ParallelWriteIterator.cc
 SimParallel.cc
 SynParallel.cc
 )
+
+set_property(TARGET parallel PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 AdviseParallel.h
 BPCalibratorParallel.h

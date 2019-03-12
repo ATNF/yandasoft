@@ -6,6 +6,9 @@ OpCalImpl.cc
 PointingSolver.cc
 ScanStats.cc
 )
+
+set_property(TARGET opcal PROPERTY POSITION_INDEPENDENT_CODE ON)
+
 install (FILES
 BaselineSolver.h
 GenericCalInfo.h
