@@ -27,6 +27,7 @@
 
 #include <lsqr_solver/LSQRSolver.h>
 #include <lsqr_solver/SparseMatrix.h>
+#include <lsqr_solver/ModelDamping.h>
 
 #include <askapparallel/AskapParallel.h>
 
@@ -52,11 +53,11 @@ using namespace askap;
 // [1] Least Squares Estimation, Sara A. van de Geer, Volume 2, pp. 1041-1045,
 //     in Encyclopedia of Statistics in Behavioral Science, 2005.
 //---------------------------------------------------------------------
-void test_overdetermined(int myrank, int nbproc)
+void testOverdetermined(int myrank, int nbproc)
 {
     if (nbproc != 1 && nbproc != 3)
     {
-        std::cout << "WARNING: Test test_overdetermined can only be run on 1 and 3 CPUs!" << std::endl;
+        std::cout << "WARNING: Test testOverdetermined can only be run on 1 and 3 CPUs!" << std::endl;
         return;
     }
 
@@ -119,7 +120,131 @@ void test_overdetermined(int myrank, int nbproc)
     }
 }
 
-// This application should be run using 1 and 3 CPUs only.
+/*
+* Define the following underdetermined system:
+*
+* x1 + x2 = 1,
+* 2x1 + x2 - q = 0.
+*
+* Which has the minimum norm underdetermined solution x1 = 0, x2 = 1, q = 1.
+* (See Carl Wunsch, The ocean circulation inverse problem, Eq.(3.4.120).)
+*/
+struct WunschFixture
+{
+  size_t ncols, nrows;
+  lsqr::SparseMatrix* matrix;
+  lsqr::Vector* b_RHS;
+
+  WunschFixture(int myrank, int nbproc)
+  {
+      ncols = 3 / nbproc; // Support only nbproc=1 and nbproc=3.
+      nrows = 2;
+
+      matrix = new lsqr::SparseMatrix(nrows, ncols * nrows);
+      b_RHS = new lsqr::Vector(nrows, 0.0);
+
+      double a[3][2];
+
+      a[0][0] = 1.0;
+      a[1][0] = 1.0;
+      a[2][0] = 0.0;
+
+      a[0][1] = 2.0;
+      a[1][1] = 1.0;
+      a[2][1] = - 1.0;
+
+      // Right hand side.
+      b_RHS->at(0) = 1.0;
+      b_RHS->at(1) = 0.0;
+
+      for (size_t j = 0; j < nrows; ++j)
+      {
+          matrix->NewRow();
+
+          if (nbproc == 1)
+          {
+              for (size_t i = 0; i < ncols; ++i)
+              {
+                  matrix->Add(a[i][j], i);
+              }
+          }
+          else if (nbproc == 3)
+          {   // One column per CPU.
+              matrix->Add(a[myrank][j], 0);
+          }
+      }
+      matrix->Finalize(ncols);
+  }
+
+  ~WunschFixture()
+  {
+      delete matrix;
+      delete b_RHS;
+  }
+};
+
+//------------------------------------------------------------------------------
+// Testing underdetermined damped system (defined in WunschFixture).
+//
+// This damped version (with model_ref = 0.5) finds another solution x1 = 1/6, x2 = 1-1/6, q = 1+1/6,
+// which is an exact solution and lies closer to the reference model, than the undamped solution.
+// this solution is stable for many orders of alpha: 1.e-3 <= alpha <= 1.e-12
+//------------------------------------------------------------------------------
+void testUnderdeterminedDamped(int myrank, int nbproc)
+{
+    if (nbproc != 1 && nbproc != 3)
+    {
+        std::cout << "WARNING: Test testUnderdeterminedDamped can only be run on 1 and 3 CPUs!" << std::endl;
+        return;
+    }
+
+    double rmin = 1.e-13;
+    size_t niter = 100;
+
+    double alpha = 1.e-12;
+    double normPower = 2.0;
+    double modelRefValue = 0.5;
+
+    WunschFixture system(myrank, nbproc);
+
+    size_t nelements = system.ncols;
+
+    lsqr::Vector model(nelements, 0.0);
+    lsqr::Vector modelRef(nelements, modelRefValue);
+
+    lsqr::ModelDamping damping(nelements);
+
+    // Add damping to the system.
+    damping.Add(alpha, normPower, *system.matrix, *system.b_RHS, &model, &modelRef, NULL, myrank, nbproc);
+
+    lsqr::LSQRSolver solver(system.matrix->GetTotalNumberRows(), nelements);
+
+    lsqr::Vector x(nelements, 0.0);
+    solver.Solve(niter, rmin, *system.matrix, *system.b_RHS, x, myrank, nbproc, true);
+
+    double epsilon = 1.e-5;
+
+    // Solution.
+    lsqr::Vector sol(3);
+    sol[0] = 1.0 / 6.0;
+    sol[1] = 1.0 - 1.0 / 6.0;
+    sol[2] = 1.0 + 1.0 / 6.0;
+
+    // Check the solution.
+    if (nbproc == 1)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            assert(std::abs(sol[i] - x[i]) < epsilon);
+        }
+    }
+    else if (nbproc == 3)
+    {
+        assert(std::abs(sol[myrank] - x[0]) < epsilon);
+    }
+}
+
+// NOTE: This application should be run using 1 and 3 CPUs only.
 int main(int argc, char *argv[])
 {
     askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
@@ -127,6 +252,7 @@ int main(int argc, char *argv[])
     int nbproc = comms.nProcs();
     int myrank = comms.rank();
 
-    test_overdetermined(myrank, nbproc);
+    testOverdetermined(myrank, nbproc);
+    testUnderdeterminedDamped(myrank, nbproc);
 }
 
