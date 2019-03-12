@@ -47,7 +47,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 
-#include <CommandLineParser.h>
+#include <utils/CommandLineParser.h>
 
 #include <measurementequation/IMeasurementEquation.h>
 //#include <dataaccess/MemBufferDataAccessor.h>
