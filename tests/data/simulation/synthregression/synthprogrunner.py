@@ -1,5 +1,6 @@
 # helper class for synthesis regression testing
 import os,math
+import subprocess
 
 # helper class to run a program from synthesis
 class SynthesisProgramRunner:
@@ -16,15 +17,11 @@ class SynthesisProgramRunner:
          raise RuntimeError, "Template parset file %s is not found" % template_parset
       self.template_parset = template_parset
 
-      if 'ASKAP_ROOT' not in os.environ:
-          raise RuntimeError, "ASKAP_ROOT should be initialised first!"
 
-      if 'AIPSPATH' not in os.environ:
-         os.environ['AIPSPATH'] = os.path.join(os.environ['ASKAP_ROOT'],'Code/Base/accessors/current')
-      self.simulator = os.path.join(os.environ['ASKAP_ROOT'],'Code/Components/Synthesis/synthesis/current/apps/csimulator.sh')
-      self.imager = os.path.join(os.environ['ASKAP_ROOT'],'Code/Components/Synthesis/synthesis/current/apps/cimager.sh')
-      self.calibrator = os.path.join(os.environ['ASKAP_ROOT'],'Code/Components/Synthesis/synthesis/current/apps/ccalibrator.sh')
-      self.imgstat = os.path.join(os.environ['ASKAP_ROOT'],'Code/Components/Synthesis/synthesis/current/apps/imgstat.sh')
+      self.simulator = os.popen('which csimulator').read().rstrip() 
+      self.imager = os.popen('which cimager').read().rstrip()
+      self.calibrator = os.popen('which ccalibrator').read().rstrip()
+      self.imgstat = os.popen('which imgstat').read().rstrip()
 
       if not os.path.exists(self.simulator):
           raise RuntimeError, "csimulator is missing at %s" % self.simulator
