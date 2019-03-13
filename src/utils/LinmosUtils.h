@@ -39,6 +39,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <casacore/casa/Arrays/Array.h>
+#include <casacore/coordinates/Coordinates/Coordinate.h>
 #include <casacore/images/Images/ImageRegrid.h>
 
 // Local packages includes

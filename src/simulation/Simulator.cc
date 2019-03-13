@@ -50,10 +50,10 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <casacore/tables/Tables/TableDesc.h>
 #include <casacore/tables/Tables/ScaColDesc.h>
 #include <casacore/tables/Tables/TableRecord.h>
-#include <casacore/tables/Tables/StManAipsIO.h>
-#include <casacore/tables/Tables/IncrementalStMan.h>
-#include <casacore/tables/Tables/StandardStMan.h>
-#include <casacore/tables/Tables/TiledShapeStMan.h>
+#include <casacore/tables/DataMan/StManAipsIO.h>
+#include <casacore/tables/DataMan/IncrementalStMan.h>
+#include <casacore/tables/DataMan/StandardStMan.h>
+#include <casacore/tables/DataMan/TiledShapeStMan.h>
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/BasicMath/Random.h>
 #include <casacore/casa/Arrays/ArrayMath.h>

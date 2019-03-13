@@ -129,7 +129,11 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
+#ifdef HAVE_CASACORE3
+        itsRestFrequency = casa::QC::HI();
+#else
         itsRestFrequency = casa::QC::HI;
+#endif // HAVE_CASACORE3
     } else {
         itsRestFrequency = SynthesisParamsHelper::convertQuantity(restFreqString, "Hz");
     }
