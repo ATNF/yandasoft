@@ -22,6 +22,11 @@
 /// It should be merged with unit tests in LSQRSolverTest.h once we have the parallel unit tests support.
 ///
 
+// MPI-specific includes
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
+
 #include <iostream>
 #include <cassert>
 
@@ -53,7 +58,7 @@ using namespace askap;
 // [1] Least Squares Estimation, Sara A. van de Geer, Volume 2, pp. 1041-1045,
 //     in Encyclopedia of Statistics in Behavioral Science, 2005.
 //---------------------------------------------------------------------
-void testOverdetermined(int myrank, int nbproc)
+void testOverdetermined(int myrank, int nbproc, void* comm)
 {
     if (nbproc != 1 && nbproc != 3)
     {
@@ -68,7 +73,7 @@ void testOverdetermined(int myrank, int nbproc)
 
     size_t nelements = nelements_total / nbproc;
 
-    lsqr::SparseMatrix matrix(nrows, nelements * nrows);
+    lsqr::SparseMatrix matrix(nrows, nelements * nrows, comm);
 
     lsqr::Vector b_RHS(nrows, 0.0);
 
@@ -135,12 +140,12 @@ struct WunschFixture
   lsqr::SparseMatrix* matrix;
   lsqr::Vector* b_RHS;
 
-  WunschFixture(int myrank, int nbproc)
+  WunschFixture(int myrank, int nbproc, void* comm)
   {
       ncols = 3 / nbproc; // Support only nbproc=1 and nbproc=3.
       nrows = 2;
 
-      matrix = new lsqr::SparseMatrix(nrows, ncols * nrows);
+      matrix = new lsqr::SparseMatrix(nrows, ncols * nrows, comm);
       b_RHS = new lsqr::Vector(nrows, 0.0);
 
       double a[3][2];
@@ -190,7 +195,7 @@ struct WunschFixture
 // which is an exact solution and lies closer to the reference model, than the undamped solution.
 // this solution is stable for many orders of alpha: 1.e-3 <= alpha <= 1.e-12
 //------------------------------------------------------------------------------
-void testUnderdeterminedDamped(int myrank, int nbproc)
+void testUnderdeterminedDamped(int myrank, int nbproc, void* comm)
 {
     if (nbproc != 1 && nbproc != 3)
     {
@@ -205,7 +210,7 @@ void testUnderdeterminedDamped(int myrank, int nbproc)
     double normPower = 2.0;
     double modelRefValue = 0.5;
 
-    WunschFixture system(myrank, nbproc);
+    WunschFixture system(myrank, nbproc, comm);
 
     size_t nelements = system.ncols;
 
@@ -252,7 +257,14 @@ int main(int argc, char *argv[])
     int nbproc = comms.nProcs();
     int myrank = comms.rank();
 
-    testOverdetermined(myrank, nbproc);
-    testUnderdeterminedDamped(myrank, nbproc);
+    void* comm = NULL;
+
+#ifdef HAVE_MPI
+    MPI_Comm comm_world = MPI_COMM_WORLD;
+    comm = (void *)&comm_world;
+#endif
+
+    testOverdetermined(myrank, nbproc, comm);
+    testUnderdeterminedDamped(myrank, nbproc, comm);
 }
 
