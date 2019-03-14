@@ -20,9 +20,10 @@ class SynthesisProgramRunner:
 
       self.simulator = os.popen('which csimulator').read().rstrip() 
       self.imager = os.popen('which cimager').read().rstrip()
+      self.NewImager = os.popen('which imager').read().rstrip()
       self.calibrator = os.popen('which ccalibrator').read().rstrip()
       self.imgstat = os.popen('which imgstat').read().rstrip()
-
+      
       if not os.path.exists(self.simulator):
           raise RuntimeError, "csimulator is missing at %s" % self.simulator
 
@@ -88,6 +89,13 @@ class SynthesisProgramRunner:
          Run cimager on a current parset
       '''
       self.runCommand(self.imager)
+
+   def runNewImager(self):
+      '''
+         Run imager on a current parset
+      '''
+      self.runCommand(self.NewImager)
+
 
    def imageStats(self, name):
       '''
