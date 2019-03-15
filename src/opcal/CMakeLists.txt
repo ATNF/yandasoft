@@ -8,6 +8,10 @@ ScanStats.cc
 )
 
 set_property(TARGET opcal PROPERTY POSITION_INDEPENDENT_CODE ON)
+if (MPI_COMPILE_FLAGS)
+	set_property(TARGET opcal PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+endif()
+
 
 install (FILES
 BaselineSolver.h

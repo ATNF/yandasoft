@@ -71,6 +71,17 @@ class SynthesisProgramRunner:
       if res != 0:
          raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
 
+   def runMPICommand(self,cmd,np):
+      '''
+         Run given command on a current parset
+
+         cmd - command
+      '''
+      res = os.system("mpirun -np %d %s -c %s" % (np, cmd, self.tmp_parset))
+      if res != 0:
+         raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
+
+
    def runSimulator(self):
       '''
          Run csimulator on a current parset
@@ -94,7 +105,7 @@ class SynthesisProgramRunner:
       '''
          Run imager on a current parset
       '''
-      self.runCommand(self.NewImager)
+      self.runMPICommand(self.NewImager,2)
 
 
    def imageStats(self, name):

@@ -7,6 +7,10 @@ SpectralLineWorkUnit.cc
 )
 
 set_property(TARGET messages PROPERTY POSITION_INDEPENDENT_CODE ON)
+if (MPI_COMPILE_FLAGS)
+	set_property(TARGET deconvolution PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+endif()
+
 
 install (FILES
 ContinuumWorkRequest.h

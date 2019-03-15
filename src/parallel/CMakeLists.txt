@@ -15,6 +15,10 @@ SynParallel.cc
 )
 
 set_property(TARGET parallel PROPERTY POSITION_INDEPENDENT_CODE ON)
+if (MPI_COMPILE_FLAGS)
+	set_property(TARGET parallel  PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+endif()
+
 
 install (FILES
 AdviseParallel.h

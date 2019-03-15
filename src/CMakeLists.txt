@@ -18,6 +18,7 @@ find_package(Accessors REQUIRED)
 find_package(Imagemath REQUIRED)
 find_package(Scimath REQUIRED)
 find_package(Components REQUIRED)
+find_package(MPI REQUIRED)
 
 include_directories(${FFTW_INCLUDE_DIRS})
 include_directories(${ASKAP_INCLUDE_DIRS})
@@ -29,6 +30,12 @@ include_directories(${ACCESSORS_INCLUDE_DIRS})
 include_directories(${IMAGEMATH_INCLUDE_DIRS})
 include_directories(${SCIMATH_INCLUDE_DIRS})
 include_directories(${COMPONENTS_INCLUDE_DIRS})
+
+include_directories(${MPI_INCLUDE_PATH})
+
+if (MPI_FOUND)
+	add_definitions(-DHAVE_MPI)
+endif()
 
 include_directories(${log4cxx_INCLUDE_DIRS})
 add_definitions(-DHAVE_LOG4CXX)
@@ -77,6 +84,7 @@ target_link_libraries(yanda_synthesis
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
 	)
+
 
 install (
 TARGETS yanda_synthesis
