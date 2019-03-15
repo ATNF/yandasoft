@@ -403,7 +403,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           if ( regridRequired ) {
 
             // load input buffer for the current plane
-            accumulator.loadInputBuffers(planeIter, inPix, inWgtPix, inSenPix);
+            // Since the plane iterator is set up outside the linmos loop and
+            // is shared by all of the input image cubes, when the planes of
+            // the input images have different shapes a new temporary plane
+            // accessor is needed with a unique shape. To do this, send the
+            // current iterator position, rather than the iterator itself.
+            accumulator.loadInputBuffers(curpos, inPix, inWgtPix, inSenPix);
+            //accumulator.loadInputBuffers(planeIter, inPix, inWgtPix, inSenPix);
             // call regrid for any buffered images
             accumulator.regrid();
             // update the accululation arrays for this plane
