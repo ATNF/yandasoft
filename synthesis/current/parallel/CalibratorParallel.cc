@@ -345,6 +345,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
     if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
+    if (parset.isDefined("solver.LSQR.parallelMatrix")) params["parallelMatrix"] = parset.getString("solver.LSQR.parallelMatrix");
     return params;
 }
 
