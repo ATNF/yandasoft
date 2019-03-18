@@ -295,6 +295,9 @@ namespace askap
 
       /// @brief solution ID validity flag
       bool itsSolutionIDValid;
+
+      /// @brief flag to solve normal equation in parallel (on the matrix level).
+      bool itsMatrixIsParallel;
     };
 
   }

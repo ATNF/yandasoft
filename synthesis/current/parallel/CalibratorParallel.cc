@@ -112,7 +112,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
-      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false)
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsMatrixIsParallel(false)
 {
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
@@ -145,6 +146,11 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       what2solve<<"'");
 
   init(parset);
+
+  if (this->parset().getString("solver", "") == "LSQR"
+      && this->parset().getString("solver.LSQR.parallelMatrix", "") == "true") {
+      itsMatrixIsParallel = true;
+  }
 
   if (itsComms.isMaster()) {
 
