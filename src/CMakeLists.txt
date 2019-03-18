@@ -42,9 +42,12 @@ add_definitions(-DHAVE_LOG4CXX)
 include_directories(${CASACORE_INCLUDE_DIRS})
 add_definitions(-DHAVE_AIPSPP)
 
-if (NOT CASACORE_VERSION STREQUAL trunk AND
-    CASACORE_VERSION VERSION_GREATER 2.4.0)
+if (CASACORE3)
 	add_definitions(-DHAVE_CASACORE3)
+endif()
+if (CASACORE3 OR CXX11)
+	set(CMAKE_CXX_STANDARD 11)
+	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
 add_subdirectory(deconvolution)
