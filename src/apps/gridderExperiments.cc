@@ -180,15 +180,27 @@ public:
       static double sumLegendreSeries(const casa::Vector<double> &coeffs, double x, int m, bool rEven) {
            ASKAPASSERT(m>=0);
            const int nOrders = int(coeffs.nelements())*2 + (rEven ? 0 : 1);
+#ifdef HAVE_GSL2
            double *vals = new double[gsl_sf_legendre_array_n(nOrders+m)];
+#else
+           double *vals = new double[nOrders+1];
+#endif // HAVE_GSL2
            
+#ifdef HAVE_GSL2
 	   const int status = gsl_sf_legendre_array(GSL_SF_LEGENDRE_SPHARM, nOrders + m, x, vals);
+#else
+	   const int status = gsl_sf_legendre_sphPlm_array(nOrders + m, m, x, vals);
+#endif // HAVE_GSL2
 	   double result = 0.;
 	   for (casa::uInt elem = 0; elem<coeffs.nelements(); ++elem) {
 		   const int r = 2*elem + (rEven ? 0 : 1);
 		   //const int l = r + m;
 		   ASKAPASSERT(r < nOrders + 1);
+#ifdef HAVE_GSL2
 		   result += coeffs[elem]*vals[gsl_sf_legendre_array_index(r+m,m)];
+#else
+		   result += coeffs[elem]*vals[r];
+#endif // HAVE_GSL2
 	   }
            
            delete[](vals);

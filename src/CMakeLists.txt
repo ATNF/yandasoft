@@ -42,6 +42,10 @@ add_definitions(-DHAVE_LOG4CXX)
 include_directories(${CASACORE_INCLUDE_DIRS})
 add_definitions(-DHAVE_AIPSPP)
 
+if (NOT GSL_VERSION VERSION_LESS 2.0)
+	add_definitions(-DHAVE_GSL2)
+endif()
+
 if (NOT CASACORE_VERSION STREQUAL trunk AND
     CASACORE_VERSION VERSION_GREATER 2.4.0)
 	add_definitions(-DHAVE_CASACORE3)
@@ -83,6 +87,7 @@ target_link_libraries(yanda_synthesis
 	${ACCESSORS_LIBRARY}
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
+	${MPI_LIBRARIES}
 	)
 
 
