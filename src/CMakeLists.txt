@@ -49,6 +49,12 @@ endif()
 if (NOT CASACORE_VERSION STREQUAL trunk AND
     CASACORE_VERSION VERSION_GREATER 2.4.0)
 	add_definitions(-DHAVE_CASACORE3)
+	set(CASACORE3 TRUE)
+endif()
+
+if (CASACORE3 OR CXX11)
+	set(CMAKE_CXX_STANDARD 11)
+	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
 add_subdirectory(deconvolution)

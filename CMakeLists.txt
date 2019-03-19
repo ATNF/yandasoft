@@ -1,6 +1,4 @@
 cmake_minimum_required (VERSION 3.2.0)
-include(CheckCXXCompilerFlag)
-include(CheckCCompilerFlag)
 
 project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
 
@@ -16,19 +14,6 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake")
 
 option (CXX11 "Compile as C++11 if possible" YES)
-
-# Detect if the compiler supports C++11 if we want to use it.
-if (CXX11)
-    check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
-    if (HAS_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(CXX11 ON)
-    else()
-	    message(STATUS "CASA_BUILD requires a c++11 compatible compiler")
-      option(CXX11 "" NO)
-    endif()
-endif()
-
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 
