@@ -39,6 +39,10 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
+
 // Include own header file first
 #include <parallel/CalibratorParallel.h>
 
@@ -166,6 +170,25 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
           std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset);
           itsSolver->setParameters(params);
       }
+  }
+
+  if (itsMatrixIsParallel) {
+#ifdef HAVE_MPI
+      // Create an MPI communicator with workers only, i.e., master rank excluded (needed for the LSQR solver).
+      MPI_Comm newComm;
+      int rank = itsComms.rank();
+      int color = (int)(rank > 0);
+      MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
+
+      ASKAPASSERT((rank > 0) == itsComms.isWorker());
+      ASKAPASSERT(itsComms.nGroups() == 1);
+
+      if (itsComms.isWorker()) {
+          void *workersComm = (void *)&newComm;
+          boost::shared_ptr<LinearSolver> solver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+          solver->SetWorkersCommunicator(workersComm);
+      }
+#endif
   }
 
   if (itsComms.isMaster()) {
