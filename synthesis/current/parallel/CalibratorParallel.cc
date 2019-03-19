@@ -600,8 +600,14 @@ void CalibratorParallel::calcNE()
       ASKAPDEBUGASSERT(itsNe);
 
       if (itsComms.isParallel()) {
-          calcOne(measurementSets()[itsComms.rank()-1],false);
-          sendNE();
+          calcOne(measurementSets()[itsComms.rank()-1], false);
+          if (!itsMatrixIsParallel) {
+              sendNE();
+          } else {
+              ASKAPCHECK(itsSolver, "Solver not defined correctly");
+              itsSolver->init();
+              itsSolver->addNormalEquations(*itsNe);
+          }
       } else {
           ASKAPCHECK(itsSolver, "Solver not defined correctly");
           // just throw exception for now, although we could've maintained a map of dataset names/iterators
@@ -620,7 +626,7 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
-  if (itsComms.isMaster()) {
+  if (itsComms.isMaster() && !itsMatrixIsParallel) {
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
@@ -648,6 +654,36 @@ void CalibratorParallel::solveNE()
           rotatePhases();
       }
   }
+
+  if (itsComms.isWorker() && itsMatrixIsParallel) {
+      ASKAPLOG_INFO_STR(logger, "Solving normal equations");
+      casa::Timer timer;
+      timer.mark();
+      Quality q;
+      ASKAPDEBUGASSERT(itsSolver);
+
+      // Remove from the model parameters that are not present in this local part of the normal equation.
+      // Essentially we are creating the local model corresponding to the local normal equation.
+      // TODO: Can it be done in a more efficient way?
+      std::vector<std::string> namesEq = itsSolver->normalEquations().unknowns();
+      std::vector<std::string> namesModel = itsModel->freeNames();
+      for (std::vector<std::string>::const_iterator it = namesModel.begin();
+           it != namesModel.end(); ++it) {
+          const std::string parname = *it;
+          if (std::find(namesEq.begin(), namesEq.end(), parname) == namesEq.end()) {
+              // Parameter not found in the local normal equation, so remove it from the model.
+              itsModel->remove(parname);
+          }
+      }
+
+      itsSolver->solveNormalEquations(*itsModel, q);
+      ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
+      ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+
+      // TODO: Gather the full model at master rank.
+      // TODO: Rotate phases at the master (as done in the above branch).
+  }
+
 }
 
 /// @brief helper method to rotate all phases
