@@ -87,6 +87,7 @@ target_link_libraries(yanda_synthesis
 	${ACCESSORS_LIBRARY}
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
+	${MPI_LIBRARIES}
 	)
 
 
