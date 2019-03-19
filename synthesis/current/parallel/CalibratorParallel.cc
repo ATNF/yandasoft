@@ -147,17 +147,28 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
   init(parset);
 
-  if (this->parset().getString("solver", "") == "LSQR"
-      && this->parset().getString("solver.LSQR.parallelMatrix", "") == "true") {
+  if (parset.getString("solver", "") == "LSQR"
+      && parset.getString("solver.LSQR.parallelMatrix", "") == "true") {
       itsMatrixIsParallel = true;
   }
 
-  if (itsComms.isMaster()) {
-
-      /// Create the solver
+  if ((itsComms.isMaster() && !itsMatrixIsParallel)
+      || (itsComms.isWorker() && itsMatrixIsParallel)) {
+      // Create the solver.
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
 
+      // Set solver parameters.
+      const std::string solverType = parset.getString("solver", "SVD");
+      itsSolver->setAlgorithm(solverType);
+
+      if (solverType == "LSQR") {
+          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset);
+          itsSolver->setParameters(params);
+      }
+  }
+
+  if (itsComms.isMaster()) {
       if (parset.isDefined("refantenna") && parset.isDefined("refgain")) {
           ASKAPLOG_WARN_STR(logger,"refantenna and refgain are both defined. refantenna will be used.");
       }
@@ -597,14 +608,6 @@ void CalibratorParallel::solveNE()
       timer.mark();
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
-
-      const std::string solverType = parset().getString("solver", "SVD");
-      itsSolver->setAlgorithm(solverType);
-
-      if (solverType == "LSQR") {
-          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset());
-          itsSolver->setParameters(params);
-      }
 
       itsSolver->solveNormalEquations(*itsModel,q);
 
