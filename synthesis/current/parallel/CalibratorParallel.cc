@@ -664,7 +664,10 @@ void CalibratorParallel::solveNE()
 
       // Remove from the model parameters that are not present in this local part of the normal equation.
       // Essentially we are creating the local model corresponding to the local normal equation.
-      // TODO: Can it be done in a more efficient way?
+      // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the model to workers,
+      //       but when broadcast is performed (in ccalibrator.cc) the equation is not yet built,
+      //       so no direct access to the list of local parameters.
+      //       In principle, we could build that local parameters list separately, at the time we initialize the model in init().
       std::vector<std::string> namesEq = itsSolver->normalEquations().unknowns();
       std::vector<std::string> namesModel = itsModel->freeNames();
       for (std::vector<std::string>::const_iterator it = namesModel.begin();
