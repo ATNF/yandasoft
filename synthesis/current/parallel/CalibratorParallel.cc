@@ -656,31 +656,27 @@ void CalibratorParallel::solveNE()
           casa::Timer timer;
           timer.mark();
           Quality q;
-          ASKAPASSERT(itsSolver);
+          ASKAPDEBUGASSERT(itsSolver);
 
-          // Remove from the model the parameters that are not present in this local part of the normal equation.
-          // Essentially we are creating the local model corresponding to the local normal equation.
-          // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the model to workers,
-          //       but when broadcast is performed (in ccalibrator.cc) the equation is not yet built,
+          // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
+          //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
           //       so no direct access to the list of local parameters.
           //       In principle, we could build that local parameters list separately, at the time we initialize the model in init().
+          // Creating the local model corresponding to the local normal equation.
+          scimath::Params localModel;
           std::vector<std::string> namesEq(itsSolver->normalEquations().unknowns());
-          std::vector<std::string> namesModel(itsModel->freeNames());
-          for (std::vector<std::string>::const_iterator it = namesModel.begin();
-               it != namesModel.end(); ++it) {
+          for (std::vector<std::string>::const_iterator it = namesEq.begin();
+               it != namesEq.end(); ++it) {
               const std::string parname = *it;
-              if (std::find(namesEq.begin(), namesEq.end(), parname) == namesEq.end()) {
-                  // Parameter not found in the local normal equation, so remove it from the model.
-                  itsModel->remove(parname);
-              }
+              localModel.add(parname, itsModel->value(parname));
           }
 
-          itsSolver->solveNormalEquations(*itsModel, q);
+          itsSolver->solveNormalEquations(localModel, q);
 
           ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
           ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
 
-          sendModelToMaster(*itsModel);
+          sendModelToMaster(localModel);
       }
       if (itsComms.isMaster()) {
           // Receive the local models from workers, and update the full model.
