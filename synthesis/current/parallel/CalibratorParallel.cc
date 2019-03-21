@@ -37,6 +37,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
+/// @author Vitaliy Ogarko <vogarko@gmail.com>
 ///
 
 #ifdef HAVE_MPI
