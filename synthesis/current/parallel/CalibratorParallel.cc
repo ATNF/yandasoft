@@ -98,6 +98,9 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>
 
+#include <Blob/BlobIBufString.h>
+#include <Blob/BlobOBufString.h>
+
 using namespace askap;
 using namespace askap::scimath;
 using namespace askap::synthesis;
@@ -626,7 +629,7 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
-  if (itsComms.isMaster() && !itsMatrixIsParallel) {
+  if (!itsMatrixIsParallel && itsComms.isMaster()) {
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
@@ -642,6 +645,61 @@ void CalibratorParallel::solveNE()
 
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+  }
+
+  if (itsMatrixIsParallel) {
+      ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
+      ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
+
+      if (itsComms.isWorker()) {
+          ASKAPLOG_INFO_STR(logger, "Solving normal equations");
+          casa::Timer timer;
+          timer.mark();
+          Quality q;
+          ASKAPDEBUGASSERT(itsSolver);
+
+          // Remove from the model the parameters that are not present in this local part of the normal equation.
+          // Essentially we are creating the local model corresponding to the local normal equation.
+          // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the model to workers,
+          //       but when broadcast is performed (in ccalibrator.cc) the equation is not yet built,
+          //       so no direct access to the list of local parameters.
+          //       In principle, we could build that local parameters list separately, at the time we initialize the model in init().
+          std::vector<std::string> namesEq(itsSolver->normalEquations().unknowns());
+          std::vector<std::string> namesModel(itsModel->freeNames());
+          for (std::vector<std::string>::const_iterator it = namesModel.begin();
+               it != namesModel.end(); ++it) {
+              const std::string parname = *it;
+              if (std::find(namesEq.begin(), namesEq.end(), parname) == namesEq.end()) {
+                  // Parameter not found in the local normal equation, so remove it from the model.
+                  itsModel->remove(parname);
+              }
+          }
+
+          itsSolver->solveNormalEquations(*itsModel, q);
+
+          ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
+          ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+
+          sendModelToMaster(*itsModel);
+      }
+      if (itsComms.isMaster()) {
+          // Receive the local models from workers, and update the full model.
+          for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
+              scimath::Params localModel;
+              receiveModelOnMaster(localModel, i + 1);
+
+              // Update the full model on master from local models on workers.
+              std::vector<std::string> localNames(localModel.freeNames());
+              for (std::vector<std::string>::const_iterator it = localNames.begin();
+                   it != localNames.end(); ++it) {
+                  const std::string parname = *it;
+                  itsModel->update(parname, localModel.value(parname));
+              }
+          }
+      }
+  }
+
+  if (itsComms.isMaster()) {
       if (itsRefGainXX != "") {
           if (itsRefGainXX == itsRefGainYY) {
               ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
@@ -653,38 +711,6 @@ void CalibratorParallel::solveNE()
           }
           rotatePhases();
       }
-  }
-
-  if (itsComms.isWorker() && itsMatrixIsParallel) {
-      ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-      casa::Timer timer;
-      timer.mark();
-      Quality q;
-      ASKAPDEBUGASSERT(itsSolver);
-
-      // Remove from the model parameters that are not present in this local part of the normal equation.
-      // Essentially we are creating the local model corresponding to the local normal equation.
-      // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the model to workers,
-      //       but when broadcast is performed (in ccalibrator.cc) the equation is not yet built,
-      //       so no direct access to the list of local parameters.
-      //       In principle, we could build that local parameters list separately, at the time we initialize the model in init().
-      std::vector<std::string> namesEq = itsSolver->normalEquations().unknowns();
-      std::vector<std::string> namesModel = itsModel->freeNames();
-      for (std::vector<std::string>::const_iterator it = namesModel.begin();
-           it != namesModel.end(); ++it) {
-          const std::string parname = *it;
-          if (std::find(namesEq.begin(), namesEq.end(), parname) == namesEq.end()) {
-              // Parameter not found in the local normal equation, so remove it from the model.
-              itsModel->remove(parname);
-          }
-      }
-
-      itsSolver->solveNormalEquations(*itsModel, q);
-      ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
-      ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
-
-      // TODO: Gather the full model at master rank.
-      // TODO: Rotate phases at the master (as done in the above branch).
   }
 
 }
@@ -929,4 +955,33 @@ void CalibratorParallel::writeModel(const std::string &postfix)
            }
       }
   }
+}
+
+void CalibratorParallel::sendModelToMaster(const scimath::Params &model) const {
+    ASKAPASSERT(itsComms.isWorker());
+    ASKAPASSERT(itsComms.rank() > 0);
+
+    LOFAR::BlobString bs;
+    bs.resize(0);
+    LOFAR::BlobOBufString bob(bs);
+    LOFAR::BlobOStream out(bob);
+    out.putStart("model", 1);
+    out << model;
+    out.putEnd();
+    itsComms.sendBlob(bs, 0);
+}
+
+void CalibratorParallel::receiveModelOnMaster(scimath::Params &model, int rank) {
+    ASKAPASSERT(itsComms.isMaster());
+    ASKAPASSERT(itsComms.rank() == 0);
+
+    LOFAR::BlobString bs;
+    bs.resize(0);
+    itsComms.receiveBlob(bs, rank);
+    LOFAR::BlobIBufString bib(bs);
+    LOFAR::BlobIStream in(bib);
+    int version=in.getStart("model");
+    ASKAPASSERT(version==1);
+    in >> model;
+    in.getEnd();
 }

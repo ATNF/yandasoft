@@ -298,6 +298,15 @@ namespace askap
 
       /// @brief flag to solve normal equation in parallel (on the matrix level).
       bool itsMatrixIsParallel;
+
+      /// @brief Sends the model from workers to master.
+      /// @param[in] model The model to send.
+      void sendModelToMaster(const scimath::Params &model) const;
+
+      /// @brief Receives the model from workers on master.
+      /// @param[in] model The model to receive.
+      /// @param[in] rank The worker's rank.
+      void receiveModelOnMaster(scimath::Params &model, int rank);
     };
 
   }
