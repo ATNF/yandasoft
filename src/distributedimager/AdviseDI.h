@@ -101,14 +101,16 @@ namespace askap {
             /// @brief get the channels
             std::vector<int> getChannels();
 
-            ///
+            /// @brief get the frequencies
+            std::vector<double> getFrequencies();
+            
             casa::MVDirection getTangent(int ms=0) {return itsTangent[ms];};
 
             casa::MVEpoch getEpoch(int ms=0) {return itsEpoch[ms]; };
 
             casa::MPosition getPosition(int ms=0) {return itsPosition[ms]; };
 
-            vector<casa::MFrequency> getBaryFrequencies() {return itsBaryFrequencies;};
+            vector<casa::MFrequency> getBaryFrequencies() {return itsFFrameFrequencies;};
 
             vector<casa::MFrequency> getTopoFrequencies() {return itsTopoFrequencies;};
 
@@ -125,7 +127,8 @@ namespace askap {
             bool isPrepared;
 
             bool barycentre;
-
+            /// obtain frequency reference frame
+            inline casa::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
 
         private:
 
@@ -135,10 +138,18 @@ namespace askap {
 
             casa::uInt itsRef;
 
-            vector<casa::MFrequency> itsBaryFrequencies;
+            vector<casa::MFrequency> itsFFrameFrequencies;
 
             vector<casa::MFrequency> itsTopoFrequencies;
 
+            vector<casa::MFrequency> itsRequestedFrequencies;
+
+            /// @brief reference frame for frequency
+            /// @details We may want to simulate/image in different reference frames.
+            /// This field contains the reference frame selected in the parset.
+            casa::MFrequency::Ref itsFreqRefFrame;  
+            
+            casa::MFrequency::Types itsFreqType;
 
             double minFrequency;
 
