@@ -156,6 +156,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
   if (parset.getString("solver", "") == "LSQR"
       && parset.getString("solver.LSQR.parallelMatrix", "") == "true") {
+      ASKAPCHECK(itsComms.isParallel(), "Parallel matrix scheme is supported only in the parallel mode!");
       itsMatrixIsParallel = true;
   }
 
@@ -176,15 +177,14 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
   }
 
   if (itsMatrixIsParallel) {
+      ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
+      ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
 #ifdef HAVE_MPI
       // Create an MPI communicator with workers only, i.e., master rank excluded (needed for the LSQR solver).
       MPI_Comm newComm;
       int rank = itsComms.rank();
       int color = (int)(rank > 0);
       MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
-
-      ASKAPASSERT((rank > 0) == itsComms.isWorker());
-      ASKAPASSERT(itsComms.nGroups() == 1);
 
       if (itsComms.isWorker()) {
           void *workersComm = (void *)&newComm;
@@ -656,7 +656,7 @@ void CalibratorParallel::solveNE()
           casa::Timer timer;
           timer.mark();
           Quality q;
-          ASKAPDEBUGASSERT(itsSolver);
+          ASKAPASSERT(itsSolver);
 
           // Remove from the model the parameters that are not present in this local part of the normal equation.
           // Essentially we are creating the local model corresponding to the local normal equation.
@@ -958,8 +958,8 @@ void CalibratorParallel::writeModel(const std::string &postfix)
 }
 
 void CalibratorParallel::sendModelToMaster(const scimath::Params &model) const {
-    ASKAPASSERT(itsComms.isWorker());
-    ASKAPASSERT(itsComms.rank() > 0);
+    ASKAPDEBUGASSERT(itsComms.isWorker());
+    ASKAPDEBUGASSERT(itsComms.rank() > 0);
 
     LOFAR::BlobString bs;
     bs.resize(0);
@@ -972,8 +972,8 @@ void CalibratorParallel::sendModelToMaster(const scimath::Params &model) const {
 }
 
 void CalibratorParallel::receiveModelOnMaster(scimath::Params &model, int rank) {
-    ASKAPASSERT(itsComms.isMaster());
-    ASKAPASSERT(itsComms.rank() == 0);
+    ASKAPDEBUGASSERT(itsComms.isMaster());
+    ASKAPDEBUGASSERT(itsComms.rank() == 0);
 
     LOFAR::BlobString bs;
     bs.resize(0);
