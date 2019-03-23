@@ -62,9 +62,9 @@ spr.addToParset("Cimager.solverpercore = true")
 #spr.runNewImager()
 #analyseResult(spr)
 
-spr.addToParset("Cimager.freqframe = bary")
+spr.addToParset("Cimager.freqframe = lsrk")
 spr.addToParset("Cimager.Channels = [1,0]")
-spr.addToParset("Cimager.Frequencies = [1,1.42e9,-10000]")
+spr.addToParset("Cimager.Frequencies = [1,1.42e9,-1e6]")
 
 spr.runNewImager()
 analyseResult(spr)

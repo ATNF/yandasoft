@@ -103,7 +103,7 @@ namespace askap {
 
             /// @brief get the frequencies
             std::vector<double> getFrequencies();
-            
+
             casa::MVDirection getTangent(int ms=0) {return itsTangent[ms];};
 
             casa::MVEpoch getEpoch(int ms=0) {return itsEpoch[ms]; };
@@ -112,7 +112,7 @@ namespace askap {
 
             vector<casa::MFrequency> getBaryFrequencies() {return itsFFrameFrequencies;};
 
-            vector<casa::MFrequency> getTopoFrequencies() {return itsTopoFrequencies;};
+            vector<casa::MFrequency> getTopoFrequencies() {return itsInputFrequencies;};
 
             cp::ContinuumWorkUnit getAllocation(int id);
 
@@ -140,7 +140,7 @@ namespace askap {
 
             vector<casa::MFrequency> itsFFrameFrequencies;
 
-            vector<casa::MFrequency> itsTopoFrequencies;
+            vector<casa::MFrequency> itsInputFrequencies;
 
             vector<casa::MFrequency> itsRequestedFrequencies;
 
@@ -174,7 +174,7 @@ namespace askap {
             std::vector< std::vector<double> > itsAllocatedFrequencies;
             std::vector< std::vector<cp::ContinuumWorkUnit> > itsAllocatedWork;
 
-            int match(int ms_number,  casa::MVFrequency freq);
+            vector<int> matchall(int,  casa::MVFrequency, casa::MVFrequency);
 
             std::vector<int> getBeams();
 
