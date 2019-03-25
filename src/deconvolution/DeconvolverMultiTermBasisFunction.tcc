@@ -513,6 +513,7 @@ namespace askap {
             maxVal = T(0);
             const uInt ncol = mask.ncolumn();
             const uInt nrow = mask.nrow();
+            #pragma acc parallel loop collapse(2) gang vector
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 const T* pMask = &mask(0,j);
