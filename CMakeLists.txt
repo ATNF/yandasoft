@@ -3,6 +3,8 @@ include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 
 project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
+set (CMAKE_C_COMPILER /group/gpuhack2019team3/software/sles12sp3/apps/binary/pgi/19.1/linux86-64/19.1/bin/pgcc)
+set (CMAKE_CXX_COMPILER /group/gpuhack2019team3/software/sles12sp3/apps/binary/pgi/19.1/linux86-64/19.1/bin/pgc++)
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
