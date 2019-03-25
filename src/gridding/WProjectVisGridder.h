@@ -109,19 +109,19 @@ namespace askap
 
                 /// @brief obtain buffer used to create convolution functions
                 /// @return a reference to the buffer held as a shared pointer
-                casa::Matrix<casa::DComplex> getCFBuffer() const;
+                casacore::Matrix<casacore::DComplex> getCFBuffer() const;
 
                 /// @brief obtain buffer used to create convolution functions
                 /// @return a reference to the buffer held as a shared pointer
-                casa::Matrix<casa::Complex> getCFBufferF() const;
+                casacore::Matrix<casacore::Complex> getCFBufferF() const;
 
                 /// @brief initialise buffer for full-sized convolution function
                 /// @param[in] uSize size in U
                 /// @param[in] vSize size in V
-                inline void initCFBuffer(casa::uInt uSize, casa::uInt vSize)
+                inline void initCFBuffer(casacore::uInt uSize, casacore::uInt vSize)
                 {
-                    if(itsDoubleCF) itsCFBuffer.reset(new casa::Matrix<casa::DComplex>(uSize,vSize));
-                    else itsCFBufferF.reset(new casa::Matrix<casa::Complex>(uSize,vSize));
+                    if(itsDoubleCF) itsCFBuffer.reset(new casacore::Matrix<casacore::DComplex>(uSize,vSize));
+                    else itsCFBufferF.reset(new casacore::Matrix<casacore::Complex>(uSize,vSize));
                 }
 
                 /// @brief initialise sum of weights
@@ -179,14 +179,14 @@ namespace askap
                 /// cutoff parameter and whether or not an offset is allowed.
                 /// @param[in] cfPlane const reference to 2D plane with the convolution function
                 /// @return an instance of CFSupport with support parameters
-                CFSupport extractSupport(const casa::Matrix<casa::DComplex> &cfPlane) const;
+                CFSupport extractSupport(const casacore::Matrix<casacore::DComplex> &cfPlane) const;
 
                 /// @brief search for support parameters
                 /// @details This method encapsulates support search operation, taking into account the
                 /// cutoff parameter and whether or not an offset is allowed.
                 /// @param[in] cfPlane const reference to 2D plane with the convolution function
                 /// @return an instance of CFSupport with support parameters
-                CFSupport extractSupport(const casa::Matrix<casa::Complex> &cfPlane) const;
+                CFSupport extractSupport(const casacore::Matrix<casacore::Complex> &cfPlane) const;
 
                 /// @brief support is plane-dependent?
                 /// @return true, if support should be searched individually for every CF cache plane
@@ -204,7 +204,7 @@ namespace askap
                 inline void offsetSupport(bool flag) { itsOffsetSupportAllowed = flag; }
 
                 /// Mapping from row, pol, and channel to planes of convolution function
-                casa::Cube<int> itsCMap;
+                casacore::Cube<int> itsCMap;
 
                 /// @brief obtain absolute cutoff flag
                 /// @return true if itsCutoff is an absolute cutoff rather than relative to the peak
@@ -245,10 +245,10 @@ namespace askap
                 /// of convolution functions. To speed things up, the allocation of the buffer is taken
                 /// outside initConvolutionFunction method. A shared pointer to this buffer is held as a
                 /// data member as initialisation and usage happen in different methods of this class.
-                boost::shared_ptr<casa::Matrix<casa::DComplex> > itsCFBuffer;
+                boost::shared_ptr<casacore::Matrix<casacore::DComplex> > itsCFBuffer;
 
                 /// @brief buffer for full-sized convolution function - Single precision version
-                boost::shared_ptr<casa::Matrix<casa::Complex> > itsCFBufferF;
+                boost::shared_ptr<casacore::Matrix<casacore::Complex> > itsCFBufferF;
 
                 /// @brief itsCutoff is an absolute cutoff, rather than relative to the peak of a particular CF plane
                 bool itsCutoffAbs;

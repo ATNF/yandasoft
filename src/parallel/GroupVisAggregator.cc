@@ -46,8 +46,8 @@ namespace synthesis {
 /// @param[in] comms communication object
 GroupVisAggregator::GroupVisAggregator(askap::askapparallel::AskapParallel& comms) : itsComms(comms), itsCommIndex(0)
 {
-  // we implicitly assume that casa::Complex just has two float data members and nothing else
-  ASKAPDEBUGASSERT(sizeof(casa::Complex) == 2*sizeof(float));
+  // we implicitly assume that casacore::Complex just has two float data members and nothing else
+  ASKAPDEBUGASSERT(sizeof(casacore::Complex) == 2*sizeof(float));
   
   ASKAPLOG_DEBUG_STR(logger, "Set up visibility aggregator to sum degridded visibilities within each group of workers");
   const size_t group = itsComms.group();
@@ -59,7 +59,7 @@ GroupVisAggregator::GroupVisAggregator(askap::askapparallel::AskapParallel& comm
   
 /// @brief update visibility cube
 /// @param[in,out] cube reference to visiblity cube to update 
-void GroupVisAggregator::update(casa::Cube<casa::Complex> &cube) const
+void GroupVisAggregator::update(casacore::Cube<casacore::Complex> &cube) const
 {
   ASKAPASSERT(cube.nelements() != 0); 
   ASKAPASSERT(cube.contiguousStorage());

@@ -86,8 +86,8 @@ public:
    /// as opposed to evaluating it at the current time.
    SnapShotImagingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
            const double tolerance,
-           const casa::uInt decimate = 0,
-           const casa::Interpolate2D::Method method = casa::Interpolate2D::CUBIC,
+           const casacore::uInt decimate = 0,
+           const casacore::Interpolate2D::Method method = casacore::Interpolate2D::CUBIC,
            const bool PredictWPlane = false);
 
    /// @brief copy constructor
@@ -109,7 +109,7 @@ public:
    /// @param[in] shape Shape of output image: cube: u,v,pol,chan
    /// @param[in] dopsf Make the psf?
    virtual void initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf = true,
+                const casacore::IPosition& shape, const bool dopsf = true,
                 const bool dopcf=false);
 
    /// @brief grid the visibility data.
@@ -118,19 +118,19 @@ public:
 
    /// @brief form the final output image
    /// @param[in] out output double precision image or PSF
-   virtual void finaliseGrid(casa::Array<double>& out);
+   virtual void finaliseGrid(casacore::Array<double>& out);
 
    /// @brief finalise weights
    /// @details Form the sum of the convolution function squared, multiplied by the weights for each
    /// different convolution function. This is used in the evaluation of the second derivative.
    /// @param[in] out output double precision sum of weights images
-   virtual void finaliseWeights(casa::Array<double>& out);
+   virtual void finaliseWeights(casacore::Array<double>& out);
 
    /// @brief initialise the degridding
    /// @param[in] axes axes specifications
    /// @param[in] image input image cube: u,v,pol,chan
    virtual void initialiseDegrid(const scimath::Axes& axes,
-					const casa::Array<double>& image);
+					const casacore::Array<double>& image);
 
    /// @brief make context-dependant changes to the gridder behaviour
    /// @param[in] context context description
@@ -222,22 +222,22 @@ protected:
    /// over 2D planes is perfromed explicitly to avoid initialising large scratch 
    /// buffers. An exception is raised if input and output arrays have different 
    /// shapes
-   void imageRegrid(const casa::Array<double> &input, casa::Array<double> &output,
+   void imageRegrid(const casacore::Array<double> &input, casacore::Array<double> &output,
                     bool toTarget, bool isWeights = false) const;
    
-   void pcfRegrid(casa::ImageRegrid<double>& regridder) const;
+   void pcfRegrid(casacore::ImageRegrid<double>& regridder) const;
    
    /// @brief clip image 
    /// @details This method clips the image by zeroing the edges according to the
    /// assigned clipping factor.
    /// @param[in] img array to modify
-   void imageClip(casa::Array<double> &img, const float factor) const;
+   void imageClip(casacore::Array<double> &img, const float factor) const;
    
    /// @brief obtain the tangent point
    /// @details This method extracts the tangent point (reference position) from the
    /// coordinate system.
    /// @return direction measure corresponding to the tangent point
-   casa::MVDirection getTangentPoint() const;
+   casacore::MVDirection getTangentPoint() const;
    
    /// @brief report current interval stats and initialise them
    /// @details We collect and report such statistics like shortest and longest
@@ -259,7 +259,7 @@ protected:
    /// current best fit w=Au+Bv from the direction coordinate stored in 
    /// itsAxes. This is used to setup image plane regridding and coordinate system
    /// of the wrapped gridder during grid/degrid initialisation.
-   casa::DirectionCoordinate currentPlaneDirectionCoordinate() const;   
+   casacore::DirectionCoordinate currentPlaneDirectionCoordinate() const;   
    
 private:
 
@@ -287,11 +287,11 @@ private:
    /// @brief buffer for the image
    /// @details It accumulates dirty or model images in the target
    /// coordinate frame
-   casa::Array<double> itsImageBuffer;
+   casacore::Array<double> itsImageBuffer;
    
    /// @brief buffer for weights
    /// @details It accumulates weights during gridding
-   casa::Array<double> itsWeightsBuffer;
+   casacore::Array<double> itsWeightsBuffer;
    
    /// @brief coefficient A of the fit
    /// @details This is a parameter of the best fitted plane 
@@ -352,10 +352,10 @@ private:
    // (it is not done at the moment, all usage of these data fields is confimed to imageRegrid)
    
    /// @brief temporary input image for regridding
-   mutable casa::TempImage<double> itsTempInImg;
+   mutable casacore::TempImage<double> itsTempInImg;
    
    /// @brief temporary output image for regridding
-   mutable casa::TempImage<double> itsTempOutImg;   
+   mutable casacore::TempImage<double> itsTempOutImg;   
 
    /// @brief flag that the model is empty for degridding
    /// @details It allows to bypass expensive image regridding
@@ -381,10 +381,10 @@ private:
    /// The decimation factor used for coordinate system interpolation during
    /// regridding. A decimation factor of 0 (or 1) implies no decimation,
    /// which is the slowest and most accurate. 
-   casa::uInt itsDecimationFactor; 
+   casacore::uInt itsDecimationFactor; 
 
    // Interpolation method used for regridding
-   casa::Interpolate2D::Method itsInterpolationMethod;
+   casacore::Interpolate2D::Method itsInterpolationMethod;
 
    #ifdef _OPENMP
    /// @brief mutex to deal with lack of thread safety in casa's regrid

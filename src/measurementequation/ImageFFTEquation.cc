@@ -240,8 +240,8 @@ namespace askap
         if (notYetDegridded(imageName)) {
             ASKAPLOG_DEBUG_STR(logger, "Degridding image "<<imageName);
             const Axes axes(parameters().axes(imageName));
-            casa::Array<double> imagePixels(parameters().value(imageName).copy());
-            const casa::IPosition imageShape(imagePixels.shape());
+            casacore::Array<double> imagePixels(parameters().value(imageName).copy());
+            const casacore::IPosition imageShape(imagePixels.shape());
             itsModelGridders[imageName]->initialiseDegrid(axes, imagePixels);
         }
       }
@@ -260,7 +260,7 @@ namespace askap
         itsIdi->rwVisibility().set(0.0);
         /*
         ASKAPDEBUGASSERT(itsIdi->nPol() == 4);
-        for (casa::uInt p=1;p<3;++p) {
+        for (casacore::uInt p=1;p<3;++p) {
              itsIdi->rwVisibility().xyPlane(p).set(0.);
         }
         */
@@ -270,7 +270,7 @@ namespace askap
           itsModelGridders[imageName]->degrid(*itsIdi);
         }
         #ifdef ASKAP_DEBUG
-        const casa::uInt nRow = itsIdi->nRow();
+        const casacore::uInt nRow = itsIdi->nRow();
         total_rows += nRow;
         current_rows += nRow;
         if (current_rows > report_every) {
@@ -356,8 +356,8 @@ namespace askap
         string imageName("image"+(*it));
         ASKAPLOG_DEBUG_STR(logger, "Initialising for " << imageName);
         const Axes axes(parameters().axes(imageName));
-        casa::Array<double> imagePixels(parameters().value(imageName).copy());
-        const casa::IPosition imageShape(imagePixels.shape());
+        casacore::Array<double> imagePixels(parameters().value(imageName).copy());
+        const casacore::IPosition imageShape(imagePixels.shape());
         /// First the model
         itsModelGridders[imageName]->customiseForContext(*it);
         itsModelGridders[imageName]->initialiseDegrid(axes, imagePixels);
@@ -462,9 +462,9 @@ namespace askap
       for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it)
       {
         const string imageName("image"+(*it));
-        const casa::IPosition imageShape(parameters().value(imageName).shape());
+        const casacore::IPosition imageShape(parameters().value(imageName).shape());
         ASKAPLOG_INFO_STR(logger,"Name: " << imageName << " Shape: " << imageShape);
-        casa::Array<double> imageDeriv(imageShape);
+        casacore::Array<double> imageDeriv(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
 
         /*
@@ -479,20 +479,20 @@ namespace askap
 
 
 
-        casa::Array<double> imagePSF(imageShape);
+        casacore::Array<double> imagePSF(imageShape);
         itsPSFGridders[imageName]->finaliseGrid(imagePSF);
 
-        casa::Array<double> imageWeight(imageShape);
+        casacore::Array<double> imageWeight(imageShape);
         itsResidualGridders[imageName]->finaliseWeights(imageWeight);
 
         /*{
-          casa::Array<double> imagePSFWeight(imageShape);
+          casacore::Array<double> imagePSFWeight(imageShape);
           itsPSFGridders[imageName]->finaliseWeights(imagePSFWeight);
-          const double maxPSFWeight = casa::max(imagePSFWeight);
+          const double maxPSFWeight = casacore::max(imagePSFWeight);
           if (maxPSFWeight > 0) {
-              const double psfScalingFactor = casa::max(imageWeight)/maxPSFWeight;
-              //std::cout<<"psf peak = "<<casa::max(imagePSF)<<" maxPSFWeight = "<<maxPSFWeight<<" factor="<<
-              //     psfScalingFactor<<" maxImageWeight="<<casa::max(imageWeight)<<std::endl;
+              const double psfScalingFactor = casacore::max(imageWeight)/maxPSFWeight;
+              //std::cout<<"psf peak = "<<casacore::max(imagePSF)<<" maxPSFWeight = "<<maxPSFWeight<<" factor="<<
+              //     psfScalingFactor<<" maxImageWeight="<<casacore::max(imageWeight)<<std::endl;
               imagePSF *= psfScalingFactor;
               // now psf has the same peak as the weight image
           } else {
@@ -504,20 +504,20 @@ namespace askap
           }
         }*/
 
-        casa::IPosition vecShape(1, imagePSF.nelements());
+        casacore::IPosition vecShape(1, imagePSF.nelements());
 
-        casa::Vector<double> imagePreconVec;
+        casacore::Vector<double> imagePreconVec;
         if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
-          casa::Array<double> imagePrecon(imageShape);
+          casacore::Array<double> imagePrecon(imageShape);
           itsPreconGridders[imageName]->finaliseGrid(imagePrecon);
           imagePreconVec.reference(imagePrecon.reform(vecShape));
         }
 
         {
-          casa::IPosition reference(4, imageShape(0)/2, imageShape(1)/2, 0, 0);
-          casa::Vector<double> imagePSFVec(imagePSF.reform(vecShape));
-          casa::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
-          casa::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
+          casacore::IPosition reference(4, imageShape(0)/2, imageShape(1)/2, 0, 0);
+          casacore::Vector<double> imagePSFVec(imagePSF.reform(vecShape));
+          casacore::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
+          casacore::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
 
           ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
               imageDerivVec, imageShape, reference,itsCoordSystems[imageName]);

@@ -67,24 +67,24 @@ struct ValueTypeExtractor {
 };
 
 
-/// Specialization of ValueTypeExtractor for casa::Vector
+/// Specialization of ValueTypeExtractor for casacore::Vector
 /// @ingroup measurementequation
 template<typename Y>
-struct ValueTypeExtractor<casa::Vector<Y> > {
- /// type of the value of the container is a template argument for casa::Vector
+struct ValueTypeExtractor<casacore::Vector<Y> > {
+ /// type of the value of the container is a template argument for casacore::Vector
  typedef Y type;
  /// type of the container. Defining this allowing reference semantics
- typedef casa::Vector<Y> container_type;
+ typedef casacore::Vector<Y> container_type;
 };
 
-/// Specialization of ValueTypeExtractor for casa::Array
+/// Specialization of ValueTypeExtractor for casacore::Array
 /// @ingroup measurementequation
 template<typename Y>
-struct ValueTypeExtractor<casa::Array<Y> > {
-  /// type of the value of the container is a template argument for casa::Array
+struct ValueTypeExtractor<casacore::Array<Y> > {
+  /// type of the value of the container is a template argument for casacore::Array
   typedef Y type;
   /// type of the container. Defining this allowing reference semantics
-  typedef casa::Array<Y> container_type;
+  typedef casacore::Array<Y> container_type;
 };
 
 /// @brief Simple increment of the iterator
@@ -149,7 +149,7 @@ private:
 /// @details The purpose of this class is to extract the required value 
 /// regardless on the actual type returned by the iterator. The default 
 /// implementation returns the value itself.
-/// However, it can return, for example casa::AutoDiff<ValueType>, which has
+/// However, it can return, for example casacore::AutoDiff<ValueType>, which has
 /// to be converted to ValueType by calling the value() method. This is 
 /// taken care of by the partial specialization.
 /// @ingroup measurementequation
@@ -161,27 +161,27 @@ struct InputValueAccessor : public BasicIncrementor {
   inline ValueType operator()(const ValueType &in) const throw() {return in;}
 };
 
-/// @brief InputValueAccessor specialization for casa::AutoDiff
+/// @brief InputValueAccessor specialization for casacore::AutoDiff
 /// @ingroup measurementequation
 template<typename T>
-struct InputValueAccessor<casa::AutoDiff<T> > : public BasicIncrementor  {
+struct InputValueAccessor<casacore::AutoDiff<T> > : public BasicIncrementor  {
   /// @brief access to the value
   /// @details This specialization just calls value() method of its input AutoDiff
   /// @param[in] in the AutoDiff to work with
-  inline T operator()(const casa::AutoDiff<T> &in) const {return in.value();}
+  inline T operator()(const casacore::AutoDiff<T> &in) const {return in.value();}
 };
 
-/// @brief InputValueAccessor specialization for casa::Complex
+/// @brief InputValueAccessor specialization for casacore::Complex
 /// @ingroup measurementequation
 template<>
-struct InputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
+struct InputValueAccessor<casacore::Complex> : public ComplexNumberIncrementor {
    
    /// @brief access to the value
    /// @details This access method of this specialization returns real or
    /// imaginary part of the input complex number, depending on whether it is
    /// an even or odd call to the increment operator.
    /// @param[in] in input complex number
-   inline casa::Double operator()(const casa::Complex &in) const 
+   inline casacore::Double operator()(const casacore::Complex &in) const 
       { return isRealNow()? real(in) : imag(in); }
 };
 
@@ -195,7 +195,7 @@ struct InputValueAccessor<scimath::ComplexDiff> : public ComplexNumberIncremento
    /// imaginary part of the value of the input ComplexDiff object, depending on 
    /// whether it is an even or odd call to the increment operator.
    /// @param[in] in input complex number
-   inline casa::Double operator()(const scimath::ComplexDiff &in) const 
+   inline casacore::Double operator()(const scimath::ComplexDiff &in) const 
       { return isRealNow()? real(in.value()) : imag(in.value()); }
 };
 
@@ -242,10 +242,10 @@ struct OutputValueAccessor : public BasicIncrementor {
                
 };
 
-/// @brief OutputValueAccessor specialization for casa::Complex
+/// @brief OutputValueAccessor specialization for casacore::Complex
 /// @ingroup measurementequation
 template<>
-struct OutputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
+struct OutputValueAccessor<casacore::Complex> : public ComplexNumberIncrementor {
    /// @brief default constructor
    /// @details strictly speaking, this method is not required for correct
    /// operations. However, the compiler gives a
@@ -259,12 +259,12 @@ struct OutputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
    /// even or odd call to the increment operator.
    /// @param[in] in the value to write
    /// @param[out] out destination
-   inline void write(casa::Double in, casa::Complex& out) const throw() 
+   inline void write(casacore::Double in, casacore::Complex& out) const throw() 
       {
         if (isRealNow()) {
             itsRealPart=in;
         } else {
-            out=casa::Complex(itsRealPart,in);
+            out=casacore::Complex(itsRealPart,in);
         }
       }
       
@@ -275,12 +275,12 @@ struct OutputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
   /// even or odd call to the increment operator.
   /// @param[in] in subtrahend
   /// @param[in,out] out minuend for input and result for output
-  inline void subtract(casa::Double in, casa::Complex& out) const throw() 
+  inline void subtract(casacore::Double in, casacore::Complex& out) const throw() 
       {
         if (isRealNow()) {
             itsRealPart=in;
         } else {
-            out-=casa::Complex(itsRealPart,in);
+            out-=casacore::Complex(itsRealPart,in);
         }
       }      
 
@@ -291,12 +291,12 @@ struct OutputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
   /// even or odd call to the increment operator.
   /// @param[in] in a value to add
   /// @param[in,out] out another item and result for output
-  inline void add(casa::Double in, casa::Complex& out) const throw() 
+  inline void add(casacore::Double in, casacore::Complex& out) const throw() 
       {
         if (isRealNow()) {
             itsRealPart=in;
         } else {
-            out+=casa::Complex(itsRealPart,in);
+            out+=casacore::Complex(itsRealPart,in);
         }
       }      
 
@@ -306,19 +306,19 @@ struct OutputValueAccessor<casa::Complex> : public ComplexNumberIncrementor {
   /// @param[in] in a value to add
   /// @param[in,out] out another item and result for output
   /// @param[in] factor scaling factor
-  inline void addScaled(casa::Double in, casa::Complex& out, const casa::Complex& factor) const throw() 
+  inline void addScaled(casacore::Double in, casacore::Complex& out, const casacore::Complex& factor) const throw() 
   {
     if (isRealNow()) {
         itsRealPart=in;
     } else {
-        out += casa::Complex(itsRealPart,in) * factor;
+        out += casacore::Complex(itsRealPart,in) * factor;
     }
   }      
        
 private:
    /// a buffer for the real part of the value (write happens when
    /// the imaginary part is known
-   mutable casa::Double itsRealPart;
+   mutable casacore::Double itsRealPart;
 };
 
 /// @brief OutputValueAccessor specialization for ComplexDiff
@@ -335,8 +335,8 @@ struct OutputValueAccessor<scimath::ComplexDiff>  {
 
 /// @brief copy 1D-vector and flatten it on demand
 /// @details A number of situation requires copying 1D vectors of different
-/// types (e.g. composing vector<double> from casa::Vector<casa::Complex> or
-/// casa::Vector<casa::AutoDiff<double> >). This templated function is intended 
+/// types (e.g. composing vector<double> from casacore::Vector<casacore::Complex> or
+/// casacore::Vector<casacore::AutoDiff<double> >). This templated function is intended 
 /// to make this copy operation more clearly visibile in the code. The fitting
 /// process deals with complex parameters as with two double-valued parameters.
 /// This method does flattening if necessary, i.e. if one of the arguments has

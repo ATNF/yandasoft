@@ -50,19 +50,19 @@ class MSGroupInfo {
         /// Destructor
         ~MSGroupInfo();
 
-        casa::uInt getNumChannels(const casa::uInt n) const;
+        casacore::uInt getNumChannels(const casacore::uInt n) const;
 
-        casa::uInt getTotalNumChannels() const;
+        casacore::uInt getTotalNumChannels() const;
 
-        casa::Quantity getFirstFreq() const;
+        casacore::Quantity getFirstFreq() const;
 
-        casa::Quantity getFreqInc() const;
+        casacore::Quantity getFreqInc() const;
 
     private:
-        std::vector<casa::uInt> itsNumChannels;
-        casa::uInt itsTotalNumChannels;
-        casa::Quantity itsFirstFreq;
-        casa::Quantity itsFreqInc;
+        std::vector<casacore::uInt> itsNumChannels;
+        casacore::uInt itsTotalNumChannels;
+        casacore::Quantity itsFirstFreq;
+        casacore::Quantity itsFreqInc;
 };
 
 }

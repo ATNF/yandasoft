@@ -74,8 +74,8 @@ struct GaussianNoiseME : public IMeasurementEquation
   /// squared here because the mean is always zero)
   /// @param[in] seed1 a first seed to initialize the random generator
   /// @param[in] seed2 a second seed to initialize the random generator 
-  explicit GaussianNoiseME(double variance, casa::Int seed1 = 0, 
-                                            casa::Int seed2 = 10);
+  explicit GaussianNoiseME(double variance, casacore::Int seed1 = 0, 
+                                            casacore::Int seed2 = 10);
 
   /// @brief constructor, initializes random distribution required.
   /// @details The required noise rms is obtained from the accessor. The
@@ -84,7 +84,7 @@ struct GaussianNoiseME : public IMeasurementEquation
   /// squared here because the mean is always zero)
   /// @param[in] seed1 a first seed to initialize the random generator
   /// @param[in] seed2 a second seed to initialize the random generator 
-  explicit GaussianNoiseME(casa::Int seed1 = 0, casa::Int seed2 = 10);
+  explicit GaussianNoiseME(casacore::Int seed1 = 0, casacore::Int seed2 = 10);
   
   
   /// @brief Predict model visibilities for one accessor (chunk).
@@ -111,7 +111,7 @@ protected:
   /// @details It runs the generator twice for real and imaginary part,
   /// composes a complex number and returns it.
   /// @return a random complex number
-  inline casa::Complex getRandomComplexNumber() const 
+  inline casacore::Complex getRandomComplexNumber() const 
   {
     return itsGen();
   }

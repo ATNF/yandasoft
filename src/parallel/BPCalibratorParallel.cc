@@ -164,7 +164,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
           // greater benefits if multiple measurement sets are present (more likely to be scheduled for different ranks)
           ASKAPLOG_INFO_STR(logger, "Work for "<<nBeam()<<" beams and "<<nChan()<<" channels will be split between "<<
                    (itsComms.nProcs() - 1)<<" ranks, this one handles chunk "<<(itsComms.rank() - 1));
-          itsWorkUnitIterator.init(casa::IPosition(2, nBeam(), nChan()), itsComms.nProcs() - 1, itsComms.rank() - 1);
+          itsWorkUnitIterator.init(casacore::IPosition(2, nBeam(), nChan()), itsComms.nProcs() - 1, itsComms.rank() - 1);
       }
 
       ASKAPCHECK((measurementSets().size() == 1) || (measurementSets().size() == nBeam()),
@@ -174,7 +174,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
   if (!itsComms.isParallel()) {
       // setup work units in the serial case - all work to be done here
       ASKAPLOG_INFO_STR(logger, "All work for "<<nBeam()<<" beams and "<<nChan()<<" channels will be handled by this rank");
-      itsWorkUnitIterator.init(casa::IPosition(2, nBeam(), nChan()));
+      itsWorkUnitIterator.init(casacore::IPosition(2, nBeam(), nChan()));
   }
 
 }
@@ -223,22 +223,22 @@ void BPCalibratorParallel::run()
            // this will force creation of the new measurement equation for this beam/channel pair
            itsEquation.reset();
 
-           const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
+           const std::pair<casacore::uInt, casacore::uInt> indices = currentBeamAndChannel();
 
            ASKAPLOG_INFO_STR(logger, "Initialise bandpass (unknowns) for "<<nAnt()<<" antennas for beam="<<indices.first<<
                              " and channel="<<indices.second);
            itsModel->reset();
-           for (casa::uInt ant = 0; ant<nAnt(); ++ant) {
-                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::XX), casa::Complex(1.,0.));
-                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::YY), casa::Complex(1.,0.));
+           for (casacore::uInt ant = 0; ant<nAnt(); ++ant) {
+                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::XX), casacore::Complex(1.,0.));
+                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::YY), casacore::Complex(1.,0.));
            }
 
            // setup reference gain, if needed
            if (itsRefAntenna >= 0) {
-               //itsRefGain = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
+               //itsRefGain = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casacore::Stokes::XX);
 	       //wasim was here
-               itsRefGainXX = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::XX);
-               itsRefGainYY = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casa::Stokes::YY);
+               itsRefGainXX = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casacore::Stokes::XX);
+               itsRefGainYY = accessors::CalParamNameHelper::paramName(itsRefAntenna, indices.first, casacore::Stokes::YY);
            } else {
                itsRefGainXX = "";
                itsRefGainYY = "";
@@ -267,8 +267,8 @@ void BPCalibratorParallel::run()
       }
   }
   if (itsComms.isMaster() && itsComms.isParallel()) {
-      const casa::uInt numberOfWorkUnits = nBeam() * nChan();
-      for (casa::uInt chunk = 0; chunk < numberOfWorkUnits; ++chunk) {
+      const casacore::uInt numberOfWorkUnits = nBeam() * nChan();
+      for (casacore::uInt chunk = 0; chunk < numberOfWorkUnits; ++chunk) {
            // asynchronously receive result from workers
            receiveModelFromWorker();
            if (validSolution()) {
@@ -302,7 +302,7 @@ bool BPCalibratorParallel::validSolution() const
 /// in the parallel case. This is done because calibration data are sent to the master asynchronously and there is no
 /// way of knowing what iteration in the worker they correspond to without looking at the data.
 /// @return pair of beam (first) and channel (second) indices
-std::pair<casa::uInt, casa::uInt> BPCalibratorParallel::currentBeamAndChannel() const
+std::pair<casacore::uInt, casacore::uInt> BPCalibratorParallel::currentBeamAndChannel() const
 {
   if (itsComms.isMaster() && itsComms.isParallel()) {
       ASKAPDEBUGASSERT(itsModel);
@@ -310,15 +310,15 @@ std::pair<casa::uInt, casa::uInt> BPCalibratorParallel::currentBeamAndChannel() 
       const double beam = itsModel->scalarValue("beam");
       const double channel = itsModel->scalarValue("channel");
       ASKAPDEBUGASSERT((beam >= 0.) && (channel >= 0.));
-      const std::pair<casa::uInt,casa::uInt> result(static_cast<casa::uInt>(beam), static_cast<casa::uInt>(channel));
+      const std::pair<casacore::uInt,casacore::uInt> result(static_cast<casacore::uInt>(beam), static_cast<casacore::uInt>(channel));
       ASKAPDEBUGASSERT(result.first < nBeam());
       ASKAPDEBUGASSERT(result.second < nChan());
       return result;
   } else {
-      const casa::IPosition cursor = itsWorkUnitIterator.cursor();
+      const casacore::IPosition cursor = itsWorkUnitIterator.cursor();
       ASKAPDEBUGASSERT(cursor.nelements() == 2);
       ASKAPDEBUGASSERT((cursor[0] >= 0) && (cursor[1] >= 0));
-      const std::pair<casa::uInt,casa::uInt> result(static_cast<casa::uInt>(cursor[0]), static_cast<casa::uInt>(cursor[1]));
+      const std::pair<casacore::uInt,casacore::uInt> result(static_cast<casacore::uInt>(cursor[0]), static_cast<casacore::uInt>(cursor[1]));
       ASKAPDEBUGASSERT(result.first < nBeam());
       ASKAPDEBUGASSERT(result.second < nChan());
       return result;
@@ -385,7 +385,7 @@ void BPCalibratorParallel::calcNE()
   ASKAPDEBUGASSERT(itsWorkUnitIterator.hasMore());
 
   // first is beam, second is channel
-  const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
+  const std::pair<casacore::uInt, casacore::uInt> indices = currentBeamAndChannel();
 
   ASKAPDEBUGASSERT((measurementSets().size() == 1) || (indices.first < measurementSets().size()));
 
@@ -416,7 +416,7 @@ void BPCalibratorParallel::solveNE()
           invalidateSolution();
           return;
       }
-      casa::Timer timer;
+      casacore::Timer timer;
       timer.mark();
       scimath::Quality q;
       ASKAPDEBUGASSERT(itsSolver);
@@ -482,7 +482,7 @@ void BPCalibratorParallel::writeModel(const std::string &)
 {
   ASKAPDEBUGASSERT(itsComms.isMaster());
 
-  const std::pair<casa::uInt, casa::uInt> indices = currentBeamAndChannel();
+  const std::pair<casacore::uInt, casacore::uInt> indices = currentBeamAndChannel();
 
   ASKAPLOG_DEBUG_STR(logger, "Writing results of the calibration for beam="<<indices.first<<" channel="<<indices.second);
 
@@ -493,12 +493,12 @@ void BPCalibratorParallel::writeModel(const std::string &)
   ASKAPDEBUGASSERT(itsModel);
   std::vector<std::string> parlist = itsModel->freeNames();
   for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
-       const casa::Complex val = itsModel->complexValue(*it);
-       const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
+       const casacore::Complex val = itsModel->complexValue(*it);
+       const std::pair<accessors::JonesIndex, casacore::Stokes::StokesTypes> paramType =
              accessors::CalParamNameHelper::parseParam(*it);
        // beam is also coded in the parameters, although we don't need it because the data are partitioned
        // just cross-check it
-       ASKAPDEBUGASSERT(static_cast<casa::uInt>(paramType.first.beam()) == indices.first);
+       ASKAPDEBUGASSERT(static_cast<casacore::uInt>(paramType.first.beam()) == indices.first);
        itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
   }
 }
@@ -552,14 +552,14 @@ void BPCalibratorParallel::rotatePhases()
  /*
   ASKAPCHECK(itsModel->has(itsRefGain), "phase rotation to `"<<itsRefGain<<
              "` is impossible because this parameter is not present in the model");
-  casa::Complex  refPhaseTerm = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGain)));
+  casacore::Complex  refPhaseTerm = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGain)));
  */
   ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
              "` is impossible because this parameter is not present in the model");
   ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
              "` is impossible because this parameter is not present in the model");
-  casa::Complex  refPhaseTermXX = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
-  casa::Complex  refPhaseTermYY = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
+  casacore::Complex  refPhaseTermXX = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
+  casacore::Complex  refPhaseTermYY = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
   std::vector<std::string> names(itsModel->freeNames());
   for (std::vector<std::string>::const_iterator it=names.begin(); it!=names.end();++it)  {
        const std::string parname = *it;
@@ -606,9 +606,9 @@ double BPCalibratorParallel::solutionTime() const
 /// @param[in] ms Name of data set
 /// @param[in] chan channel to work with
 /// @param[in] beam beam to work with
-void BPCalibratorParallel::calcOne(const std::string& ms, const casa::uInt chan, const casa::uInt beam)
+void BPCalibratorParallel::calcOne(const std::string& ms, const casacore::uInt chan, const casacore::uInt beam)
 {
-  casa::Timer timer;
+  casacore::Timer timer;
   timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms <<" channel "<<chan<<" beam "<<beam);
   // First time around we need to generate the equation
@@ -622,7 +622,7 @@ void BPCalibratorParallel::calcOne(const std::string& ms, const casa::uInt chan,
       sel->chooseFeed(beam);
       accessors::IDataConverterPtr conv=ds.createConverter();
       conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-      conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+      conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
       // ensure that time is counted in seconds since 0 MJD
       conv->setEpochFrame();
       accessors::IDataSharedIter it=ds.createIterator(sel, conv);

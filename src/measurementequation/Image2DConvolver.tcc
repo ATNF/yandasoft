@@ -72,13 +72,13 @@ Image2DConvolver<T>::~Image2DConvolver()
 }
 
 template <typename T>
-void Image2DConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
-                                   casa::ImageInterface<T>& imageIn,
-                                   casa::VectorKernel::KernelTypes kernelType,
-                                   const casa::IPosition& pixelAxes,
-                                   const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                                   casa::Bool autoScale, casa::Double scale,
-                                   casa::Bool copyMiscellaneous)
+void Image2DConvolver<T>::convolve(casacore::ImageInterface<T>& imageOut,
+                                   casacore::ImageInterface<T>& imageIn,
+                                   casacore::VectorKernel::KernelTypes kernelType,
+                                   const casacore::IPosition& pixelAxes,
+                                   const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                                   casacore::Bool autoScale, casacore::Double scale,
+                                   casacore::Bool copyMiscellaneous)
 {
     // Checks
     if (parameters.nelements() != 3) {
@@ -97,23 +97,23 @@ void Image2DConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
         ASKAPTHROW(AskapError, "The image axes must have at least 2 pixel axes");
     }
     //
-    const casa::IPosition& inShape = imageIn.shape();
-    const casa::IPosition& outShape = imageOut.shape();
+    const casacore::IPosition& inShape = imageIn.shape();
+    const casacore::IPosition& outShape = imageOut.shape();
     if (!inShape.isEqual(outShape)) {
         ASKAPTHROW(AskapError, "Input and output images must have the same shape");
     }
 
     // Generate Kernel Array (height unity)
-    casa::Array<T> kernel;
+    casacore::Array<T> kernel;
     T kernelVolume = makeKernel(kernel, kernelType, parameters, pixelAxes, imageIn);
 
     // Figure out output image restoring beam (if any), output units and scale
     // factor for convolution kernel array
-    casa::Vector<casa::Quantum<casa::Double> > beamOut;
+    casacore::Vector<casacore::Quantum<casacore::Double> > beamOut;
     const CoordinateSystem& cSys = imageIn.coordinates();
     const ImageInfo& imageInfo = imageIn.imageInfo();
     const Unit& brightnessUnit = imageIn.units();
-    casa::String brightnessUnitOut;
+    casacore::String brightnessUnitOut;
 
     dealWithRestoringBeam(brightnessUnitOut, beamOut, kernel, kernelVolume,
                           kernelType, parameters,
@@ -122,7 +122,7 @@ void Image2DConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
 
     // Convolve.  We have already scaled the convolution kernel (with some
     // trickery cleverer than what ImageConvolver can do) so no more scaling
-    casa::Double scale2 = 1.0;
+    casacore::Double scale2 = 1.0;
     askap::synthesis::ImageConvolver<T> aic;
     aic.convolve(imageOut, imageIn, kernel, ImageConvolver<T>::NONE,
                  scale2, copyMiscellaneous);
@@ -132,8 +132,8 @@ void Image2DConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
     imageOut.setUnits(brightnessUnitOut);
     ImageInfo iiOut = imageOut.imageInfo();
  
-    casa::Bool holdsOneSkyAxis;
-    casa::Bool hasSky = CoordinateUtil::holdsSky(holdsOneSkyAxis, cSys, pixelAxes.asVector());
+    casacore::Bool holdsOneSkyAxis;
+    casacore::Bool hasSky = CoordinateUtil::holdsSky(holdsOneSkyAxis, cSys, pixelAxes.asVector());
     if (hasSky && beamOut.nelements() == 3) {
         iiOut.setRestoringBeam(beamOut);
         imageOut.setImageInfo(iiOut);
@@ -154,68 +154,68 @@ void Image2DConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
 // Private functions
 
 template <typename T>
-T Image2DConvolver<T>::makeKernel(casa::Array<T>& kernelArray,
-                                  casa::VectorKernel::KernelTypes kernelType,
-                                  const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                                  const casa::IPosition& pixelAxes,
-                                  const casa::ImageInterface<T>& imageIn) const
+T Image2DConvolver<T>::makeKernel(casacore::Array<T>& kernelArray,
+                                  casacore::VectorKernel::KernelTypes kernelType,
+                                  const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                                  const casacore::IPosition& pixelAxes,
+                                  const casacore::ImageInterface<T>& imageIn) const
 {
     // Check number of parameters
     checkKernelParameters(kernelType, parameters);
 
     // Convert kernel widths to pixels from world.  Demands major and minor
     // both in pixels or both in world, else exception
-    casa::Vector<casa::Double> dParameters;
+    casacore::Vector<casacore::Double> dParameters;
     const CoordinateSystem cSys = imageIn.coordinates();
 
     // Use the reference value for the shape conversion direction
-    casa::Vector<casa::Quantum<casa::Double> > wParameters(5);
-    for (casa::uInt i = 0; i < 3; i++) {
+    casacore::Vector<casacore::Quantum<casacore::Double> > wParameters(5);
+    for (casacore::uInt i = 0; i < 3; i++) {
         wParameters(i + 2) = parameters(i);
     }
 
-    const casa::Vector<casa::Double> refVal = cSys.referenceValue();
-    const casa::Vector<String> units = cSys.worldAxisUnits();
+    const casacore::Vector<casacore::Double> refVal = cSys.referenceValue();
+    const casacore::Vector<String> units = cSys.worldAxisUnits();
     Int wAxis = cSys.pixelAxisToWorldAxis(pixelAxes(0));
-    wParameters(0) = casa::Quantum<casa::Double>(refVal(wAxis), units(wAxis));
+    wParameters(0) = casacore::Quantum<casacore::Double>(refVal(wAxis), units(wAxis));
     wAxis = cSys.pixelAxisToWorldAxis(pixelAxes(1));
-    wParameters(1) = casa::Quantum<casa::Double>(refVal(wAxis), units(wAxis));
+    wParameters(1) = casacore::Quantum<casacore::Double>(refVal(wAxis), units(wAxis));
     LogIO os;
     
-    worldWidthsToPixel(os, dParameters, wParameters, cSys, pixelAxes, casa::False);
+    worldWidthsToPixel(os, dParameters, wParameters, cSys, pixelAxes, casacore::False);
 
     // Create n-Dim kernel array shape
-    const casa::IPosition kernelShape = shapeOfKernel(kernelType, dParameters, imageIn.ndim(), pixelAxes);
+    const casacore::IPosition kernelShape = shapeOfKernel(kernelType, dParameters, imageIn.ndim(), pixelAxes);
 
     // Create kernel array. We will fill the n-Dim array (shape non-unity
-    // only for pixelAxes) through its 2D casa::Matrix incarnation. Aren't we clever.
+    // only for pixelAxes) through its 2D casacore::Matrix incarnation. Aren't we clever.
     kernelArray.resize(kernelShape);
-    casa::Array<T> kernelArray2 = kernelArray.nonDegenerate(pixelAxes);
-    casa::Matrix<T> kernelMatrix = static_cast<casa::Matrix<T> >(kernelArray2);
+    casacore::Array<T> kernelArray2 = kernelArray.nonDegenerate(pixelAxes);
+    casacore::Matrix<T> kernelMatrix = static_cast<casacore::Matrix<T> >(kernelArray2);
 
-    // Fill kernel casa::Matrix with functional (height unity)
+    // Fill kernel casacore::Matrix with functional (height unity)
     return fillKernel(kernelMatrix, kernelType, kernelShape, pixelAxes, dParameters);
 }
 
 
 template <typename T>
 void Image2DConvolver<T>::dealWithRestoringBeam(
-        casa::String& brightnessUnitOut,
-        casa::Vector<casa::Quantum<casa::Double> >& beamOut,
-        casa::Array<T>& kernelArray,
+        casacore::String& brightnessUnitOut,
+        casacore::Vector<casacore::Quantum<casacore::Double> >& beamOut,
+        casacore::Array<T>& kernelArray,
         T kernelVolume,
-        casa::VectorKernel::KernelTypes,
-        const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-        const casa::IPosition& pixelAxes,
-        const casa::CoordinateSystem& cSys,
-        const casa::ImageInfo& imageInfo,
-        const casa::Unit& brightnessUnitIn,
-        casa::Bool autoScale, casa::Double scale) const
+        casacore::VectorKernel::KernelTypes,
+        const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+        const casacore::IPosition& pixelAxes,
+        const casacore::CoordinateSystem& cSys,
+        const casacore::ImageInfo& imageInfo,
+        const casacore::Unit& brightnessUnitIn,
+        casacore::Bool autoScale, casacore::Double scale) const
 {
     // Find out if convolution axes hold the sky.  Scaling from
     // Jy/beam and Jy/pixel only really makes sense if this is True
-    casa::Bool holdsOneSkyAxis;
-    const casa::Bool hasSky = casa::CoordinateUtil::holdsSky(holdsOneSkyAxis, cSys, pixelAxes.asVector());
+    casacore::Bool holdsOneSkyAxis;
+    const casacore::Bool hasSky = casacore::CoordinateUtil::holdsSky(holdsOneSkyAxis, cSys, pixelAxes.asVector());
     if (hasSky) {
         ASKAPLOG_INFO_STR(i2dconvlogger, "You are convolving the sky");
     } else {
@@ -223,13 +223,13 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
     }
 
     // Generate an array holding the restoring beam if needed
-    casa::Vector<casa::Quantum<casa::Double> > beamIn = imageInfo.restoringBeam().toVector();
+    casacore::Vector<casacore::Quantum<casacore::Double> > beamIn = imageInfo.restoringBeam().toVector();
     beamOut.resize(0);
 
     // Get brightness units
-    const casa::String bUnitIn = upcase(brightnessUnitIn.getName());
+    const casacore::String bUnitIn = upcase(brightnessUnitIn.getName());
     //
-    const casa::Vector<casa::Double>& refPix = cSys.referencePixel();
+    const casacore::Vector<casacore::Double>& refPix = cSys.referencePixel();
     if (hasSky && bUnitIn == String("JY/PIXEL")) {
 
         // Easy case.  Peak of convolution kernel must be unity
@@ -240,17 +240,17 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
 
         // Exception already generated if only one of major and minor in pixel units
         if (parameters(0).getFullUnit().getName() == String("pix")) {
-            casa::Vector<casa::Double> pixelParameters(5);
+            casacore::Vector<casacore::Double> pixelParameters(5);
             pixelParameters(0) = refPix(pixelAxes(0));
             pixelParameters(1) = refPix(pixelAxes(1));
             pixelParameters(2) = parameters(0).getValue();
             pixelParameters(3) = parameters(1).getValue();
             pixelParameters(4) = parameters(2).getValue(Unit("rad"));
-            casa::Vector<casa::Quantum<casa::Double> > worldParameters;
+            casacore::Vector<casacore::Quantum<casacore::Double> > worldParameters;
             //
-            casa::LogIO os;
+            casacore::LogIO os;
             pixelWidthsToWorld(os, worldParameters, pixelParameters,
-                                               cSys, pixelAxes, casa::False);
+                                               cSys, pixelAxes, casacore::False);
             //
             beamOut(0) = worldParameters(0);
             beamOut(1) = worldParameters(1);
@@ -274,36 +274,36 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
         if (hasSky && bUnitIn == String("JY/BEAM") && beamIn.nelements() == 3) {
 
             // Convert restoring beam parameters to pixels.  Output pa is pos +x -> +y in pixel frame.
-            casa::Vector<casa::Quantum<casa::Double> > wParameters(5);
-            const casa::Vector<casa::Double> refVal = cSys.referenceValue();
-            const casa::Vector<String> units = cSys.worldAxisUnits();
+            casacore::Vector<casacore::Quantum<casacore::Double> > wParameters(5);
+            const casacore::Vector<casacore::Double> refVal = cSys.referenceValue();
+            const casacore::Vector<String> units = cSys.worldAxisUnits();
             Int wAxis = cSys.pixelAxisToWorldAxis(pixelAxes(0));
-            wParameters(0) = casa::Quantum<casa::Double>(refVal(wAxis), units(wAxis));
+            wParameters(0) = casacore::Quantum<casacore::Double>(refVal(wAxis), units(wAxis));
             wAxis = cSys.pixelAxisToWorldAxis(pixelAxes(1));
-            wParameters(1) = casa::Quantum<casa::Double>(refVal(wAxis), units(wAxis));
-            for (casa::uInt i = 0; i < 3; i++) {
+            wParameters(1) = casacore::Quantum<casacore::Double>(refVal(wAxis), units(wAxis));
+            for (casacore::uInt i = 0; i < 3; i++) {
                 wParameters(i + 2) = beamIn(i);
             }
-            casa::Vector<casa::Double> dParameters;
-            casa::LogIO os;
+            casacore::Vector<casacore::Double> dParameters;
+            casacore::LogIO os;
             worldWidthsToPixel(os, dParameters, wParameters, cSys, pixelAxes, False);
 
             // Create 2-D beam array shape
-            casa::IPosition dummyAxes(2, 0, 1);
-            casa::IPosition beamShape = shapeOfKernel(casa::VectorKernel::GAUSSIAN,
+            casacore::IPosition dummyAxes(2, 0, 1);
+            casacore::IPosition beamShape = shapeOfKernel(casacore::VectorKernel::GAUSSIAN,
                                         dParameters, 2, dummyAxes);
 
-            // Create beam casa::Matrix and fill with height unity
-            casa::Matrix<T> beamMatrixIn(beamShape(0), beamShape(1));
-            fillKernel(beamMatrixIn, casa::VectorKernel::GAUSSIAN, beamShape,
+            // Create beam casacore::Matrix and fill with height unity
+            casacore::Matrix<T> beamMatrixIn(beamShape(0), beamShape(1));
+            fillKernel(beamMatrixIn, casacore::VectorKernel::GAUSSIAN, beamShape,
                        dummyAxes, dParameters);
 
             // Get 2-D version of convolution kenrel
-            casa::Array<T> kernelArray2 = kernelArray.nonDegenerate(pixelAxes);
-            casa::Matrix<T> kernelMatrix = static_cast<casa::Matrix<T> >(kernelArray2);
+            casacore::Array<T> kernelArray2 = kernelArray.nonDegenerate(pixelAxes);
+            casacore::Matrix<T> kernelMatrix = static_cast<casacore::Matrix<T> >(kernelArray2);
 
             // Convolve input restoring beam array by convolution kernel array
-            casa::Matrix<T> beamMatrixOut;
+            casacore::Matrix<T> beamMatrixOut;
             Convolver<T> conv(beamMatrixIn, kernelMatrix.shape());   // matrixIn     = input restoring beam
             conv.linearConv(beamMatrixOut, kernelMatrix);
 
@@ -320,11 +320,11 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
             // Fit output beam matrix with a Gaussian, for better or worse
             // Fit2D is not templated.  So all our templating is useless
             // other than for Float until I template Fit2D
-            casa::Fit2D fitter(os);
-            const casa::uInt n = beamMatrixOut.shape()(0);
+            casacore::Fit2D fitter(os);
+            const casacore::uInt n = beamMatrixOut.shape()(0);
             //
-            casa::Vector<casa::Double> bParameters = fitter.estimate(Fit2D::GAUSSIAN, beamMatrixOut);
-            casa::Vector<casa::Bool> bParameterMask(bParameters.nelements(), True);
+            casacore::Vector<casacore::Double> bParameters = fitter.estimate(Fit2D::GAUSSIAN, beamMatrixOut);
+            casacore::Vector<casacore::Bool> bParameterMask(bParameters.nelements(), True);
             bParameters(1) = (n - 1) / 2;      // x centre
             bParameters(2) = bParameters(1);    // y centre
             /*
@@ -333,8 +333,8 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
                */
 
             // Set range so we don't include too many pixels in fit which will make it very slow
-            fitter.addModel(casa::Fit2D::GAUSSIAN, bParameters, bParameterMask);
-            casa::Array<casa::Float> sigma;
+            fitter.addModel(casacore::Fit2D::GAUSSIAN, bParameters, bParameterMask);
+            casacore::Array<casacore::Float> sigma;
             fitter.setIncludeRange(maxValOut / 10.0, maxValOut + 0.1);
             Fit2D::ErrorTypes error = fitter.fit(beamMatrixOut, sigma);
             if (error == Fit2D::NOCONVERGE ||
@@ -342,10 +342,10 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
                     error == Fit2D::NOGOOD) {
                 ASKAPTHROW(AskapError, "Failed to fit the output beam");
             }
-            casa::Vector<casa::Double> bSolution = fitter.availableSolution();
+            casacore::Vector<casacore::Double> bSolution = fitter.availableSolution();
 
             // Convert to world units. Ho hum.
-            casa::Vector<casa::Double> pixelParameters(5);
+            casacore::Vector<casacore::Double> pixelParameters(5);
             pixelParameters(0) = refPix(pixelAxes(0));
             pixelParameters(1) = refPix(pixelAxes(1));
             pixelParameters(2) = bSolution(3);
@@ -366,51 +366,51 @@ void Image2DConvolver<T>::dealWithRestoringBeam(
 
     // Put beam position angle into range +/- 180 in case it has eluded us so far
     if (beamOut.nelements() == 3) {
-        casa::MVAngle pa(beamOut(2).getValue(Unit("rad")));
+        casacore::MVAngle pa(beamOut(2).getValue(Unit("rad")));
         pa();
-        beamOut(2) = casa::Quantum<casa::Double>(pa.degree(), Unit("deg"));
+        beamOut(2) = casacore::Quantum<casacore::Double>(pa.degree(), Unit("deg"));
     }
 }
 
 
 template <typename T>
 void Image2DConvolver<T>::checkKernelParameters(
-        casa::VectorKernel::KernelTypes kernelType,
-        const casa::Vector<casa::Quantum<casa::Double> >& parameters) const
+        casacore::VectorKernel::KernelTypes kernelType,
+        const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters) const
 {
-    if (kernelType == casa::VectorKernel::BOXCAR) {
+    if (kernelType == casacore::VectorKernel::BOXCAR) {
         ASKAPTHROW(AskapError, "Boxcar kernel not yet implemented");
         //
         if (parameters.nelements() != 3) {
             ASKAPTHROW(AskapError, "Boxcar kernels require 3 parameters");
         }
-    } else if (kernelType == casa::VectorKernel::GAUSSIAN) {
+    } else if (kernelType == casacore::VectorKernel::GAUSSIAN) {
         if (parameters.nelements() != 3) {
             ASKAPTHROW(AskapError, "Gaussian kernels require 3 parameters");
         }
     } else {
         ASKAPTHROW(AskapError, "The kernel type "
-            << casa::VectorKernel::fromKernelType(kernelType) << " is not allowed");
+            << casacore::VectorKernel::fromKernelType(kernelType) << " is not allowed");
     }
 }
 
 // Work out how big the array holding the kernel should be.
 // Simplest algorithm possible. Shape is presently square.
 template <typename T>
-casa::IPosition Image2DConvolver<T>::shapeOfKernel(
-        casa::VectorKernel::KernelTypes kernelType,
-        const casa::Vector<casa::Double>& parameters,
-        casa::uInt ndim,
-        const casa::IPosition& axes) const
+casacore::IPosition Image2DConvolver<T>::shapeOfKernel(
+        casacore::VectorKernel::KernelTypes kernelType,
+        const casacore::Vector<casacore::Double>& parameters,
+        casacore::uInt ndim,
+        const casacore::IPosition& axes) const
 {
     // Find 2D shape
-    casa::uInt n;
-    if (kernelType == casa::VectorKernel::GAUSSIAN) {
-        const casa::uInt n1 = sizeOfGaussian(parameters(0), 5.0);
-        const casa::uInt n2 = sizeOfGaussian(parameters(1), 5.0);
+    casacore::uInt n;
+    if (kernelType == casacore::VectorKernel::GAUSSIAN) {
+        const casacore::uInt n1 = sizeOfGaussian(parameters(0), 5.0);
+        const casacore::uInt n2 = sizeOfGaussian(parameters(1), 5.0);
         n = max(n1, n2);
         if (n % 2 == 0) n++;                                 // Make shape odd so centres well
-    } else if (kernelType == casa::VectorKernel::BOXCAR) {
+    } else if (kernelType == casacore::VectorKernel::BOXCAR) {
         n = 2 * Int(max(parameters(0), parameters(1)) + 0.5);
         if (n % 2 == 0) n++;                                 // Make shape odd so centres well
     } else {
@@ -419,7 +419,7 @@ casa::IPosition Image2DConvolver<T>::shapeOfKernel(
 
     // Now find the shape for the image and slot the 2D shape in
     // in the correct axis locations
-    casa::IPosition shape(ndim, 1);
+    casacore::IPosition shape(ndim, 1);
     shape(axes(0)) = n;
     shape(axes(1)) = n;
 
@@ -427,19 +427,19 @@ casa::IPosition Image2DConvolver<T>::shapeOfKernel(
 }
 
 template <typename T>
-casa::uInt Image2DConvolver<T>::sizeOfGaussian(casa::Double width, casa::Double nSigma) const
+casacore::uInt Image2DConvolver<T>::sizeOfGaussian(casacore::Double width, casacore::Double nSigma) const
 {
     // +/- 5sigma is a volume error of less than 6e-5%
-    casa::Double sigma = width / sqrt(casa::Double(8.0) * C::ln2);
+    casacore::Double sigma = width / sqrt(casacore::Double(8.0) * C::ln2);
     return (Int(nSigma*sigma + 0.5) + 1) * 2;
 }
 
 template <typename T>
-T Image2DConvolver<T>::fillKernel(casa::Matrix<T>& kernelMatrix,
-                                  casa::VectorKernel::KernelTypes kernelType,
-                                  const casa::IPosition& kernelShape,
-                                  const casa::IPosition& axes,
-                                  const casa::Vector<casa::Double>& parameters) const
+T Image2DConvolver<T>::fillKernel(casacore::Matrix<T>& kernelMatrix,
+                                  casacore::VectorKernel::KernelTypes kernelType,
+                                  const casacore::IPosition& kernelShape,
+                                  const casacore::IPosition& axes,
+                                  const casacore::Vector<casacore::Double>& parameters) const
 {
     // Centre functional in array (shape is odd)
     // Need to think about these T castes for Complex images
@@ -454,10 +454,10 @@ T Image2DConvolver<T>::fillKernel(casa::Matrix<T>& kernelMatrix,
     const T pa = static_cast<T>(parameters(2));
     const T ratio = static_cast<T>(parameters(1) / parameters(0));
     const T major = static_cast<T>(parameters(0));
-    if (kernelType == casa::VectorKernel::GAUSSIAN) {
+    if (kernelType == casacore::VectorKernel::GAUSSIAN) {
         fillGaussian(maxValKernel, volumeKernel, kernelMatrix, height,
                      xCentre, yCentre, major, ratio, pa);
-    } else if (kernelType == casa::VectorKernel::BOXCAR) {
+    } else if (kernelType == casacore::VectorKernel::BOXCAR) {
         // TODO: Unsure why fillBoxcar is commented out. Rather than an uninitialised
         // volumeKernel, throw an exception until this is fixed.
         ASKAPTHROW(AskapError, "VectorKernel::BOXCAR not supported");
@@ -475,25 +475,25 @@ T Image2DConvolver<T>::fillKernel(casa::Matrix<T>& kernelMatrix,
 
 template <typename T>
 void Image2DConvolver<T>::fillGaussian(T& maxVal, T& volume,
-                                       casa::Matrix<T>& pixels, T height, T xCentre,
+                                       casacore::Matrix<T>& pixels, T height, T xCentre,
                                        T yCentre, T majorAxis, T ratio,
                                        T positionAngle) const
 //
 // pa positive in +x ->+y pixel coordinate frame
 //
 {
-    const casa::uInt n1 = pixels.shape()(0);
-    const casa::uInt n2 = pixels.shape()(1);
+    const casacore::uInt n1 = pixels.shape()(0);
+    const casacore::uInt n2 = pixels.shape()(1);
     AlwaysAssert(n1 == n2, AipsError);
     positionAngle += C::pi_2;        // +y -> -x
     const Gaussian2D<T> g2d(height, xCentre, yCentre, majorAxis,
                             ratio, positionAngle);
     maxVal = -1.0e30;
     volume = 0.0;
-    casa::Vector<T> pos(2);
-    for (casa::uInt j = 0; j < n1; j++) {
+    casacore::Vector<T> pos(2);
+    for (casacore::uInt j = 0; j < n1; j++) {
         pos(1) = static_cast<T>(j);
-        for (casa::uInt i = 0; i < n1; i++) {
+        for (casacore::uInt i = 0; i < n1; i++) {
             pos(0) = static_cast<T>(i);
             T val = g2d(pos);
             pixels(i, j) = val;
@@ -504,12 +504,12 @@ void Image2DConvolver<T>::fillGaussian(T& maxVal, T& volume,
     }
 }
 template < typename T >
-void Image2DConvolver<T>::worldWidthsToPixel (casa::LogIO& os,
-        casa::Vector<casa::Double>& dParameters,
-        const casa::Vector<casa::Quantum<casa::Double> >& wParameters,
-        const casa::CoordinateSystem& cSys,
-        const casa::IPosition& pixelAxes,
-        casa::Bool doRef) const
+void Image2DConvolver<T>::worldWidthsToPixel (casacore::LogIO& os,
+        casacore::Vector<casacore::Double>& dParameters,
+        const casacore::Vector<casacore::Quantum<casacore::Double> >& wParameters,
+        const casacore::CoordinateSystem& cSys,
+        const casacore::IPosition& pixelAxes,
+        casacore::Bool doRef) const
 //
 // world parameters: x, y, major, minor, pa
 // pixel parameters: major, minor, pa (rad)
@@ -577,10 +577,10 @@ void Image2DConvolver<T>::worldWidthsToPixel (casa::LogIO& os,
                 world = MDirection(wParameters(0), wParameters(1), dCoord.directionType());
             }
             //
-            Quantum<casa::Double> tmpMaj(1.0, Unit("arcsec"));
+            Quantum<casacore::Double> tmpMaj(1.0, Unit("arcsec"));
             GaussianShape gaussShape(world, tmpMaj, dParameters(1)/dParameters(0),
                     wParameters(4));                              // pa is N->E
-            Vector<casa::Double> pars = gaussShape.toPixel (dCoord);
+            Vector<casacore::Double> pars = gaussShape.toPixel (dCoord);
             dParameters(2) = pars(4);                                              // pa: +x -> +y
         } else {
 
@@ -616,7 +616,7 @@ void Image2DConvolver<T>::worldWidthsToPixel (casa::LogIO& os,
             world = MDirection(wParameters(0), wParameters(1), dCoord.directionType());
         }
         GaussianShape gaussShape(world, wParameters(2), wParameters(3), wParameters(4));
-        Vector<casa::Double> pars = gaussShape.toPixel (dCoord);
+        Vector<casacore::Double> pars = gaussShape.toPixel (dCoord);
         dParameters(0) = pars(2);
         dParameters(1) = pars(3);
         dParameters(2) = pars(4);      // radians; +x -> +y
@@ -642,12 +642,12 @@ void Image2DConvolver<T>::worldWidthsToPixel (casa::LogIO& os,
     dParameters(1) = min(tmp, dParameters(1));
 }  
 template < typename T >
-casa::Bool Image2DConvolver<T>::pixelWidthsToWorld (casa::LogIO& os,
-        casa::Vector<casa::Quantum<casa::Double> >& wParameters,
-        const casa::Vector<casa::Double>& pParameters,
-        const casa::CoordinateSystem& cSys,
-        const casa::IPosition& pixelAxes,
-        casa::Bool doRef) const
+casacore::Bool Image2DConvolver<T>::pixelWidthsToWorld (casacore::LogIO& os,
+        casacore::Vector<casacore::Quantum<casacore::Double> >& wParameters,
+        const casacore::Vector<casacore::Double>& pParameters,
+        const casacore::CoordinateSystem& cSys,
+        const casacore::IPosition& pixelAxes,
+        casacore::Bool doRef) const
 //
 // pixel parameters: x, y, major, minor, pa (rad)
 // world parameters: major, minor, pa
@@ -675,9 +675,9 @@ casa::Bool Image2DConvolver<T>::pixelWidthsToWorld (casa::LogIO& os,
 
         // Major/minor
 
-        Quantum<casa::Double> q0 = pixelWidthToWorld (os, pParameters(4), pParameters(2),
+        Quantum<casacore::Double> q0 = pixelWidthToWorld (os, pParameters(4), pParameters(2),
                 cSys, pixelAxes);
-        Quantum<casa::Double> q1 = pixelWidthToWorld (os, pParameters(4), pParameters(3),
+        Quantum<casacore::Double> q1 = pixelWidthToWorld (os, pParameters(4), pParameters(3),
                 cSys, pixelAxes);
         //
         if (q0.getValue() < q1.getValue(q0.getFullUnit())) {
@@ -697,10 +697,10 @@ casa::Bool Image2DConvolver<T>::pixelWidthsToWorld (casa::LogIO& os,
     return flipped;
 }
 template < typename T>
-casa::Double Image2DConvolver<T>::worldWidthToPixel (casa::LogIO& os, casa::Double positionAngle,
-        const casa::Quantum<casa::Double>& length,
-        const casa::CoordinateSystem& cSys,
-        const casa::IPosition& pixelAxes) const
+casacore::Double Image2DConvolver<T>::worldWidthToPixel (casacore::LogIO& os, casacore::Double positionAngle,
+        const casacore::Quantum<casacore::Double>& length,
+        const casacore::CoordinateSystem& cSys,
+        const casacore::IPosition& pixelAxes) const
 {
     //
     Int worldAxis0 = cSys.pixelAxisToWorldAxis(pixelAxes(0));
@@ -709,13 +709,13 @@ casa::Double Image2DConvolver<T>::worldWidthToPixel (casa::LogIO& os, casa::Doub
     // Units of the axes must be consistent for now.
     // I will be able to relax this criterion when I get the time
 
-    casa::Vector<casa::String> units = cSys.worldAxisUnits();
-    casa::Unit unit0(units(worldAxis0));
-    casa::Unit unit1(units(worldAxis1));
+    casacore::Vector<casacore::String> units = cSys.worldAxisUnits();
+    casacore::Unit unit0(units(worldAxis0));
+    casacore::Unit unit1(units(worldAxis1));
     if (unit0 != unit1) {
         os << "Units of the two axes must be conformant" << LogIO::EXCEPTION;
     }
-    casa::Unit unit(unit0);
+    casacore::Unit unit(unit0);
 
     // Check units are ok
 
@@ -724,45 +724,45 @@ casa::Double Image2DConvolver<T>::worldWidthToPixel (casa::LogIO& os, casa::Doub
         oss << "The units of the world length (" << length.getFullUnit().getName()
             << ") are not consistent with those of Coordinate System ("
             << unit.getName() << ")";
-        casa::String s(oss);
+        casacore::String s(oss);
         os << s << LogIO::EXCEPTION;
     }
     //
-    casa::Double w0 = cos(positionAngle) * length.getValue(unit);
-    casa::Double w1 = sin(positionAngle) * length.getValue(unit);
+    casacore::Double w0 = cos(positionAngle) * length.getValue(unit);
+    casacore::Double w1 = sin(positionAngle) * length.getValue(unit);
 
     // Find pixel coordinate of tip of axis  relative to reference pixel
 
-    casa::Vector<casa::Double> world = cSys.referenceValue().copy();
+    casacore::Vector<casacore::Double> world = cSys.referenceValue().copy();
     world(worldAxis0) += w0;
     world(worldAxis1) += w1;
     //
-    casa::Vector<casa::Double> pixel;
+    casacore::Vector<casacore::Double> pixel;
     if (!cSys.toPixel (pixel, world)) {
         os << cSys.errorMessage() << LogIO::EXCEPTION;
     }
     // 
-    casa::Double lengthInPixels = hypot(pixel(pixelAxes(0)), pixel(pixelAxes(1)));
+    casacore::Double lengthInPixels = hypot(pixel(pixelAxes(0)), pixel(pixelAxes(1)));
     return lengthInPixels;
 }
 template < typename T>
 
-casa::Quantum<casa::Double> Image2DConvolver<T>::pixelWidthToWorld (casa::LogIO& os,
-        casa::Double positionAngle,
-        casa::Double length,
-        const casa::CoordinateSystem& cSys2,
-        const casa::IPosition& pixelAxes) const
+casacore::Quantum<casacore::Double> Image2DConvolver<T>::pixelWidthToWorld (casacore::LogIO& os,
+        casacore::Double positionAngle,
+        casacore::Double length,
+        const casacore::CoordinateSystem& cSys2,
+        const casacore::IPosition& pixelAxes) const
 {
-    casa::CoordinateSystem cSys(cSys2);
+    casacore::CoordinateSystem cSys(cSys2);
     Int worldAxis0 = cSys.pixelAxisToWorldAxis(pixelAxes(0));
     Int worldAxis1 = cSys.pixelAxisToWorldAxis(pixelAxes(1));
 
     // Units of the axes must be consistent for now.
     // I will be able to relax this criterion when I get the time
 
-    casa::Vector<casa::String> units = cSys.worldAxisUnits().copy();
-    casa::Unit unit0(units(worldAxis0));
-    casa::Unit unit1(units(worldAxis1));
+    casacore::Vector<casacore::String> units = cSys.worldAxisUnits().copy();
+    casacore::Unit unit0(units(worldAxis0));
+    casacore::Unit unit1(units(worldAxis1));
     if (unit0 != unit1) {
         os << "Units of the axes must be conformant" << LogIO::EXCEPTION;
     }
@@ -774,32 +774,32 @@ casa::Quantum<casa::Double> Image2DConvolver<T>::pixelWidthToWorld (casa::LogIO&
         os << cSys.errorMessage() << LogIO::EXCEPTION;
     }
     //
-    casa::Double p0 = cos(positionAngle) * length;
-    casa::Double p1 = sin(positionAngle) * length;
+    casacore::Double p0 = cos(positionAngle) * length;
+    casacore::Double p1 = sin(positionAngle) * length;
 
     // Find world coordinate of tip of length relative to reference pixel
 
-    casa::Vector<casa::Double> pixel= cSys.referencePixel().copy();
+    casacore::Vector<casacore::Double> pixel= cSys.referencePixel().copy();
     pixel(pixelAxes(0)) += p0;
     pixel(pixelAxes(1)) += p1;
     //
-    casa::Vector<casa::Double> world;
+    casacore::Vector<casacore::Double> world;
     if (!cSys.toWorld(world, pixel)) {
         os << cSys.errorMessage() << LogIO::EXCEPTION;
     }
     // 
-    casa::Double lengthInWorld = hypot(world(worldAxis0), world(worldAxis1));
-    casa::Quantum<casa::Double> q(lengthInWorld, Unit(units(worldAxis0)));
+    casacore::Double lengthInWorld = hypot(world(worldAxis0), world(worldAxis1));
+    casacore::Quantum<casacore::Double> q(lengthInWorld, Unit(units(worldAxis0)));
     //
     return q;
 }
 template <typename T>
 
-casa::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casa::LogIO& os,
-        casa::Vector<casa::Quantum<casa::Double> >& wParameters,
-        const casa::CoordinateSystem& cSys,
-        const casa::Vector<Double>& pParameters,
-        const casa::IPosition& pixelAxes, casa::Bool doRef) const
+casacore::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casacore::LogIO& os,
+        casacore::Vector<casacore::Quantum<casacore::Double> >& wParameters,
+        const casacore::CoordinateSystem& cSys,
+        const casacore::Vector<Double>& pParameters,
+        const casacore::IPosition& pixelAxes, casacore::Bool doRef) const
 //
 // pixel parameters: x, y, major, minor, pa (rad)
 // world parameters: major, minor, pa
@@ -815,8 +815,8 @@ casa::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casa::LogIO& os,
     // See what sort of coordinates we have. Make sure it is called
     // only for the Sky.  More development needed otherwise.
 
-    casa::Coordinate::Type type0 = cSys.type(c0);
-    casa::Coordinate::Type type1 = cSys.type(c1);
+    casacore::Coordinate::Type type0 = cSys.type(c0);
+    casacore::Coordinate::Type type1 = cSys.type(c1);
     if (type0!=Coordinate::DIRECTION || type1!=Coordinate::DIRECTION) {
         os << "Can only be called for axes holding the sky" << LogIO::EXCEPTION;
     }
@@ -827,10 +827,10 @@ casa::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casa::LogIO& os,
 
     // Is the 'x' (first axis) the Longitude or Latitude ?
 
-    casa::Vector<casa::Int> dirPixelAxes = cSys.pixelAxes(c0);
-    casa::Bool xIsLong = dirPixelAxes(0)==pixelAxes(0) && dirPixelAxes(1)==pixelAxes(1);
-    casa::uInt whereIsX = 0;
-    casa::uInt whereIsY = 1;
+    casacore::Vector<casacore::Int> dirPixelAxes = cSys.pixelAxes(c0);
+    casacore::Bool xIsLong = dirPixelAxes(0)==pixelAxes(0) && dirPixelAxes(1)==pixelAxes(1);
+    casacore::uInt whereIsX = 0;
+    casacore::uInt whereIsY = 1;
     if (!xIsLong) {
         whereIsX = 1;
         whereIsY = 0;
@@ -839,9 +839,9 @@ casa::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casa::LogIO& os,
     // Encode a pretend GaussianShape from these values as a means
     // of converting to world.
 
-    const casa::DirectionCoordinate& dCoord = cSys.directionCoordinate(c0);
+    const casacore::DirectionCoordinate& dCoord = cSys.directionCoordinate(c0);
     GaussianShape gaussShape;
-    casa::Vector<casa::Double> cParameters(pParameters.copy());
+    casacore::Vector<casacore::Double> cParameters(pParameters.copy());
     //
     if (doRef) {
         cParameters(0) = dCoord.referencePixel()(whereIsX);     // x centre
@@ -856,7 +856,7 @@ casa::Bool Image2DConvolver<T>::skyPixelWidthsToWorld (casa::LogIO& os,
         }
     }
     // 
-    casa::Bool flipped = gaussShape.fromPixel (cParameters, dCoord);
+    casacore::Bool flipped = gaussShape.fromPixel (cParameters, dCoord);
     wParameters.resize(3);
     wParameters(0) = gaussShape.majorAxis();
     wParameters(1) = gaussShape.minorAxis();

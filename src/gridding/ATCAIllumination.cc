@@ -130,7 +130,7 @@ double ATCAIllumination::outerJamesian(double fractionalRadius)
   // constants were taken from Tim's glish script
   const double a2 = 0.95;
   const double a1 = 8.;
-  return 1.-a2*exp(a1*(casa::square(fractionalRadius)-1.));
+  return 1.-a2*exp(a1*(casacore::square(fractionalRadius)-1.));
 }
 
 /// @brief a helper method to return 1D illumination
@@ -173,7 +173,7 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
   ASKAPTRACE("ATCAIllumination::getPattern");
 
   //std::cout<<"ATCAIllumination::getPattern is called for pa = "<<pa/M_PI*180.<<std::endl;
-  const casa::uInt oversample = pattern.overSample();
+  const casacore::uInt oversample = pattern.overSample();
   const double cellU = pattern.uCellSize()/oversample;
   const double cellV = pattern.vCellSize()/oversample;
   
@@ -184,8 +184,8 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
   
   // scaled l and m to take the calculations out of the loop
   // these quantities are effectively dimensionless 
-  const double lScaled = 2.*casa::C::pi*cellU *l;
-  const double mScaled = 2.*casa::C::pi*cellV *m;
+  const double lScaled = 2.*casacore::C::pi*cellU *l;
+  const double mScaled = 2.*casacore::C::pi*cellV *m;
   
   // zero value of the pattern by default
   pattern.pattern().set(0.);
@@ -193,38 +193,38 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
   ASKAPCHECK(std::abs(std::abs(cellU/cellV)-1.)<1e-7, 
 	     "Rectangular cells are not supported at the moment");
   
-  const double cell = std::abs(cellU*(casa::C::c/freq));
+  const double cell = std::abs(cellU*(casacore::C::c/freq));
   
   const double dishRadiusInCells = itsDiameter/(2.0*cell);  
   
   // squares of the disk and blockage area radii
-  const double rMaxSquared = casa::square(dishRadiusInCells);
-  const double rMinSquared = casa::square(itsBlockage/(2.0*cell));     
+  const double rMaxSquared = casacore::square(dishRadiusInCells);
+  const double rMinSquared = casacore::square(itsBlockage/(2.0*cell));     
   
   // feed legs/wedges length parameters
   const double feedLegsHalfWidthInCells = itsFeedLegsHalfWidth / cell;
   const double wedgeStartingRadiusInCells = itsWedgeStartingRadius / cell;
   
   // sizes of the grid to fill with pattern values
-  const casa::uInt nU = pattern.uSize();
-  const casa::uInt nV = pattern.vSize();
+  const casacore::uInt nU = pattern.uSize();
+  const casacore::uInt nV = pattern.vSize();
   
-  ASKAPCHECK((casa::square(double(nU)) > rMaxSquared) || 
-	     (casa::square(double(nV)) > rMaxSquared),
+  ASKAPCHECK((casacore::square(double(nU)) > rMaxSquared) || 
+	     (casacore::square(double(nV)) > rMaxSquared),
 	     "The pattern buffer passed to ATCAIllumination::getPattern is too small for the given model. "
 	     "Sizes should be greater than "<<sqrt(rMaxSquared)<<" on each axis, you have "
 	     <<nU<<" x "<<nV);
   
   // maximum possible support for this class corresponds to the dish size
-  pattern.setMaxSupport(1+2*casa::uInt(dishRadiusInCells)/oversample);
+  pattern.setMaxSupport(1+2*casacore::uInt(dishRadiusInCells)/oversample);
   
   double sum=0.; // normalisation factor
-  for (casa::uInt iU=0; iU<nU; ++iU) {
+  for (casacore::uInt iU=0; iU<nU; ++iU) {
     const double offsetU = double(iU)-double(nU)/2.;
-    const double offsetUSquared = casa::square(offsetU);
-    for (casa::uInt iV=0; iV<nV; ++iV) {
+    const double offsetUSquared = casacore::square(offsetU);
+    for (casacore::uInt iV=0; iV<nV; ++iV) {
       const double offsetV = double(iV)-double(nV)/2.;
-      const double offsetVSquared = casa::square(offsetV);
+      const double offsetVSquared = casacore::square(offsetV);
       const double radiusSquared = offsetUSquared + offsetVSquared;
       if ( (radiusSquared >= rMinSquared) && (radiusSquared <= rMaxSquared)) {
 	// don't need to multiply by wavelength here because we
@@ -232,12 +232,12 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
 	// in a relative coordinates in frequency
 
 	// initial value is just the phase slope related to pointing offset
-	casa::DComplex value(1.0);
+	casacore::DComplex value(1.0);
 	if (itsDoTapering) {
 	  const double fractionalRadiusSquared = radiusSquared/rMaxSquared;
 	  const double extraPhase = itsMaxDefocusingPhase * fractionalRadiusSquared;
 	  value *= double(jamesian(sqrt(fractionalRadiusSquared))) *
-	    casa::DComplex(cos(extraPhase),sin(extraPhase));
+	    casacore::DComplex(cos(extraPhase),sin(extraPhase));
 	}
 	if (itsDoFeedLegs) {
 	  // rotated offsets
@@ -276,11 +276,11 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
 	
 	
 	// add up the norm contribution and assign the final value
-	//sum += casa::abs(value);
+	//sum += casacore::abs(value);
 	sum += std::real(std::conj(value)*value);
 	// Now apply the phase slope related to pointing offset
 	const double phase = lScaled*offsetU + mScaled*offsetV;
-	pattern(iU, iV) = value*casa::DComplex(cos(phase), -sin(phase));
+	pattern(iU, iV) = value*casacore::DComplex(cos(phase), -sin(phase));
       }
     }
   }
@@ -288,7 +288,7 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
   // We need to divide by the sum squared so that the convolution is normalized to unity
   ASKAPCHECK(sum > 0., "Integral of the pattern should be non-zero");
   sum = sqrt(sum);
-  pattern.pattern() *= casa::DComplex(double(nU)*double(nV)/double(sum),0.);
+  pattern.pattern() *= casacore::DComplex(double(nU)*double(nV)/double(sum),0.);
 }
 
 /// @brief check whether the pattern is symmetric

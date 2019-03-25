@@ -63,21 +63,21 @@ namespace askap
 				defaultScales[1]=10.0;
 				defaultScales[2]=30.0;
 				std::vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
-				solver = askap::scimath::Solver::ShPtr(new ImageMultiScaleSolver(casa::Vector<float>(scales)));
+				solver = askap::scimath::Solver::ShPtr(new ImageMultiScaleSolver(casacore::Vector<float>(scales)));
 				ASKAPLOG_INFO_STR(logger, "Constructed image multiscale solver" );
 				solver->setGain(parset.getFloat("solver.Clean.gain", 0.7));
 				solver->setAlgorithm(parset.getString("solver.Clean.algorithm", "MultiScale"));
 				solver->setVerbose(parset.getBool("solver.Clean.verbose", true));
 				solver->setNiter(parset.getInt32("solver.Clean.niter", 100));
-				casa::Quantity threshold;
-				casa::Quantity::read(threshold, parset.getString("solver.Clean.threshold", "0Jy"));
+				casacore::Quantity threshold;
+				casacore::Quantity::read(threshold, parset.getString("solver.Clean.threshold", "0Jy"));
 				solver->setThreshold(threshold);
 			}
 			else
 			{
 				solver = askap::scimath::Solver::ShPtr(new ImageSolver);
-				casa::Quantity threshold;
-				casa::Quantity::read(threshold, parset.getString("solver.Dirty.threshold", "0Jy"));
+				casacore::Quantity threshold;
+				casacore::Quantity::read(threshold, parset.getString("solver.Dirty.threshold", "0Jy"));
 				solver->setThreshold(threshold);
 				ASKAPLOG_INFO_STR(logger, "Constructed dirty image solver" );
 			}

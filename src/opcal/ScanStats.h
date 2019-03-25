@@ -115,7 +115,7 @@ protected:
    /// are flagged
    /// @param[in] flags nRow x nChan x nPol cube as provided by the accessor
    /// @return nRow x nPol matrix with aggregated flags 
-   static casa::Matrix<casa::Bool> allChannelsFlagged(const casa::Cube<casa::Bool> &flags);
+   static casacore::Matrix<casacore::Bool> allChannelsFlagged(const casacore::Cube<casacore::Bool> &flags);
    
 private:
    /// collection of individual observations

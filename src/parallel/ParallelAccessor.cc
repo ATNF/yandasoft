@@ -52,8 +52,8 @@ ParallelAccessor::ParallelAccessor(size_t cacheSize, double tolerance) : accesso
 /// returned by a separate method.
 /// @param[in] tangentPoint tangent point to rotate the coordinates to
 /// @return uvw after rotation to the new coordinate system for each row
-const casa::Vector<casa::RigidVector<casa::Double, 3> >&
-                 ParallelAccessor::rotatedUVW(const casa::MDirection &tangentPoint) const
+const casacore::Vector<casacore::RigidVector<casacore::Double, 3> >&
+                 ParallelAccessor::rotatedUVW(const casacore::MDirection &tangentPoint) const
 {
   return itsRotatedUVW.uvw(*this, tangentPoint);
 }                 
@@ -66,8 +66,8 @@ const casa::Vector<casa::RigidVector<casa::Double, 3> >&
 /// @param[in] tangentPoint tangent point to rotate the coordinates to
 /// @param[in] imageCentre image centre (additional translation is done if imageCentre!=tangentPoint)
 /// @return delays corresponding to the uvw rotation for each row
-const casa::Vector<casa::Double>& ParallelAccessor::uvwRotationDelay(
-                 const casa::MDirection &tangentPoint, const casa::MDirection &imageCentre) const
+const casacore::Vector<casacore::Double>& ParallelAccessor::uvwRotationDelay(
+                 const casacore::MDirection &tangentPoint, const casacore::MDirection &imageCentre) const
 {
   return itsRotatedUVW.delays(*this,tangentPoint,imageCentre);
 }
@@ -77,7 +77,7 @@ const casa::Vector<casa::Double>& ParallelAccessor::uvwRotationDelay(
 ///         spectral channel (vector size is nChannel). Velocities
 ///         are given as Doubles, the frame/units are specified by
 ///         the DataSource object (via IDataConverter).
-const casa::Vector<casa::Double>& ParallelAccessor::velocity() const
+const casacore::Vector<casacore::Double>& ParallelAccessor::velocity() const
 {
   ASKAPTHROW(AskapError, "ParallelAccessor::velocity() has not been implemented");
 }

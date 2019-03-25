@@ -64,7 +64,7 @@ public:
 
    /// @brief construct with explicitly defined beam parameters
    /// @param[in] beam beam parameters (should be 3 elements)
-   explicit RestoringBeamHelper(const casa::Vector<casa::Quantum<double> > &beam);
+   explicit RestoringBeamHelper(const casacore::Vector<casacore::Quantum<double> > &beam);
    
    /// @brief construct for a delayed fit
    /// @param[in] cutoff relative cutoff to determine which pixels are included in the fit
@@ -80,7 +80,7 @@ public:
    
    /// @brief initialise with explicitly defined beam parameters
    /// @param[in] beam beam parameters (should be 3 elements)
-   void assign(const casa::Vector<casa::Quantum<double> > &beam);
+   void assign(const casacore::Vector<casacore::Quantum<double> > &beam);
    
    /// @brief initialise for a delayed fit
    /// @param[in] cutoff relative cutoff to determine which pixels are included in the fit
@@ -103,13 +103,13 @@ public:
    
    /// @brief access the result
    /// @return parameters of the restoring beam (3-element vector)
-   const casa::Vector<casa::Quantum<double> >& value() const;
+   const casacore::Vector<casacore::Quantum<double> >& value() const;
    
 private:
    /// @brief parameters of the restoring beam
    /// @details This vector should always contain 3 elements. Otherwise, it is assumed that
    /// a fit is required.
-   casa::Vector<casa::Quantum<double> > itsBeam;
+   casacore::Vector<casacore::Quantum<double> > itsBeam;
    
    /// @brief relative cutoff for the pixels used for the PSF fit
    /// @details This data field is negative for an uninitialised object

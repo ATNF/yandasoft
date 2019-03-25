@@ -119,11 +119,11 @@ namespace askap
       for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
       {
 
-        const casa::Vector<double>& freq=itsIdi->frequency();
+        const casacore::Vector<double>& freq=itsIdi->frequency();
         //const double time=itsIdi->time();
         const uint nChan=freq.nelements();
         const uint nRow=itsIdi->nRow();
-        casa::Matrix<double> vis(nRow,2*nChan);
+        casacore::Matrix<double> vis(nRow,2*nChan);
         vis.set(0.0);
 
         for (it=completions.begin();it!=completions.end();it++)
@@ -131,8 +131,8 @@ namespace askap
 
           string imageName("image.i"+(*it));
 
-          const casa::Array<double> imagePixels(parameters().value(imageName));
-          const casa::IPosition imageShape(imagePixels.shape());
+          const casacore::Array<double> imagePixels(parameters().value(imageName));
+          const casacore::IPosition imageShape(imagePixels.shape());
 
           Axes axes(parameters().axes(imageName));
           if(!axes.has("RA")||!axes.has("DEC"))
@@ -147,7 +147,7 @@ namespace askap
           double decEnd=axes.end("DEC");
           int decCells=imageShape(axes.order("DEC"));
 
-          casa::Matrix<double> noDeriv(0,0);
+          casacore::Matrix<double> noDeriv(0,0);
 
           this->calcVisDFT(imagePixels, raStart, raEnd, raCells, decStart, decEnd, decCells,
             freq, itsIdi->uvw(), vis, false, noDeriv);
@@ -156,7 +156,7 @@ namespace askap
           {
             for (uint i=0;i<nChan;i++)
             {
-              itsIdi->rwVisibility()(row,i,0) += casa::Complex(vis(row,2*i), vis(row,2*i+1));
+              itsIdi->rwVisibility()(row,i,0) += casacore::Complex(vis(row,2*i), vis(row,2*i+1));
             }
           }
         }
@@ -179,17 +179,17 @@ namespace askap
       for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
       {
 
-        const casa::Vector<double>& freq=itsIdi->frequency();
+        const casacore::Vector<double>& freq=itsIdi->frequency();
         const uint nChan=freq.nelements();
         const uint nRow=itsIdi->nRow();
         //const double time=itsIdi->time();
 
 // Set up arrays to hold the output values
 // Row, Two values (complex) per channel, single pol
-        casa::Vector<double> residual(2*nRow*nChan);
-        casa::Vector<double> weights(2*nRow*nChan);
+        casacore::Vector<double> residual(2*nRow*nChan);
+        casacore::Vector<double> weights(2*nRow*nChan);
         weights.set(1.0);
-        casa::Matrix<double> vis(nRow,2*nChan);
+        casacore::Matrix<double> vis(nRow,2*nChan);
         vis.set(0.0);
 
         for (it=completions.begin();it!=completions.end();it++)
@@ -197,8 +197,8 @@ namespace askap
           string imageName("image.i"+(*it));
           if(parameters().isFree(imageName)) {
 
-            const casa::Array<double> imagePixels(parameters().value(imageName));
-            const casa::IPosition imageShape(imagePixels.shape());
+            const casacore::Array<double> imagePixels(parameters().value(imageName));
+            const casacore::IPosition imageShape(imagePixels.shape());
   
             Axes axes(parameters().axes(imageName));
             if(!axes.has("RA")||!axes.has("DEC"))
@@ -215,7 +215,7 @@ namespace askap
             const uint nPixels=imagePixels.nelements();
   
             DesignMatrix designmatrix; //old parameters: parameters();
-            casa::Matrix<double> imageDeriv(2*nRow*nChan,nPixels);
+            casacore::Matrix<double> imageDeriv(2*nRow*nChan,nPixels);
   
             this->calcVisDFT(imagePixels, raStart, raEnd, raCells,
               decStart, decEnd, decCells, freq, itsIdi->uvw(),
@@ -239,12 +239,12 @@ namespace askap
       }
     };
 
-    void ImageDFTEquation::calcVisDFT(const casa::Array<double>& imagePixels,
+    void ImageDFTEquation::calcVisDFT(const casacore::Array<double>& imagePixels,
       const double raStart, const double raEnd, const int raCells,
       const double decStart, const double decEnd, const int decCells,
-      const casa::Vector<double>& freq,
-      const casa::Vector<casa::RigidVector<double, 3> >& uvw,
-      casa::Matrix<double>& vis, bool doDeriv, casa::Matrix<double>& imageDeriv)
+      const casacore::Vector<double>& freq,
+      const casacore::Vector<casacore::RigidVector<double, 3> >& uvw,
+      casacore::Matrix<double>& vis, bool doDeriv, casacore::Matrix<double>& imageDeriv)
     {
       double raInc=(raStart-raEnd)/double(raCells);
       double decInc=(decStart-decEnd)/double(decCells);
@@ -268,8 +268,8 @@ namespace askap
           for (uint l=0;l<uint(raCells);l++)
           {
             double ra = raStart + l * raInc;
-            double delay = casa::C::_2pi * (ra * u + dec * v + sqrt(1 - ra * ra - dec * dec) * w)/casa::C::c;
-            double flux = imagePixels(casa::IPosition(2, l, m));
+            double delay = casacore::C::_2pi * (ra * u + dec * v + sqrt(1 - ra * ra - dec * dec) * w)/casacore::C::c;
+            double flux = imagePixels(casacore::IPosition(2, l, m));
             if(doDeriv)
             {
               for (uint i=0;i<nChan;i++)

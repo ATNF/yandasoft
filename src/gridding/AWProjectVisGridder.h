@@ -98,12 +98,12 @@ namespace askap
                 /// Form the sum of the convolution function squared, multiplied by the weights for each
                 /// different convolution function. This is used in the evaluation of the second derivative.
                 /// @param out Output double precision grid
-                virtual void finaliseWeights(casa::Array<double>& out);
+                virtual void finaliseWeights(casacore::Array<double>& out);
 
                 /*
                 /// Form the final output image or PSF
                 /// @param out Output double precision image or PSF
-                virtual void finaliseGrid(casa::Array<double>& out);
+                virtual void finaliseGrid(casacore::Array<double>& out);
                 */
 
                 /// @brief Initialise the gridding
@@ -111,14 +111,14 @@ namespace askap
                 /// @param shape Shape of output image: u,v,pol,chan
                 /// @param dopsf Make the psf?
                 virtual void initialiseGrid(const scimath::Axes& axes,
-                        const casa::IPosition& shape, const bool dopsf=true,
+                        const casacore::IPosition& shape, const bool dopsf=true,
                         const bool dopcf=false);
 
                 /// @brief Initialise the degridding
                 /// @param axes axes specifications
                 /// @param image Input image: cube: u,v,pol,chan
                 virtual void initialiseDegrid(const scimath::Axes& axes,
-                        const casa::Array<double>& image);
+                        const casacore::Array<double>& image);
 
                 /// @brief static method to get the name of the gridder
                 /// @details We specify parameters per gridder type in the parset file.
@@ -161,7 +161,7 @@ namespace askap
 
                 /// Correct for gridding convolution function
                 /// @param image image to be corrected
-                virtual void correctConvolution(casa::Array<double>& image);
+                virtual void correctConvolution(casacore::Array<double>& image);
 
             private:
                 /// @brief assignment operator (not to be called)
@@ -185,7 +185,7 @@ namespace askap
                 int itsMaxFields;
 
                 /// Cube of slopes
-                casa::Cube<double> itsSlopes;
+                casacore::Cube<double> itsSlopes;
         };
 
     } // end namespace synthesis

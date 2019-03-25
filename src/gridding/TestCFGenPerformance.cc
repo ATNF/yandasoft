@@ -74,21 +74,21 @@ void TestCFGenPerformance::init()
   
   // some hard-coded beam arrangement and pointing. We could've provided more flexibility if it is found useful.  
   const double maxSeparationInRad = 0.087;
-  const casa::uInt nAnt = 36;
+  const casacore::uInt nAnt = 36;
   //const double maxSeparationInRad = 0.0087;
-  //const casa::uInt nAnt = 6;
-  const casa::MVDirection dishPointing = getTangentPoint();
-  casa::Vector<casa::MVDirection> beamPointings(itsNBeams, dishPointing);
+  //const casacore::uInt nAnt = 6;
+  const casacore::MVDirection dishPointing = getTangentPoint();
+  casacore::Vector<casacore::MVDirection> beamPointings(itsNBeams, dishPointing);
   int nBeamsOnEachSide = int(sqrt(double(itsNBeams)));
   if (nBeamsOnEachSide == 0) {
       nBeamsOnEachSide = itsNBeams;
   }
-  for (casa::uInt beam=0; beam < beamPointings.nelements(); ++beam) {
+  for (casacore::uInt beam=0; beam < beamPointings.nelements(); ++beam) {
        const double length = double(beam % nBeamsOnEachSide) / double(nBeamsOnEachSide) * maxSeparationInRad;
-       const double angle = 2.*casa::C::pi * double(beam / nBeamsOnEachSide) / double(nBeamsOnEachSide);
+       const double angle = 2.*casacore::C::pi * double(beam / nBeamsOnEachSide) / double(nBeamsOnEachSide);
        beamPointings[beam].shift(length*cos(angle), length*sin(angle));
   } 
-  const casa::uInt nSamples = nAnt * (nAnt - 1) / 2 * beamPointings.nelements();
+  const casacore::uInt nSamples = nAnt * (nAnt - 1) / 2 * beamPointings.nelements();
   itsAccessor.itsAntenna1.resize(nSamples);
   itsAccessor.itsAntenna2.resize(nSamples);
   itsAccessor.itsFeed1.resize(nSamples);
@@ -104,21 +104,21 @@ void TestCFGenPerformance::init()
   itsAccessor.itsDishPointing2.resize(nSamples);
   itsAccessor.itsDishPointing2.set(dishPointing);
   itsAccessor.itsVisibility.resize(nSamples,1,1);
-  itsAccessor.itsVisibility.set(casa::Complex(0.));
+  itsAccessor.itsVisibility.set(casacore::Complex(0.));
   itsAccessor.itsFlag.resize(nSamples,1,1);
   itsAccessor.itsFlag.set(false);
   itsAccessor.itsNoise.resize(nSamples,1,1);
-  itsAccessor.itsNoise.set(casa::Complex(1.,1.));
+  itsAccessor.itsNoise.set(casacore::Complex(1.,1.));
   itsAccessor.itsTime = 0.;
   itsAccessor.itsFrequency.resize(1);
   itsAccessor.itsFrequency.set(1.4e9);
   itsAccessor.itsUVW.resize(nSamples);
   itsAccessor.itsUVWRotationDelay.resize(nSamples);
   itsAccessor.itsStokes.resize(1);
-  itsAccessor.itsStokes.set(casa::Stokes::XX);
-  for (casa::uInt ant1 = 0, index = 0; ant1<nAnt; ++ant1) {
-       for (casa::uInt ant2 = 0; ant2<ant1; ++ant2) {
-            for (casa::uInt beam=0; beam < beamPointings.nelements(); ++beam,++index) {
+  itsAccessor.itsStokes.set(casacore::Stokes::XX);
+  for (casacore::uInt ant1 = 0, index = 0; ant1<nAnt; ++ant1) {
+       for (casacore::uInt ant2 = 0; ant2<ant1; ++ant2) {
+            for (casacore::uInt beam=0; beam < beamPointings.nelements(); ++beam,++index) {
                  ASKAPDEBUGASSERT(index < nSamples);
                  itsAccessor.itsAntenna1[index] = ant1;
                  itsAccessor.itsAntenna2[index] = ant2;
@@ -137,7 +137,7 @@ void TestCFGenPerformance::init()
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
 void TestCFGenPerformance::initialiseGrid(const scimath::Axes& axes,
-               const casa::IPosition& shape, const bool dopsf, const bool dopcf)
+               const casacore::IPosition& shape, const bool dopsf, const bool dopcf)
 {
   AWProjectVisGridder::initialiseGrid(axes,shape,dopsf,dopcf);
   init();

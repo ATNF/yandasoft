@@ -136,14 +136,14 @@ void AProjectWStackVisGridder::initIndices(const accessors::IConstDataAccessor& 
     itsGMap.resize(nSamples, nPol, nChan);
     itsGMap.set(0);
 
-    const casa::Vector<casa::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
+    const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
 
     for (int i=0; i<nSamples; ++i) {
         const int feed=acc.feed1()(i);
         ASKAPCHECK(feed<itsMaxFeeds, "Exceeded specified maximum number of feeds");
         ASKAPCHECK(feed>-1, "Illegal negative feed number");
 
-        const double w=(rotatedUVW(i)(2))/(casa::C::c);
+        const double w=(rotatedUVW(i)(2))/(casacore::C::c);
 
         for (int chan=0; chan<nChan; ++chan) {
             const double freq=acc.frequency()[chan];
@@ -173,7 +173,7 @@ void AProjectWStackVisGridder::initIndices(const accessors::IConstDataAccessor& 
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
 void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,
-                                              const casa::IPosition& shape,
+                                              const casacore::IPosition& shape,
                                               const bool dopsf,
                                               const bool dopcf)
 {
@@ -183,8 +183,8 @@ void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casa::uInt nx=std::min(itsMaxSupport, int(itsShape(0)));
-    const casa::uInt ny=std::min(itsMaxSupport, int(itsShape(1)));
+    const casacore::uInt nx=std::min(itsMaxSupport, int(itsShape(0)));
+    const casacore::uInt ny=std::min(itsMaxSupport, int(itsShape(1)));
 
     ASKAPLOG_INFO_STR(logger, "Shape for calculating gridding convolution function = "
             << nx << " by " << ny << " pixels");
@@ -197,15 +197,15 @@ void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,
 /// @param axes axes specifications
 /// @param image Input image: cube: u,v,pol,chan
 void AProjectWStackVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casa::Array<double>& image)
+        const casacore::Array<double>& image)
 {
     ASKAPTRACE("AProjectWStackVisGridder::initialiseDegrid");
     WStackVisGridder::initialiseDegrid(axes,image);      
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casa::uInt nx=std::min(itsMaxSupport, int(itsShape(0)));
-    const casa::uInt ny=std::min(itsMaxSupport, int(itsShape(1)));
+    const casacore::uInt nx=std::min(itsMaxSupport, int(itsShape(0)));
+    const casacore::uInt ny=std::min(itsMaxSupport, int(itsShape(1)));
 
     ASKAPLOG_INFO_STR(logger, "Shape for calculating degridding convolution function = "
             << nx << " by " << ny << " pixels");
@@ -227,7 +227,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 
     validateCFCache(acc, hasSymmetricIllumination);
         
-    casa::MVDirection out = getImageCentre();
+    casacore::MVDirection out = getImageCentre();
 
     /// We have to calculate the lookup function converting from
     /// row and channel to plane of the w-dependent convolution
@@ -245,8 +245,8 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
     }
 
     UVPattern &pattern = uvPattern();
-    const casa::uInt nx = pattern.uSize();
-    const casa::uInt ny = pattern.vSize();
+    const casacore::uInt nx = pattern.uSize();
+    const casacore::uInt ny = pattern.vSize();
 
 
     int nDone=0;
@@ -256,7 +256,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
         if (!isCFValid(feed, currentField())) {
             makeCFValid(feed, currentField());
             nDone++;
-            casa::MVDirection offset(acc.pointingDir1()(row).getAngle());
+            casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
             rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
                     -out.getLong()) *cos(offset.getLat());
             rwSlopes()(1, feed, currentField())= isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
@@ -276,23 +276,23 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                 scimath::fft2d(pattern.pattern(), false);
 
                 double peak=0.0;
-                for (casa::uInt ix=0; ix<nx; ++ix) {
-                    for (casa::uInt iy=0; iy<ny; ++iy) {
+                for (casacore::uInt ix=0; ix<nx; ++ix) {
+                    for (casacore::uInt iy=0; iy<ny; ++iy) {
                         pattern(ix, iy)=pattern(ix,iy)*conj(pattern(ix,iy));
-                        if (casa::abs(pattern(ix,iy))>peak) {
-                            peak=casa::abs(pattern(ix,iy));
+                        if (casacore::abs(pattern(ix,iy))>peak) {
+                            peak=casacore::abs(pattern(ix,iy));
                         }
                     }
                 }
                 if(peak>0.0) {
-                    pattern.pattern()*=casa::DComplex(1.0/peak);
+                    pattern.pattern()*=casacore::DComplex(1.0/peak);
                 }
                 // The maximum will be 1.0
-                ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casa::max(pattern.pattern()));
+                ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casacore::max(pattern.pattern()));
                 scimath::fft2d(pattern.pattern(), true);	
                 // Now correct for normalization of FFT
-                pattern.pattern()*=casa::DComplex(1.0/(double(nx)*double(ny)));
-                ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casa::sum(pattern.pattern()));
+                pattern.pattern()*=casacore::DComplex(1.0/(double(nx)*double(ny)));
+                ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casacore::sum(pattern.pattern()));
 
                 if (itsSupport==0) {
                     // we probably need a proper support search here
@@ -311,7 +311,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 
                     const int cSize=2*itsSupport+1;
                     // just for logging
-                    const double cell = std::abs(pattern.uCellSize())*(casa::C::c/acc.frequency()[chan]);
+                    const double cell = std::abs(pattern.uCellSize())*(casacore::C::c/acc.frequency()[chan]);
                     ASKAPLOG_DEBUG_STR(logger, "Convolution function support = "
                             << itsSupport << " pixels, size = " << cSize
                             << " pixels");
@@ -361,7 +361,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 // 1. For each plane of the convolution function, transform to image plane
 // and multiply by conjugate to get abs value squared.
 // 2. Sum all planes weighted by the weight for that convolution function.
-void AProjectWStackVisGridder::finaliseWeights(casa::Array<double>& out) {
+void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
 
     ASKAPTRACE("AProjectWStackVisGridder::finaliseWeights");
     ASKAPLOG_DEBUG_STR(logger, "Calculating sum of weights image");
@@ -382,7 +382,7 @@ void AProjectWStackVisGridder::finaliseWeights(casa::Array<double>& out) {
     const int cceny = cny/2;
 
     /// This is the output array before sinc padding
-    casa::Array<double> cOut(casa::IPosition(4, cnx, cny, nPol, nChan));
+    casacore::Array<double> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
 
     // for debugging
@@ -411,7 +411,7 @@ void AProjectWStackVisGridder::finaliseWeights(casa::Array<double>& out) {
             // so the total field of view is itsOverSample times larger than the
             // original field of view.
             /// Work space
-            casa::Matrix<casa::DComplex> thisPlane(cnx, cny);
+            casacore::Matrix<casacore::DComplex> thisPlane(cnx, cny);
             thisPlane.set(0.0);
             const std::pair<int,int> cfOffset = getConvFuncOffset(iz);
             
@@ -432,18 +432,18 @@ void AProjectWStackVisGridder::finaliseWeights(casa::Array<double>& out) {
 
             //	  	  ASKAPLOG_DEBUG_STR(logger, "Convolution function["<< iz << "] peak = "<< peak);
             scimath::fft2d(thisPlane, false);
-            thisPlane*=casa::DComplex(nx*ny);
-            const double peak=real(casa::max(casa::abs(thisPlane)));
+            thisPlane*=casacore::DComplex(nx*ny);
+            const double peak=real(casacore::max(casacore::abs(thisPlane)));
             // ASKAPLOG_DEBUG_STR(logger, "Transform of convolution function["<< iz << "] peak = "<< peak);
 
             if(peak>0.0) {
-                thisPlane*=casa::DComplex(1.0/peak);
+                thisPlane*=casacore::DComplex(1.0/peak);
             }
 
             // Now we need to cut out only the part inside the field of view
             for (int chan=0; chan<nChan; ++chan) {
                 for (int pol=0; pol<nPol; ++pol) {
-                    casa::IPosition ip(4, 0, 0, pol, chan);
+                    casacore::IPosition ip(4, 0, 0, pol, chan);
                     const double wt = sumOfWeights()(iz, pol, chan);
                     ASKAPCHECK(!std::isnan(wt), "sumWeights returns NaN for row="<<iz<<
                                " pol="<<pol<<" chan="<<chan);
@@ -451,7 +451,7 @@ void AProjectWStackVisGridder::finaliseWeights(casa::Array<double>& out) {
                         ip(0)=ix;
                         for (int iy=0; iy<cny; ++iy) {
                             ip(1)=iy;
-                            cOut(ip)+=wt*casa::real(thisPlane(ix, iy)*conj(thisPlane(ix, iy)));
+                            cOut(ip)+=wt*casacore::real(thisPlane(ix, iy)*conj(thisPlane(ix, iy)));
                         }
                     }
                 }
@@ -467,7 +467,7 @@ int AProjectWStackVisGridder::cIndex(int row, int pol, int chan) {
     return itsCMap(row, pol, chan);
 }
 
-void AProjectWStackVisGridder::correctConvolution(casa::Array<double>& /*grid*/) {
+void AProjectWStackVisGridder::correctConvolution(casacore::Array<double>& /*grid*/) {
 }
 
 /// @brief static method to create gridder

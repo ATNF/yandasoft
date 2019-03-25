@@ -24,7 +24,7 @@
 // Include own header file first
 #include "GridKernel.h"
 
-/// Use pointers instead of casa::Matrix operators to grid
+/// Use pointers instead of casacore::Matrix operators to grid
 //#define ASKAP_GRID_WITH_POINTERS 1
 
 /// Use BLAS
@@ -46,34 +46,34 @@ std::string GridKernel::info() {
 	return std::string("Gridding with BLAS");
 #else
 #ifdef ASKAP_GRID_WITH_POINTERS
-	return std::string("Gridding with casa::Matrix pointers");
+	return std::string("Gridding with casacore::Matrix pointers");
 #else
-	return std::string("Standard gridding/degridding with casa::Matrix");
+	return std::string("Standard gridding/degridding with casacore::Matrix");
 #endif
 #endif
 }
 
 /// Totally selfcontained gridding
-void GridKernel::grid(casa::Matrix<casa::Complex>& grid,
-		casa::Matrix<casa::Complex>& convFunc, const casa::Complex& cVis,
+void GridKernel::grid(casacore::Matrix<casacore::Complex>& grid,
+		casacore::Matrix<casacore::Complex>& convFunc, const casacore::Complex& cVis,
 		const int iu, const int iv, const int support) {
 
 #if defined ( ASKAP_GRID_WITH_POINTERS ) || defined ( ASKAP_GRID_WITH_BLAS )
 #if defined ( ASKAP_GRID_WITH_POINTERS )
-    casa::Float rVis = cVis.real();
-    casa::Float iVis = cVis.imag();
+    casacore::Float rVis = cVis.real();
+    casacore::Float iVis = cVis.imag();
 #endif
 	for (int suppv = -support; suppv < +support; suppv++) {
 		const int voff = suppv + support;
 		const int uoff = -support + support;
 #ifdef ASKAP_GRID_WITH_BLAS
-        casa::Complex *wtPtr = &convFunc(uoff, voff);
-        casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
+        casacore::Complex *wtPtr = &convFunc(uoff, voff);
+        casacore::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 		cblas_caxpy(2*support+1, &cVis, wtPtr, 1, gridPtr, 1);
 #else
         // Writing the multiply in real/imag is twice as fast with gcc
-        casa::Float *wtPtrF = reinterpret_cast<casa::Float *> (&convFunc(uoff, voff));
-        casa::Float *gridPtrF = reinterpret_cast<casa::Float *> (&grid(iu - support, iv + suppv));
+        casacore::Float *wtPtrF = reinterpret_cast<casacore::Float *> (&convFunc(uoff, voff));
+        casacore::Float *gridPtrF = reinterpret_cast<casacore::Float *> (&grid(iu - support, iv + suppv));
         for (int suppu = -support; suppu < +support; suppu++, wtPtrF+=2, gridPtrF+=2) {
             gridPtrF[0] += rVis * wtPtrF[0] - iVis * wtPtrF[1];
             gridPtrF[1] += rVis * wtPtrF[1] + iVis * wtPtrF[0];
@@ -87,7 +87,7 @@ void GridKernel::grid(casa::Matrix<casa::Complex>& grid,
 		for (int suppu=-support; suppu<+support; suppu++)
 		{
 			const int uoff=suppu+support;
-			casa::Complex wt=convFunc(uoff, voff);
+			casacore::Complex wt=convFunc(uoff, voff);
 			grid(iu+suppu, iv+suppv)+=cVis*wt;
 		}
 	}
@@ -95,9 +95,9 @@ void GridKernel::grid(casa::Matrix<casa::Complex>& grid,
 }
 
 /// Totally selfcontained degridding
-void GridKernel::degrid(casa::Complex& cVis,
-		const casa::Matrix<casa::Complex>& convFunc,
-		const casa::Matrix<casa::Complex>& grid,
+void GridKernel::degrid(casacore::Complex& cVis,
+		const casacore::Matrix<casacore::Complex>& convFunc,
+		const casacore::Matrix<casacore::Complex>& grid,
         const int iu, const int iv, const int support) {
 	/// Degridding from grid to visibility. Here we just take a weighted sum of the visibility
 	/// data using the convolution function as the weighting function.
@@ -106,17 +106,17 @@ void GridKernel::degrid(casa::Complex& cVis,
 	for (int suppv = -support; suppv < +support; suppv++) {
 		const int voff = suppv + support;
 		const int uoff = -support + support;
-        const casa::Complex *wtPtr = &convFunc(uoff, voff);
-        const casa::Complex *gridPtr = &(grid(iu - support, iv + suppv));
+        const casacore::Complex *wtPtr = &convFunc(uoff, voff);
+        const casacore::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 #ifdef ASKAP_GRID_WITH_BLAS
-		casa::Complex dot;
+		casacore::Complex dot;
 		cblas_cdotc_sub(2*support+1, gridPtr, 1, wtPtr, 1, &dot);
 		cVis+=dot;
 #else
         // Writing the multiply in real/imag is twice as fast with gcc
         // Doing the 'reinterpret_cast' thing to avoid complex like in grid, doesn't help here.
         for (int suppu = -support; suppu < +support; suppu++, wtPtr++, gridPtr++) {
-            cVis += casa::Complex( (*wtPtr).real()*(*gridPtr).real()+(*wtPtr).imag()*(*gridPtr).imag(),
+            cVis += casacore::Complex( (*wtPtr).real()*(*gridPtr).real()+(*wtPtr).imag()*(*gridPtr).imag(),
                                   -(*wtPtr).real()*(*gridPtr).imag()+(*wtPtr).imag()*(*gridPtr).real());
 		}
 #endif
@@ -128,7 +128,7 @@ void GridKernel::degrid(casa::Complex& cVis,
 		for (int suppu=-support; suppu<+support; suppu++)
 		{
 			const int uoff=suppu+support;
-			casa::Complex wt=convFunc(uoff, voff);
+			casacore::Complex wt=convFunc(uoff, voff);
 			cVis+=wt*conj(grid(iu+suppu, iv+suppv));
 		}
 	}

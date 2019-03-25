@@ -52,7 +52,7 @@ struct IVisCubeUpdate {
   
   /// @brief update visibility cube
   /// @param[in,out] cube reference to visiblity cube to update 
-  virtual void update(casa::Cube<casa::Complex> &cube) const = 0;
+  virtual void update(casacore::Cube<casacore::Complex> &cube) const = 0;
   
   /// @brief aggregate flag with the logical or operation
   /// @param[in,out] flag flag to reduce

@@ -48,15 +48,15 @@ namespace askap {
                 static std::string info();
 
                 /// Gridding kernel
-                static void grid(casa::Matrix<casa::Complex>& grid,
-                        casa::Matrix<casa::Complex>& convFunc,
-                        const casa::Complex& cVis, const int iu,
+                static void grid(casacore::Matrix<casacore::Complex>& grid,
+                        casacore::Matrix<casacore::Complex>& convFunc,
+                        const casacore::Complex& cVis, const int iu,
                         const int iv, const int support);
 
                 /// Degridding kernel
-                static void degrid(casa::Complex& cVis,
-                        const casa::Matrix<casa::Complex>& convFunc,
-                        const casa::Matrix<casa::Complex>& grid,
+                static void degrid(casacore::Complex& cVis,
+                        const casacore::Matrix<casacore::Complex>& convFunc,
+                        const casacore::Matrix<casacore::Complex>& grid,
                         const int iu, const int iv,
                         const int support);
 

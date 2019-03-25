@@ -95,7 +95,7 @@ namespace askap
       
       
     private:
-      static casa::Interpolate2D::Method interpMethod(casa::String str);
+      static casacore::Interpolate2D::Method interpMethod(casacore::String str);
 
       static std::map<std::string, GridderCreator*> theirRegistry;
     };

@@ -125,13 +125,13 @@ struct EstimatorAdapter : public scimath::INormalEquations {
   
   /// @brief stubbed method for this class
   /// @return nothing, throws an exception
-  virtual const casa::Matrix<double>& normalMatrix(const std::string &, 
+  virtual const casacore::Matrix<double>& normalMatrix(const std::string &, 
                         const std::string &) const 
       { ASKAPTHROW(AskapError, "Method is not supported"); }
       
   /// @brief stubbed method for this class
   /// @return nothing, throws an exception
-  virtual const casa::Vector<double>& dataVector(const std::string &) const
+  virtual const casacore::Vector<double>& dataVector(const std::string &) const
       { ASKAPTHROW(AskapError, "Method is not supported"); }
                         
   /// @brief stubbed method for this class
@@ -164,7 +164,7 @@ AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const
       
        const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
        const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
-       itsTangent = casa::MVDirection(ra,dec);
+       itsTangent = casacore::MVDirection(ra,dec);
        itsTangentDefined = true;
    }
    itsNe.reset();
@@ -194,9 +194,9 @@ void AdviseParallel::estimate()
        broadcastModel();
        receiveModel();
        ASKAPCHECK(params()->has("tangent"), "tangent is not defined. There is likely to be a problem with model broadcast/receive");
-       const casa::Vector<casa::Double> tangent = params()->value("tangent");
+       const casacore::Vector<casacore::Double> tangent = params()->value("tangent");
        ASKAPCHECK(tangent.nelements() == 2, "Expect a 2-element vector for tangent, you have "<<tangent);       
-       itsTangent = casa::MVDirection(tangent);
+       itsTangent = casacore::MVDirection(tangent);
        itsTangentDefined = true;
        ASKAPLOG_INFO_STR(logger, "Using tangent "<<printDirection(itsTangent)<<" (estimated most central direction)");
        // now all ranks should have the same value of itsTangent & itsTangentDefined, ready for the second iteration
@@ -252,7 +252,7 @@ void AdviseParallel::broadcastStatistics()
 /// @param[in] ms measurement set name
 void AdviseParallel::calcOne(const std::string &ms)
 {
-   casa::Timer timer;
+   casacore::Timer timer;
    timer.mark();
    ASKAPLOG_INFO_STR(logger, "Performing iteration to accumulate metadata statistics for " << ms );
    ASKAPDEBUGASSERT(itsEstimator);
@@ -271,7 +271,7 @@ void AdviseParallel::calcOne(const std::string &ms)
    accessors::IDataConverterPtr conv=ds.createConverter();
    ASKAPLOG_INFO_STR(logger, "Initialised converter" );
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-   conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+   conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
    conv->setEpochFrame(); // time since 0 MJD
    accessors::IDataSharedIter it=ds.createIterator(sel, conv);
    ASKAPLOG_INFO_STR(logger, "Initialised iterator" );
@@ -354,12 +354,12 @@ void AdviseParallel::summary() const
        }
        ASKAPLOG_INFO_STR(logger, "  Most central pointing direction of the field: "<<printDirection(stats.centre())<<" (J2000)");
        const std::pair<double,double> offsets = stats.maxOffsets();
-       ASKAPLOG_INFO_STR(logger, "  Largest beam offsets from the central direction: "<<offsets.first/casa::C::pi*180.<<" , "<<offsets.second/casa::C::pi*180.<<" deg");
+       ASKAPLOG_INFO_STR(logger, "  Largest beam offsets from the central direction: "<<offsets.first/casacore::C::pi*180.<<" , "<<offsets.second/casacore::C::pi*180.<<" deg");
        const double cellSize = stats.squareCellSize(); // in arcsec
        ASKAPLOG_INFO_STR(logger, "  Estimated square cell size: "<<cellSize<<" arcsec");
 
        if (itsTangentDefined) {
-           ASKAPLOG_INFO_STR(logger, "  Distance of the 'average' pointing direction from the tangent point: "<<itsTangent.separation(stats.centre())*180./casa::C::pi<<" deg");
+           ASKAPLOG_INFO_STR(logger, "  Distance of the 'average' pointing direction from the tangent point: "<<itsTangent.separation(stats.centre())*180./casacore::C::pi<<" deg");
        }
        for (int stage = 0; stage<2; ++stage) {
             const std::string what = stage == 0 ? "'average' pointing" : "tangent point";

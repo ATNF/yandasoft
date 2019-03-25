@@ -77,7 +77,7 @@ namespace askap {
 
             ASKAPLOG_INFO_STR(decmsbaselogger, "Calculating multiscale basis functions");
             // Make a cube and use referencing in Array
-            casa::Cube<T> scaleCube(this->itsBasisFunction);
+            casacore::Cube<T> scaleCube(this->itsBasisFunction);
 
             for (uInt scale = 0; scale < itsScales.nelements(); scale++) {
                 const Float scaleSize = itsScales(scale);

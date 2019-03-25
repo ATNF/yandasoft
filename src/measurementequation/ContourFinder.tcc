@@ -63,16 +63,16 @@ namespace synthesis {
 /// @param[in] clip if true, a contour will always be closed by returning edge pixels if
 ///            contour goes beyond the array 
 template<typename T, typename P> 
-ContourFinder<T,P>::ContourFinder(const casa::Array<T> &array, const P &pred,
-                const casa::IPosition &peak, bool clip) : itsArray(array),
+ContourFinder<T,P>::ContourFinder(const casacore::Array<T> &array, const P &pred,
+                const casacore::IPosition &peak, bool clip) : itsArray(array),
                 itsPredicate(pred), itsPeak(peak), itsDoClip(clip),
                 itsIsEndMark(false) 
 {
   ASKAPASSERT(array.shape().size());
   ASKAPASSERT(array.shape()[0]>1);
-  if (this->itsPeak == casa::IPosition(1,-1)) {
+  if (this->itsPeak == casacore::IPosition(1,-1)) {
       T minVal, maxVal;
-      casa::IPosition minPos, maxPos;
+      casacore::IPosition minPos, maxPos;
       minMax(minVal,maxVal,minPos,maxPos,this->itsArray);
       this->itsPeak = abs(minVal) > abs(maxVal) ? minPos : maxPos;
   }
@@ -117,7 +117,7 @@ bool ContourFinder<T,P>::operator!=(const ContourFinder<T,P> &other) const
 /// @details It returns IPosition for the current point of the contour.
 /// @return const reference to the currnt point of the contour.
 template<typename T, typename P> 
-const casa::IPosition& ContourFinder<T,P>::operator*() const
+const casacore::IPosition& ContourFinder<T,P>::operator*() const
 {
   return this->itsTestedPosition;
 }
@@ -126,7 +126,7 @@ const casa::IPosition& ContourFinder<T,P>::operator*() const
 /// @details It returns IPosition for the current point of the contour by pointer.
 /// @return const pointer to the currnt point of the contour.
 template<typename T, typename P> 
-const casa::IPosition* ContourFinder<T,P>::operator->() const
+const casacore::IPosition* ContourFinder<T,P>::operator->() const
 {
   return &(this->itsTestedPosition);
 }
@@ -138,7 +138,7 @@ const casa::IPosition* ContourFinder<T,P>::operator->() const
 template<typename T, typename P> 
 ContourFinder<T,P>& ContourFinder<T,P>::init()
 {
-  this->itsIncrements = casa::IPosition(itsArray.shape().size(),1);
+  this->itsIncrements = casacore::IPosition(itsArray.shape().size(),1);
   this->itsTestedPosition = itsPeak;
   if (!this->searchAlongFirstAxis()) {
       this->operator++();

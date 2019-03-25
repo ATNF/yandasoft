@@ -80,7 +80,7 @@ struct Sum : public MEComponent<Effect1::theirFDPFlag || Effect2::theirFDPFlag |
    /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
    /// this effect
    inline scimath::ComplexDiffMatrix get(const accessors::IConstDataAccessor &chunk, 
-                                casa::uInt row) const
+                                casacore::uInt row) const
    { return BlockCDMOperations<Effect1::theirFDPFlag,Effect2::theirFDPFlag,Effect3::theirFDPFlag>::sum(
               itsEffect1.get(chunk,row),itsEffect2.get(chunk,row),itsEffect3.get(chunk,row)); }
    
@@ -112,7 +112,7 @@ struct Sum<Effect1, Effect2, MEComponent<false> > : public MEComponent<Effect1::
    /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
    /// this effect
    inline scimath::ComplexDiffMatrix get(const accessors::IConstDataAccessor &chunk, 
-                                casa::uInt row) const
+                                casacore::uInt row) const
    { return BlockCDMOperations<Effect1::theirFDPFlag,Effect2::theirFDPFlag,false>::sum(
               itsEffect1.get(chunk,row),itsEffect2.get(chunk,row)); }
    

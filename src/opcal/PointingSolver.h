@@ -68,30 +68,30 @@ public:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  virtual void process(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
+  virtual void process(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);
 
 protected:
   /// @brief obtain MRO reference position
   /// @return position measure
-  static casa::MPosition mroPosition();
+  static casacore::MPosition mroPosition();
 
   /// @brief obtain Az and El at MRO for the given direction
   /// @param[in] dir direction of interest in J2000
   /// @param[in] time time in seconds since 0 MJD
   /// @return direction in AzEl
-  static casa::MVDirection mroAzEl(const casa::MVDirection &dir, double time);
+  static casacore::MVDirection mroAzEl(const casacore::MVDirection &dir, double time);
   
   /// @brief obtain parallactic angle at MRO for the given direction
   /// @param[in] dir direction of interest in J2000
   /// @param[in] time time in seconds since 0 MJD
   /// @return parallactic angle in radians
-  static double mroPA(const casa::MVDirection &dir, double time);
+  static double mroPA(const casacore::MVDirection &dir, double time);
   
   
   /// @brief solve for corrections for just one antenna
   /// @param[in] caldata vector of data for all points of the pattern
   /// @return pair with offsets in two coordinates
-  std::pair<double, double> solveOne(const casa::Vector<GenericCalInfo> &caldata) const;
+  std::pair<double, double> solveOne(const casacore::Vector<GenericCalInfo> &caldata) const;
   
 private:
    

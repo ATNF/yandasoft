@@ -48,12 +48,12 @@ namespace synthesis {
 /// is filled with 0.
 /// @param[in] freq vector of frequencies to do calculations for (in Hz)
 /// @param[out] result an output buffer used to store values
-void Calibrator1934::calculate(const casa::RigidVector<casa::Double, 3> &,
-        const casa::Vector<casa::Double> &freq, std::vector<double> &result) const
+void Calibrator1934::calculate(const casacore::RigidVector<casacore::Double, 3> &,
+        const casacore::Vector<casacore::Double> &freq, std::vector<double> &result) const
 {
    result.resize(2 * freq.nelements());
    std::vector<double>::iterator it = result.begin();
-   for (casa::Vector<casa::Double>::const_iterator ci = freq.begin(); ci != freq.end(); ++ci,++it) {
+   for (casacore::Vector<casacore::Double>::const_iterator ci = freq.begin(); ci != freq.end(); ++ci,++it) {
         ASKAPDEBUGASSERT(it != result.end());
         *(it++) = fluxDensity(*ci / 1e6);         
         // calibrator is always assumed to be in the phase centre, so the imaginary part is always 0.
@@ -71,15 +71,15 @@ void Calibrator1934::calculate(const casa::RigidVector<casa::Double, 3> &,
 /// @param[in] uvw  baseline spacings (in metres)
 /// @param[in] freq vector of frequencies to do calculations for (in Hz)
 /// @param[out] result an output buffer used to store values
-void Calibrator1934::calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    std::vector<casa::AutoDiff<double> > &result) const                    
+void Calibrator1934::calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    std::vector<casacore::AutoDiff<double> > &result) const                    
 {
    result.resize(2 * freq.nelements());
-   std::vector<casa::AutoDiff<double> >::iterator it = result.begin();
-   for (casa::Vector<casa::Double>::const_iterator ci = freq.begin(); ci != freq.end(); ++ci,++it) {
+   std::vector<casacore::AutoDiff<double> >::iterator it = result.begin();
+   for (casacore::Vector<casacore::Double>::const_iterator ci = freq.begin(); ci != freq.end(); ++ci,++it) {
         ASKAPDEBUGASSERT(it != result.end());
-        *(it++) = casa::AutoDiff<double>(fluxDensity(*ci / 1e6));         
+        *(it++) = casacore::AutoDiff<double>(fluxDensity(*ci / 1e6));         
         // calibrator is always assumed to be in the phase centre, so the imaginary part is always 0.
         ASKAPDEBUGASSERT(it != result.end());        
         *it = 0.;

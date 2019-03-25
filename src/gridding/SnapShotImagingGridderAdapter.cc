@@ -77,8 +77,8 @@ boost::mutex SnapShotImagingGridderAdapter::theirMutex;
 /// @param[in] tolerance w-term tolerance in wavelengths (a new fit is performed if the old
 /// plane gives w-deviation exceeding this value)
 SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
-                               const double tolerance, const casa::uInt decimate,
-                               const casa::Interpolate2D::Method method,
+                               const double tolerance, const casacore::uInt decimate,
+                               const casacore::Interpolate2D::Method method,
                                const bool doPredictWPlane) :
      itsAccessorAdapter(tolerance), itsDoPSF(false), itsDoPCF(false), itsCoeffA(0.), itsCoeffB(0.),
      itsFirstAccessor(true), itsBuffersFinalised(false), itsNumOfImageRegrids(0), itsTimeImageRegrid(0.),
@@ -194,7 +194,7 @@ boost::shared_ptr<IVisGridder> SnapShotImagingGridderAdapter::clone()
 /// @param[in] shape Shape of output image: cube: u,v,pol,chan
 /// @param[in] dopsf Make the psf?
 void SnapShotImagingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf, const bool dopcf)
+                const casacore::IPosition& shape, const bool dopsf, const bool dopcf)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::initialiseGrid");
 
@@ -278,7 +278,7 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
 
 /// @brief form the final output image
 /// @param[in] out output double precision image or PSF
-void SnapShotImagingGridderAdapter::finaliseGrid(casa::Array<double>& out)
+void SnapShotImagingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseGrid");
 
@@ -297,7 +297,7 @@ void SnapShotImagingGridderAdapter::finaliseGrid(casa::Array<double>& out)
 /// @details Form the sum of the convolution function squared, multiplied by the weights for each
 /// different convolution function. This is used in the evaluation of the second derivative.
 /// @param[in] out output double precision sum of weights images
-void SnapShotImagingGridderAdapter::finaliseWeights(casa::Array<double>& out)
+void SnapShotImagingGridderAdapter::finaliseWeights(casacore::Array<double>& out)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseWeights");
 
@@ -316,11 +316,11 @@ void SnapShotImagingGridderAdapter::finaliseWeights(casa::Array<double>& out)
 /// @param[in] axes axes specifications
 /// @param[in] image input image cube: u,v,pol,chan
 void SnapShotImagingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
-					const casa::Array<double>& image)
+					const casacore::Array<double>& image)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::initialiseDegrid");
 
-  itsModelIsEmpty = (casa::max(casa::abs(image)) <= 0.);
+  itsModelIsEmpty = (casacore::max(casacore::abs(image)) <= 0.);
   if (itsModelIsEmpty) {
       ASKAPLOG_INFO_STR(logger, "No need to degrid: model is empty");
       return;
@@ -390,7 +390,7 @@ void SnapShotImagingGridderAdapter::degrid(IDataAccessor& acc)
       // need to patch axes here before passing to initialise degrid
       axes.addDirectionAxis(currentPlaneDirectionCoordinate());
       //
-      casa::Array<double> scratch(itsImageBuffer.shape());
+      casacore::Array<double> scratch(itsImageBuffer.shape());
       imageRegrid(itsImageBuffer,scratch, false);
       itsGridder->initialiseDegrid(axes,scratch);
       itsFirstAccessor = false;
@@ -434,7 +434,7 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   } else {
       ASKAPLOG_DEBUG_STR(logger, "Finalising current dirty image");
   }
-  casa::Array<double> scratch(itsImageBuffer.shape());
+  casacore::Array<double> scratch(itsImageBuffer.shape());
   itsGridder->finaliseGrid(scratch);
   imageRegrid(scratch, itsImageBuffer, true);
 
@@ -452,25 +452,25 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
 /// current best fit w=Au+Bv from the direction coordinate stored in 
 /// itsAxes. This is used to setup image plane regridding and coordinate system
 /// of the wrapped gridder during grid/degrid initialisation.
-casa::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirectionCoordinate() const
+casacore::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirectionCoordinate() const
 {
   ASKAPDEBUGASSERT(itsAxes.hasDirection());
-  const casa::DirectionCoordinate dc(itsAxes.directionAxis());
-  const casa::MDirection::Types directionType = dc.directionType();
-  const casa::Vector<casa::Double> refVal = dc.referenceValue();
+  const casacore::DirectionCoordinate dc(itsAxes.directionAxis());
+  const casacore::MDirection::Types directionType = dc.directionType();
+  const casacore::Vector<casacore::Double> refVal = dc.referenceValue();
   ASKAPDEBUGASSERT(refVal.nelements() == 2);
-  const casa::Vector<casa::Double> refPix = dc.referencePixel();
+  const casacore::Vector<casacore::Double> refPix = dc.referencePixel();
   ASKAPDEBUGASSERT(refPix.nelements() == 2);
-  const casa::Vector<casa::Double> inc = dc.increment();
+  const casacore::Vector<casacore::Double> inc = dc.increment();
   ASKAPDEBUGASSERT(inc.nelements() == 2);
-  const casa::Matrix<casa::Double> xform = dc.linearTransform();
+  const casacore::Matrix<casacore::Double> xform = dc.linearTransform();
   // now patch projection
-  casa::Vector<casa::Double> projParams(2);
+  casacore::Vector<casacore::Double> projParams(2);
   projParams[0] = -coeffA();
   projParams[1] = -coeffB();
-  const casa::Projection projection(casa::Projection::SIN, projParams);
+  const casacore::Projection projection(casacore::Projection::SIN, projParams);
   //
-  return casa::DirectionCoordinate(directionType, projection, refVal[0],refVal[1],
+  return casacore::DirectionCoordinate(directionType, projection, refVal[0],refVal[1],
                    inc[0],inc[1],xform,refPix[0],refPix[1]);
 }
 
@@ -490,13 +490,13 @@ casa::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirectionCo
 /// over 2D planes is perfromed explicitly to avoid initialising large scratch 
 /// buffers. An exception is raised if input and output arrays have different 
 /// shapes
-void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input, 
-           casa::Array<double> &output, bool toTarget, bool isWeights) const
+void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &input, 
+           casacore::Array<double> &output, bool toTarget, bool isWeights) const
 {
    ASKAPTRACE("SnapShotImagingGridderAdapter::imageRegrid");    
  
    // for stats
-   casa::Timer timer;
+   casacore::Timer timer;
    timer.mark();
    ++itsNumOfImageRegrids;
    // actual code
@@ -515,12 +515,12 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
    
    // constness is conceptual, we don't do any assignments to the input array
    // the following line doesn't copy the data (reference semantics)
-   casa::Array<double> inRef(input);
+   casacore::Array<double> inRef(input);
    // form coordinate systems
-   const casa::DirectionCoordinate dcCurrent = currentPlaneDirectionCoordinate();
-   const casa::DirectionCoordinate& dcTarget = itsAxes.directionAxis();
-   casa::CoordinateSystem csInput;
-   casa::CoordinateSystem csOutput;
+   const casacore::DirectionCoordinate dcCurrent = currentPlaneDirectionCoordinate();
+   const casacore::DirectionCoordinate& dcTarget = itsAxes.directionAxis();
+   casacore::CoordinateSystem csInput;
+   casacore::CoordinateSystem csOutput;
    if (toTarget) {
       csInput.addCoordinate(dcCurrent);
       csOutput.addCoordinate(dcTarget);
@@ -533,22 +533,22 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
    scimath::MultiDimArrayPlaneIter planeIter(input.shape());
    
    // regridder
-   casa::ImageRegrid<double> regridder;
+   casacore::ImageRegrid<double> regridder;
    // regridder works with images, so we have to setup temporary 2D images
    // the following may cause an unnecessary copy, there should be a better way
    // of constructing an image out of an array
-   const casa::IPosition tempShape = planeIter.planeShape().nonDegenerate();
+   const casacore::IPosition tempShape = planeIter.planeShape().nonDegenerate();
    if (!itsTempInImg.shape().isEqual(tempShape)) {
        /* 
        // this resizing is temporary replaced with a more convoluted operation
        // as a workaround to avoid a possible casacore bug with TempImage
-       itsTempInImg.resize(casa::TiledShape(tempShape));
-       itsTempOutImg.resize(casa::TiledShape(tempShape));       
+       itsTempInImg.resize(casacore::TiledShape(tempShape));
+       itsTempOutImg.resize(casacore::TiledShape(tempShape));       
        */
        // +100 forces to use the memory
        const double maxMemoryInMB = double(tempShape.product()*sizeof(double))/1024./1024.+100;
-       itsTempInImg = casa::TempImage<double>(casa::TiledShape(tempShape),csInput,maxMemoryInMB);
-       itsTempOutImg = casa::TempImage<double>(casa::TiledShape(tempShape),csOutput,maxMemoryInMB);       
+       itsTempInImg = casacore::TempImage<double>(casacore::TiledShape(tempShape),csInput,maxMemoryInMB);
+       itsTempOutImg = casacore::TempImage<double>(casacore::TiledShape(tempShape),csOutput,maxMemoryInMB);       
    }
    ASKAPDEBUGASSERT(itsTempInImg.shape().isEqual(itsTempOutImg.shape()));
    const bool csSuccess = itsTempInImg.setCoordinateInfo(csInput) && itsTempOutImg.setCoordinateInfo(csOutput);
@@ -562,7 +562,7 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
         #endif
           if (!isPCFGridder()) {
             regridder.regrid(itsTempOutImg, itsInterpolationMethod,
-                    casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+                    casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
           } else {
             pcfRegrid(regridder);
           }
@@ -570,9 +570,9 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
         }
         #endif
         // the next line does not do any copying (reference semantics)
-        casa::Array<double> outRef(planeIter.getPlane(output).nonDegenerate());
+        casacore::Array<double> outRef(planeIter.getPlane(output).nonDegenerate());
         // create a lattice to benefit from lattice math operators
-        casa::ArrayLattice<double> tempOutputLattice(outRef, casa::True);
+        casacore::ArrayLattice<double> tempOutputLattice(outRef, casacore::True);
         if (toTarget) {
             tempOutputLattice += itsTempOutImg;
         } else {
@@ -589,49 +589,49 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casa::Array<double> &input
    itsTimeImageRegrid += timer.real();
 }
 
-void SnapShotImagingGridderAdapter::pcfRegrid(casa::ImageRegrid<double>& regridder) const
+void SnapShotImagingGridderAdapter::pcfRegrid(casacore::ImageRegrid<double>& regridder) const
 {
    // Special regridder for the preconditioner function
 
    // The PCF uses the imaginary part of Fourier components to store estimates
    // of the gridding kernel size. It has nothing to do with phases. The real and
    // imaginary images need to be split out, regridded separately, then recombined. 
-   casa::IPosition shape = itsTempInImg.shape();
-   casa::Array<casa::DComplex> scratch(shape);
-   casa::Array<casa::DComplex> scratchReal(shape);
-   casa::Array<casa::DComplex> scratchImag(shape);
+   casacore::IPosition shape = itsTempInImg.shape();
+   casacore::Array<casacore::DComplex> scratch(shape);
+   casacore::Array<casacore::DComplex> scratchReal(shape);
+   casacore::Array<casacore::DComplex> scratchImag(shape);
    // Copy to a complex array and transform to the uv plane
-   casa::convertArray<casa::DComplex,double>(scratch, itsTempInImg.get());
+   casacore::convertArray<casacore::DComplex,double>(scratch, itsTempInImg.get());
    scimath::fft2d(scratch, true);
 
    // Regrid the real part
-   casa::convertArray<casa::DComplex,double>(scratchReal, real(scratch));
+   casacore::convertArray<casacore::DComplex,double>(scratchReal, real(scratch));
    scimath::fft2d(scratchReal, false);
    itsTempInImg.put(real(scratchReal));
    regridder.regrid(itsTempOutImg, itsInterpolationMethod,
-           casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
-   casa::convertArray<casa::DComplex,double>(scratchReal, itsTempOutImg.get());
+           casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+   casacore::convertArray<casacore::DComplex,double>(scratchReal, itsTempOutImg.get());
    scimath::fft2d(scratchReal, true);
-   casa::convertArray<casa::DComplex,double>(scratchReal, real(scratchReal));
+   casacore::convertArray<casacore::DComplex,double>(scratchReal, real(scratchReal));
 
    // Regrid the imaginary part
    // Even though these are non-negative numbers, they are stored with conjugate
    // symmetry to ensure that they form a real PCF image. However, we need to
    // regrid the non-negative numbers, so take the absolute values first.
-   casa::convertArray<casa::DComplex,double>(scratchImag, abs(imag(scratch)));
+   casacore::convertArray<casacore::DComplex,double>(scratchImag, abs(imag(scratch)));
    scimath::fft2d(scratchImag, false);
    itsTempInImg.put(real(scratchImag));
    regridder.regrid(itsTempOutImg, itsInterpolationMethod,
-           casa::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
-   casa::convertArray<casa::DComplex,double>(scratchImag, itsTempOutImg.get());
+           casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
+   casacore::convertArray<casacore::DComplex,double>(scratchImag, itsTempOutImg.get());
    scimath::fft2d(scratchImag, true);
-   casa::convertArray<casa::DComplex,double>(scratchImag, real(scratchImag));
+   casacore::convertArray<casacore::DComplex,double>(scratchImag, real(scratchImag));
 
    // Recombine the real and imaginary uv grids. Need to add the imaginary parts
    // with conjugate symmetry or the real image storage will lose them.
-   casa::IPosition start(shape.nelements());
-   casa::IPosition end(shape.nelements());
-   for (casa::uInt k=0; k<start.nelements(); ++k) {
+   casacore::IPosition start(shape.nelements());
+   casacore::IPosition end(shape.nelements());
+   for (casacore::uInt k=0; k<start.nelements(); ++k) {
      start(k) = 0;
      end(k) = 0;
    }
@@ -639,18 +639,18 @@ void SnapShotImagingGridderAdapter::pcfRegrid(casa::ImageRegrid<double>& regridd
    end(0) = shape[0]/2-1;
    start(1) = 0;
    end(1) = shape[1]/2;
-   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,+1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,+1)*scratchImag(start,end);
    start(1) = shape[1]/2+1;
    end(1) = shape[1]-1;
-   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,-1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,-1)*scratchImag(start,end);
    start(0) = shape[0]/2;
    end(0) = shape[0]-1;
    start(1) = 0;
    end(1) = shape[1]/2-1;
-   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,+1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,+1)*scratchImag(start,end);
    start(1) = shape[1]/2;
    end(1) = shape[1]-1;
-   scratch(start,end) = scratchReal(start,end) + casa::DComplex(0,-1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,-1)*scratchImag(start,end);
 
    // Transform back to an image
    scimath::fft2d(scratch, false);
@@ -662,16 +662,16 @@ void SnapShotImagingGridderAdapter::pcfRegrid(casa::ImageRegrid<double>& regridd
 /// @details This method extracts the tangent point (reference position) from the
 /// coordinate system.
 /// @return direction measure corresponding to the tangent point
-casa::MVDirection SnapShotImagingGridderAdapter::getTangentPoint() const
+casacore::MVDirection SnapShotImagingGridderAdapter::getTangentPoint() const
 {
    // at this stage, just a copy of the method from TableVisGridder. May need some refactoring 
    // in the future
    ASKAPCHECK(itsAxes.hasDirection(),"Direction axis is missing. axes="<<itsAxes);
-   const casa::Vector<casa::Double> refVal(itsAxes.directionAxis().referenceValue());
+   const casacore::Vector<casacore::Double> refVal(itsAxes.directionAxis().referenceValue());
    ASKAPDEBUGASSERT(refVal.nelements() == 2);
-   const casa::Quantum<double> refLon(refVal[0], "rad");
-   const casa::Quantum<double> refLat(refVal[1], "rad");
-   const casa::MVDirection out(refLon, refLat);
+   const casacore::Quantum<double> refLon(refVal[0], "rad");
+   const casacore::Quantum<double> refLat(refVal[1], "rad");
+   const casacore::MVDirection out(refLon, refLat);
    return out;
 }
 
@@ -703,14 +703,14 @@ void SnapShotImagingGridderAdapter::setWeightsClippingFactor(const float factor)
 /// @details This method clips the image by zeroing the edges according to the
 /// assigned clipping factor.
 /// @param[in] img array to modify
-void SnapShotImagingGridderAdapter::imageClip(casa::Array<double> &img, const float factor) const
+void SnapShotImagingGridderAdapter::imageClip(casacore::Array<double> &img, const float factor) const
 {
   ASKAPDEBUGTRACE("SnapShotImagingGridderAdapter::imageClip");
 
   ASKAPDEBUGASSERT(factor < 1.);
   const float unpaddingFactor = 1. - factor;
   ASKAPDEBUGASSERT(unpaddingFactor <= 1.);
-  const casa::IPosition shapeToPreserve = scimath::PaddingUtils::paddedShape(img.shape(), unpaddingFactor);
+  const casacore::IPosition shapeToPreserve = scimath::PaddingUtils::paddedShape(img.shape(), unpaddingFactor);
   if (shapeToPreserve != img.shape()) {
       ASKAPASSERT(img.shape().nelements() == 2);
       scimath::PaddingUtils::clip(img, shapeToPreserve);

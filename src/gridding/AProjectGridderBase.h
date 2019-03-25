@@ -83,7 +83,7 @@ struct AProjectGridderBase : virtual public IVisGridder
   /// @details
   /// @param[in] feed feed number to query
   /// @param[in] field field number to query
-  inline const casa::MVDirection& pointing(int feed, int field) const { return itsPointings(feed,field);}
+  inline const casacore::MVDirection& pointing(int feed, int field) const { return itsPointings(feed,field);}
   
   /// @brief obtain uv-pattern
   /// @return a reference to uv-pattern
@@ -101,8 +101,8 @@ struct AProjectGridderBase : virtual public IVisGridder
   /// @param[in] vCellSize size of the uv-cell in the direction of 
   ///            v-coordinate (in wavelengths)
   /// @param[in] overSample oversampling factor (default is 1)
-  void initUVPattern(casa::uInt uSize, casa::uInt vSize, double uCellSize,
-                     double vCellSize, casa::uInt overSample = 1);
+  void initUVPattern(casacore::uInt uSize, casacore::uInt vSize, double uCellSize,
+                     double vCellSize, casacore::uInt overSample = 1);
   
   /// @brief obtain current field
   /// @details Although it is not great, we use the fact that only one field (i.e. dish pointing)
@@ -111,7 +111,7 @@ struct AProjectGridderBase : virtual public IVisGridder
   /// related functionality to detect the field change. This method returns the field 
   /// corresponding to the accessor passed during the last call to indexField.
   /// @return current field index
-  inline casa::uInt currentField() const { return itsCurrentField; }
+  inline casacore::uInt currentField() const { return itsCurrentField; }
   
   /// @brief checks whether the current field has been updated
   /// @details See currentField for more detailed description.
@@ -138,7 +138,7 @@ struct AProjectGridderBase : virtual public IVisGridder
   /// following invalidation. It depends on the actual algorithm and the dataset. To keep track
   /// of the cache rebuild stats call this method with the exact number of CFs calculated.
   /// @param[in] nDone number of convolution functions rebuilt at this iteration
-  void updateStats(casa::uInt nDone);
+  void updateStats(casacore::uInt nDone);
    
   /// @brief a helper factory of illumination patterns
   /// @details Illumination model is required for a number of gridders. This
@@ -165,7 +165,7 @@ protected:
 
   /// @brief read-write access to the buffer of slopes
   /// @return non-const reference to the cube of slopes
-  casa::Cube<double>& rwSlopes() { return itsSlopes;}
+  casacore::Cube<double>& rwSlopes() { return itsSlopes;}
           
 private:
   /// @brief assignment operator (never to be called)
@@ -187,13 +187,13 @@ private:
   /// Last field processed
   int itsLastField;
   /// Current field processed
-  casa::uInt itsCurrentField;
+  casacore::uInt itsCurrentField;
    
   /// @brief flags that CF is valid for given feed and fields
-  casa::Matrix<bool> itsDone;
+  casacore::Matrix<bool> itsDone;
    
   /// Pointing for this feed and field
-  casa::Matrix<casa::MVDirection> itsPointings;
+  casacore::Matrix<casacore::MVDirection> itsPointings;
    
   /// @brief buffer in the uv-space
   /// @details It is used to compute convolution functions (buffer for illumination pattern)
@@ -206,28 +206,28 @@ private:
   /// reused later) it should be equal to 1. In the worst case (CFs are
   /// recomputed for every iteration) this should be equal to the number iterations 
   /// (to be exact, the number of calls to initConvolutionFunctions).
-  casa::uInt itsNumberOfCFGenerations;
+  casacore::uInt itsNumberOfCFGenerations;
       
   /// @brief total number of iterations
   /// @details This number is incremented each time a new accessor is passed to this gridder
   /// (i.e. counts every iteration). 
-  casa::uInt itsNumberOfIterations;
+  casacore::uInt itsNumberOfIterations;
    
   /// @brief number of CFs generated due to parallactic angle change
   /// @details This number is incremented each time a CF is recomputed 
   /// due to a change in parallactic angle. 
-  casa::uInt itsNumberOfCFGenerationsDueToPA;
+  casacore::uInt itsNumberOfCFGenerationsDueToPA;
       
   /// @brief parallactic angle for which the cache is valid
   /// @details This buffer is only used and filled if the illumination pattern is asymmetric.
   /// We currently don't account for the VLBI case with notably different parallactic angles.
   /// Therefore, only one angle is stored here. 
-  casa::Float itsCFParallacticAngle;
+  casacore::Float itsCFParallacticAngle;
       
   /// @brief number of CFs generated due to a change of frequency 
   /// @details This number is incremented each time a CF is recomputed following a change
   /// in frequency setup.
-  casa::uInt itsNumberOfCFGenerationsDueToFreq;
+  casacore::uInt itsNumberOfCFGenerationsDueToFreq;
    
   /// @brief relative frequency tolerance
   /// @details If abs(df/f) exceeds this value for any spectral channel, the cache of 
@@ -240,7 +240,7 @@ private:
   /// @details To be able to determine whether the cache of CFs needs to be recomputed one has
   /// to know which frequencies were used to compute it. This is a copy of the frequency axis
   /// returned by the accessor on the first iteration
-  casa::Vector<casa::Double> itsCachedFrequencies;
+  casacore::Vector<casacore::Double> itsCachedFrequencies;
                    
   /// @brief flag showing that CFs are rebuilt due to parallactic angle
   bool itsCFInvalidDueToPA;
@@ -249,7 +249,7 @@ private:
   bool itsCFInvalidDueToFreq; 
 
   /// @brief cube of slopes
-  casa::Cube<double> itsSlopes;            
+  casacore::Cube<double> itsSlopes;            
   
 };
 

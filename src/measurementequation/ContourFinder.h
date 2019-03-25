@@ -93,8 +93,8 @@ public:
   ///            a maximum and use its position.
   /// @param[in] clip if true, a contour will always be closed by returning edge pixels if
   ///            contour goes beyond the array  
-  ContourFinder(const casa::Array<T> &array, const P &pred,
-                const casa::IPosition &peak = casa::IPosition(1,-1),
+  ContourFinder(const casacore::Array<T> &array, const P &pred,
+                const casacore::IPosition &peak = casacore::IPosition(1,-1),
                 bool clip = true);
   
   /// @brief default constructor, serves as an end-mark
@@ -119,12 +119,12 @@ public:
   /// @brief access operator
   /// @details It returns IPosition for the current point of the contour.
   /// @return const reference to the currnt point of the contour.
-  const casa::IPosition& operator*() const;
+  const casacore::IPosition& operator*() const;
    
   /// @brief access operator
   /// @details It returns IPosition for the current point of the contour by pointer.
   /// @return const pointer to the currnt point of the contour.
-  const casa::IPosition* operator->() const;
+  const casacore::IPosition* operator->() const;
   
   /// @brief rewind the iterator
   /// @details This method rewinds the iterator to its initial state. It should not be called
@@ -146,14 +146,14 @@ protected:
     
 private:
   /// @brief array to work with
-  casa::Array<T> itsArray;
+  casacore::Array<T> itsArray;
   
   /// @brief predicate
   P itsPredicate;
   
   /// @brief position of the peak 
   /// @details This data member has the same shape as the array
-  casa::IPosition itsPeak;
+  casacore::IPosition itsPeak;
   
   /// @brief true, if contour is clipped at the image edges
   /// @details If false, the contour may be broken if it goes beyond the image dimensions
@@ -161,10 +161,10 @@ private:
   
   /// @brief increment for each dimension
   /// @details The code first tests the positive increment and then the negative one. 
-  casa::IPosition itsIncrements;
+  casacore::IPosition itsIncrements;
   
   /// @brief current tested coordinates
-  casa::IPosition itsTestedPosition;
+  casacore::IPosition itsTestedPosition;
   
   /// @brief true, if this object is an end-mark
   bool itsIsEndMark;

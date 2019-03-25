@@ -65,7 +65,7 @@ public:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  virtual void process(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
+  virtual void process(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);
 
 protected:
 
@@ -75,7 +75,7 @@ protected:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  void solveForXY(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
+  void solveForXY(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);
 
   /// @brief solve for dZ and populate corrections
   /// @param[in] scans description of scans, note separate beams are present as separate scans.
@@ -83,7 +83,7 @@ protected:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  void solveForZ(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);
+  void solveForZ(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);
 
   /// @brief solve for rate-dependent decorrelation
   /// @details This method is intended for an experiment with calibration solution attempting to fit
@@ -95,12 +95,12 @@ protected:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  void solveForDecorrelation(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);  
+  void solveForDecorrelation(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);  
   
 protected:
   /// @brief obtain MRO reference position
   /// @return position measure
-  static casa::MPosition mroPosition();
+  static casacore::MPosition mroPosition();
 
 private:
    
@@ -111,15 +111,15 @@ private:
   bool itsSolveZ;
   
   /// @brief reference antenna
-  casa::uInt itsRefAnt;
+  casacore::uInt itsRefAnt;
   
   /// @brief buffer for corrections
   /// @details rows are antennas, columns are X,Y and Z
-  casa::Matrix<double> itsCorrections;
+  casacore::Matrix<double> itsCorrections;
   
   /// @brief uncertainties for corrections
   /// @details rows are antennas, columns are X,Y and Z
-  casa::Matrix<double> itsErrors;
+  casacore::Matrix<double> itsErrors;
 
   /// @brief parset file with original antenna layout 
   /// @details This is either a slice of the FCM or a parset for ingest pipeline

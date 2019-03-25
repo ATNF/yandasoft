@@ -225,12 +225,12 @@ namespace askap
 
       /// @brief chunk size per worker (used in parallel case)
       /// @details zero means that the whole dataset is used
-      casa::uInt itsChannelsPerWorker;
+      casacore::uInt itsChannelsPerWorker;
 
       /// @brief start channel per worker (used in parallel case)
       /// @details This data field is only used if itsChannelPerWorker
       /// is positive. It is expected to be used with substitution
-      casa::uInt itsStartChan;
+      casacore::uInt itsStartChan;
 
       /// @brief flag to treat gains as beam-independent
       bool itsBeamIndependentGains;
@@ -268,26 +268,26 @@ namespace askap
       /// @param[in] nAnt currently expected number of antennas in the buffer
       /// @param[in] nBeam currently expected number of beams in the buffer
       /// @param[in] nChan currently expected number of frequency channels in the buffer
-      void updatePreAvgBufferEstimates(const casa::uInt nAnt, const casa::uInt nBeam, const casa::uInt nChan = 1);
+      void updatePreAvgBufferEstimates(const casacore::uInt nAnt, const casacore::uInt nBeam, const casacore::uInt nChan = 1);
 
       /// @brief maximum number of antennas for pre-averging
       /// @details It is handy to cache the number of antennas expected to be dealt with in pre-averaging.
       /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
       /// change from integration to integration.
-      casa::uInt itsMaxNAntForPreAvg;
+      casacore::uInt itsMaxNAntForPreAvg;
 
       /// @brief maximum number of beams for pre-averging
       /// @details It is handy to cache the number of beams expected to be dealt with in pre-averaging.
       /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
       /// change from integration to integration.
-      casa::uInt itsMaxNBeamForPreAvg;
+      casacore::uInt itsMaxNBeamForPreAvg;
 
       /// @brief maximum number of channels for pre-averging
       /// @details It is handy to cache the number of channels expected to be dealt with in pre-averaging.
       /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
       /// change from integration to integration. It is also used to give a warning if calibration effect is frequency
       /// independent and more than one channel is selected for preaveraging.
-      casa::uInt itsMaxNChanForPreAvg;
+      casacore::uInt itsMaxNChanForPreAvg;
 
       /// @brief solution ID to work with
       /// @details This field should only be used if itsSolutionIDValid is true

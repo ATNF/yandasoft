@@ -81,7 +81,7 @@ namespace synthesis {
       // Do not dlclose the library.
       ASKAPLOG_INFO_STR(logger, "Gridder "<<name<<
                  " is not in the registry, attempting to load it dynamically");
-      casa::DynLib dl(libname, string("libaskap_"), "register_"+libname, false);
+      casacore::DynLib dl(libname, string("libaskap_"), "register_"+libname, false);
       if (dl.getHandle()) {
         // Successfully loaded. Get the creator function.
         ASKAPLOG_INFO_STR(logger, "Dynamically loaded gridder " << name);
@@ -141,7 +141,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         const double threshold = SynthesisParamsHelper::convertQuantity(
                     parset.getString("gridder.MaxPointingSeparation","-1rad"),"rad");
         ASKAPLOG_INFO_STR(logger,"MaxPointingSeparation is used, data from pointing centres further than "<<
-                threshold*180./casa::C::pi<<" deg from the image centre will be rejected");
+                threshold*180./casacore::C::pi<<" deg from the image centre will be rejected");
         boost::shared_ptr<TableVisGridder> tvg =
 	        boost::dynamic_pointer_cast<TableVisGridder>(gridder);
 	    ASKAPCHECK(tvg, "Gridder type ("<<gridderName<<") is incompatible with the MaxPointingSeparation option");
@@ -202,8 +202,8 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to do snap-shot imaging");
         const double wtolerance = parset.getDouble("gridder.snapshotimaging.wtolerance");
         ASKAPLOG_INFO_STR(logger, "w-coordinate tolerance is "<<wtolerance<<" wavelengths");
-        const casa::uInt decimate = parset.getUint("gridder.snapshotimaging.coorddecimation", 3);
-        const casa::Interpolate2D::Method method = interpMethod(
+        const casacore::uInt decimate = parset.getUint("gridder.snapshotimaging.coorddecimation", 3);
+        const casacore::Interpolate2D::Method method = interpMethod(
                 parset.getString("gridder.snapshotimaging.interpmethod", "cubic"));
 
         const bool PredictWPlane = parset.getBool("gridder.snapshotimaging.longtrack",false);
@@ -227,10 +227,10 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
     if (parset.getBool("gridder.bwsmearing",false)) {
         ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to simulate bandwidth smearing");
         const double chanBW = parset.getDouble("gridder.bwsmearing.chanbw",1e6);
-        const casa::Int nSteps = parset.getInt32("gridder.bwsmearing.nsteps", 10);
+        const casacore::Int nSteps = parset.getInt32("gridder.bwsmearing.nsteps", 10);
         ASKAPCHECK(nSteps > 0, "Number of steps is supposed to be positive");
         ASKAPLOG_INFO_STR(logger, "  assumed channel bandwidth = "<<chanBW/1e6<<" MHz, number of integration steps = "<<nSteps);
-        boost::shared_ptr<SmearingGridderAdapter> adapter(new SmearingGridderAdapter(gridder, chanBW, casa::uInt(nSteps)));
+        boost::shared_ptr<SmearingGridderAdapter> adapter(new SmearingGridderAdapter(gridder, chanBW, casacore::uInt(nSteps)));
         ASKAPDEBUGASSERT(adapter);
         gridder = adapter;
     }
@@ -238,20 +238,20 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
     return gridder;
 }
 
-casa::Interpolate2D::Method VisGridderFactory::interpMethod(casa::String str) {
+casacore::Interpolate2D::Method VisGridderFactory::interpMethod(casacore::String str) {
     str.downcase();
     if (str.compare("nearest") == 0) {
         ASKAPLOG_INFO_STR(logger, "Regridding interpolation method: NEAREST");
-        return casa::Interpolate2D::NEAREST;
+        return casacore::Interpolate2D::NEAREST;
     } else if (str.compare("linear") == 0) {
         ASKAPLOG_INFO_STR(logger, "Regridding interpolation method: LINEAR");
-        return casa::Interpolate2D::LINEAR;
+        return casacore::Interpolate2D::LINEAR;
     } else if (str.compare("cubic") == 0) {
         ASKAPLOG_INFO_STR(logger, "Regridding interpolation method: CUBIC");
-        return casa::Interpolate2D::CUBIC;
+        return casacore::Interpolate2D::CUBIC;
     } else if (str.compare("lanczos") == 0) {
         ASKAPLOG_INFO_STR(logger, "Regridding interpolation method: LANCZOS");
-        return casa::Interpolate2D::LANCZOS;
+        return casacore::Interpolate2D::LANCZOS;
     } else {
         ASKAPTHROW(AskapError, "Unknown interpolation method: " << str);
     }

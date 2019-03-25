@@ -77,7 +77,7 @@ public:
    /// The output is guaranteed to have the requested shape.
    /// @param[in] shape required shape
    /// @return array with the taper (casa arrays use reference semantics)
-   casa::Array<casa::Complex> taper(const casa::IPosition &shape) const;
+   casacore::Array<casacore::Complex> taper(const casacore::IPosition &shape) const;
    
    /// @return major axis in pixels
    inline double majorAxis() const {return itsMajorAxis;}
@@ -93,7 +93,7 @@ protected:
    /// @details This method populates the cache using the values of
    /// data members
    /// @param[in] shape shape of the required array
-   void initTaperCache(const casa::IPosition &shape) const;
+   void initTaperCache(const casacore::IPosition &shape) const;
    
 private:
    /// @brief Major axis (sigma, rather than FWHM) in pixels
@@ -104,7 +104,7 @@ private:
    double itsPA;
    /// @brief cache of the taper image
    /// @note May be we can make it float?
-   mutable casa::Array<casa::Complex> itsTaperCache;
+   mutable casacore::Array<casacore::Complex> itsTaperCache;
 };
 
 } // namespace synthesis

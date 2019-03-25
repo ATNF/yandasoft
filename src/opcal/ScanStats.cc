@@ -57,10 +57,10 @@ namespace synthesis {
 
 // helper class to check the beam in ObservationDescription
 struct BeamCheckHelper {
-  explicit BeamCheckHelper(const casa::uInt beam) : itsBeam(beam) {}
+  explicit BeamCheckHelper(const casacore::uInt beam) : itsBeam(beam) {}
   bool operator()(const ObservationDescription& obs) const { return obs.beam() == itsBeam; }
 private:
-  casa::uInt itsBeam;  
+  casacore::uInt itsBeam;  
 };
 
 /// @brief constructor
@@ -85,28 +85,28 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
   
   const double dirTolerance = 1e-7;
   const double freqTolerance = 1.;
-  casa::uInt cycle = 0;
+  casacore::uInt cycle = 0;
   for (accessors::IConstDataSharedIter it = iter; it!=it.end(); ++it,++cycle) {
-       const casa::Vector<casa::uInt>& beam1 = it->feed1();
-       const casa::Vector<casa::uInt>& beam2 = it->feed2();
-       const casa::Vector<casa::uInt>& antenna1 = it->antenna1();
-       const casa::Vector<casa::uInt>& antenna2 = it->antenna2();
+       const casacore::Vector<casacore::uInt>& beam1 = it->feed1();
+       const casacore::Vector<casacore::uInt>& beam2 = it->feed2();
+       const casacore::Vector<casacore::uInt>& antenna1 = it->antenna1();
+       const casacore::Vector<casacore::uInt>& antenna2 = it->antenna2();
        
        // buffer for observations of the current integration, one per beam
-       std::map<casa::uInt, ObservationDescription> currentObs;
+       std::map<casacore::uInt, ObservationDescription> currentObs;
        
        ASKAPDEBUGASSERT(it->nRow() == beam1.nelements());
        ASKAPDEBUGASSERT(it->nRow() == beam2.nelements());
-       const casa::uInt centreChan = it->nChannel() / 2;
+       const casacore::uInt centreChan = it->nChannel() / 2;
        ASKAPDEBUGASSERT(it->frequency().nelements() > centreChan);
        const double freq = it->frequency()[centreChan];
-       const casa::Matrix<casa::Bool> flags = allChannelsFlagged(it->flag());
-       const casa::Vector<casa::Stokes::StokesTypes> stokes = it->stokes();
+       const casacore::Matrix<casacore::Bool> flags = allChannelsFlagged(it->flag());
+       const casacore::Vector<casacore::Stokes::StokesTypes> stokes = it->stokes();
        ASKAPDEBUGASSERT(flags.ncolumn() == stokes.nelements());
        ASKAPDEBUGASSERT(flags.nrow() == it->nRow());
        // go through all rows and aggregate baselines
-       for (casa::uInt row=0; row<it->nRow(); ++row) {
-            const casa::uInt beam = beam1[row];
+       for (casacore::uInt row=0; row<it->nRow(); ++row) {
+            const casacore::uInt beam = beam1[row];
             ASKAPCHECK(beam == beam2[row], "Cross-correlations of different beams are not supported");
             
             // either existing or a brand new element in the map
@@ -122,9 +122,9 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                 ASKAPCHECK(obs.direction().separation(it->pointingDir2()[row]) < dirTolerance, 
                           "Pointing direction is different for two antennas, unsupported scenario");                
 
-                const casa::Vector<casa::Stokes::StokesTypes>& stokes = obs.stokes();
+                const casacore::Vector<casacore::Stokes::StokesTypes>& stokes = obs.stokes();
                 ASKAPCHECK(stokes.nelements() == it->nPol(), "Number of polarisations appears to have changed");
-                for (casa::uInt pol = 0; pol < stokes.nelements(); ++pol) {
+                for (casacore::uInt pol = 0; pol < stokes.nelements(); ++pol) {
                      ASKAPCHECK(stokes[pol] == it->stokes()[pol], "Polarisation product "<<pol+1<<" appears to have changed type");
                 }
             } else {
@@ -142,7 +142,7 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
             obs.processBaselineFlags(antenna1[row], antenna2[row], flags.row(row));
        } // loop over row
        // aggregate the map into the final buffer
-       for (std::map<casa::uInt, ObservationDescription>::const_iterator ci = currentObs.begin(); ci != currentObs.end(); ++ci) {
+       for (std::map<casacore::uInt, ObservationDescription>::const_iterator ci = currentObs.begin(); ci != currentObs.end(); ++ci) {
             std::vector<ObservationDescription>::reverse_iterator lastObsThisBeam = 
                   std::find_if(itsObs.rbegin(), itsObs.rend(), BeamCheckHelper(ci->first));
             bool sameScan = (lastObsThisBeam != itsObs.rend());
@@ -150,7 +150,7 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
                 sameScan = (lastObsThisBeam->endCycle() + 1 == ci->second.startCycle());
                 sameScan &= (lastObsThisBeam->name() == name);
                 if (sameScan && (itsCycleLimit >= 0)) {
-                    sameScan = (ci->second.endCycle() - lastObsThisBeam->startCycle() < static_cast<casa::uInt>(itsCycleLimit));
+                    sameScan = (ci->second.endCycle() - lastObsThisBeam->startCycle() < static_cast<casacore::uInt>(itsCycleLimit));
                 } 
                 if (sameScan && (itsTimeLimit >= 0.)) {
                     sameScan = (ci->second.endTime() - lastObsThisBeam->startTime() < itsTimeLimit);
@@ -181,13 +181,13 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
 /// are flagged
 /// @param[in] flags nRow x nChan x nPol cube as provided by the accessor
 /// @return nRow x nPol matrix with aggregated flags 
-casa::Matrix<casa::Bool> ScanStats::allChannelsFlagged(const casa::Cube<casa::Bool> &flags)
+casacore::Matrix<casacore::Bool> ScanStats::allChannelsFlagged(const casacore::Cube<casacore::Bool> &flags)
 {
    ASKAPDEBUGASSERT(flags.nelements() > 0);
-   casa::Matrix<casa::Bool> result(flags.nrow(), flags.nplane(), true);
-   for (casa::uInt row = 0; row < flags.nrow(); ++row) {
-        for (casa::uInt pol = 0; pol < flags.nplane(); ++pol) {
-             for (casa::uInt chan = 0; chan < flags.ncolumn(); ++chan) {
+   casacore::Matrix<casacore::Bool> result(flags.nrow(), flags.nplane(), true);
+   for (casacore::uInt row = 0; row < flags.nrow(); ++row) {
+        for (casacore::uInt pol = 0; pol < flags.nplane(); ++pol) {
+             for (casacore::uInt chan = 0; chan < flags.ncolumn(); ++chan) {
                   if (!flags(row,chan,pol)) {
                       result(row,pol) = false;
                       break;

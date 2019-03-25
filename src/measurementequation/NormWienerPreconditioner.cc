@@ -68,71 +68,71 @@ namespace askap
 	    return IImagePreconditioner::ShPtr(new NormWienerPreconditioner(*this));
     }
     
-    bool NormWienerPreconditioner::doPreconditioning(casa::Array<float>& psf,
-                                                     casa::Array<float>& dirty,
-                                                     casa::Array<float>& pcf) const
+    bool NormWienerPreconditioner::doPreconditioning(casacore::Array<float>& psf,
+                                                     casacore::Array<float>& dirty,
+                                                     casacore::Array<float>& pcf) const
     {
       {
         ASKAPTRACE("NormWienerPreconditioner::doPreconditioning");
 
 	ASKAPLOG_INFO_STR(logger, "Applying Normalised Wiener filter with robustness parameter " << itsRobust);
 
-       float maxPSFBefore=casa::max(psf);
+       float maxPSFBefore=casacore::max(psf);
        ASKAPLOG_INFO_STR(logger, "Peak of PSF before Normalised Wiener filtering = " << maxPSFBefore);
-       casa::ArrayLattice<float> lpsf(psf);
-       casa::ArrayLattice<float> ldirty(dirty);
+       casacore::ArrayLattice<float> lpsf(psf);
+       casacore::ArrayLattice<float> ldirty(dirty);
 
-       const casa::IPosition shape = lpsf.shape();
-       casa::ArrayLattice<casa::Complex> scratch(shape);
+       const casacore::IPosition shape = lpsf.shape();
+       casacore::ArrayLattice<casacore::Complex> scratch(shape);
        //scratch.set(0.);
-       scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpsf)));       
+       scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(lpsf)));       
        
        LatticeFFT::cfft2d(scratch, True);
        
        // Construct a Wiener filter
        
-       casa::ArrayLattice<casa::Complex> wienerfilter(shape);
+       casacore::ArrayLattice<casacore::Complex> wienerfilter(shape);
        //wienerfilter.set(0.);
       
       // Normalize relative to the average weight
        const double noisepower(pow(10.0, 2*itsRobust));
        const double np(noisepower*maxPSFBefore);
-       wienerfilter.copyData(casa::LatticeExpr<casa::Complex>(maxPSFBefore*conj(scratch)/(real(scratch*conj(scratch)) + np*np)));
+       wienerfilter.copyData(casacore::LatticeExpr<casacore::Complex>(maxPSFBefore*conj(scratch)/(real(scratch*conj(scratch)) + np*np)));
               
        // Apply the filter to the lpsf
        // (reuse the ft(lpsf) currently held in 'scratch')
        
        // need to rebuild ft(lpsf) with padding, otherwise there is a scaling error
        //scratch.set(0.);
-       scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpsf)));       
+       scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(lpsf)));       
        LatticeFFT::cfft2d(scratch, True);      
        //
-       scratch.copyData(casa::LatticeExpr<casa::Complex> (wienerfilter * scratch));
+       scratch.copyData(casacore::LatticeExpr<casacore::Complex> (wienerfilter * scratch));
        
        /*
-       SynthesisParamsHelper::saveAsCasaImage("dbg.img",casa::amplitude(scratch.asArray()));       
+       SynthesisParamsHelper::saveAsCasaImage("dbg.img",casacore::amplitude(scratch.asArray()));       
        //SynthesisParamsHelper::saveAsCasaImage("dbg.img",lpsf.asArray());
        throw AskapError("This is a debug exception");
        */
        
        LatticeFFT::cfft2d(scratch, False);       
-       lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
+       lpsf.copyData(casacore::LatticeExpr<float>(real(scratch)));
        
-       float maxPSFAfter=casa::max(psf);
+       float maxPSFAfter=casacore::max(psf);
        ASKAPLOG_INFO_STR(logger, "Peak of PSF after Normalised Wiener filtering  = " << maxPSFAfter); 
        psf*=maxPSFBefore/maxPSFAfter;
        ASKAPLOG_INFO_STR(logger, "Normalized to unit peak");
       
        // Apply the filter to the dirty image
        //scratch.set(0.);
-       scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(ldirty)));       
+       scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(ldirty)));       
        
        LatticeFFT::cfft2d(scratch, True);
  
-       scratch.copyData(casa::LatticeExpr<casa::Complex> (wienerfilter * scratch));
+       scratch.copyData(casacore::LatticeExpr<casacore::Complex> (wienerfilter * scratch));
        LatticeFFT::cfft2d(scratch, False);
        
-       ldirty.copyData(casa::LatticeExpr<float>(real(scratch)));
+       ldirty.copyData(casacore::LatticeExpr<float>(real(scratch)));
        dirty*=maxPSFBefore/maxPSFAfter;
 	  
        return true;

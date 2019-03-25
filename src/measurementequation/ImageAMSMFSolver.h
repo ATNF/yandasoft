@@ -49,7 +49,7 @@ namespace askap
     /// @brief Multiscale solver for images.
     ///
     /// @details This solver performs multi-scale clean using the
-    /// casa::LatticeCleaner classes
+    /// casacore::LatticeCleaner classes
     ///
     /// @ingroup measurementequation
     class ImageAMSMFSolver : public ImageCleaningSolver
@@ -61,7 +61,7 @@ namespace askap
 
       /// @brief Constructor from scales
       /// @param[in] scales Scales to be solved in pixels
-      explicit ImageAMSMFSolver(const casa::Vector<float>& scales);
+      explicit ImageAMSMFSolver(const casacore::Vector<float>& scales);
 
       /// @brief Initialize this solver
       virtual void init();
@@ -82,7 +82,7 @@ namespace askap
       virtual askap::scimath::Solver::ShPtr clone() const;
 
       /// Set the scales
-      void setScales(const casa::Vector<float>& scales);
+      void setScales(const casacore::Vector<float>& scales);
 
       /// @brief configure basic parameters of the solver
       /// @details This method encapsulates extraction of basic solver parameters from the parset.
@@ -104,7 +104,7 @@ namespace askap
       inline std::string makeImageString(const std::string& samplestring, const std::string& stokes, const int& order){std::string newstring(samplestring);newstring.replace(6,1,stokes);newstring.replace(8,1,(utility::toString<int>(order)).data());return newstring;};
 
       /// Scales in pixels
-      casa::Vector<float> itsScales;
+      casacore::Vector<float> itsScales;
 
       uInt itsNumberTaylor;
 
@@ -121,7 +121,7 @@ namespace askap
 
       Bool itsDecoupled;
 
-      casa::Array<Float> itsPSFZeroArray;
+      casacore::Array<Float> itsPSFZeroArray;
 
       Float itsPSFZeroCentre;
 

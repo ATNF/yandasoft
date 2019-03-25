@@ -66,7 +66,7 @@ struct IdentityComponent : public MEComponent<false> {
    /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
    /// this effect
    inline scimath::ComplexDiffMatrix get(const accessors::IConstDataAccessor &chunk, 
-                                casa::uInt row) const;
+                                casacore::uInt row) const;
 };
 
 /// @brief main method returning Mueller matrix and derivatives
@@ -78,12 +78,12 @@ struct IdentityComponent : public MEComponent<false> {
 /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
 /// this effect
 inline scimath::ComplexDiffMatrix IdentityComponent::get(const accessors::IConstDataAccessor &chunk, 
-                                      casa::uInt row) const
+                                      casacore::uInt row) const
 {
    
    scimath::ComplexDiffMatrix calFactor(chunk.nPol(), chunk.nPol(), 0.);
 
-   for (casa::uInt pol=0; pol<chunk.nPol(); ++pol) {            
+   for (casacore::uInt pol=0; pol<chunk.nPol(); ++pol) {            
         calFactor(pol,pol) = scimath::ComplexDiff(1.);            
    }
    return calFactor;

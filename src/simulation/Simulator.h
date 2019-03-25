@@ -48,7 +48,7 @@ namespace askap
     {
         /// @brief Simulator for synthesis observing 
         ///
-        /// @details Cloned from casa::NewMSSimulator to allow substantial changes.
+        /// @details Cloned from casacore::NewMSSimulator to allow substantial changes.
         /// @ingroup simulation
 
         class Simulator
@@ -65,13 +65,13 @@ namespace askap
                 /// @param tileSize  Tile size in bytes
                 /// @param ncorrTile Nr of correlations per tile
                 /// @param nchanTile Nr of channels per tile
-                explicit Simulator(const casa::String& msname,
+                explicit Simulator(const casacore::String& msname,
                         int tileSize=32768,
                         int ncorrTile=4, int nchanTile=32);
 
                 /// Constructor from existing MS
                 /// @param ms Existing MeasurementSet object
-                explicit Simulator(casa::MeasurementSet& ms);
+                explicit Simulator(casacore::MeasurementSet& ms);
 
                 // Destructor
                 ~Simulator();
@@ -89,31 +89,31 @@ namespace askap
                 /// @param name Antenna name e.g. ASKAP23
                 /// @param coordsystem Coordinate system local or global
                 /// @param location MPosition of local coordinate system
-                void initAnt(const casa::String& telname,
-                        const casa::Vector<double>& x, const casa::Vector<double>& y,
-                        const casa::Vector<double>& z,
-                        const casa::Vector<double>& dishdiameter,
-                        const casa::Vector<double>& offset,
-                        const casa::Vector<casa::String>& mount,
-                        const casa::Vector<casa::String>& name,
-                        const casa::String& coordsystem, const casa::MPosition& location);
+                void initAnt(const casacore::String& telname,
+                        const casacore::Vector<double>& x, const casacore::Vector<double>& y,
+                        const casacore::Vector<double>& z,
+                        const casacore::Vector<double>& dishdiameter,
+                        const casacore::Vector<double>& offset,
+                        const casacore::Vector<casacore::String>& mount,
+                        const casacore::Vector<casacore::String>& name,
+                        const casacore::String& coordsystem, const casacore::MPosition& location);
 
                 /// @brief Set the observed fields
                 /// @param sourcename Source name
                 /// @param sourcedirection MDirection for source
                 /// @param calcode Calibrator code
-                void initFields(const casa::String& sourcename,
-                            const casa::MDirection& sourcedirection,
-                            const casa::String& calcode);
+                void initFields(const casacore::String& sourcename,
+                            const casacore::MDirection& sourcedirection,
+                            const casacore::String& calcode);
 
                 /// @brief Set the Feeds
                 /// @param mode "Perfect X Y" or "Perfect R L"
                 /// @param x Offset of feed (radians)
                 /// @param y Offset of feed (radians)
                 /// @param pol Polarisation of feed e.g. "R L"
-                void initFeeds(const casa::String& mode, const casa::Vector<double>& x,
-                            const casa::Vector<double>& y,
-                            const casa::Vector<casa::String>& pol);
+                void initFeeds(const casacore::String& mode, const casacore::Vector<double>& x,
+                            const casacore::Vector<double>& y,
+                            const casacore::Vector<casacore::String>& pol);
 
                 /// @brief Set the spectral windows information
                 /// @param spwindowname Name of spectral window e.g. "Continuum6"
@@ -122,9 +122,9 @@ namespace askap
                 /// @param freqinc Frequency increment e.g. "1MHz"
                 /// @param freqres Frequency resolution e.g. "1MHz"
                 /// @param stokes Stokes to be measured e.g. "XX XY YX YY"
-                void initSpWindows(const casa::String& spwindowname, const int& nchan,
-                        const casa::Quantity& startfreq, const casa::Quantity& freqinc,
-                        const casa::Quantity& freqres, const casa::String& stokes);
+                void initSpWindows(const casacore::String& spwindowname, const int& nchan,
+                        const casacore::Quantity& startfreq, const casacore::Quantity& freqinc,
+                        const casacore::Quantity& freqres, const casacore::String& stokes);
 
                 /// @brief Set maximum tolerable blockage before flagging
                 /// @param fraclimit Maximim tolerable blockage (fraction) e.g. 0.1
@@ -135,7 +135,7 @@ namespace askap
 
                 /// @brief Set minimum allowed elevation before flagging
                 /// @param ellimit Minimum allowed elevation e.g. "8deg"
-                void setElevationLimit(const casa::Quantity& ellimit)
+                void setElevationLimit(const casacore::Quantity& ellimit)
                 {
                     elevationLimit_p = ellimit;
                 }
@@ -160,7 +160,7 @@ namespace askap
                 /// up with the given factors. Empty array switches the
                 /// scaling off and has the same effect as an array of 1
                 /// with the number of elements equal to the number of antennas
-                void setRelAntennaWeight(const casa::Vector<double> &wt)
+                void setRelAntennaWeight(const casacore::Vector<double> &wt)
                 {
                    itsRelAntennaWeight.assign(wt.copy());
                 }
@@ -170,14 +170,14 @@ namespace askap
                 /// between the constant and variable noise cases
                 /// (zero and non-zero length of the vector).
                 /// @return const reference to the vector with relative antenna weights 
-                const casa::Vector<double>& relAntennaWeight() const { return itsRelAntennaWeight; }
+                const casacore::Vector<double>& relAntennaWeight() const { return itsRelAntennaWeight; }
 
                 /// @brief Set meaning of times for observing
                 /// @param integrationtime Integration time e.g. "10s"
                 /// @param usehourangles Use hour angles for observing times?
                 /// @param reftime Reference time to which all times are referred
-                void settimes(const casa::Quantity& integrationtime,
-                        const bool usehourangles, const casa::MEpoch& reftime);
+                void settimes(const casacore::Quantity& integrationtime,
+                        const bool usehourangles, const casacore::MEpoch& reftime);
 
                 /// @brief Observe a given source 
                 /// @param sourcename Source to be observed (as defined in initFields)
@@ -187,9 +187,9 @@ namespace askap
                 /// @details Generate the empty data rows for the observing. All the
                 /// relevant information must have been filled in by previous init
                 /// calls. 
-                void observe(const casa::String& sourcename,
-                        const casa::String& spwindowname, const casa::Quantity& starttime,
-                        const casa::Quantity& stoptime);
+                void observe(const casacore::String& sourcename,
+                        const casacore::String& spwindowname, const casacore::Quantity& starttime,
+                        const casacore::Quantity& stoptime);
 
                 /// @brief return area times sqrt(bandwidth*int_time)
                 /// @details This quantity is used for automatic noise estimates. It is 
@@ -209,10 +209,10 @@ namespace askap
                 /// @param xin Input x coordinate
                 /// @param yin Input y coordinate
                 /// @param zin Input z coordinate
-                static void local2global(casa::Vector<double>& xreturned,
-                        casa::Vector<double>& yreturned, casa::Vector<double>& zreturned,
-                        const casa::MPosition& location, const casa::Vector<double>& xin,
-                        const casa::Vector<double>& yin, const casa::Vector<double>& zin);
+                static void local2global(casacore::Vector<double>& xreturned,
+                        casacore::Vector<double>& yreturned, casacore::Vector<double>& zreturned,
+                        const casacore::MPosition& location, const casacore::Vector<double>& xin,
+                        const casacore::Vector<double>& yin, const casacore::Vector<double>& zin);
 
                 /// Convert global coordinates to local
                 /// @param xreturned Converted x coordinate
@@ -222,10 +222,10 @@ namespace askap
                 /// @param xin Input x coordinate
                 /// @param yin Input y coordinate
                 /// @param zin Input z coordinate
-                static void longlat2global(casa::Vector<double>& xreturned,
-                        casa::Vector<double>& yreturned, casa::Vector<double>& zreturned,
-                        const casa::MPosition& location, const casa::Vector<double>& xin,
-                        const casa::Vector<double>& yin, const casa::Vector<double>& zin);
+                static void longlat2global(casacore::Vector<double>& xreturned,
+                        casacore::Vector<double>& yreturned, casacore::Vector<double>& zreturned,
+                        const casacore::MPosition& location, const casacore::Vector<double>& xin,
+                        const casacore::Vector<double>& yin, const casacore::Vector<double>& zin);
             protected:
             
                 /// Returns the fractional blockage of one antenna by another
@@ -235,16 +235,16 @@ namespace askap
                 /// @param diam1 Diameter of antenna 1
                 /// @param diam2 Diameter of antenna 2
                 static void blockage(double &fraction1, double &fraction2,
-                        const casa::Vector<double>& uvw, // uvw in same units as diam!
+                        const casacore::Vector<double>& uvw, // uvw in same units as diam!
                         const double diam1, const double diam2);
 
                 /// Provide nicely formatted direction
                 /// @param direction Direction to be formatted
-                static casa::String formatDirection(const casa::MDirection& direction);
+                static casacore::String formatDirection(const casacore::MDirection& direction);
 
                 /// Provide nicely formatted time
                 /// @param time Time to be formatted
-                static casa::String formatTime(const double time);
+                static casacore::String formatTime(const double time);
 
             private:
 
@@ -262,24 +262,24 @@ namespace askap
                 /// Fractional blockage limit
                 double fractionBlockageLimit_p;
                 /// Elevation limit
-                casa::Quantity elevationLimit_p;
+                casacore::Quantity elevationLimit_p;
                 /// Autocorrelation weight
                 float autoCorrelationWt_p;
                 /// Telescope name
-                casa::String telescope_p;
+                casacore::String telescope_p;
                 /// Integration time as a Quantity
-                casa::Quantity qIntegrationTime_p;
+                casacore::Quantity qIntegrationTime_p;
                 /// Use hour angles?
                 bool useHourAngle_p;
                 /// Is the hour angle defined?
                 bool hourAngleDefined_p;
                 /// Reference time
-                casa::MEpoch mRefTime_p;
+                casacore::MEpoch mRefTime_p;
                 /// Offset time as a double
                 double t_offset_p;
 
                 /// Measurement set points
-                casa::MeasurementSet* ms_p;
+                casacore::MeasurementSet* ms_p;
 
 
                 /// Restore default values
@@ -316,7 +316,7 @@ namespace askap
                 /// @brief relative Tsys/eff per antenna
                 /// @details It is used to apply different scaling factor (to itsNoiseRMS) per antenna
                 /// Empty array means that the numbers are identical for all antennas.
-                casa::Vector<double> itsRelAntennaWeight;
+                casacore::Vector<double> itsRelAntennaWeight;
         };
 
     }

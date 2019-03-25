@@ -47,7 +47,7 @@ namespace askap
     /// @brief Multiscale solver for images.
     ///
     /// @details This solver performs multi-scale clean using the 
-    /// casa::LatticeCleaner classes
+    /// casacore::LatticeCleaner classes
     ///
     /// @ingroup measurementequation
     class ImageMSMFSolver : public ImageCleaningSolver
@@ -59,7 +59,7 @@ namespace askap
 
         /// @brief Constructor from scales
         /// @param[in] scales Scales to be solved in pixels
-        explicit ImageMSMFSolver(const casa::Vector<float>& scales);
+        explicit ImageMSMFSolver(const casacore::Vector<float>& scales);
           
         /// @brief Initialize this solver
         virtual void init();
@@ -80,7 +80,7 @@ namespace askap
         virtual askap::scimath::Solver::ShPtr clone() const;
         
         /// Set the scales
-        void setScales(const casa::Vector<float>& scales);
+        void setScales(const casacore::Vector<float>& scales);
                
       /// @brief switch the speed up on
       /// @param[in] factor speed up factor
@@ -98,10 +98,10 @@ namespace askap
 	
 
         /// Scales in pixels
-        casa::Vector<float> itsScales;
+        casacore::Vector<float> itsScales;
 
 	/// Map of Cleaners - one for each polarisation index
-        std::map<std::string, boost::shared_ptr<casa::MultiTermLatticeCleaner<float> > > itsCleaners;
+        std::map<std::string, boost::shared_ptr<casacore::MultiTermLatticeCleaner<float> > > itsCleaners;
 
     private:
       /// @brief if true, use speed up factor (default is false)

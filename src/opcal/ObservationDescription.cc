@@ -49,8 +49,8 @@ ObservationDescription::ObservationDescription() : itsBeam(-1) {}
 /// @param[in] beam beam ID
 /// @param[in] dir current direction (in accessor frame)
 /// @param[in] freq centre frequency (in accessor units)
-ObservationDescription::ObservationDescription(const std::string &name, casa::uInt cycle, double time, 
-       casa::uInt beam, const casa::MVDirection &dir, double freq) : itsName(name), itsStartCycle(cycle), itsEndCycle(cycle),
+ObservationDescription::ObservationDescription(const std::string &name, casacore::uInt cycle, double time, 
+       casacore::uInt beam, const casacore::MVDirection &dir, double freq) : itsName(name), itsStartCycle(cycle), itsEndCycle(cycle),
        itsStartTime(time), itsEndTime(time), itsBeam(static_cast<int>(beam)), 
        itsScanID(0u), itsFieldID(0u), itsDirection(dir), itsFreq(freq) {}
           
@@ -70,8 +70,8 @@ bool ObservationDescription::isValid() const
 /// @param[in] beam beam ID
 /// @param[in] dir current direction (in accessor frame)
 /// @param[in] freq centre frequency (in accessor units)
-void ObservationDescription::set(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, 
-                                 const casa::MVDirection &dir, double freq)
+void ObservationDescription::set(const std::string &name, casacore::uInt cycle, double time, casacore::uInt beam, 
+                                 const casacore::MVDirection &dir, double freq)
 {
   itsName = name;
   itsStartCycle = itsEndCycle = cycle;
@@ -86,7 +86,7 @@ void ObservationDescription::set(const std::string &name, casa::uInt cycle, doub
 /// in a separate method.
 /// @param[in] scanID scan ID to set
 /// @param[in] fieldID field ID to set
-void ObservationDescription::setScanAndFieldIDs(casa::uInt scanID, casa::uInt fieldID)
+void ObservationDescription::setScanAndFieldIDs(casacore::uInt scanID, casacore::uInt fieldID)
 {
   itsScanID = scanID;
   itsFieldID = fieldID;
@@ -97,10 +97,10 @@ void ObservationDescription::setScanAndFieldIDs(casa::uInt scanID, casa::uInt fi
 /// @brief obtain beam
 /// @return beam number
 /// @note an exception is thrown if the structure is uninitialised
-casa::uInt ObservationDescription::beam() const
+casacore::uInt ObservationDescription::beam() const
 {
   ASKAPCHECK(itsBeam >= 0, "An attempt to get beam for an undefined observation structure");
-  return static_cast<casa::uInt>(itsBeam);
+  return static_cast<casacore::uInt>(itsBeam);
 }
   
 /// @brief obtain name
@@ -115,7 +115,7 @@ const std::string& ObservationDescription::name() const
 /// @brief obtain scan ID
 /// @return scan ID in the appropriate dataset. Zero if the input iterator is not table-based
 /// @note an exception is thrown if the structure is uninitialised
-casa::uInt ObservationDescription::scanID() const
+casacore::uInt ObservationDescription::scanID() const
 {
   ASKAPCHECK(isValid(), "An attempt to get scan ID for an undefined observation structure");
   return itsScanID;
@@ -124,7 +124,7 @@ casa::uInt ObservationDescription::scanID() const
 /// @brief obtain field ID
 /// @return field ID in the appropriate dataset. Zero if the input iterator is not table-based
 /// @note an exception is thrown if the structure is uninitialised
-casa::uInt ObservationDescription::fieldID() const
+casacore::uInt ObservationDescription::fieldID() const
 {
   ASKAPCHECK(isValid(), "An attempt to get field ID for an undefined observation structure");
   return itsFieldID;
@@ -134,7 +134,7 @@ casa::uInt ObservationDescription::fieldID() const
 /// @brief obtain start cycle 
 /// @return iteration number of the start of the observation
 /// @note an exception is thrown if the structure is uninitialised
-casa::uInt ObservationDescription::startCycle() const
+casacore::uInt ObservationDescription::startCycle() const
 {
   ASKAPCHECK(isValid(), "An attempt to get start cycle for an undefined observation structure");
   return itsStartCycle;
@@ -143,7 +143,7 @@ casa::uInt ObservationDescription::startCycle() const
 /// @brief obtain end cycle 
 /// @return iteration number of the end of the observation
 /// @note an exception is thrown if the structure is uninitialised
-casa::uInt ObservationDescription::endCycle() const
+casacore::uInt ObservationDescription::endCycle() const
 {
   ASKAPCHECK(isValid(), "An attempt to get end cycle for an undefined observation structure");
   return itsEndCycle;
@@ -171,7 +171,7 @@ double ObservationDescription::endTime() const
 /// @param[in] cycle current cycle (i.e. iteration number)
 /// @param[in] time current time (in accessor units)
 /// @note an exception is thrown if the structure is uninitialised
-void ObservationDescription::update(casa::uInt cycle, double time)
+void ObservationDescription::update(casacore::uInt cycle, double time)
 {
   ASKAPCHECK(isValid(), "An attempt to extend an undefined observation");
   ASKAPCHECK(cycle > itsEndCycle, "New cycle number is supposed to be greater than the previous value");
@@ -208,7 +208,7 @@ void ObservationDescription::merge(const ObservationDescription &other)
 /// @brief observed direction
 /// @return phase centre of the observation (same frame as used in the accessor)
 /// @note an exception is thrown if the structure is uninitialised 
-const casa::MVDirection& ObservationDescription::direction() const
+const casacore::MVDirection& ObservationDescription::direction() const
 {
   ASKAPCHECK(isValid(), "An attempt to get direction for an undefined observation structure");
   return itsDirection;
@@ -227,7 +227,7 @@ double ObservationDescription::frequency() const
 /// @brief stokes vector
 /// @return vector with polarisation descriptors for each recorded product
 /// @note an exception is thrown if the structure is uninitialised
-const casa::Vector<casa::Stokes::StokesTypes>& ObservationDescription::stokes() const
+const casacore::Vector<casacore::Stokes::StokesTypes>& ObservationDescription::stokes() const
 {
    ASKAPCHECK(isValid(), "An attempt to get stokes vector for an undefined observation structure");
    return itsStokes;
@@ -235,7 +235,7 @@ const casa::Vector<casa::Stokes::StokesTypes>& ObservationDescription::stokes() 
 
 /// @brief initialise the stokes vector
 /// @param[in] stokes vector with polarisation descriptors for each recorded product
-void ObservationDescription::setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes)
+void ObservationDescription::setStokes(const casacore::Vector<casacore::Stokes::StokesTypes> &stokes)
 {
    itsStokes.reference(stokes.copy());
    ASKAPCHECK(itsAntennasWithValidData.size() == 0, 
@@ -252,8 +252,8 @@ void ObservationDescription::setStokes(const casa::Vector<casa::Stokes::StokesTy
 ///                  length of stokes vector)
 /// @note This method is not supposed to be called by the reader, it is called when
 ///       the structure is populated
-void ObservationDescription::processBaselineFlags(casa::uInt ant1, casa::uInt ant2, 
-                              const casa::Vector<casa::Bool> &flags)
+void ObservationDescription::processBaselineFlags(casacore::uInt ant1, casacore::uInt ant2, 
+                              const casacore::Vector<casacore::Bool> &flags)
 {
    // note, a better performance implementation is possible if we iterate over row for
    // each polarisation. But it is not a bottleneck at the moment
@@ -280,7 +280,7 @@ void ObservationDescription::processBaselineFlags(casa::uInt ant1, casa::uInt an
 /// @param[in] stokes polarisation product of interest
 /// @param[in] nAnt total number of antennas, indices probed go from 0 to nAnt-1
 /// @return set flagged antennas represented by their indices
-std::set<casa::uInt> ObservationDescription::flaggedAntennas(casa::Stokes::StokesTypes stokes, casa::uInt nAnt) const
+std::set<casacore::uInt> ObservationDescription::flaggedAntennas(casacore::Stokes::StokesTypes stokes, casacore::uInt nAnt) const
 {
    ASKAPCHECK(isValid(), "An attempt to get stokes vector for an undefined observation structure");
    ASKAPCHECK(itsAntennasWithValidData.size() > 0, "Perhaps, the Stokes vector is uninitialised");
@@ -294,9 +294,9 @@ std::set<casa::uInt> ObservationDescription::flaggedAntennas(casa::Stokes::Stoke
    ASKAPCHECK(pol < itsStokes.nelements(), "Requested stokes type has not been observed");
    
    // now check all antennas from 0 to nAnt-1
-   std::set<casa::uInt> result;
-   const std::set<casa::uInt>& flags = itsAntennasWithValidData[pol];
-   for (casa::uInt ant = 0; ant < nAnt; ++ant) {
+   std::set<casacore::uInt> result;
+   const std::set<casacore::uInt>& flags = itsAntennasWithValidData[pol];
+   for (casacore::uInt ant = 0; ant < nAnt; ++ant) {
         if (flags.find(ant) == flags.end()) {
             result.insert(ant);
         }       
@@ -311,7 +311,7 @@ ObservationDescription::ObservationDescription(const ObservationDescription &src
     itsName(src.itsName), itsStartCycle(src.itsStartCycle), itsEndCycle(src.itsEndCycle),
     itsStartTime(src.itsStartTime), itsEndTime(src.itsEndTime), itsBeam(src.itsBeam),
     itsScanID(src.itsScanID), itsFieldID(src.itsFieldID), 
-    itsDirection(casa::MVDirection(src.itsDirection)), itsFreq(src.itsFreq),
+    itsDirection(casacore::MVDirection(src.itsDirection)), itsFreq(src.itsFreq),
     itsStokes(src.itsStokes.copy()), itsAntennasWithValidData(src.itsAntennasWithValidData)
 {
 }
@@ -330,7 +330,7 @@ ObservationDescription& ObservationDescription::operator=(const ObservationDescr
     itsBeam=src.itsBeam;
     itsScanID = src.itsScanID;
     itsFieldID = src.itsFieldID; 
-    itsDirection = casa::MVDirection(src.itsDirection);
+    itsDirection = casacore::MVDirection(src.itsDirection);
     itsFreq = src.itsFreq;
     itsStokes.reference(src.itsStokes.copy());
     itsAntennasWithValidData = src.itsAntennasWithValidData;

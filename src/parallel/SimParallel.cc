@@ -83,7 +83,7 @@ SimParallel::SimParallel(askap::askapparallel::AskapParallel& comms,
 {
   itsModelReadByMaster = parset.getBool("modelReadByMaster", true);
   itsMSWrittenByMaster = parset.getBool("msWrittenByMaster", false);
-  ASKAPCHECK(getFreqRefFrame().getType() == casa::MFrequency::Ref(casa::MFrequency::TOPO).getType(), 
+  ASKAPCHECK(getFreqRefFrame().getType() == casacore::MFrequency::Ref(casacore::MFrequency::TOPO).getType(), 
              "Only topocentric reference frame is currently understood by the simulator");
   if (itsMSWrittenByMaster) {
       ASKAPCHECK(comms.isParallel(), "msWrittenByMaster can only be used in the parallel case");
@@ -121,7 +121,7 @@ void SimParallel::init()
         int tileNchan = parset().getInt32("stman.tilenchan", 32);
         itsSim.reset(new Simulator(msname, bucketSize, tileNcorr, tileNchan));
 
-        itsMs.reset(new casa::MeasurementSet(msname, casa::Table::Update));
+        itsMs.reset(new casacore::MeasurementSet(msname, casacore::Table::Update));
 
         // The antenna info is kept in a separate parset file
         readAntennas();
@@ -220,16 +220,16 @@ void SimParallel::readAntennas()
     const double scale = antParset.getDouble("scale", 1.0);
 
     /// Now we get the coordinates for each antenna in turn
-    casa::Vector<double> x(nAnt);
-    casa::Vector<double> y(nAnt);
-    casa::Vector<double> z(nAnt);
+    casacore::Vector<double> x(nAnt);
+    casacore::Vector<double> y(nAnt);
+    casacore::Vector<double> z(nAnt);
 
-    casa::Vector<double> dishDiameter(nAnt);
+    casacore::Vector<double> dishDiameter(nAnt);
 
-    casa::Vector<double> offset(nAnt);
+    casacore::Vector<double> offset(nAnt);
     offset.set(0.0);
-    casa::Vector<casa::String> mounts(nAnt);
-    casa::Vector<casa::String> name(nAnt);
+    casacore::Vector<casacore::String> mounts(nAnt);
+    casacore::Vector<casacore::String> name(nAnt);
 
     /// Antenna information in the form:
     /// antennas.ASKAP.antenna0=[x,y,z]
@@ -245,12 +245,12 @@ void SimParallel::readAntennas()
     }
 
     /// Csimulator.ASKAP.location=[+115deg, -26deg, 192km, WGS84]
-    casa::MPosition location;
+    casacore::MPosition location;
     if(coordinates == "local") {
         location = asMPosition(antParset.getStringVector("location"));
     }
     itsSim->initAnt(telName, x, y, z, dishDiameter, offset, mounts, name,
-                    casa::String(coordinates), location);
+                    casacore::String(coordinates), location);
     ASKAPLOG_INFO_STR(logger, "Successfully defined " << nAnt
             << " antennas of " << telName);
 }
@@ -267,11 +267,11 @@ void SimParallel::readFeeds()
     int nFeeds = feedNames.size();
     ASKAPCHECK(nFeeds > 0, "No feeds specified");
 
-    casa::Vector<double> x(nFeeds);
-    casa::Vector<double> y(nFeeds);
-    casa::Vector<casa::String> pol(nFeeds);
+    casacore::Vector<double> x(nFeeds);
+    casacore::Vector<double> y(nFeeds);
+    casacore::Vector<casacore::String> pol(nFeeds);
 
-    casa::String mode = parset.getString("feeds.mode", "perfect X Y");
+    casacore::String mode = parset.getString("feeds.mode", "perfect X Y");
 
     for (int feed = 0; feed < nFeeds; feed++) {
         ostringstream os;
@@ -284,7 +284,7 @@ void SimParallel::readFeeds()
     }
 
     if (parset.isDefined("feeds.spacing")) {
-        casa::Quantity qspacing = asQuantity(parset.getString("feeds.spacing"));
+        casacore::Quantity qspacing = asQuantity(parset.getString("feeds.spacing"));
         double spacing = qspacing.getValue("rad");
         ASKAPLOG_INFO_STR(logger, "Scaling feed specifications by " << qspacing);
         x *= spacing;
@@ -313,8 +313,8 @@ void SimParallel::readSources()
             ostringstream oos;
             oos << "sources." << sources[i] << ".direction";
             ASKAPLOG_INFO_STR(logger, "Simulating source " << sources[i]);
-            casa::MDirection direction(asMDirection(parset.getStringVector(oos.str())));
-            itsSim->initFields(casa::String(sources[i]), direction, casa::String(""));
+            casacore::MDirection direction(asMDirection(parset.getStringVector(oos.str())));
+            itsSim->initFields(casacore::String(sources[i]), direction, casacore::String(""));
         }
     }
 
@@ -338,8 +338,8 @@ void SimParallel::readSpws()
         os << "spws." << names[spw];
         vector<string> line = parset.getStringVector(os.str());
         ASKAPASSERT(line.size() >= 4);
-        const casa::Quantity startFreq = asQuantity(line[1]);
-        const casa::Quantity freqInc = asQuantity(line[2]);
+        const casacore::Quantity startFreq = asQuantity(line[1]);
+        const casacore::Quantity freqInc = asQuantity(line[2]);
         ASKAPCHECK(startFreq.isConform("Hz"), "start frequency for spectral window " << names[spw] << " is supposed to be in units convertible to Hz, you gave " <<
                    line[1]);
         ASKAPCHECK(freqInc.isConform("Hz"), "frequency increment for spectral window " << names[spw] << " is supposed to be in units convertible to Hz, you gave " <<
@@ -368,14 +368,14 @@ void SimParallel::readSimulation()
     itsSim->setAutoCorrelationWt(parset.getFloat("simulation.autocorrwt", 0.0));
 
     /// Csimulator.simulate.integrationtime=10s
-    casa::Quantity
+    casacore::Quantity
     integrationTime(asQuantity(parset.getString(
                         "simulation.integrationtime", "10s")));
     /// Csimulator.simulate.usehourangles=true
     bool useHourAngles(parset.getBool("simulation.usehourangles", true));
     /// Csimulator.simulate.referencetime=2007Mar07
     vector<string> refTimeString(parset.getStringVector("simulation.referencetime"));
-    casa::MEpoch refTime(asMEpoch(refTimeString));
+    casacore::MEpoch refTime(asMEpoch(refTimeString));
     itsSim->settimes(integrationTime, useHourAngles, refTime);
     ASKAPLOG_INFO_STR(logger, "Successfully set simulation parameters");
 }
@@ -437,7 +437,7 @@ void SimParallel::predict(const string& ms)
 {
     if (itsComms.isWorker() != itsMSWrittenByMaster) {
         ASKAPDEBUGASSERT(ms != "");
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
         ASKAPLOG_INFO_STR(logger, "Simulating data for " << ms);
         ASKAPDEBUGASSERT(itsModel);
@@ -446,8 +446,8 @@ void SimParallel::predict(const string& ms)
         IDataSelectorPtr sel = ds.createSelector();
         sel << parset();
         IDataConverterPtr conv = ds.createConverter();
-        conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO), "Hz");
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         // ensure that time is counted in seconds since 0 MJD
         conv->setEpochFrame(); 
         IDataSharedIter it = ds.createIterator(sel, conv);
@@ -464,7 +464,7 @@ void SimParallel::predict(const string& ms)
     if (itsComms.isWorker() && itsMSWrittenByMaster) {
         // client code
         ASKAPDEBUGASSERT(ms == "");
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
         IDataSharedIter it(new ParallelWriteIterator(itsComms));
         predict(it);
@@ -533,8 +533,8 @@ void SimParallel::predict(IDataSharedIter &it)
         if (itsNoiseVariance > 0.) {
             ASKAPDEBUGASSERT(itsSim);
 
-            const casa::Int seed1 = getSeed("noise.seed1","time");                  
-            const casa::Int seed2 = getSeed("noise.seed2","%w");                  
+            const casacore::Int seed1 = getSeed("noise.seed1","time");                  
+            const casacore::Int seed2 = getSeed("noise.seed2","%w");                  
 
             ASKAPLOG_INFO_STR(logger, "Set seed1 to " << seed1);
             ASKAPLOG_INFO_STR(logger, "Set seed2 to " << seed2);
@@ -576,16 +576,16 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
        ASKAPCHECK(!parset.isDefined("rms") && !parset.isDefined("variance"), 
           "If an automatic noise estimate is used, neither 'rms', nor 'variance' parset parameters should be given");
    
-       const casa::Vector<double> tSysVector = parset.getDoubleVector("Tsys");
-       const casa::Vector<double> effVector = parset.getDoubleVector("efficiency");
+       const casacore::Vector<double> tSysVector = parset.getDoubleVector("Tsys");
+       const casacore::Vector<double> effVector = parset.getDoubleVector("efficiency");
        ASKAPCHECK(tSysVector.nelements()>=1, "At least one Tsys has to be defined");
        ASKAPCHECK(effVector.nelements()>=1, "At least one efficiency has to be defined");
        ASKAPLOG_INFO_STR(logger, "Noise level is estimated automatically using Tsys="<<tSysVector<<
                                  " K and efficiency="<<effVector);
-       for (casa::uInt ant = 0; ant<tSysVector.nelements(); ++ant) {
+       for (casacore::uInt ant = 0; ant<tSysVector.nelements(); ++ant) {
             ASKAPCHECK(tSysVector[ant]>0, "Tsys is supposed to be positive, you have "<<tSysVector<<" ant="<<ant);
        }
-       for (casa::uInt ant = 0; ant<effVector.nelements(); ++ant) {
+       for (casacore::uInt ant = 0; ant<effVector.nelements(); ++ant) {
             ASKAPCHECK((effVector[ant] > 0) && (effVector[ant] <= 1.), "Efficiency is supposed to be from (0,1] interval, you have "<<
                         effVector<<" ant="<<ant);
        }
@@ -594,15 +594,15 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
                   "If multiple Tsys and efficiencies are given, their numbers should be equal");
        ASKAPASSERT(itsSim);                          
        if (tSysVector.nelements() * effVector.nelements() > 1) {
-           casa::Vector<double> relWeights(tSysVector.nelements() != 1 ? tSysVector.nelements() : effVector.nelements(), 1.);
-           for (casa::uInt ant=0; ant<relWeights.nelements(); ++ant) {
+           casacore::Vector<double> relWeights(tSysVector.nelements() != 1 ? tSysVector.nelements() : effVector.nelements(), 1.);
+           for (casacore::uInt ant=0; ant<relWeights.nelements(); ++ant) {
                 relWeights[ant] = tSysVector[ant < tSysVector.nelements() ? ant : 0] / 
                                   effVector[ant < effVector.nelements() ? ant : 0];
                 if (relWeights[ant] > TsysOverEff) {
                     TsysOverEff = relWeights[ant];
                 }
            }
-           for (casa::uInt ant=0; ant<relWeights.nelements(); ++ant) {
+           for (casacore::uInt ant=0; ant<relWeights.nelements(); ++ant) {
                 relWeights[ant] /= TsysOverEff;
            }
            itsSim->setRelAntennaWeight(relWeights);
@@ -633,13 +633,13 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
 /// @param[in] parname name of the parameter
 /// @param[in] defval default value (as string)
 /// @return seed
-casa::Int SimParallel::getSeed(const std::string &parname,const std::string &defval) const
+casacore::Int SimParallel::getSeed(const std::string &parname,const std::string &defval) const
 {
    const std::string seedStr(parset().getString(parname,defval));
    if (seedStr == "time") {
-       return casa::Int(time(0));
+       return casacore::Int(time(0));
    }    
-   return utility::fromString<casa::Int>(substitute(seedStr));
+   return utility::fromString<casacore::Int>(substitute(seedStr));
 }
 
 /// @brief a helper method to corrupt the data (opposite to calibration)

@@ -69,18 +69,18 @@ namespace askap
 				/// @param shape Shape of output image: u,v,pol,chan
 				/// @param dopsf Make the psf?
 				virtual void initialiseGrid(const scimath::Axes& axes,
-				    const casa::IPosition& shape, const bool dopsf=true,
+				    const casacore::IPosition& shape, const bool dopsf=true,
                     const bool dopcf=false);
 				
 				/// Form the final output image
 				/// @param out Output double precision image or PSF
-				virtual void finaliseGrid(casa::Array<double>& out);
+				virtual void finaliseGrid(casacore::Array<double>& out);
 
 				/// @brief Initialise the degridding
 				/// @param axes axes specifications
 				/// @param image Input image: cube: u,v,pol,chan
 				virtual void initialiseDegrid(const scimath::Axes& axes,
-				    const casa::Array<double>& image);
+				    const casacore::Array<double>& image);
 
 				/// Clone a copy of this Gridder
 				virtual IVisGridder::ShPtr clone();
@@ -115,10 +115,10 @@ namespace askap
 				/// Multiply by the phase screen
 				/// @param scratch To be multiplied
 				/// @param i Index
-				void multiply(casa::Array<casa::DComplex>& scratch, int i);
+				void multiply(casacore::Array<casacore::DComplex>& scratch, int i);
 				
 				/// Mapping from row, pol, and channel to planes of grid
-				casa::Cube<int> itsGMap;
+				casacore::Cube<int> itsGMap;
             private:
     	        /// @brief assignment operator
 				/// @details It is required as private to avoid being called

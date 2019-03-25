@@ -90,9 +90,9 @@ namespace askap
         /// @details 
         /// @param[in] psf point spread function do modify
         /// @param[in] dirty dirty image to modify
-	bool doPreconditioning(casa::Array<float>& psf,
-                           casa::Array<float>& dirty,
-                           casa::Array<float>& pcf) const;
+	bool doPreconditioning(casacore::Array<float>& psf,
+                           casacore::Array<float>& dirty,
+                           casacore::Array<float>& pcf) const;
   
     void setIsRestoreSolver();
     bool getIsRestoreSolver();
@@ -117,13 +117,13 @@ namespace askap
 	/// size before this method is called. Pass a void shared pointer (default) to skip 
 	/// mask-related functionality. Hint: use utility::NullDeleter to wrap a shared pointer
 	/// over an existing array reference.
-	float doNormalization(const casa::Vector<double>& diag, 
+	float doNormalization(const casacore::Vector<double>& diag, 
 			     const float& tolerance,
-			     casa::Array<float>& psf, 
+			     casacore::Array<float>& psf, 
                              float psfRefPeak,
-			     casa::Array<float>& dirty,
-			     const boost::shared_ptr<casa::Array<float> >& mask = 
-			               boost::shared_ptr<casa::Array<float> >()) const;
+			     casacore::Array<float>& dirty,
+			     const boost::shared_ptr<casacore::Array<float> >& mask = 
+			               boost::shared_ptr<casacore::Array<float> >()) const;
 
 	/// @brief perform normalization of the dirty image and psf
 	/// @details This is an overloaded version of the method. It also
@@ -145,10 +145,10 @@ namespace askap
 	/// size before this method is called. Pass a void shared pointer (default) to skip 
 	/// mask-related functionality. Hint: use utility::NullDeleter to wrap a shared pointer
 	/// over an existing array reference.
-	inline float doNormalization(const casa::Vector<double>& diag, 
-           const float& tolerance, casa::Array<float>& psf, casa::Array<float>& dirty,
-           const boost::shared_ptr<casa::Array<float> >& mask = 
-			               boost::shared_ptr<casa::Array<float> >()) const
+	inline float doNormalization(const casacore::Vector<double>& diag, 
+           const float& tolerance, casacore::Array<float>& psf, casacore::Array<float>& dirty,
+           const boost::shared_ptr<casacore::Array<float> >& mask = 
+			               boost::shared_ptr<casacore::Array<float> >()) const
       { return doNormalization(diag,tolerance, psf, -1., dirty, mask); }
 
     /// @brief configure basic parameters of the solver
@@ -207,14 +207,14 @@ namespace askap
     /// @param[in] psfOld an array with original psf prior to preconditioning
     /// @param[in] psfNew an array with the psf after preconditioning has been applied
     /// @return sensitivity loss factor (should be grater than or equal to 1)
-    static double sensitivityLoss(const casa::Array<float>& psfOld, const casa::Array<float>& psfNew);
+    static double sensitivityLoss(const casacore::Array<float>& psfOld, const casacore::Array<float>& psfNew);
     
     /// @brief a helper method to extract the first plane out of the multi-dimensional array
     /// @details This method just uses MultiDimArrayPlaneIter to extract the first plane
     /// out of the array. It accepts a const reference to the array (which is a conseptual const).
     /// @param[in] in const reference to the input array
     /// @return the array with the first plane
-    static casa::Array<float> getFirstPlane(const casa::Array<float> &in);
+    static casacore::Array<float> getFirstPlane(const casacore::Array<float> &in);
                 
     /// @brief helper method to save part of the NE
     /// @details We need to save slice and diagonal of the normal equations as 
@@ -226,7 +226,7 @@ namespace askap
     /// "psf" or "weights"
     /// @param[in] nePart part of the normal equations to save (map of vectors)
     void saveNEPartIntoParameter(askap::scimath::Params& ip, const std::string &prefix,
-                 const std::map<std::string, casa::Vector<double> > &nePart) const;
+                 const std::map<std::string, casacore::Vector<double> > &nePart) const;
     
     /// @brief helper method to save a given array
     /// @details This method encapsulates common functionality to store a given array
@@ -239,8 +239,8 @@ namespace askap
     /// @param[in] arr array to save
     /// @param[in] pos position to save (arr is a part of the parameter)
     static void saveArrayIntoParameter(askap::scimath::Params& ip, const std::string &imgName, 
-              const casa::IPosition &shape, const std::string &prefix, const casa::Array<double> &arr, 
-              const casa::IPosition &pos);
+              const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<double> &arr, 
+              const casacore::IPosition &pos);
     
     /// @brief helper method to save a given array
     /// @details This variant of the method intended for single precision arrays which are expanded to
@@ -253,8 +253,8 @@ namespace askap
     /// @param[in] arr array to save
     /// @param[in] pos position to save (arr is a part of the parameter)
     static void saveArrayIntoParameter(askap::scimath::Params& ip, const std::string &imgName, 
-              const casa::IPosition &shape, const std::string &prefix, const casa::Array<float> &arr, 
-              const casa::IPosition &pos);
+              const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr, 
+              const casacore::IPosition &pos);
     
 private:
 	/// Instance of a preconditioner

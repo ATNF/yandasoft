@@ -149,7 +149,7 @@ protected:
   /// and frequency-independent cases).
   /// @param[in] cdm a square ComplexDiffMatrix describing the effect
   /// @return correction matrix
-  static casa::Matrix<casa::Complex> getCorrectionMatrix(const scimath::ComplexDiffMatrix &cdm);
+  static casacore::Matrix<casacore::Complex> getCorrectionMatrix(const scimath::ComplexDiffMatrix &cdm);
 
   /// @brief a helper method to form a ComplexDiffMatrix for a given row
   /// @details This is the only method which depends on the template type.
@@ -162,7 +162,7 @@ protected:
   /// @return ComplexDiffMatrix encapsulating information about measurement 
   ///         equation corresponding to the given row
   virtual scimath::ComplexDiffMatrix buildComplexDiffMatrix(const accessors::IConstDataAccessor &acc,
-                    casa::uInt row) const = 0;
+                    casacore::uInt row) const = 0;
   
   /// @brief check whether the measurement equation is frequency-dependent
   /// @details For frequency-dependent effects the buildComplexDiffMatrix method returns block matrix with 

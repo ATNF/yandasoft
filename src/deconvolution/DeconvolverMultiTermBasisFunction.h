@@ -80,9 +80,9 @@ namespace askap {
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
                 /// @param[in] psf Point Spread Function containing 2*nTaylor-1 terms (array)
-                DeconvolverMultiTermBasisFunction(casa::Vector<casa::Array<T> >& dirty,
-                                                  casa::Vector<casa::Array<T> >& psf,
-                                                  casa::Vector<casa::Array<T> >& psfLong);
+                DeconvolverMultiTermBasisFunction(casacore::Vector<casacore::Array<T> >& dirty,
+                                                  casacore::Vector<casacore::Array<T> >& psf,
+                                                  casacore::Vector<casacore::Array<T> >& psfLong);
 
                 /// @brief Construct from dirty image and psf
                 /// @detail Construct a deconvolver from a dirty image and
@@ -91,7 +91,7 @@ namespace askap {
                 /// version for compatibility
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverMultiTermBasisFunction(casa::Array<T>& dirty, casa::Array<T>& psf);
+                DeconvolverMultiTermBasisFunction(casacore::Array<T>& dirty, casacore::Array<T>& psf);
 
                 virtual ~DeconvolverMultiTermBasisFunction();
 
@@ -107,22 +107,22 @@ namespace askap {
                 boost::shared_ptr<BasisFunction<T> > basisFunction();
 
                 /// @brief Set the type of solution used in finding the optimum component
-                void setSolutionType(casa::String solutionType);
+                void setSolutionType(casacore::String solutionType);
 
                 /// @brief Get the type of solution used in finding the optimum component
-                const casa::String solutionType();
+                const casacore::String solutionType();
 
                 /// @brief Set whether to use decoupled residuals
-                void setDecoupled(casa::Bool decoupled);
+                void setDecoupled(casacore::Bool decoupled);
 
                 /// @brief Get whether to use decoupled residuals
-                const casa::Bool decoupled();
+                const casacore::Bool decoupled();
 
                 /// @brief Set the deep cleaning switch for component finding
-                void setDeepCleanMode(casa::Bool deep);
+                void setDeepCleanMode(casacore::Bool deep);
 
                 /// @brief Get the deep cleaning switch for component finding
-                const casa::Bool deepCleanMode();
+                const casacore::Bool deepCleanMode();
 
                 /// @brief Perform the deconvolution
                 /// @detail This is the main deconvolution method.
@@ -145,12 +145,12 @@ namespace askap {
                 /// @detail Update an existing deconvolver for a changed dirty image
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] term term to update
-                virtual void updateDirty(casa::Array<T>& dirty, casa::uInt term = 0);
+                virtual void updateDirty(casacore::Array<T>& dirty, casacore::uInt term = 0);
 
                 /// @brief Update only the dirty images
                 /// @detail Update an existing deconvolver for a changed dirty images.
                 /// @param[in] dirty Dirty image (vector of arrays)
-                virtual void updateDirty(casa::Vector<casa::Array<T> >& dirty);
+                virtual void updateDirty(casacore::Vector<casacore::Array<T> >& dirty);
 
             private:
 
@@ -167,47 +167,47 @@ namespace askap {
                 // Initialise the PSFs - only need to do this once per change in basis functions
                 virtual void initialiseForBasisFunction(bool force);
 
-                void chooseComponent(uInt& optimumBase, casa::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues);
+                void chooseComponent(uInt& optimumBase, casacore::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues);
 
                 void getCoupledResidual(T& absPeakRes);
 
                 // Long vector of PSFs
-                casa::Vector<casa::Array<T> > itsPsfLongVec;
+                casacore::Vector<casacore::Array<T> > itsPsfLongVec;
 
                 /// Residual images convolved with basis functions, [nx,ny][nterms][nbases]
-                casa::Vector<casa::Vector<casa::Array<T> > > itsResidualBasis;
+                casacore::Vector<casacore::Vector<casacore::Array<T> > > itsResidualBasis;
 
                 /// Mask images giving the location of all components per bases
-                casa::Vector<casa::Array<T> > itsMask;
+                casacore::Vector<casacore::Array<T> > itsMask;
 
                 /// Point spread functions convolved with cross terms
                 // [nx,ny][nterms,nterms][nbases,nbases]
-                casa::Matrix<casa::Matrix<casa::Array<T> > > itsPSFCrossTerms;
+                casacore::Matrix<casacore::Matrix<casacore::Array<T> > > itsPSFCrossTerms;
 
                 /// The coupling between different terms for each basis [nterms,nterms][nbases]
-                casa::Vector<casa::Matrix<casa::Double> > itsCouplingMatrix;
+                casacore::Vector<casacore::Matrix<casacore::Double> > itsCouplingMatrix;
 
                 /// Inverse of the coupling matrix [nterms,nterms][nbases]
-                casa::Vector<casa::Matrix<casa::Double> > itsInverseCouplingMatrix;
+                casacore::Vector<casacore::Matrix<casacore::Double> > itsInverseCouplingMatrix;
 
                 /// Determinants of the coupling Matrix for each base [nbases]
-                casa::Vector<casa::Double> itsDetCouplingMatrix;
+                casacore::Vector<casacore::Double> itsDetCouplingMatrix;
 
                 /// Basis function used in the deconvolution
                 boost::shared_ptr<BasisFunction<T> > itsBasisFunction;
 
                 /// The flux subtracted on each term and scale [nterms][nbases]
-                casa::Vector< casa::Vector<T> > itsTermBaseFlux;
+                casacore::Vector< casacore::Vector<T> > itsTermBaseFlux;
 
-                casa::Bool itsDirtyChanged;
+                casacore::Bool itsDirtyChanged;
 
-                casa::Bool itsBasisFunctionChanged;
+                casacore::Bool itsBasisFunctionChanged;
 
-                casa::String itsSolutionType;
+                casacore::String itsSolutionType;
 
-                casa::Bool itsDecoupled;
+                casacore::Bool itsDecoupled;
 
-                casa::Bool itsDeep;
+                casacore::Bool itsDeep;
         };
 
     } // namespace synthesis

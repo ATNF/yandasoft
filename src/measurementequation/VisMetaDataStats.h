@@ -74,7 +74,7 @@ public:
    /// with either this version of the constructor or the version specific for 
    /// the snap-shot imaging.
    /// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)      
-   explicit VisMetaDataStats(const casa::MVDirection &tangent); 
+   explicit VisMetaDataStats(const casacore::MVDirection &tangent); 
 
    /// @brief constructor specific to snap-shot imaging
    /// @details For the snap-shot imaging we need to do two passes unless the desired tangent point
@@ -87,7 +87,7 @@ public:
    /// case. This is why a complex two-pass estimation procedure is required.
    /// @param[in] tangent tangent point to be used with snap-shot imaging (for uvw-rotation)
    /// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)      
-   VisMetaDataStats(const casa::MVDirection &tangent, double wtolerance);
+   VisMetaDataStats(const casacore::MVDirection &tangent, double wtolerance);
 
    /// @brief copy constructor
    /// @details An explicit copy constructor is required because accessor adapter is a non-copyable non-trivial type.
@@ -151,15 +151,15 @@ public:
           
    /// @brief number of antennas
    /// @return largest encountered antenna index + 1
-   inline casa::uInt nAntennas() const { return itsMaxAntennaIndex + 1; } 
+   inline casacore::uInt nAntennas() const { return itsMaxAntennaIndex + 1; } 
    
    /// @brief number of beams
    /// @return largest encountered beam index + 1
-   inline casa::uInt nBeams() const { return itsMaxBeamIndex + 1; }
+   inline casacore::uInt nBeams() const { return itsMaxBeamIndex + 1; }
    
    /// @brief most central direction of the observed field
    /// @return direction of the centre in the frame used by the accessor
-   casa::MVDirection centre() const;
+   casacore::MVDirection centre() const;
    
    /// @brief largest separation of individual pointing from the centre
    /// @return largest offsets from the centre() in radians (measure of the field size)
@@ -195,18 +195,18 @@ protected:
    /// @details
    /// @param[in] offsets pair of offsets to apply
    /// @return direction measure
-   casa::MVDirection getOffsetDir(const std::pair<double,double> &offsets) const;
+   casacore::MVDirection getOffsetDir(const std::pair<double,double> &offsets) const;
    
    /// @brief helper method to compute offsets of the given direction w.r.t. the reference direction
    /// @details
    /// @param[in] dir direction measure
    /// @return pair with offsets w.r.t. the reference direction
-   std::pair<double,double> getOffsets(const casa::MVDirection &dir) const;
+   std::pair<double,double> getOffsets(const casacore::MVDirection &dir) const;
    
 private:
    /// @brief tangent point for imaging
    /// @details Is not initialised, if itsTangentSet is false
-   casa::MVDirection itsTangent;
+   casacore::MVDirection itsTangent;
    
    /// @brief flag that itsTangent is initialised
    bool itsTangentSet;      
@@ -239,10 +239,10 @@ private:
    double itsMaxFreq;
    
    /// @brief largest antenna index
-   casa::uInt itsMaxAntennaIndex;
+   casacore::uInt itsMaxAntennaIndex;
    
    /// @brief largest beam index
-   casa::uInt itsMaxBeamIndex;
+   casacore::uInt itsMaxBeamIndex;
    
    // data members related to direction and field size estimates
    
@@ -251,7 +251,7 @@ private:
    /// phase centre. For all other phase centres, the offsets w.r.t. this reference
    /// position are calculated and the largest (in both directions) are found. These are
    /// used to estimate the centre and the field size. 
-   casa::MVDirection itsReferenceDir;
+   casacore::MVDirection itsReferenceDir;
    
    /// @brief true, if the reference direction has been initialised
    bool itsRefDirValid; 

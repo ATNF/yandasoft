@@ -68,7 +68,7 @@ struct NoXPolBeamIndependentGain : public ParameterizedMEComponent<false> {
    /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
    /// this effect
    inline scimath::ComplexDiffMatrix get(const accessors::IConstDataAccessor &chunk, 
-                                casa::uInt row) const;   
+                                casacore::uInt row) const;   
 };
 
 } // namespace synthesis

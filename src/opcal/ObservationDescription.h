@@ -62,8 +62,8 @@ struct ObservationDescription {
   /// @param[in] beam beam ID
   /// @param[in] dir current direction (in accessor frame)
   /// @param[in] freq centre frequency (in accessor units)
-  ObservationDescription(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, 
-                         const casa::MVDirection &dir, double freq);
+  ObservationDescription(const std::string &name, casacore::uInt cycle, double time, casacore::uInt beam, 
+                         const casacore::MVDirection &dir, double freq);
   
   
   /// @brief copy constructor
@@ -88,13 +88,13 @@ struct ObservationDescription {
   /// @param[in] beam beam ID
   /// @param[in] dir current direction (in accessor frame)
   /// @param[in] freq centre frequency (in accessor units)
-  void set(const std::string &name, casa::uInt cycle, double time, casa::uInt beam, const casa::MVDirection &dir, double freq);
+  void set(const std::string &name, casacore::uInt cycle, double time, casacore::uInt beam, const casacore::MVDirection &dir, double freq);
   
   /// @brief extend existing observation for additional cycle(s)  
   /// @param[in] cycle current cycle (i.e. iteration number)
   /// @param[in] time current time (in accessor units)
   /// @note an exception is thrown if the structure is uninitialised. The flags are not updated!
-  void update(casa::uInt cycle, double time);
+  void update(casacore::uInt cycle, double time);
 
   /// @brief extend exsting observation by merging in another structure
   /// @details Unlike update, it also processes flagging informaton.
@@ -107,14 +107,14 @@ struct ObservationDescription {
   /// in a separate method.
   /// @param[in] scanID scan ID to set
   /// @param[in] fieldID field ID to set
-  void setScanAndFieldIDs(casa::uInt scanID, casa::uInt fieldID);
+  void setScanAndFieldIDs(casacore::uInt scanID, casacore::uInt fieldID);
   
   // getter methods
 
   /// @brief obtain beam
   /// @return beam number
   /// @note an exception is thrown if the structure is uninitialised
-  casa::uInt beam() const;
+  casacore::uInt beam() const;
   
   /// @brief obtain name
   /// @return file name or other user-defined string key identifying this dataset
@@ -124,12 +124,12 @@ struct ObservationDescription {
   /// @brief obtain start cycle 
   /// @return iteration number of the start of the observation
   /// @note an exception is thrown if the structure is uninitialised
-  casa::uInt startCycle() const;
+  casacore::uInt startCycle() const;
   
   /// @brief obtain end cycle 
   /// @return iteration number of the end of the observation
   /// @note an exception is thrown if the structure is uninitialised
-  casa::uInt endCycle() const;
+  casacore::uInt endCycle() const;
   
   /// @brief obtain start time
   /// @return time of the start of this observation (in units set up in accessor)
@@ -144,17 +144,17 @@ struct ObservationDescription {
   /// @brief obtain scan ID
   /// @return scan ID in the appropriate dataset. Zero if the input iterator is not table-based
   /// @note an exception is thrown if the structure is uninitialised
-  casa::uInt scanID() const;
+  casacore::uInt scanID() const;
 
   /// @brief obtain field ID
   /// @return field ID in the appropriate dataset. Zero if the input iterator is not table-based
   /// @note an exception is thrown if the structure is uninitialised
-  casa::uInt fieldID() const;
+  casacore::uInt fieldID() const;
     
   /// @brief observed direction
   /// @return phase centre of the observation (same frame as used in the accessor)
   /// @note an exception is thrown if the structure is uninitialised 
-  const casa::MVDirection& direction() const;
+  const casacore::MVDirection& direction() const;
   
   /// @brief centre frequency
   /// @return frequency corresponding to the centre of the band (in units used in the accessor)
@@ -165,11 +165,11 @@ struct ObservationDescription {
   /// @brief stokes vector
   /// @return vector with polarisation descriptors for each recorded product
   /// @note an exception is thrown if the structure is uninitialised
-  const casa::Vector<casa::Stokes::StokesTypes>& stokes() const;
+  const casacore::Vector<casacore::Stokes::StokesTypes>& stokes() const;
 
   /// @brief initialise the stokes vector
   /// @param[in] stokes vector with polarisation descriptors for each recorded product
-  void setStokes(const casa::Vector<casa::Stokes::StokesTypes> &stokes);
+  void setStokes(const casacore::Vector<casacore::Stokes::StokesTypes> &stokes);
 
   /// @brief update antennas with valid data
   /// @details This method processes a flag vector for the given baseline and updates
@@ -180,7 +180,7 @@ struct ObservationDescription {
   ///                  length of stokes vector)
   /// @note This method is not supposed to be called by the reader, it is called when
   ///       the structure is populated
-  void processBaselineFlags(casa::uInt ant1, casa::uInt ant2, const casa::Vector<casa::Bool> &flags);
+  void processBaselineFlags(casacore::uInt ant1, casacore::uInt ant2, const casacore::Vector<casacore::Bool> &flags);
 
   // access to the valid antenna information - we can add other methods if necessary
   
@@ -194,17 +194,17 @@ struct ObservationDescription {
   /// @param[in] stokes polarisation product of interest
   /// @param[in] nAnt total number of antennas, indices probed go from 0 to nAnt-1
   /// @return set flagged antennas represented by their indices
-  std::set<casa::uInt> flaggedAntennas(casa::Stokes::StokesTypes stokes, casa::uInt nAnt) const;
+  std::set<casacore::uInt> flaggedAntennas(casacore::Stokes::StokesTypes stokes, casacore::uInt nAnt) const;
   
 private:  
   /// @brief file name or other string key defined by the user
   std::string itsName;
   
   /// @brief start cycle (the cycle is just the sequence number of iteration)
-  casa::uInt itsStartCycle;
+  casacore::uInt itsStartCycle;
   
   /// @brief end cycle (the cycle is just the sequence number of iteration)
-  casa::uInt itsEndCycle;
+  casacore::uInt itsEndCycle;
   
   /// @brief start time (same units/frame as used in the accessor to get the data)
   double itsStartTime;
@@ -217,13 +217,13 @@ private:
   int itsBeam;
   
   /// @brief scan ID
-  casa::uInt itsScanID;
+  casacore::uInt itsScanID;
   
   /// @brief field ID
-  casa::uInt itsFieldID;
+  casacore::uInt itsFieldID;
     
   /// @brief phase centre direction (same coordinate system as the accessor is set up with)
-  casa::MVDirection itsDirection;
+  casacore::MVDirection itsDirection;
   
   /// @brief centre frequency (in accessor units). 
   /// @note At this stage we assume that all observations are taken in a standard mode, so no
@@ -235,12 +235,12 @@ private:
   /// @details The size of the vector is the number of polarisations, content describes frame and which
   /// product is where. Largely added for an extra consistency check - we don't expect this code to be
   /// used for polarisation work
-  casa::Vector<casa::Stokes::StokesTypes> itsStokes;
+  casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
 
   /// @brief set of antennas with valid data for each polarisation
   /// @details If a given antenna has some unflagged data for the given polarisation it will be
   /// added to the apppropriate set. Antennas are referred to by their indices.
-  std::vector<std::set<casa::uInt> > itsAntennasWithValidData;
+  std::vector<std::set<casacore::uInt> > itsAntennasWithValidData;
 };
 
 } // namespace synthesis

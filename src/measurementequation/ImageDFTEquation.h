@@ -107,12 +107,12 @@ namespace askap
         /// @param doDeriv Do we want to calculate the derivative of the 
         /// visibility with respect to each pixel?
         /// @param imageDeriv Image derivative with respect to each pixel
-        static void calcVisDFT(const casa::Array<double>& imagePixels,
+        static void calcVisDFT(const casacore::Array<double>& imagePixels,
           const double raStart, const double raEnd, const int raCells,
           const double decStart, const double decEnd, const int decCells,
-          const casa::Vector<double>& freq,
-          const casa::Vector<casa::RigidVector<double, 3> >& uvw,
-          casa::Matrix<double>& vis, bool doderiv, casa::Matrix<double>& imageDeriv);
+          const casacore::Vector<double>& freq,
+          const casacore::Vector<casacore::RigidVector<double, 3> >& uvw,
+          casacore::Matrix<double>& vis, bool doderiv, casacore::Matrix<double>& imageDeriv);
     };
 
   }

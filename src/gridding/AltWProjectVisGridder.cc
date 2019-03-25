@@ -109,7 +109,7 @@ IVisGridder::ShPtr AltWProjectVisGridder::createGridder(const LOFAR::ParameterSe
     gridder->configureWSampling(parset);
     return gridder;
 }
-void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
+void AltWProjectVisGridder::finaliseGrid(casacore::Array<double>& out) {
     static int passThrough = 0;
     ASKAPTRACE("AltWProjectVisGridder::finaliseGrid");
     ASKAPLOG_INFO_STR(logger, "Using Alternate Finalise Grid ");
@@ -117,28 +117,28 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
 
     ASKAPDEBUGASSERT(itsGrid.size() > 0);
     // buffer for result as doubles
-    casa::Array<double> dBuffer(itsGrid[0].shape());
+    casacore::Array<double> dBuffer(itsGrid[0].shape());
     ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
 
     /// Loop over all grids Fourier transforming and accumulating
     for (unsigned int i=0; i<itsGrid.size(); i++) {
-        casa::Array<casa::DComplex> scratch(itsGrid[i].shape());
-        casa::convertArray<casa::DComplex,casa::Complex>(scratch, itsGrid[i]);
+        casacore::Array<casacore::DComplex> scratch(itsGrid[i].shape());
+        casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, itsGrid[i]);
 
         if (itsWriteOut == true) {
           // for debugging
           ASKAPLOG_INFO_STR(logger, "Writing out Grids ");
-          casa::Array<float> buf(scratch.shape());
-          casa::convertArray<float,double>(buf,imag(scratch));
+          casacore::Array<float> buf(scratch.shape());
+          casacore::convertArray<float,double>(buf,imag(scratch));
           string name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.imag";
           scimath::saveAsCasaImage(name,buf);
-          casa::convertArray<float,double>(buf,real(scratch));
+          casacore::convertArray<float,double>(buf,real(scratch));
           name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.real";
           scimath::saveAsCasaImage(name,buf);
           /*
               // adjust values to extract part which gives a real symmetric FT and the remainder
-              casa::Matrix<float> bufM(buf.nonDegenerate());
+              casacore::Matrix<float> bufM(buf.nonDegenerate());
               for (int x=0; x<int(bufM.nrow()); ++x) {
                    for (int y=0; y<int(bufM.ncolumn())/2; ++y) {
                         const float val = 0.5*(bufM(x,y)+bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1));
@@ -147,7 +147,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
                    }
               }
               scimath::saveAsCasaImage("uvcoverage.sympart",buf);
-              casa::Matrix<casa::DComplex> scratchM(scratch.nonDegenerate());
+              casacore::Matrix<casacore::DComplex> scratchM(scratch.nonDegenerate());
               for (int x=0; x<int(scratchM.nrow()); ++x) {
                    for (int y=0; y<int(scratchM.ncolumn()); ++y) {
                         scratchM(x,y) -= double(bufM(x,y));
@@ -156,18 +156,18 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
               // as we ignore imaginary part after FT, make scratch hermitian to be fair
               for (int x=0; x<int(scratchM.nrow()); ++x) {
                    for (int y=0; y<int(scratchM.ncolumn())/2; ++y) {
-                        const casa::DComplex val = 0.5*(scratchM(x,y)+
+                        const casacore::DComplex val = 0.5*(scratchM(x,y)+
                               conj(scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1)));
                         scratchM(x,y) = val;
                         scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1) = conj(val);
                    }
               }
-              casa::convertArray<float,double>(buf,imag(scratch));
+              casacore::convertArray<float,double>(buf,imag(scratch));
               scimath::saveAsCasaImage("uvcoverage.asympart.imag",buf);
-              casa::convertArray<float,double>(buf,real(scratch));
+              casacore::convertArray<float,double>(buf,real(scratch));
               scimath::saveAsCasaImage("uvcoverage.asympart.real",buf);
               scimath::fft2d(scratch, false);
-              casa::convertArray<float,double>(buf,real(scratch));
+              casacore::convertArray<float,double>(buf,real(scratch));
               scimath::saveAsCasaImage("psf.asympart.real",buf);
 
               ASKAPCHECK(false, "Debug termination");
@@ -179,7 +179,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
         if (i==0) {
             toDouble(dBuffer, scratch);
         } else {
-            casa::Array<double> work(dBuffer.shape());
+            casacore::Array<double> work(dBuffer.shape());
             toDouble(work, scratch);
             dBuffer+=work;
         }

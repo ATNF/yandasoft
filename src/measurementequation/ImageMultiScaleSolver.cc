@@ -81,7 +81,7 @@ namespace askap
       itsScales(2)=30;
     }
     
-    ImageMultiScaleSolver::ImageMultiScaleSolver(const casa::Vector<float>& scales) : 
+    ImageMultiScaleSolver::ImageMultiScaleSolver(const casacore::Vector<float>& scales) : 
       itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.)
     {
       itsScales.resize(scales.size());
@@ -130,22 +130,22 @@ namespace askap
       for (map<string, uint>::const_iterator indit=indices.begin();indit!=indices.end();++indit)
 	{
 	  // Axes are dof, dof for each parameter
-	  //const casa::IPosition vecShape(1, ip.value(indit->first).nelements());
+	  //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
 	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
 	       planeIter.hasMore(); planeIter.next()) {
 	    
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for "<<
 		       indit->first);
-	    casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+	    casacore::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
             "Data vector not present for " << indit->first);
-	    casa::Vector<double> dv = normalEquations().dataVector(indit->first);
+	    casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
 	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
             "PSF Slice not present for " << indit->first);
-	    casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+	    casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
             "Preconditioner fuction Slice not present for " << indit->first);
-	    casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+	    casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 
 	    if (planeIter.tag()!="") {
 	      // it is not a single plane case, there is something to report
@@ -153,15 +153,15 @@ namespace askap
 				" tagged as "<<planeIter.tag());
 	    }
 	    
-	    casa::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
-	    casa::Array<float> psfArray = padImage(planeIter.getPlane(slice));
-	    casa::Array<float> cleanArray = padImage(planeIter.getPlane(ip.value(indit->first)));
-	    casa::Array<float> maskArray(dirtyArray.shape());
+	    casacore::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
+	    casacore::Array<float> psfArray = padImage(planeIter.getPlane(slice));
+	    casacore::Array<float> cleanArray = padImage(planeIter.getPlane(ip.value(indit->first)));
+	    casacore::Array<float> maskArray(dirtyArray.shape());
 	    ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
 			      dirtyArray.shape()<<" after padding");
 
 	    // send an anternative preconditioner function, if it isn't empty.
-	    casa::Array<float> pcfArray;
+	    casacore::Array<float> pcfArray;
         if (pcf.shape() > 0) {
 	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
 	      pcfArray = padImage(planeIter.getPlane(pcf));
@@ -170,7 +170,7 @@ namespace askap
 	    // Precondition the PSF and DIRTY images before solving.
 	    const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray,pcfArray);
         doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
-                        boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
+                        boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	    if (wasPreconditioning) {
 	      // Store the new PSF in parameter class to be saved to disk later
 	      saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "psf.image", unpadImage(psfArray),
@@ -185,10 +185,10 @@ namespace askap
 	    
 	    // We need lattice equivalents. We can use ArrayLattice which involves
 	    // no copying
-	    casa::ArrayLattice<float> dirty(dirtyArray);
-	    casa::ArrayLattice<float> psf(psfArray);
-	    casa::ArrayLattice<float> clean(cleanArray);
-	    casa::ArrayLattice<float> mask(maskArray);
+	    casacore::ArrayLattice<float> dirty(dirtyArray);
+	    casacore::ArrayLattice<float> psf(psfArray);
+	    casacore::ArrayLattice<float> clean(cleanArray);
+	    casacore::ArrayLattice<float> mask(maskArray);
 	    
 	    // uncomment the code below to save the residual image
 	    // This takes up some memory and we have to ship the residual image out inside
@@ -211,12 +211,12 @@ namespace askap
 	    const std::string cleanerKey = indit->first + planeIter.tag();
 	    
 	    itsCleaners.find(cleanerKey);                     
-	    boost::shared_ptr<casa::LatticeCleaner<float> > lc = itsCleaners.cachedItem();
+	    boost::shared_ptr<casacore::LatticeCleaner<float> > lc = itsCleaners.cachedItem();
 	    if(!itsCleaners.notFound()) {
 	      ASKAPDEBUGASSERT(lc);
 	      lc->update(dirty);
 	    } else {
-	      itsCleaners.cachedItem().reset(new casa::LatticeCleaner<float>(psf, dirty));
+	      itsCleaners.cachedItem().reset(new casacore::LatticeCleaner<float>(psf, dirty));
 	      lc = itsCleaners.cachedItem();
 	      ASKAPDEBUGASSERT(lc);     
 	      if (itsDoSpeedUp) {
@@ -225,14 +225,14 @@ namespace askap
 	      lc->setMask(mask,maskingThreshold());	  
 	      
 	      if(algorithm()=="Hogbom") {
-		casa::Vector<float> scales(1);
+		casacore::Vector<float> scales(1);
 		scales(0)=0.0;
 		lc->setscales(scales);
-		lc->setcontrol(casa::CleanEnums::HOGBOM, niter(), gain(), threshold(),
+		lc->setcontrol(casacore::CleanEnums::HOGBOM, niter(), gain(), threshold(),
 			       fractionalThreshold(), false);
 	      } else {
 		lc->setscales(itsScales);
-		lc->setcontrol(casa::CleanEnums::MULTISCALE, niter(), gain(), threshold(), 
+		lc->setcontrol(casacore::CleanEnums::MULTISCALE, niter(), gain(), threshold(), 
 			       fractionalThreshold(),false);
 	      } // if algorithm == Hogbom, else case (other algorithm)
 	      lc->ignoreCenterBox(true);

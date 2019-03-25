@@ -51,9 +51,9 @@ class CubeBuilder {
     public:
         /// Constructor
         CubeBuilder(const LOFAR::ParameterSet& parset,
-                    const casa::uInt nchan,
-                    const casa::Quantity& f0,
-                    const casa::Quantity& inc,
+                    const casacore::uInt nchan,
+                    const casacore::Quantity& f0,
+                    const casacore::Quantity& inc,
                     const std::string& name = "");
 
         CubeBuilder(const LOFAR::ParameterSet& parset,const std:: string& name);            
@@ -61,16 +61,16 @@ class CubeBuilder {
         /// Destructor
         ~CubeBuilder();
 
-        void writeSlice(const casa::Array<float>& arr, const casa::uInt chan);
+        void writeSlice(const casacore::Array<float>& arr, const casacore::uInt chan);
 
-        casa::CoordinateSystem
+        casacore::CoordinateSystem
         createCoordinateSystem(const LOFAR::ParameterSet& parset,
-                               const casa::uInt nx,
-                               const casa::uInt ny,
-                               const casa::Quantity& f0,
-                               const casa::Quantity& inc);
+                               const casacore::uInt nx,
+                               const casacore::uInt ny,
+                               const casacore::Quantity& f0,
+                               const casacore::Quantity& inc);
 
-        void addBeam(casa::Vector<casa::Quantum<double> > &beam);
+        void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
         void setUnits(const std::string &units);
 
     std::string filename() const{return itsFilename;};
@@ -83,10 +83,10 @@ class CubeBuilder {
         std::string itsFilename;
 
     /// Rest frequency to be written to the cubes
-        casa::Quantum<double> itsRestFrequency;
+        casacore::Quantum<double> itsRestFrequency;
 
     /// Description of the polarisation properties of the output cubes
-        casa::Vector<casa::Stokes::StokesTypes> itsStokes;
+        casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
 };
 
 }

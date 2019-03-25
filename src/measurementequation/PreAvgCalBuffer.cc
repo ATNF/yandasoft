@@ -56,10 +56,10 @@ PreAvgCalBuffer::PreAvgCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now
 /// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
 /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
 /// assuming that measurement equation is frequency-independent
-PreAvgCalBuffer::PreAvgCalBuffer(casa::uInt nAnt, casa::uInt nBeam, casa::uInt nChan) : itsAntenna1(nBeam*nAnt*(nAnt-1)/2), 
-      itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2), itsFlag(nBeam*nAnt*(nAnt-1)/2,casa::Int(nChan),4),
+PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan) : itsAntenna1(nBeam*nAnt*(nAnt-1)/2), 
+      itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2), itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4),
       // npol=4
-      itsStokes(4), itsPolXProducts(4,casa::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casa::Int(nChan))),
+      itsStokes(4), itsPolXProducts(4,casacore::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
       itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false)
 {
   initialise(nAnt,nBeam,nChan);
@@ -71,10 +71,10 @@ PreAvgCalBuffer::PreAvgCalBuffer(casa::uInt nAnt, casa::uInt nBeam, casa::uInt n
 /// explicitly given number of beams with nBeam set to 1, this constructor configures
 /// the buffer to ignore the beam index (i.e. assuming the measurement equation is beam-independent)
 /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-PreAvgCalBuffer::PreAvgCalBuffer(casa::uInt nAnt) : itsAntenna1(nAnt*(nAnt-1)/2), 
+PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt) : itsAntenna1(nAnt*(nAnt-1)/2), 
       itsAntenna2(nAnt*(nAnt-1)/2), itsBeam(nAnt*(nAnt-1)/2), itsFlag(nAnt*(nAnt-1)/2,1,4),
       // npol=4
-      itsStokes(4), itsPolXProducts(4,casa::IPosition(2,int(nAnt*(nAnt-1)/2),1)),
+      itsStokes(4), itsPolXProducts(4,casacore::IPosition(2,int(nAnt*(nAnt-1)/2),1)),
       itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(true)
 {
   initialise(nAnt, 1, 1);
@@ -97,16 +97,16 @@ void PreAvgCalBuffer::beamIndependent(bool flag)
 void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
 {
   // resize buffers
-  const casa::uInt numberOfRows = acc.nRow();
-  const casa::uInt numberOfPol = acc.nPol();
-  const casa::uInt numberOfChan = fdp ? acc.nChannel() : 1;
-  if (itsFlag.shape() != casa::IPosition(3,numberOfRows, numberOfChan, numberOfPol)) {
+  const casacore::uInt numberOfRows = acc.nRow();
+  const casacore::uInt numberOfPol = acc.nPol();
+  const casacore::uInt numberOfChan = fdp ? acc.nChannel() : 1;
+  if (itsFlag.shape() != casacore::IPosition(3,numberOfRows, numberOfChan, numberOfPol)) {
       // resizing buffers
       itsAntenna1.resize(numberOfRows);
       itsAntenna2.resize(numberOfRows);
       itsBeam.resize(numberOfRows);
       itsFlag.resize(numberOfRows, numberOfChan, numberOfPol);
-      itsPolXProducts.resize(numberOfPol,casa::IPosition(2,casa::Int(numberOfRows), casa::uInt(numberOfChan)),false);
+      itsPolXProducts.resize(numberOfPol,casacore::IPosition(2,casacore::Int(numberOfRows), casacore::uInt(numberOfChan)),false);
       itsStokes.resize(numberOfPol);      
   }
   // initialise buffers
@@ -117,9 +117,9 @@ void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
   } else {
       itsBeam = acc.feed1();
   }
-  const casa::uInt unusedBeamId = casa::max(itsBeam)*10;
-  const casa::Vector<casa::uInt>& feed2 = acc.feed2();
-  for (casa::uInt row=0; row<numberOfRows; ++row) {
+  const casacore::uInt unusedBeamId = casacore::max(itsBeam)*10;
+  const casacore::Vector<casacore::uInt>& feed2 = acc.feed2();
+  for (casacore::uInt row=0; row<numberOfRows; ++row) {
        if ((itsBeam[row] != feed2[row]) || (itsBeamIndependent && (itsBeam[row] != 0))) {
            // so it is kept flagged (not very tidy way of doing the check,
            // we can introduce a separate vector to track this condition)
@@ -143,28 +143,28 @@ void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
 /// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
 /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
 /// assuming that measurement equation is frequency-independent
-void PreAvgCalBuffer::initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt nChan)
+void PreAvgCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan)
 {
   ASKAPDEBUGASSERT(nChan > 0);
   ASKAPASSERT(nAnt > 0);
-  const casa::uInt numberOfRows = nBeam*nAnt*(nAnt-1)/2;
-  if (itsFlag.shape() != casa::IPosition(3,int(numberOfRows),int(nChan),4)) {
+  const casacore::uInt numberOfRows = nBeam*nAnt*(nAnt-1)/2;
+  if (itsFlag.shape() != casacore::IPosition(3,int(numberOfRows),int(nChan),4)) {
      // resizing buffers
      itsAntenna1.resize(numberOfRows);
      itsAntenna2.resize(numberOfRows);
      itsBeam.resize(numberOfRows);
      // npol=4
-     itsFlag.resize(numberOfRows,casa::Int(nChan),4);
-     itsPolXProducts.resize(4,casa::IPosition(2,casa::Int(numberOfRows), casa::Int(nChan)),false);
+     itsFlag.resize(numberOfRows,casacore::Int(nChan),4);
+     itsPolXProducts.resize(4,casacore::IPosition(2,casacore::Int(numberOfRows), casacore::Int(nChan)),false);
      itsStokes.resize(4);
   }
   // initialising buffers
   itsFlag.set(true); // everything is bad, unless at least one sample is summed into the buffer
   itsPolXProducts.reset();
   
-  for (casa::uInt beam=0,row=0; beam<nBeam; ++beam) {
-       for (casa::uInt ant1=0; ant1<nAnt; ++ant1) {
-            for (casa::uInt ant2 = ant1 + 1; ant2<nAnt; ++ant2,++row) {
+  for (casacore::uInt beam=0,row=0; beam<nBeam; ++beam) {
+       for (casacore::uInt ant1=0; ant1<nAnt; ++ant1) {
+            for (casacore::uInt ant2 = ant1 + 1; ant2<nAnt; ++ant2,++row) {
                  ASKAPDEBUGASSERT(row<numberOfRows);
                  itsAntenna1[row] = ant1;
                  itsAntenna2[row] = ant2;
@@ -175,8 +175,8 @@ void PreAvgCalBuffer::initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt n
   
   // we don't track polarisation at this stage leaving this up to the user of this class
   // just fill the vector with Linear Stokes
-  for (casa::uInt pol = 0; pol<itsStokes.nelements(); ++pol) {
-       itsStokes[pol] = scimath::PolConverter::stokesFromIndex(pol, casa::Stokes::XX);
+  for (casacore::uInt pol = 0; pol<itsStokes.nelements(); ++pol) {
+       itsStokes[pol] = scimath::PolConverter::stokesFromIndex(pol, casacore::Stokes::XX);
   }
   
   // initialise stats
@@ -189,21 +189,21 @@ void PreAvgCalBuffer::initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt n
    
 /// The number of rows in this chunk
 /// @return the number of rows in this chunk
-casa::uInt PreAvgCalBuffer::nRow() const throw()
+casacore::uInt PreAvgCalBuffer::nRow() const throw()
 {
   return itsBeam.nelements();
 }
   	
 /// The number of spectral channels (equal for all rows)
 /// @return the number of spectral channels
-casa::uInt PreAvgCalBuffer::nChannel() const throw()
+casacore::uInt PreAvgCalBuffer::nChannel() const throw()
 {
   return itsFlag.ncolumn();
 }
 
 /// The number of polarization products (equal for all rows)
 /// @return the number of polarization products (can be 1,2 or 4)
-casa::uInt PreAvgCalBuffer::nPol() const throw()
+casacore::uInt PreAvgCalBuffer::nPol() const throw()
 {
   return itsFlag.nplane();
 }
@@ -211,7 +211,7 @@ casa::uInt PreAvgCalBuffer::nPol() const throw()
 /// First antenna IDs for all rows
 /// @return a vector with IDs of the first antenna corresponding
 /// to each visibility (one for each row)
-const casa::Vector<casa::uInt>& PreAvgCalBuffer::antenna1() const
+const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna1() const
 {
   return itsAntenna1;
 }
@@ -219,7 +219,7 @@ const casa::Vector<casa::uInt>& PreAvgCalBuffer::antenna1() const
 /// Second antenna IDs for all rows
 /// @return a vector with IDs of the second antenna corresponding
 /// to each visibility (one for each row)
-const casa::Vector<casa::uInt>& PreAvgCalBuffer::antenna2() const
+const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna2() const
 {
   return itsAntenna2;
 }
@@ -227,7 +227,7 @@ const casa::Vector<casa::uInt>& PreAvgCalBuffer::antenna2() const
 /// First feed IDs for all rows
 /// @return a vector with IDs of the first feed corresponding
 /// to each visibility (one for each row)
-const casa::Vector<casa::uInt>& PreAvgCalBuffer::feed1() const
+const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed1() const
 {
   return itsBeam;
 }
@@ -235,7 +235,7 @@ const casa::Vector<casa::uInt>& PreAvgCalBuffer::feed1() const
 /// Second feed IDs for all rows
 /// @return a vector with IDs of the second feed corresponding
 /// to each visibility (one for each row)
-const casa::Vector<casa::uInt>& PreAvgCalBuffer::feed2() const
+const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed2() const
 {
   return itsBeam;
 }
@@ -243,7 +243,7 @@ const casa::Vector<casa::uInt>& PreAvgCalBuffer::feed2() const
 /// Cube of flags corresponding to the output of visibility() 
 /// @return a reference to nRow x nChannel x nPol cube with flag 
 ///         information. If True, the corresponding element is flagged bad.
-const casa::Cube<casa::Bool>& PreAvgCalBuffer::flag() const
+const casacore::Cube<casacore::Bool>& PreAvgCalBuffer::flag() const
 {
   return itsFlag;
 }
@@ -253,7 +253,7 @@ const casa::Cube<casa::Bool>& PreAvgCalBuffer::flag() const
 /// each product in the visibility cube (nPol() elements).
 /// @note All rows of the accessor have the same structure of the visibility
 /// cube, i.e. polarisation types returned by this method are valid for all rows.
-const casa::Vector<casa::Stokes::StokesTypes>& PreAvgCalBuffer::stokes() const
+const casacore::Vector<casacore::Stokes::StokesTypes>& PreAvgCalBuffer::stokes() const
 {
   return itsStokes;
 }
@@ -266,13 +266,13 @@ const casa::Vector<casa::Stokes::StokesTypes>& PreAvgCalBuffer::stokes() const
 /// @param[in] beam beam index
 /// @return row number in the buffer corresponding to the given (ant1,ant2,beam) or -1 if 
 /// there is no match
-int PreAvgCalBuffer::findMatch(casa::uInt ant1, casa::uInt ant2, casa::uInt beam)
+int PreAvgCalBuffer::findMatch(casacore::uInt ant1, casacore::uInt ant2, casacore::uInt beam)
 {
   ASKAPDEBUGASSERT(itsAntenna1.nelements() == itsAntenna2.nelements());
   ASKAPDEBUGASSERT(itsAntenna1.nelements() == itsBeam.nelements());
   // we can probably implement a more clever search algorithm here because the 
   // metadata are almost always ordered
-  for (casa::uInt row=0; row<itsAntenna1.nelements(); ++row) {
+  for (casacore::uInt row=0; row<itsAntenna1.nelements(); ++row) {
        if ((itsAntenna1[row] == ant1) && (itsAntenna2[row] == ant2) && (itsBeam[row] == (itsBeamIndependent ? 0 : beam))) {
            return int(row);
        }
@@ -308,14 +308,14 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
   ASKAPDEBUGASSERT(itsPolXProducts.nPol() > 0);
   accessors::MemBufferDataAccessor modelAcc(acc);
   me->predict(modelAcc);
-  const casa::Cube<casa::Complex> &measuredVis = acc.visibility();
-  const casa::Cube<casa::Complex> &modelVis = modelAcc.visibility();
-  const casa::Cube<casa::Complex> &measuredNoise = acc.noise();
-  const casa::Cube<casa::Bool> &measuredFlag = acc.flag();
+  const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();
+  const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();
+  const casacore::Cube<casacore::Complex> &measuredNoise = acc.noise();
+  const casacore::Cube<casacore::Bool> &measuredFlag = acc.flag();
   ASKAPDEBUGASSERT(measuredFlag.nrow() == acc.nRow());
   ASKAPDEBUGASSERT(measuredFlag.ncolumn() == acc.nChannel());
   ASKAPDEBUGASSERT(measuredFlag.nplane() == acc.nPol());
-  const casa::uInt bufferNPol = nPol();
+  const casacore::uInt bufferNPol = nPol();
   ASKAPDEBUGASSERT(bufferNPol == itsPolXProducts.nPol());
   ASKAPDEBUGASSERT(modelVis.shape() == measuredVis.shape());
   ASKAPDEBUGASSERT(modelVis.shape() == measuredNoise.shape());
@@ -323,14 +323,14 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
   
   
   // references to metadata
-  const casa::Vector<casa::uInt> &beam1 = acc.feed1();
-  const casa::Vector<casa::uInt> &beam2 = acc.feed2();
-  const casa::Vector<casa::uInt> &antenna1 = acc.antenna1();
-  const casa::Vector<casa::uInt> &antenna2 = acc.antenna2(); 
+  const casacore::Vector<casacore::uInt> &beam1 = acc.feed1();
+  const casacore::Vector<casacore::uInt> &beam2 = acc.feed2();
+  const casacore::Vector<casacore::uInt> &antenna1 = acc.antenna1();
+  const casacore::Vector<casacore::uInt> &antenna2 = acc.antenna2(); 
   
   ASKAPCHECK(fdp || (nChannel() == 1), 
      "Only single spectral channel is supported by the pre-averaging calibration buffer in the frequency-independent mode");
-  for (casa::uInt row = 0; row<acc.nRow(); ++row) {
+  for (casacore::uInt row = 0; row<acc.nRow(); ++row) {
        if ((beam1[row] != beam2[row]) || (antenna1[row] == antenna2[row])) {
            // cross-beam correlations and auto-correlations are not supported
            itsVisTypeIgnored += acc.nChannel() * acc.nPol();
@@ -343,24 +343,24 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
            itsNoMatchIgnored += acc.nChannel() * acc.nPol();
            continue;
        }
-       const casa::uInt bufRow = casa::uInt(matchRow);
+       const casacore::uInt bufRow = casacore::uInt(matchRow);
        ASKAPDEBUGASSERT(bufRow < itsFlag.nrow());
        // making a slice referenced to the full cross-product buffer
        // in the frequency-independent mode do averaging of all frequency channels together
        scimath::PolXProducts pxpSlice = itsPolXProducts.slice(bufRow,0);
        // the code below works with this 1D slice
-       for (casa::uInt chan = 0; chan<acc.nChannel(); ++chan) {
-            const casa::uInt bufChan = fdp ? chan : 0;
+       for (casacore::uInt chan = 0; chan<acc.nChannel(); ++chan) {
+            const casacore::uInt bufChan = fdp ? chan : 0;
             if (fdp && (chan > 0)) {
                 // update the slice to point to the correct channel of the buffer
                 pxpSlice = itsPolXProducts.slice(bufRow,chan);
             }
 
             // if any polarisations are flagged, ignore this visibility
-            casa::Bool JonesFlag = casa::False;
-            for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
+            casacore::Bool JonesFlag = casacore::False;
+            for (casacore::uInt pol = 0; pol<acc.nPol(); ++pol) {
                 if (measuredFlag(row,chan,pol)) {
-                    JonesFlag = casa::True;
+                    JonesFlag = casacore::True;
                     break;
                 }
             }
@@ -369,13 +369,13 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
                 continue;
             }
 
-            for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
+            for (casacore::uInt pol = 0; pol<acc.nPol(); ++pol) {
                  if (pol < bufferNPol) {
-                     const casa::Complex model = modelVis(row,chan,pol);
+                     const casacore::Complex model = modelVis(row,chan,pol);
                      const float visNoise =
-                         casa::square(casa::real(measuredNoise(row,chan,pol)));
+                         casacore::square(casacore::real(measuredNoise(row,chan,pol)));
                      const float weight = (visNoise > 0.) ? 1./visNoise : 0.;
-                     for (casa::uInt pol2 = 0; pol2<acc.nPol(); ++pol2) {
+                     for (casacore::uInt pol2 = 0; pol2<acc.nPol(); ++pol2) {
                           /*
                           // temporary hack
                           if (((pol != 0) && (pol != 3)) ||
@@ -389,7 +389,7 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
                           pxpSlice.addModelMeasProduct(pol,pol2,
                               weight * std::conj(model) * measuredVis(row,chan,pol2));
                           //pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) *
-                          //    (pol == pol2 ? measuredVis(row,chan,pol2) : casa::Complex(0.,0.)));
+                          //    (pol == pol2 ? measuredVis(row,chan,pol2) : casacore::Complex(0.,0.)));
                           if (pol2<=pol) {
                               pxpSlice.addModelProduct(pol,pol2,
                                   weight * std::conj(model) * modelVis(row,chan,pol2));

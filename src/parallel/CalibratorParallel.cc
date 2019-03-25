@@ -158,8 +158,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       if (parset.isDefined("refantenna")) {
           const int refAntenna = parset.getInt32("refantenna",-1);
           const int refBeam = 0;
-          itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::XX);
-          itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casa::Stokes::YY);
+          itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casacore::Stokes::XX);
+          itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casacore::Stokes::YY);
       } else if (parset.isDefined("refgain")) {
           const string refGain = parset.getString("refgain");
           itsRefGainXX = refGain;
@@ -217,7 +217,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       // Todo: replace these with a single parameter: Channels(chanperworker,chunk) and move to init
       const int chunkSize = parset.getInt32("chanperworker",0);
       ASKAPCHECK(chunkSize >= 0, "Number of channels per worker cannot be negative, you have "<<chunkSize);
-      itsChannelsPerWorker = static_cast<casa::uInt>(chunkSize);
+      itsChannelsPerWorker = static_cast<casacore::uInt>(chunkSize);
       if (itsChannelsPerWorker > 0) {
           const int chunk = parset.getInt32("chunk");
           ASKAPCHECK(chunk >= 0, "Chunk number is supposed to be non-negative, you have "<<chunk);
@@ -243,7 +243,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 /// @param[in] nAnt currently expected number of antennas in the buffer
 /// @param[in] nBeam currently expected number of beams in the buffer
 /// @param[in] nChan currently expected number of frequency channels in the buffer
-void CalibratorParallel::updatePreAvgBufferEstimates(const casa::uInt nAnt, const casa::uInt nBeam, const casa::uInt nChan)
+void CalibratorParallel::updatePreAvgBufferEstimates(const casacore::uInt nAnt, const casacore::uInt nBeam, const casacore::uInt nChan)
 {
    if (itsMaxNAntForPreAvg < nAnt) {
        itsMaxNAntForPreAvg = nAnt;
@@ -269,22 +269,22 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       itsModel->reset();
 
       // initial assumption of the parameters
-      const casa::uInt nAnt = parset.getInt32("nAnt",36);
-      const casa::uInt nBeam = parset.getInt32("nBeam",1);
+      const casacore::uInt nAnt = parset.getInt32("nAnt",36);
+      const casacore::uInt nBeam = parset.getInt32("nBeam",1);
       if (itsSolveGains) {
           ASKAPLOG_INFO_STR(logger, "Initialise gains (unknowns) for "<<nAnt<<" antennas and "<<nBeam<<" beam(s).");
           if (itsBeamIndependentGains) {
               ASKAPCHECK(nBeam == 1, "Number of beams should be set to 1 for beam-independent case");
           }
-          for (casa::uInt ant = 0; ant<nAnt; ++ant) {
-               for (casa::uInt beam = 0; beam<nBeam; ++beam) {
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XX), casa::Complex(1.,0.));
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YY), casa::Complex(1.,0.));
+          for (casacore::uInt ant = 0; ant<nAnt; ++ant) {
+               for (casacore::uInt beam = 0; beam<nBeam; ++beam) {
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::XX), casacore::Complex(1.,0.));
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::YY), casacore::Complex(1.,0.));
                     /*
                     // temporary hack to fix some gains
                     if ((ant == 0) || (ant == 3)) {
-                         itsModel->fix(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XX));
-                         itsModel->fix(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YY));
+                         itsModel->fix(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::XX));
+                         itsModel->fix(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::YY));
                     }
                     //
                     */
@@ -296,10 +296,10 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       }
       if (itsSolveLeakage) {
           ASKAPLOG_INFO_STR(logger, "Initialise leakages (unknowns) for "<<nAnt<<" antennas and "<<nBeam<<" beam(s).");
-          for (casa::uInt ant = 0; ant<nAnt; ++ant) {
-               for (casa::uInt beam = 0; beam<nBeam; ++beam) {
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XY),casa::Complex(0.,0.));
-                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YX),casa::Complex(0.,0.));
+          for (casacore::uInt ant = 0; ant<nAnt; ++ant) {
+               for (casacore::uInt beam = 0; beam<nBeam; ++beam) {
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::XY),casacore::Complex(0.,0.));
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::YX),casacore::Complex(0.,0.));
                }
           }
           // technically could've done it outside the if-statement but this way it reflects the intention to keep track
@@ -307,16 +307,16 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
           updatePreAvgBufferEstimates(nAnt, nBeam);
       }
       if (itsSolveBandpass) {
-          const casa::uInt nChan = parset.getInt32("nChan",304);
+          const casacore::uInt nChan = parset.getInt32("nChan",304);
           ASKAPLOG_INFO_STR(logger, "Initialise bandpass (unknowns) for "<<nAnt<<" antennas, "<<nBeam<<" beam(s) and "<<
                                    nChan<<" spectral channels");
-          for (casa::uInt ant = 0; ant<nAnt; ++ant) {
-               for (casa::uInt beam = 0; beam<nBeam; ++beam) {
-                    const std::string xxParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XX);
-                    const std::string yyParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YY);
-                    for (casa::uInt chan = 0; chan<nChan; ++chan) {
-                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(xxParName, chan), casa::Complex(1.,0.));
-                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(yyParName, chan), casa::Complex(1.,0.));
+          for (casacore::uInt ant = 0; ant<nAnt; ++ant) {
+               for (casacore::uInt beam = 0; beam<nBeam; ++beam) {
+                    const std::string xxParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::XX);
+                    const std::string yyParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::YY);
+                    for (casacore::uInt chan = 0; chan<nChan; ++chan) {
+                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(xxParName, chan), casacore::Complex(1.,0.));
+                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(yyParName, chan), casacore::Complex(1.,0.));
                     }
                }
           }
@@ -328,10 +328,10 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       // at this stage we cache just the "perfect" ME, but recreate calibration ME.
       itsEquation.reset();
 
-      const casa::uInt nChan = parset.getInt32("chanperworker",0);
+      const casacore::uInt nChan = parset.getInt32("chanperworker",0);
       if (nChan > 0) {
-          const casa::uInt nAnt = parset.getInt32("nAnt",36);
-          const casa::uInt nBeam = parset.getInt32("nBeam",1);
+          const casacore::uInt nAnt = parset.getInt32("nAnt",36);
+          const casacore::uInt nBeam = parset.getInt32("nBeam",1);
           updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
       }
 
@@ -350,7 +350,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
 
 void CalibratorParallel::calcOne(const std::string& ms, bool discard)
 {
-  casa::Timer timer;
+  casacore::Timer timer;
   timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
   // First time around we need to generate the equation
@@ -368,7 +368,7 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
           sel << parset();
           IDataConverterPtr conv=ds.createConverter();
           conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-          conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+          conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
           // ensure that time is counted in seconds since 0 MJD
           conv->setEpochFrame();
           //IDataSharedIter it=ds.createIterator(sel, conv);
@@ -586,7 +586,7 @@ void CalibratorParallel::solveNE()
       }
 
       ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-      casa::Timer timer;
+      casacore::Timer timer;
       timer.mark();
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
@@ -631,66 +631,66 @@ void CalibratorParallel::rotatePhases()
   ASKAPDEBUGASSERT(itsModel);
   // by default assume frequency-independent case
   std::vector<std::string> names(itsModel->freeNames());
-  casa::Array<casa::Complex> refPhaseTerms;
-  const casa::uInt refPols = 2;
+  casacore::Array<casacore::Complex> refPhaseTerms;
+  const casacore::uInt refPols = 2;
   if (itsSolveBandpass) {
       // first find the required dimensionality
-      casa::uInt maxChan = 0;
+      casacore::uInt maxChan = 0;
       for (std::vector<std::string>::const_iterator it=names.begin();
                it!=names.end();++it)  {
            const std::string parname = *it;
            if (parname.find(accessors::CalParamNameHelper::bpPrefix()) != std::string::npos) {
-               const casa::uInt chan = accessors::CalParamNameHelper::extractChannelInfo(parname).first;
+               const casacore::uInt chan = accessors::CalParamNameHelper::extractChannelInfo(parname).first;
                if (chan > maxChan) {
                    maxChan = chan;
                }
            }
       }
       // build a vector of reference phase terms, one per channel
-      refPhaseTerms.resize(casa::IPosition(2,maxChan+1,refPols));
-      for (casa::uInt chan = 0; chan <= maxChan; ++chan) {
+      refPhaseTerms.resize(casacore::IPosition(2,maxChan+1,refPols));
+      for (casacore::uInt chan = 0; chan <= maxChan; ++chan) {
            const std::string xRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainXX, chan);
            const std::string yRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainYY, chan);
            ASKAPCHECK(itsModel->has(xRefPar), "phase rotation to `"<<xRefPar<<
               "` is impossible because this parameter is not present in the model, channel = "<<chan);
            ASKAPCHECK(itsModel->has(yRefPar), "phase rotation to `"<<yRefPar<<
               "` is impossible because this parameter is not present in the model, channel = "<<chan);
-           refPhaseTerms(casa::IPosition(2,chan,0)) = casa::polar(1.f,-arg(itsModel->complexValue(xRefPar)));
-           refPhaseTerms(casa::IPosition(2,chan,1)) = casa::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
+           refPhaseTerms(casacore::IPosition(2,chan,0)) = casacore::polar(1.f,-arg(itsModel->complexValue(xRefPar)));
+           refPhaseTerms(casacore::IPosition(2,chan,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
       }
   } else {
       ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
               "` is impossible because this parameter is not present in the model");
       ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
               "` is impossible because this parameter is not present in the model");
-      refPhaseTerms.resize(casa::IPosition(2,1,refPols));
-      refPhaseTerms(casa::IPosition(2,0,0)) = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
-      refPhaseTerms(casa::IPosition(2,0,1)) = casa::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
+      refPhaseTerms.resize(casacore::IPosition(2,1,refPols));
+      refPhaseTerms(casacore::IPosition(2,0,0)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
+      refPhaseTerms(casacore::IPosition(2,0,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
   }
   ASKAPDEBUGASSERT(refPhaseTerms.nelements() > 1);
 
   for (std::vector<std::string>::const_iterator it=names.begin();
                it!=names.end();++it)  {
        const std::string parname = *it;
-       const casa::uInt index = itsSolveBandpass ?
+       const casacore::uInt index = itsSolveBandpass ?
            accessors::CalParamNameHelper::extractChannelInfo(parname).first : 0;
        if (parname.find("gain.g11") != std::string::npos) {
            itsModel->update(parname,
-                 itsModel->complexValue(parname)*refPhaseTerms(casa::IPosition(2,index,0)));
+                 itsModel->complexValue(parname)*refPhaseTerms(casacore::IPosition(2,index,0)));
        }
        else if (parname.find("gain.g22") != std::string::npos) {
            itsModel->update(parname,
-                 itsModel->complexValue(parname)*refPhaseTerms(casa::IPosition(2,index,1)));
+                 itsModel->complexValue(parname)*refPhaseTerms(casacore::IPosition(2,index,1)));
        }
        else if (parname.find("leakage.d12") != std::string::npos) {
            itsModel->update(parname,
                  itsModel->complexValue(parname)*
-                 refPhaseTerms(casa::IPosition(2,index,1))*conj(refPhaseTerms(casa::IPosition(2,index,0))));
+                 refPhaseTerms(casacore::IPosition(2,index,1))*conj(refPhaseTerms(casacore::IPosition(2,index,0))));
        }
        else if (parname.find("leakage.d21") != std::string::npos) {
            itsModel->update(parname,
                  itsModel->complexValue(parname)*
-                 refPhaseTerms(casa::IPosition(2,index,0))*conj(refPhaseTerms(casa::IPosition(2,index,1))));
+                 refPhaseTerms(casacore::IPosition(2,index,0))*conj(refPhaseTerms(casacore::IPosition(2,index,1))));
        }
   }
 }
@@ -833,24 +833,24 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       std::vector<std::string> parlist = itsModel->freeNames();
       for (std::vector<std::string>::const_iterator it = parlist.begin();
            it != parlist.end(); ++it) {
-           casa::Complex val = itsModel->complexValue(*it);
+           casacore::Complex val = itsModel->complexValue(*it);
            if (itsSolveBandpass) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
                        " for the bandpass calibration, you have "<<*it);
-               const std::pair<casa::uInt, std::string> parsedParam =
+               const std::pair<casacore::uInt, std::string> parsedParam =
                        accessors::CalParamNameHelper::extractChannelInfo(*it);
-               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
+               const std::pair<accessors::JonesIndex, casacore::Stokes::StokesTypes> paramType =
                     accessors::CalParamNameHelper::parseParam(parsedParam.second);
                solAcc->setBandpassElement(paramType.first, paramType.second, parsedParam.first, val);
            } else {
-               const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType =
+               const std::pair<accessors::JonesIndex, casacore::Stokes::StokesTypes> paramType =
                     accessors::CalParamNameHelper::parseParam(*it);
                if ( itsNormaliseGains ) {
-                   if ( casa::fabs(val) > 0.0 &&
-                        ((paramType.second == casa::Stokes::XX) ||
-                         (paramType.second == casa::Stokes::YY)) ) {
-                       val /= casa::fabs(val);
+                   if ( casacore::fabs(val) > 0.0 &&
+                        ((paramType.second == casacore::Stokes::XX) ||
+                         (paramType.second == casacore::Stokes::YY)) ) {
+                       val /= casacore::fabs(val);
                    }
                }
                solAcc->setJonesElement(paramType.first, paramType.second, val);

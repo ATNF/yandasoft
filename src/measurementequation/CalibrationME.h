@@ -145,7 +145,7 @@ protected:
   /// @return ComplexDiffMatrix encapsulating information about measurement 
   ///         equation corresponding to the given row
   virtual scimath::ComplexDiffMatrix buildComplexDiffMatrix(const accessors::IConstDataAccessor &acc,
-                    casa::uInt row) const
+                    casacore::uInt row) const
       {   return itsEffect.get(acc,row); }
 
   /// @brief check whether the measurement equation is frequency-dependent

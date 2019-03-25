@@ -90,13 +90,13 @@ IImagePreconditioner::ShPtr GaussianTaperPreconditioner::clone()
 /// @param[in] psf array with PSF
 /// @param[in] dirty array with dirty image
 /// @return true if psf and dirty have been altered
-bool GaussianTaperPreconditioner::doPreconditioning(casa::Array<float>& psf,
-                                                    casa::Array<float>& dirty,
-                                                    casa::Array<float>& pcf) const
+bool GaussianTaperPreconditioner::doPreconditioning(casacore::Array<float>& psf,
+                                                    casacore::Array<float>& dirty,
+                                                    casacore::Array<float>& pcf) const
 {
   ASKAPTRACE("GaussianTaperPreconditioner::doPreconditioning");
 
-  const float maxPSFBefore=casa::max(psf);
+  const float maxPSFBefore=casacore::max(psf);
   ASKAPLOG_INFO_STR(logger, "Peak of PSF before Gaussian taper = " << maxPSFBefore);
   
   ASKAPLOG_INFO_STR(logger, "Applying Gaussian taper "<<majorAxis()*sqrt(8.*log(2.))<<" x "<<
@@ -105,7 +105,7 @@ bool GaussianTaperPreconditioner::doPreconditioning(casa::Array<float>& psf,
   
   applyTaper(psf);
 
-  const float maxPSFAfter=casa::max(psf);
+  const float maxPSFAfter=casacore::max(psf);
 
   ASKAPLOG_INFO_STR(logger, "Peak of PSF after Gaussian taper  = " << maxPSFAfter);
   ASKAPCHECK(maxPSFAfter>0., "Peak of the PSF is supposed to be a positive number");
@@ -124,35 +124,35 @@ bool GaussianTaperPreconditioner::doPreconditioning(casa::Array<float>& psf,
 /// encapsulates the code which is actually doing the job. It is called twice from
 /// doPreconditioning.
 /// @param[in] image an image to apply the taper to
-void GaussianTaperPreconditioner::applyTaper(casa::Array<float> &image) const
+void GaussianTaperPreconditioner::applyTaper(casacore::Array<float> &image) const
 {
-  casa::ArrayLattice<float> lattice(image);
+  casacore::ArrayLattice<float> lattice(image);
   
   /*
-  casa::IPosition paddedShape = image.shape();
+  casacore::IPosition paddedShape = image.shape();
   ASKAPDEBUGASSERT(paddedShape.nelements()>=2);
   paddedShape[0] *= 2;
   paddedShape[1] *= 2;
   */
   
   // Setup work arrays.
-  const casa::IPosition shape = lattice.shape();
-  //const casa::IPosition shape = paddedShape;
-  casa::ArrayLattice<casa::Complex> scratch(shape);
+  const casacore::IPosition shape = lattice.shape();
+  //const casacore::IPosition shape = paddedShape;
+  casacore::ArrayLattice<casacore::Complex> scratch(shape);
       
   // fft to transform the image into uv-domain
-  scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lattice)));
-  casa::LatticeFFT::cfft2d(scratch, true);
+  scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(lattice)));
+  casacore::LatticeFFT::cfft2d(scratch, true);
   
   // apply the taper
-  casa::Array<casa::Complex> taperCache = taper(shape); 
-  casa::ArrayLattice<casa::Complex> taperLattice(taperCache);
+  casacore::Array<casacore::Complex> taperCache = taper(shape); 
+  casacore::ArrayLattice<casacore::Complex> taperLattice(taperCache);
   
-  scratch.copyData(casa::LatticeExpr<casa::Complex> (taperLattice * scratch));
+  scratch.copyData(casacore::LatticeExpr<casacore::Complex> (taperLattice * scratch));
   
   // transform back to the image domain
-  casa::LatticeFFT::cfft2d(scratch, false);
-  lattice.copyData(casa::LatticeExpr<float> ( real(scratch) ));
+  casacore::LatticeFFT::cfft2d(scratch, false);
+  lattice.copyData(casacore::LatticeExpr<float> ( real(scratch) ));
 }
 
 } // namespace synthesis

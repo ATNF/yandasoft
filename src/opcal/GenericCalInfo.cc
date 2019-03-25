@@ -49,7 +49,7 @@ GenericCalInfo::GenericCalInfo() : itsGainDefined(false), itsDelayDefined(false)
 /// @details
 /// @param[in] gain complex gain to set
 /// @param[in] delay delay to set  
-GenericCalInfo::GenericCalInfo(const casa::Complex &gain, double delay) : itsGain(gain),
+GenericCalInfo::GenericCalInfo(const casacore::Complex &gain, double delay) : itsGain(gain),
    itsGainDefined(true), itsDelay(delay), itsDelayDefined(true) {}
   
 /// @brief obtain delay
@@ -64,7 +64,7 @@ double GenericCalInfo::delay() const
 /// @brief obtain complex gain
 /// @return complex gain
 /// @note an exception is thrown if the value is undefined
-const casa::Complex& GenericCalInfo::gain() const
+const casacore::Complex& GenericCalInfo::gain() const
 {
   ASKAPCHECK(itsGainDefined, "Attempting to access complex gain which has not been defined");
   return itsGain;
@@ -80,7 +80,7 @@ void GenericCalInfo::invalidate()
   
 /// @brief set complex gain
 /// @param[in] gain complex gain to set
-void GenericCalInfo::setGain(const casa::Complex &gain)
+void GenericCalInfo::setGain(const casacore::Complex &gain)
 {
   itsGain = gain;
   itsGainDefined = true;

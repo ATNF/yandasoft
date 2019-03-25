@@ -79,35 +79,35 @@ class ImageConvolver {
         // to the kernel if it does not have enough dimensions.   If "autoScale"
         // is true, the kernel is normalized to have unit sum.  Otherwise,
         // the kernel is scaled (multiplied) by the value "scale".
-        void convolve(casa::ImageInterface<T>& imageOut,
-                      casa::ImageInterface<T>& imageIn,
-                      const casa::ImageInterface<T>& kernel,
-                      ScaleTypes scaleType, casa::Double scale,
-                      casa::Bool copyMiscellaneous, casa::Bool warnOnly);
+        void convolve(casacore::ImageInterface<T>& imageOut,
+                      casacore::ImageInterface<T>& imageIn,
+                      const casacore::ImageInterface<T>& kernel,
+                      ScaleTypes scaleType, casacore::Double scale,
+                      casacore::Bool copyMiscellaneous, casacore::Bool warnOnly);
 
-        void convolve(casa::ImageInterface<T>& imageOut,
-                      casa::ImageInterface<T>& imageIn,
-                      const casa::Lattice<T>& kernel,
+        void convolve(casacore::ImageInterface<T>& imageOut,
+                      casacore::ImageInterface<T>& imageIn,
+                      const casacore::Lattice<T>& kernel,
                       ScaleTypes scaleType,
-                      casa::Double scale,
-                      casa::Bool copyMiscellaneous);
+                      casacore::Double scale,
+                      casacore::Bool copyMiscellaneous);
 
-        void convolve(casa::ImageInterface<T>& imageOut,
-                      casa::ImageInterface<T>& imageIn,
-                      const casa::Array<T>& kernel,
+        void convolve(casacore::ImageInterface<T>& imageOut,
+                      casacore::ImageInterface<T>& imageIn,
+                      const casacore::Array<T>& kernel,
                       ScaleTypes scaleType,
-                      casa::Double scale,
-                      casa::Bool copyMiscellaneous);
+                      casacore::Double scale,
+                      casacore::Bool copyMiscellaneous);
 
     private:
 
         // Make mask for image
-        void makeMask(casa::ImageInterface<T>& out) const;
+        void makeMask(casacore::ImageInterface<T>& out) const;
 
         // Check Coordinates of kernel and image
-        void checkCoordinates(const casa::CoordinateSystem& cSysImage,
-                              const casa::CoordinateSystem& cSysKernel,
-                              casa::Bool warnOnly) const;
+        void checkCoordinates(const casacore::CoordinateSystem& cSysImage,
+                              const casacore::CoordinateSystem& cSysKernel,
+                              casacore::Bool warnOnly) const;
 };
 
 } // End synthesis namespace

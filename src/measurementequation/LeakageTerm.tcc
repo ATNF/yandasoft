@@ -56,20 +56,20 @@ namespace synthesis {
 /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
 /// this effect
 inline scimath::ComplexDiffMatrix LeakageTerm::get(const accessors::IConstDataAccessor &chunk, 
-                                      casa::uInt row) const
+                                      casacore::uInt row) const
 {
-   const casa::uInt nPol = chunk.nPol();
+   const casacore::uInt nPol = chunk.nPol();
    ASKAPDEBUGASSERT(nPol != 0);   
-   const casa::Vector<casa::Stokes::StokesTypes> stokes = chunk.stokes();   
+   const casacore::Vector<casacore::Stokes::StokesTypes> stokes = chunk.stokes();   
    ASKAPDEBUGASSERT(stokes.nelements() == nPol);
    ASKAPDEBUGASSERT(!scimath::PolConverter::isStokes(stokes));
    
    
-   const casa::uInt ant1 = chunk.antenna1()[row];
-   const casa::uInt ant2 = chunk.antenna2()[row];
+   const casacore::uInt ant1 = chunk.antenna1()[row];
+   const casacore::uInt ant2 = chunk.antenna2()[row];
    
-   const casa::uInt beam1 = chunk.feed1()[row];
-   const casa::uInt beam2 = chunk.feed2()[row];
+   const casacore::uInt beam1 = chunk.feed1()[row];
+   const casacore::uInt beam2 = chunk.feed2()[row];
   
    // main diagonal is always 1.
    scimath::ComplexDiffMatrix calFactor(4, 4, 1.);
@@ -78,16 +78,16 @@ inline scimath::ComplexDiffMatrix LeakageTerm::get(const accessors::IConstDataAc
    // in the canonic form (e.g. XX,XY,YX,YY for linears)
    bool canonicPolOrder = (nPol == 4);
    
-   calFactor(3, 1) = -1.*getParameter(accessors::CalParamNameHelper::paramName(ant1, beam1, casa::Stokes::YX));
-   calFactor(1, 3) = getParameter(accessors::CalParamNameHelper::paramName(ant1, beam1, casa::Stokes::XY));
+   calFactor(3, 1) = -1.*getParameter(accessors::CalParamNameHelper::paramName(ant1, beam1, casacore::Stokes::YX));
+   calFactor(1, 3) = getParameter(accessors::CalParamNameHelper::paramName(ant1, beam1, casacore::Stokes::XY));
    
-   calFactor(3, 2) = -1.*conj(getParameter(accessors::CalParamNameHelper::paramName(ant2, beam2, casa::Stokes::YX)));
-   calFactor(2, 3) = conj(getParameter(accessors::CalParamNameHelper::paramName(ant2, beam2, casa::Stokes::XY)));
+   calFactor(3, 2) = -1.*conj(getParameter(accessors::CalParamNameHelper::paramName(ant2, beam2, casacore::Stokes::YX)));
+   calFactor(2, 3) = conj(getParameter(accessors::CalParamNameHelper::paramName(ant2, beam2, casacore::Stokes::XY)));
    
-   for (casa::uInt pol=0; pol<4; ++pol) {
+   for (casacore::uInt pol=0; pol<4; ++pol) {
         
         if (pol<nPol) {
-            const casa::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
+            const casacore::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
             ASKAPDEBUGASSERT(polIndex<4);
             // polIndex is index in the polarisation frame, i.e.
             // XX is 0, XY is 1, YX is 2 and YY is 3
@@ -101,9 +101,9 @@ inline scimath::ComplexDiffMatrix LeakageTerm::get(const accessors::IConstDataAc
 
         // cross-diagonal terms                   
         calFactor(pol, 3 - pol) = (pol % 3 == 0 ? 1. : -1.)*getParameter(accessors::CalParamNameHelper::paramName(ant1, 
-                            beam1, pol < 2 ? casa::Stokes::XY : casa::Stokes::YX))*
+                            beam1, pol < 2 ? casacore::Stokes::XY : casacore::Stokes::YX))*
                             conj(getParameter(accessors::CalParamNameHelper::paramName(ant2, beam2, 
-                            pol % 2 == 0 ? casa::Stokes::XY : casa::Stokes::YX)));
+                            pol % 2 == 0 ? casacore::Stokes::XY : casacore::Stokes::YX)));
         if (pol % 3 != 0) {
             // middle rows and columns of the 4x4 matrix (index is 0-based)
             // exploit the symmetries

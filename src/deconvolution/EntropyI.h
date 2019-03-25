@@ -49,18 +49,18 @@ namespace askap {
                 enum GRADTYPE {H = 0, C, F, J };
 
                 // calculate the entropy for the whole image
-                virtual T entropy(const casa::Array<T>& model);
+                virtual T entropy(const casacore::Array<T>& model);
 
                 // calculate the entropy for the whole image
-                virtual T entropy(const casa::Array<T>& model, const casa::Array<T>& mask);
+                virtual T entropy(const casacore::Array<T>& model, const casacore::Array<T>& mask);
 
                 // calculate the gradient entropy for the whole image
-                virtual void gradEntropy(casa::Array<T>& gradH, casa::Array<T>& rHess,
-                                         const casa::Array<T>& model);
+                virtual void gradEntropy(casacore::Array<T>& gradH, casacore::Array<T>& rHess,
+                                         const casacore::Array<T>& model);
 
                 // calculate the gradient entropy for the whole image
-                virtual void gradEntropy(casa::Array<T>& gradH, casa::Array<T>& rHess,
-                                         const casa::Array<T>& model, const casa::Array<T>& mask);
+                virtual void gradEntropy(casacore::Array<T>& gradH, casacore::Array<T>& rHess,
+                                         const casacore::Array<T>& model, const casacore::Array<T>& mask);
 
             protected:
 

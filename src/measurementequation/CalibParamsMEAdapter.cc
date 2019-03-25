@@ -145,16 +145,16 @@ void CalibParamsMEAdapter::predict(accessors::IDataAccessor &chunk) const
   }
   // iterate over all rows as even if there is no change in calibration solution the new
   // visibility chunk may have antennas/beams not previously seen in the data.
-  const casa::Vector<casa::uInt>& ant1IDs = chunk.antenna1();
-  const casa::Vector<casa::uInt>& ant2IDs = chunk.antenna2();
-  const casa::Vector<casa::uInt>& beam1IDs = chunk.feed1();
-  const casa::Vector<casa::uInt>& beam2IDs = chunk.feed2();
-  const casa::uInt nRow = chunk.nRow();
+  const casacore::Vector<casacore::uInt>& ant1IDs = chunk.antenna1();
+  const casacore::Vector<casacore::uInt>& ant2IDs = chunk.antenna2();
+  const casacore::Vector<casacore::uInt>& beam1IDs = chunk.feed1();
+  const casacore::Vector<casacore::uInt>& beam2IDs = chunk.feed2();
+  const casacore::uInt nRow = chunk.nRow();
   ASKAPDEBUGASSERT(nRow == ant1IDs.nelements());
   ASKAPDEBUGASSERT(nRow == ant2IDs.nelements());
   ASKAPDEBUGASSERT(nRow == beam1IDs.nelements());
   ASKAPDEBUGASSERT(nRow == beam2IDs.nelements());
-  for (casa::uInt row = 0; row < nRow; ++row) {
+  for (casacore::uInt row = 0; row < nRow; ++row) {
        processAntBeamPair(ant1IDs[row], beam1IDs[row]);
        processAntBeamPair(ant2IDs[row], beam2IDs[row]);
   }
@@ -176,7 +176,7 @@ void CalibParamsMEAdapter::calcEquations(const accessors::IConstDataAccessor &,
 /// updateSingleAntBeam method if an update is necessary
 /// @param[in] ant antenna index   
 /// @param[in] beam beam index
-void CalibParamsMEAdapter::processAntBeamPair(const casa::uInt ant, const casa::uInt beam) const
+void CalibParamsMEAdapter::processAntBeamPair(const casacore::uInt ant, const casacore::uInt beam) const
 {
    const accessors::JonesIndex index(ant, beam);
    if (itsAntBeamPairs.find(index) == itsAntBeamPairs.end()) {
@@ -201,16 +201,16 @@ void CalibParamsMEAdapter::updateSingleAntBeam(const accessors::JonesIndex &inde
   // is intended to be used with the simulator only anyway).
   
   const accessors::JonesJTerm gain = calSolution().gain(index);  
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casa::Stokes::XX), 
-                  gain.g1IsValid() ? gain.g1() : casa::Complex(1.,0.));
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casa::Stokes::YY), 
-                  gain.g2IsValid() ? gain.g2() : casa::Complex(1.,0.));
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XX), 
+                  gain.g1IsValid() ? gain.g1() : casacore::Complex(1.,0.));
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YY), 
+                  gain.g2IsValid() ? gain.g2() : casacore::Complex(1.,0.));
                   
   const accessors::JonesDTerm leakage = calSolution().leakage(index);    
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casa::Stokes::XY), 
-                  leakage.d12IsValid() ? leakage.d12() : casa::Complex(0.,0.));
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casa::Stokes::YX),  
-                  leakage.d21IsValid() ? leakage.d21() : casa::Complex(0.,0.));
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XY), 
+                  leakage.d12IsValid() ? leakage.d12() : casacore::Complex(0.,0.));
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YX),  
+                  leakage.d21IsValid() ? leakage.d21() : casacore::Complex(0.,0.));
 }
    
 /// @brief helper method to update a given parameter if necessary
@@ -219,7 +219,7 @@ void CalibParamsMEAdapter::updateSingleAntBeam(const accessors::JonesIndex &inde
 /// slave measurement equation.
 /// @param[in] name parameter name
 /// @param[in] val new value
-void CalibParamsMEAdapter::updateParameter(const std::string &name, const casa::Complex &val) const
+void CalibParamsMEAdapter::updateParameter(const std::string &name, const casacore::Complex &val) const
 {
   ASKAPDEBUGASSERT(rwParameters());
   if (rwParameters()->has(name)) {

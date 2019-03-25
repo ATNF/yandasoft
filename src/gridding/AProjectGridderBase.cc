@@ -57,7 +57,7 @@ AProjectGridderBase::AProjectGridderBase(const int maxFeeds, const int maxFields
                      const double pointingTol, const double paTol, const double freqTol) :
           itsPointingTolerance(pointingTol),  itsParallacticAngleTolerance(paTol),
           itsLastField(-1), itsCurrentField(0),
-          itsDone(maxFeeds, maxFields, false), itsPointings(maxFeeds, maxFields, casa::MVDirection()),
+          itsDone(maxFeeds, maxFields, false), itsPointings(maxFeeds, maxFields, casacore::MVDirection()),
           itsNumberOfCFGenerations(0), itsNumberOfIterations(0), 
           itsNumberOfCFGenerationsDueToPA(0), itsCFParallacticAngle(0),
           itsNumberOfCFGenerationsDueToFreq(0), itsFrequencyTolerance(freqTol),
@@ -98,8 +98,8 @@ AProjectGridderBase::AProjectGridderBase(const AProjectGridderBase &other) :
 AProjectGridderBase::~AProjectGridderBase()
 {
   size_t nUsed = 0;
-  for (casa::uInt feed = 0; feed<itsDone.nrow(); ++feed) {
-      for (casa::uInt field = 0; field<itsDone.ncolumn(); ++field) {
+  for (casacore::uInt feed = 0; feed<itsDone.nrow(); ++feed) {
+      for (casacore::uInt field = 0; field<itsDone.ncolumn(); ++field) {
            if (isCFValid(feed,field)) {
                ++nUsed;
             }
@@ -150,8 +150,8 @@ AProjectGridderBase::~AProjectGridderBase()
 /// @param[in] vCellSize size of the uv-cell in the direction of 
 ///            v-coordinate (in wavelengths)
 /// @param[in] overSample oversampling factor (default is 1)
-void AProjectGridderBase::initUVPattern(casa::uInt uSize, casa::uInt vSize, double uCellSize,
-                     double vCellSize, casa::uInt overSample)
+void AProjectGridderBase::initUVPattern(casacore::uInt uSize, casacore::uInt vSize, double uCellSize,
+                     double vCellSize, casacore::uInt overSample)
 {
   itsPattern.reset(new UVPattern(uSize,vSize, uCellSize,vCellSize,overSample));
 }
@@ -166,9 +166,9 @@ void AProjectGridderBase::indexField(const IConstDataAccessor &acc)
   bool newField = true;
   ASKAPDEBUGASSERT(acc.nRow()>0);
 
-  casa::uInt firstFeed = acc.feed1()(0);
+  casacore::uInt firstFeed = acc.feed1()(0);
   ASKAPCHECK(firstFeed<itsDone.nrow(), "Too many feeds: increase maxfeeds");
-  casa::MVDirection firstPointing = acc.pointingDir1()(0);
+  casacore::MVDirection firstPointing = acc.pointingDir1()(0);
 
   for (int field=itsLastField; field>-1; --field) {
        if (firstPointing.separation(pointing(firstFeed, field))<itsPointingTolerance) {
@@ -205,8 +205,8 @@ void AProjectGridderBase::validateCFCache(const IConstDataAccessor &acc, bool sy
     
   if (!symmetric) {
       // need to check parallactic angles here
-      const casa::Vector<casa::Float> &feed1PAs = acc.feed1PA();
-      ASKAPDEBUGASSERT(feed1PAs.nelements() == casa::uInt(nSamples));
+      const casacore::Vector<casacore::Float> &feed1PAs = acc.feed1PA();
+      ASKAPDEBUGASSERT(feed1PAs.nelements() == casacore::uInt(nSamples));
       for (int row = 0; row<nSamples; ++row) {
            if (fabs(feed1PAs[row] - itsCFParallacticAngle) > itsParallacticAngleTolerance) {
                itsCFInvalidDueToPA = true;
@@ -222,13 +222,13 @@ void AProjectGridderBase::validateCFCache(const IConstDataAccessor &acc, bool sy
     
   // don't bother checking if the cache is rebuilt anyway
   if (!itsCFInvalidDueToPA && (itsFrequencyTolerance >= 0.)) {
-      const casa::Vector<casa::Double> &freq = acc.frequency();
+      const casacore::Vector<casacore::Double> &freq = acc.frequency();
       if (freq.nelements() != itsCachedFrequencies.nelements()) {
           itsCFInvalidDueToFreq = true;
       } else {
           // we can also write the following using iterators, if necessary
-          for (casa::uInt chan = 0; chan<freq.nelements(); ++chan) {
-               const casa::Double newFreq = freq[chan];
+          for (casacore::uInt chan = 0; chan<freq.nelements(); ++chan) {
+               const casacore::Double newFreq = freq[chan];
                ASKAPDEBUGASSERT(newFreq > 0.);
                if ( fabs(itsCachedFrequencies[chan] - newFreq)/newFreq > itsFrequencyTolerance) {
                     itsCFInvalidDueToFreq = true;
@@ -265,7 +265,7 @@ AProjectGridderBase& AProjectGridderBase::operator=(const AProjectGridderBase &)
 /// following invalidation. It depends on the actual algorithm and the dataset. To keep track
 /// of the cache rebuild stats call this method with the exact number of CFs calculated.
 /// @param[in] nDone number of convolution functions rebuilt at this iteration
-void AProjectGridderBase::updateStats(casa::uInt nDone)
+void AProjectGridderBase::updateStats(casacore::uInt nDone)
 {
   ++itsNumberOfIterations;
   itsNumberOfCFGenerations += nDone;

@@ -85,9 +85,9 @@ namespace askap
       /// @param[in] psf array with PSF
       /// @param[in] dirty array with dirty image
       /// @return true if psf and dirty have been altered
-      virtual bool doPreconditioning(casa::Array<float>& psf,
-                                     casa::Array<float>& dirty,
-                                     casa::Array<float>& pcf) const;
+      virtual bool doPreconditioning(casacore::Array<float>& psf,
+                                     casacore::Array<float>& dirty,
+                                     casacore::Array<float>& pcf) const;
 
       /// @brief static factory method to create preconditioner from a parset
       /// @details
@@ -116,7 +116,7 @@ namespace askap
       /// Wiener filter. One approach to this is thresholding out small values.
       /// @param[in] input array from which to determine threshold
       /// @return threshold value
-      float pcfThreshold(casa::Matrix<casa::Complex>& pcf) const;
+      float pcfThreshold(casacore::Matrix<casacore::Complex>& pcf) const;
 
       /// @brief Parameter of the filter
       /// @details Depending on the mode, it can either be the noise power value directly or the
@@ -135,11 +135,11 @@ namespace askap
       // when different frequencies are deconvolved on the same MPI rank.
       static bool itsUseCachedPcf;
       static double itsAveWgtSum;
-      static casa::Matrix<float> itsPcf;
+      static casacore::Matrix<float> itsPcf;
 
       /// @brief cache for Wiener filter array
       // do not make this static, since in general different solvers will require different preconditioning.
-      mutable casa::Matrix<casa::Complex> itsWienerfilter;
+      mutable casacore::Matrix<casacore::Complex> itsWienerfilter;
 
       /// @brief gaussian taper in the image domain (in pixels)
       /// @details fwhm is stored inside cache class.

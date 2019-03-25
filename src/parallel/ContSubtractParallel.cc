@@ -168,7 +168,7 @@ void ContSubtractParallel::initMeasurementEquation()
 /// @param[in] ms measurement set name
 void ContSubtractParallel::calcOne(const std::string &ms)
 {
-   casa::Timer timer;
+   casacore::Timer timer;
    timer.mark();
    ASKAPLOG_INFO_STR(logger, "Performing continuum model subtraction for " << ms );
 
@@ -189,15 +189,15 @@ void ContSubtractParallel::calcOne(const std::string &ms)
    sel << parset();
    IDataConverterPtr conv=ds.createConverter();
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-   conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+   conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
    IDataSharedIter it=ds.createIterator(sel, conv);
    for (; it.hasMore(); it.next()) {
         // iteration over the dataset
         MemBufferDataAccessor acc(*it);
         acc.rwVisibility().set(0.);
         accessorBasedEquation->predict(acc);
-        const casa::Cube<casa::Complex>& model = acc.visibility();
-        casa::Cube<casa::Complex>& vis = it->rwVisibility();
+        const casacore::Cube<casacore::Complex>& model = acc.visibility();
+        casacore::Cube<casacore::Complex>& vis = it->rwVisibility();
         ASKAPDEBUGASSERT(model.nrow() == vis.nrow());
         ASKAPDEBUGASSERT(model.ncolumn() == vis.ncolumn());
         ASKAPDEBUGASSERT(model.nplane() == vis.nplane());

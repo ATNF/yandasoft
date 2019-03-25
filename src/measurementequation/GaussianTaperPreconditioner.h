@@ -79,9 +79,9 @@ public:
    /// @param[in] psf array with PSF
    /// @param[in] dirty array with dirty image
    /// @return true if psf and dirty have been altered
-   virtual bool doPreconditioning(casa::Array<float>& psf,
-                                  casa::Array<float>& dirty,
-                                  casa::Array<float>& pcf) const;
+   virtual bool doPreconditioning(casacore::Array<float>& psf,
+                                  casacore::Array<float>& dirty,
+                                  casacore::Array<float>& pcf) const;
 
    /// @brief a helper method to apply the taper to one given array
    /// @details We need exactly the same operation for psf and dirty image. This method
@@ -89,7 +89,7 @@ public:
    /// doPreconditioning. In addition, this method is used in Wiener preconditioner to 
    /// smooth PSF before filter construction 
    /// @param[in] image an image to apply the taper to
-   void applyTaper(casa::Array<float> &image) const;
+   void applyTaper(casacore::Array<float> &image) const;
 };
 
 } // namespace synthesis

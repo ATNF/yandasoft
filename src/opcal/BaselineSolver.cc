@@ -70,7 +70,7 @@ struct LesserHAorDec {
    /// @details
    /// @param[in] pos position on the ground
    /// @param[in] workWithHA if true, hour angle is compared
-   LesserHAorDec(const casa::MPosition &pos, bool workWithHA) : itsPosition(pos), itsWorkWithHA(workWithHA) {}
+   LesserHAorDec(const casacore::MPosition &pos, bool workWithHA) : itsPosition(pos), itsWorkWithHA(workWithHA) {}
    
 
    /// @brief compares two directions 
@@ -85,7 +85,7 @@ struct LesserHAorDec {
    
 private:
    /// @brief position on the ground to do the calculations for
-   casa::MPosition itsPosition;
+   casacore::MPosition itsPosition;
    
    /// @brief true, if hour angle is compared; false, if declination is compared
    bool itsWorkWithHA;
@@ -102,16 +102,16 @@ private:
 bool LesserHAorDec::operator()(const ObservationDescription &scan1, const ObservationDescription &scan2) const
 {
   const double time1 = 0.5*(scan1.startTime() + scan1.endTime());
-  const casa::MEpoch epoch1(casa::Quantity(time1/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-  casa::MeasFrame frame1(itsPosition, epoch1);    
-  casa::MVDirection hadec1 = casa::MDirection::Convert(casa::MDirection(scan1.direction(),casa::MDirection::J2000), 
-         casa::MDirection::Ref(casa::MDirection::HADEC,frame1))().getValue();
+  const casacore::MEpoch epoch1(casacore::Quantity(time1/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+  casacore::MeasFrame frame1(itsPosition, epoch1);    
+  casacore::MVDirection hadec1 = casacore::MDirection::Convert(casacore::MDirection(scan1.direction(),casacore::MDirection::J2000), 
+         casacore::MDirection::Ref(casacore::MDirection::HADEC,frame1))().getValue();
 
   const double time2 = 0.5*(scan2.startTime() + scan2.endTime());
-  const casa::MEpoch epoch2(casa::Quantity(time2/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-  casa::MeasFrame frame2(itsPosition, epoch2);    
-  casa::MVDirection hadec2 = casa::MDirection::Convert(casa::MDirection(scan2.direction(),casa::MDirection::J2000), 
-         casa::MDirection::Ref(casa::MDirection::HADEC,frame2))().getValue();
+  const casacore::MEpoch epoch2(casacore::Quantity(time2/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+  casacore::MeasFrame frame2(itsPosition, epoch2);    
+  casacore::MVDirection hadec2 = casacore::MDirection::Convert(casacore::MDirection(scan2.direction(),casacore::MDirection::J2000), 
+         casacore::MDirection::Ref(casacore::MDirection::HADEC,frame2))().getValue();
 
   if (itsWorkWithHA) {
       return hadec1.getLong() < hadec2.getLong();
@@ -124,22 +124,22 @@ bool LesserHAorDec::operator()(const ObservationDescription &scan1, const Observ
 // helper functional fitting sinusoid due to errors in X and Y component of the baseline
 // to be used with the casa fitter. We could've used our own, but it doesn't solve for errors
 template<typename T>
-class SinusoidDueToXY : public casa::Function1D<T> {
+class SinusoidDueToXY : public casacore::Function1D<T> {
 public:
    
    /// @brief evaluate - main method
-   virtual T eval(casa::Function<double>::FunctionArg x) const {
+   virtual T eval(casacore::Function<double>::FunctionArg x) const {
        return this->param_p[0]*cos(x[0]+this->param_p[1])+this->param_p[2]; 
    };
-   SinusoidDueToXY() : casa::Function1D<T>(3u) {}  
+   SinusoidDueToXY() : casacore::Function1D<T>(3u) {}  
 
    template<typename W>
-   SinusoidDueToXY(const SinusoidDueToXY<W> &other) : casa::Function1D<T>(other) {}
+   SinusoidDueToXY(const SinusoidDueToXY<W> &other) : casacore::Function1D<T>(other) {}
 
    // Copy it - compulsory methods required by casacore, we never use them explicitly
-   virtual casa::Function1D<T>* clone() const { return new SinusoidDueToXY<T>(*this); };   
-   virtual casa::Function1D<typename casa::FunctionTraits<T>::DiffType>* cloneAD() const { return new SinusoidDueToXY<typename casa::FunctionTraits<T>::DiffType>(*this); };   
-   virtual casa::Function1D<typename casa::FunctionTraits<T>::BaseType>* cloneNonAD() const { return new SinusoidDueToXY<typename casa::FunctionTraits<T>::BaseType>(*this); };   
+   virtual casacore::Function1D<T>* clone() const { return new SinusoidDueToXY<T>(*this); };   
+   virtual casacore::Function1D<typename casacore::FunctionTraits<T>::DiffType>* cloneAD() const { return new SinusoidDueToXY<typename casacore::FunctionTraits<T>::DiffType>(*this); };   
+   virtual casacore::Function1D<typename casacore::FunctionTraits<T>::BaseType>* cloneNonAD() const { return new SinusoidDueToXY<typename casacore::FunctionTraits<T>::BaseType>(*this); };   
 };
 
 //////////////////
@@ -170,7 +170,7 @@ BaselineSolver::BaselineSolver(const LOFAR::ParameterSet& parset) :
 ///            not necessarily match the scans known to online system
 /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
 ///            (column index is antenna ID used in the measurement set).
-void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+void BaselineSolver::process(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata)
 {
   ASKAPASSERT(scans.size() == caldata.nrow());
   itsCorrections.resize(caldata.ncolumn(), 3);
@@ -188,7 +188,7 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
   } 
   
   // writing results to the log
-  for (casa::uInt ant=0; ant<itsCorrections.nrow(); ++ant) {
+  for (casacore::uInt ant=0; ant<itsCorrections.nrow(); ++ant) {
        if (ant != itsRefAnt) {
            ASKAPLOG_INFO_STR(logger, "Antenna "<<ant);
            ASKAPLOG_INFO_STR(logger, "dX: "<<itsCorrections(ant,0)<<" +/- "<<itsErrors(ant,0)<<" metres");
@@ -203,13 +203,13 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
       ASKAPLOG_INFO_STR(logger, "Reading FCM configuration from "<<itsOrigFCMLayout<<", writing corrections.dat");
       LOFAR::ParameterSet fcmParset(itsOrigFCMLayout);
       std::vector<std::string> idMap = fcmParset.getStringVector("baselinemap.antennaidx");
-      std::map<std::string, casa::uInt> antmap;
+      std::map<std::string, casacore::uInt> antmap;
       // building antenna map
-      for (casa::uInt ant = 0; ant < idMap.size(); ++ant) {
+      for (casacore::uInt ant = 0; ant < idMap.size(); ++ant) {
            const std::string idStr = idMap[ant];
            ASKAPCHECK(idStr.size() >= 3, "Antenna names in the baselinemap.antennaidx are supposed to be at least 3 symbols long, you have "<<idStr);
            ASKAPCHECK(idStr.find("ak") == 0, "All names in the baselinemap.antennaidx are supposed to start with ak, you have "<<idStr);
-           const std::string antkey = "ant" + utility::toString<casa::uInt>(utility::fromString<casa::uInt>(idStr.substr(2)));
+           const std::string antkey = "ant" + utility::toString<casacore::uInt>(utility::fromString<casacore::uInt>(idStr.substr(2)));
            antmap[antkey] = ant;
       }
       std::vector<std::string> antennas = fcmParset.getStringVector("antennas");
@@ -217,20 +217,20 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
       std::ofstream os("corrections.dat");
       for (std::vector<std::string>::const_iterator ci=antennas.begin(); ci != antennas.end(); ++ci) {
            const std::string parsetKey = "antenna."+*ci+".location.itrf";
-           const casa::Vector<double> oldXYZ = fcmParset.isDefined(parsetKey) ? 
+           const casacore::Vector<double> oldXYZ = fcmParset.isDefined(parsetKey) ? 
                         fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey);
            ASKAPCHECK(oldXYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
-           std::map<std::string, casa::uInt>::const_iterator mapIt = antmap.find(*ci);
+           std::map<std::string, casacore::uInt>::const_iterator mapIt = antmap.find(*ci);
            if (mapIt == antmap.end()) { 
                continue; // unused antenna
            }
-           const casa::uInt ant = mapIt->second;
+           const casacore::uInt ant = mapIt->second;
            ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" is "<<*ci);
            if (ant == itsRefAnt) {
                continue;
            }
            os<<"common."<<parsetKey<<" = [";
-           for (casa::uInt elem=0; elem<itsCorrections.ncolumn(); ++elem) {
+           for (casacore::uInt elem=0; elem<itsCorrections.ncolumn(); ++elem) {
                 ASKAPASSERT(elem < oldXYZ.nelements());
                 ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
                 // corrections are determined deviations from the best XYZ, need to subtract them to apply
@@ -252,10 +252,10 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
 ///            not necessarily match the scans known to online system
 /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
 ///            (column index is antenna ID used in the measurement set).
-void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+void BaselineSolver::solveForXY(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata)
 {
   ASKAPASSERT(scans.size()>1);
-  const casa::MPosition mroPos = mroPosition();
+  const casacore::MPosition mroPos = mroPosition();
   std::vector<size_t> scanIndices(scans.size());
   for (size_t scan=0; scan<scanIndices.size(); ++scan) {
        scanIndices[scan]=scan;
@@ -263,10 +263,10 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
   std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,true)));
 
   ASKAPDEBUGASSERT(scanIndices.size() == scans.size());
-  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+  for (casacore::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
        // figure out the number of valid points
        size_t nGoodPoints = 0;
-       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+       for (casacore::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             if (caldata(scanIndices[cnt],ant).gainDefined()) {
                 ++nGoodPoints;
             }
@@ -284,11 +284,11 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
        }
 
        // use casa fitter
-       casa::Vector<double> hangles(nGoodPoints);
-       casa::Vector<double> phases(nGoodPoints);
-       casa::Vector<double> sigma(nGoodPoints,1.);
+       casacore::Vector<double> hangles(nGoodPoints);
+       casacore::Vector<double> phases(nGoodPoints);
+       casacore::Vector<double> sigma(nGoodPoints,1.);
 
-       casa::NonLinearFitLM<double> fitter;
+       casacore::NonLinearFitLM<double> fitter;
        SinusoidDueToXY<double> func;
        func.parameters()[0] = 1.;
        func.parameters()[1] = 0.;
@@ -299,77 +299,77 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
   
        // could've cached the hour angles, but for now leave as is
        scimath::PhaseUnwrapper<double> unwrapper;
-       for (casa::uInt cnt = 0, pointCnt = 0; cnt < scans.size(); ++cnt) {
+       for (casacore::uInt cnt = 0, pointCnt = 0; cnt < scans.size(); ++cnt) {
             const GenericCalInfo& cInfo = caldata(scanIndices[cnt],ant);
             if (!cInfo.gainDefined()) {
                 continue;
             }
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
-            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-            casa::MeasFrame frame(mroPos, epoch);    
+            const casacore::MEpoch epoch(casacore::Quantity(time/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+            casacore::MeasFrame frame(mroPos, epoch);    
             
-            const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+            const casacore::MVDirection hadec = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::HADEC,frame))().getValue();
             
             ASKAPASSERT(pointCnt < nGoodPoints);
             hangles[pointCnt] = hadec.getLong() - mroPos.getValue().getLong(); // Hour angle at latitude 0
             
             /*
             // Phase centre in the apparent topocentric frame
-            casa::MVDirection fpc = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::TOPO,frame))().getValue();
-            const double gastDayFrac = casa::MEpoch::Convert(epoch,casa::MEpoch::Ref(casa::MEpoch::GAST))().get("d").getValue("d");
-            const double gast = (gastDayFrac - casa::Int(gastDayFrac)) * casa::C::_2pi; // in radians
+            casacore::MVDirection fpc = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::TOPO,frame))().getValue();
+            const double gastDayFrac = casacore::MEpoch::Convert(epoch,casacore::MEpoch::Ref(casacore::MEpoch::GAST))().get("d").getValue("d");
+            const double gast = (gastDayFrac - casacore::Int(gastDayFrac)) * casacore::C::_2pi; // in radians
             hangles[pointCnt] = gast - fpc.getLong();
             // to ensure corresponding local hour angle is contiguous without the need to unwrap
-            if (hangles[pointCnt] + mroPos.getValue().getLong() > casa::C::pi) {
-                hangles[pointCnt] -= 2.*casa::C::pi;
+            if (hangles[pointCnt] + mroPos.getValue().getLong() > casacore::C::pi) {
+                hangles[pointCnt] -= 2.*casacore::C::pi;
             }
-            if (hangles[pointCnt] + mroPos.getValue().getLong() < -casa::C::pi) {
-                hangles[pointCnt] += 2.*casa::C::pi;
+            if (hangles[pointCnt] + mroPos.getValue().getLong() < -casacore::C::pi) {
+                hangles[pointCnt] += 2.*casacore::C::pi;
             }
             */
             /*
-            ASKAPLOG_DEBUG_STR(logger, "cnt = "<<cnt<<" newH: "<<hangles[pointCnt]*180./casa::C::pi<<
-                     " oldH:"<<(hadec.getLong() - mroPos.getValue().getLong())*180./casa::C::pi<<" diff: "<<
-                      (hangles[pointCnt] - hadec.getLong() + mroPos.getValue().getLong()) / casa::C::pi * 648000.<<" "
-                     <<" decDiff: "<<(fpc.getLat() - hadec.getLat()) / casa::C::pi * 648000.);
+            ASKAPLOG_DEBUG_STR(logger, "cnt = "<<cnt<<" newH: "<<hangles[pointCnt]*180./casacore::C::pi<<
+                     " oldH:"<<(hadec.getLong() - mroPos.getValue().getLong())*180./casacore::C::pi<<" diff: "<<
+                      (hangles[pointCnt] - hadec.getLong() + mroPos.getValue().getLong()) / casacore::C::pi * 648000.<<" "
+                     <<" decDiff: "<<(fpc.getLat() - hadec.getLat()) / casacore::C::pi * 648000.);
             */
 
             const double cd = cos(hadec.getLat()); 
             ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
-            const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+            const casacore::MVDirection azel = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::AZEL,frame))().getValue();
             phases[pointCnt] = unwrapper(arg(cInfo.gain())) / cd;
-            os<<cnt<<" "<<hangles[pointCnt] / casa::C::pi * 180<<" "<<phases[pointCnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<azel.getLong() / casa::C::pi * 180.<<std::endl;
+            os<<cnt<<" "<<hangles[pointCnt] / casacore::C::pi * 180<<" "<<phases[pointCnt] / casacore::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casacore::C::pi * 180.<<" "<<azel.getLong() / casacore::C::pi * 180.<<std::endl;
             ++pointCnt;
        }
-       casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
+       casacore::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
-       casa::Vector<double> err = fitter.errors();
+       casacore::Vector<double> err = fitter.errors();
        ASKAPCHECK(err.nelements() == 3, "Expect 3 uncertainties out of the fitter, you have size="<<err.nelements());
        // for our test setup of 864.5 MHz central freq
-       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
-       double ampl = param[0] / 2. / casa::C::pi * wavelength;
+       const double wavelength = casacore::C::c / 864.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
+       double ampl = param[0] / 2. / casacore::C::pi * wavelength;
        // fit can converge with either sign of the first coefficient, but we like to always have a positive amplitude
        if (ampl < 0) {
            ampl = -ampl;
            param[0] = -param[0];
-           param[1] += casa::C::pi;
+           param[1] += casacore::C::pi;
        }
-       const double amplErr = err[0] / 2. / casa::C::pi * wavelength;
+       const double amplErr = err[0] / 2. / casacore::C::pi * wavelength;
        ASKAPLOG_DEBUG_STR(logger, "Antenna "<<ant);
        ASKAPLOG_DEBUG_STR(logger, "Amplitude of the residual "<<ampl<<" +/- "<<amplErr<<" metres");
-       ASKAPLOG_DEBUG_STR(logger, "Phase of the residual "<<param[1]/casa::C::pi*180.<<" +/- "<<err[1] / casa::C::pi * 180.<<" deg");
+       ASKAPLOG_DEBUG_STR(logger, "Phase of the residual "<<param[1]/casacore::C::pi*180.<<" +/- "<<err[1] / casacore::C::pi * 180.<<" deg");
        const double cphi = cos(param[1]);
        const double sphi = sin(param[1]);
        const double cphiErr = abs(sphi)*err[1];
        const double sphiErr = abs(cphi)*err[1];
        const double dX = -ampl * cphi;
-       const double dXErr = sqrt(casa::square(ampl * cphiErr) + casa::square(cphi * amplErr));
+       const double dXErr = sqrt(casacore::square(ampl * cphiErr) + casacore::square(cphi * amplErr));
        const double dY = -ampl * sphi;
-       const double dYErr = sqrt(casa::square(ampl * sphiErr) + casa::square(sphi * amplErr));
+       const double dYErr = sqrt(casacore::square(ampl * sphiErr) + casacore::square(sphi * amplErr));
        ASKAPDEBUGASSERT(itsCorrections.nrow()>ant);
        ASKAPDEBUGASSERT(itsErrors.nrow()>ant);
        ASKAPDEBUGASSERT(itsCorrections.ncolumn()>=2);
@@ -387,10 +387,10 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
 
 /// @brief obtain MRO reference position
 /// @return position measure
-casa::MPosition BaselineSolver::mroPosition()
+casacore::MPosition BaselineSolver::mroPosition()
 {
-   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(116.6310372795, "deg"), 
-                          casa::Quantity(-26.6991531922, "deg")), casa::MPosition::Ref(casa::MPosition::WGS84));
+   casacore::MPosition mroPos(casacore::MVPosition(casacore::Quantity(370.81, "m"), casacore::Quantity(116.6310372795, "deg"), 
+                          casacore::Quantity(-26.6991531922, "deg")), casacore::MPosition::Ref(casacore::MPosition::WGS84));
    return mroPos;
 }
 
@@ -401,42 +401,42 @@ casa::MPosition BaselineSolver::mroPosition()
 ///            not necessarily match the scans known to online system
 /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
 ///            (column index is antenna ID used in the measurement set).
-void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+void BaselineSolver::solveForZ(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata)
 {
   ASKAPASSERT(scans.size()>2);
   std::vector<size_t> scanIndices(scans.size());
   for (size_t scan=0; scan<scanIndices.size(); ++scan) {
        scanIndices[scan]=scan;
   }
-  const casa::MPosition mroPos = mroPosition();
+  const casacore::MPosition mroPos = mroPosition();
   std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,false)));
 
-  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+  for (casacore::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
        // do LSF into phase vs. sin(dec)
        double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
        
        scimath::PhaseUnwrapper<double> unwrapper;
        const std::string spcfilename = "phase.z.ant"+utility::toString(ant)+".dat";
        std::ofstream os(spcfilename.c_str());
-       casa::uInt counter = 0;
-       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+       casacore::uInt counter = 0;
+       for (casacore::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const GenericCalInfo& cInfo = caldata(scanIndices[cnt],ant);
             if (!cInfo.gainDefined()) {
                 continue;
             }
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
-            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-            casa::MeasFrame frame(mroPos, epoch);    
-            casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+            const casacore::MEpoch epoch(casacore::Quantity(time/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+            casacore::MeasFrame frame(mroPos, epoch);    
+            casacore::MVDirection hadec = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::HADEC,frame))().getValue();
             const double sd = sin(hadec.getLat());
             const double phase = unwrapper(arg(cInfo.gain()));
             /*
             // the following code can be useful is unwrapper fails to do a decent job
             // due to gaps in declination coverage and large Z correction
             if ((ant == 8) && (sd > -0.5)) {
-                phase += 2.*casa::C::pi;
+                phase += 2.*casacore::C::pi;
             }
             
 
@@ -445,11 +445,11 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
                 continue;
             }
             */
-            const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+            const casacore::MVDirection azel = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::AZEL,frame))().getValue();
 
-            os<<cnt<<" "<<sd<<" "<<phase / casa::C::pi * 180.<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<
-                     azel.getLong() / casa::C::pi * 180.<<std::endl;
+            os<<cnt<<" "<<sd<<" "<<phase / casacore::C::pi * 180.<<" "<<azel.getLat() / casacore::C::pi * 180.<<" "<<
+                     azel.getLong() / casacore::C::pi * 180.<<std::endl;
             // build normal equations
             sx += sd;
             sx2 += sd*sd;
@@ -474,15 +474,15 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        const double coeff = (sxy - sx * sy) / denominator;
  
        // for our test setup of 864.5 MHz central freq
-       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do get it from scan's frequency)
+       const double wavelength = casacore::C::c / 864.5e6; // effective wavelength in metres (to do get it from scan's frequency)
        // the formula for phase has -sin(dec)*dZ therefore, we have to swap the sign here
-       const double dZ = -coeff / 2. / casa::C::pi * wavelength;
+       const double dZ = -coeff / 2. / casacore::C::pi * wavelength;
        ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
        ASKAPDEBUGASSERT(itsCorrections.ncolumn() > 2); 
        itsCorrections(ant,2) = dZ; 
        const double r=(sxy-sx*sy)/sqrt(denominator * (sy2-sy*sy));
        const double coeffErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(scans.size())-2));       
-       const double dZErr = coeffErr / 2. / casa::C::pi * wavelength;
+       const double dZErr = coeffErr / 2. / casacore::C::pi * wavelength;
        itsErrors(ant,2) = dZErr;
        
        ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" dZ: "<<dZ<<" +/- "<<dZErr<<" metres; r="<<r);
@@ -499,14 +499,14 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
 ///            not necessarily match the scans known to online system
 /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
 ///            (column index is antenna ID used in the measurement set).
-void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata)
 {
   ASKAPASSERT(scans.size()>2);
   std::vector<size_t> scanIndices(scans.size());
   for (size_t scan=0; scan<scanIndices.size(); ++scan) {
        scanIndices[scan]=scan;
   }
-  const casa::MPosition mroPos = mroPosition();
+  const casacore::MPosition mroPos = mroPosition();
   std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,false)));
   
   // hardcoded antenna positions - nominal ones are enough as we're only interested in rates
@@ -516,25 +516,25 @@ void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::M
                              {-2555389.85800794, 5097664.67850522, -2848561.91777563},
                              {-2556002.4999209, 5097320.29662981, -2848637.49793128},
                              {-2555888.89502723, 5097552.29356202, -2848324.68084774}};
-  const double siderealRate = casa::C::_2pi / 86400. / (1. - 1./365.25);
+  const double siderealRate = casacore::C::_2pi / 86400. / (1. - 1./365.25);
 
-  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+  for (casacore::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
        ASKAPCHECK(ant < 6, "This experimental code only supports 6 antennas as it is BETA-specific");
        // do LSF into amp vs. rate
        double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
        
        const std::string spcfilename = "amp.ant"+utility::toString(ant)+".dat";
        std::ofstream os(spcfilename.c_str());
-       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+       for (casacore::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const ObservationDescription& scan = scans[scanIndices[cnt]];
             const double time = 0.5*(scan.startTime() + scan.endTime());
-            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-            //casa::MeasFrame frame(mroPos, epoch);
-            casa::MeasFrame frame(epoch);
-            double gast = casa::MEpoch::Convert(epoch, casa::MEpoch::Ref(casa::MEpoch::GAST))().get("d").getValue("d");
-            gast = (gast - casa::Int(gast)) * casa::C::_2pi; // into radians
-            casa::MDirection radec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
-                                   casa::MDirection::Ref(casa::MDirection::TOPO,frame))();
+            const casacore::MEpoch epoch(casacore::Quantity(time/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+            //casacore::MeasFrame frame(mroPos, epoch);
+            casacore::MeasFrame frame(epoch);
+            double gast = casacore::MEpoch::Convert(epoch, casacore::MEpoch::Ref(casacore::MEpoch::GAST))().get("d").getValue("d");
+            gast = (gast - casacore::Int(gast)) * casacore::C::_2pi; // into radians
+            casacore::MDirection radec = casacore::MDirection::Convert(casacore::MDirection(scan.direction(),casacore::MDirection::J2000), 
+                                   casacore::MDirection::Ref(casacore::MDirection::TOPO,frame))();
             const double H0 = gast - radec.getAngle().getValue()(0);
             const double sH0 = sin(H0);
             const double cH0 = cos(H0);                                         
@@ -542,9 +542,9 @@ void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::M
             
             // hardcoded effective LO freq
             //const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
-            //              siderealRate * casa::C::_2pi / casa::C::c * 672e6;
+            //              siderealRate * casacore::C::_2pi / casacore::C::c * 672e6;
             const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
-                          siderealRate * casa::C::_2pi / casa::C::c * 864.5e6;
+                          siderealRate * casacore::C::_2pi / casacore::C::c * 864.5e6;
             const double amp = abs(caldata(scanIndices[cnt],ant).gain());
             
             os<<cnt<<" "<<rate<<" "<<amp<<std::endl;

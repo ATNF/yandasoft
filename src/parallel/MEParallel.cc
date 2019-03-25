@@ -83,7 +83,7 @@ void MEParallel::sendNE()
     ASKAPTRACE("MEParallel::sendNE");
 
     if (itsComms.isParallel() && itsComms.isWorker()) {
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
         ASKAPLOG_DEBUG_STR(logger, "Reducing normal equations to the solver");
         reduceNE(itsNe);
@@ -104,7 +104,7 @@ void MEParallel::receiveNE()
         itsSolver->init();
 
         ASKAPLOG_INFO_STR(logger, "Waiting for normal equation reduction to complete");
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
 
         reduceNE(itsNe);
@@ -267,7 +267,7 @@ void MEParallel::sendNormalEquations(const askap::scimath::INormalEquations::ShP
 {
     ASKAPDEBUGTRACE("MEParallel::sendNormalEquations");
 
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
     ASKAPLOG_INFO_STR(logger, "Sending normal equations to rank " << dest);
 
@@ -303,7 +303,7 @@ askap::scimath::INormalEquations::ShPtr MEParallel::receiveNormalEquations(int s
     }
 
     ASKAPLOG_INFO_STR(logger, "Waiting to receive normal equations from rank " << source);
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
 
     BlobIBufMW bibmw(itsComms, source);

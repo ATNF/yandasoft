@@ -57,7 +57,7 @@ namespace askap {
                 /// Cdeconvolver.Clean.gain = 0.1
                 /// Cdeconvolver.Clean.tolerance = 1e-4
                 /// Cdeconvolver.Clean.threshold = 0.001
-                static DeconvolverBase<casa::Float, casa::Complex>::ShPtr make(const LOFAR::ParameterSet& parset);
+                static DeconvolverBase<casacore::Float, casacore::Complex>::ShPtr make(const LOFAR::ParameterSet& parset);
 
             protected:
 
@@ -66,7 +66,7 @@ namespace askap {
                 /// an array will be created from from the image file gaskap.residual
                 /// @param name Name of image in the parset file
                 /// @param parset ParameterSet containing description of images
-                static casa::Array<casa::Float> getArrayFromImage(const casa::String name,
+                static casacore::Array<casacore::Float> getArrayFromImage(const casacore::String name,
                                                                   const LOFAR::ParameterSet &parset);
 
                 /// @brief Put an array as an image
@@ -76,8 +76,8 @@ namespace askap {
                 /// @param templateName Name of template image
                 /// @param name Name of image in the parset file
                 /// @param parset ParameterSet containing description of images
-                static casa::Array<casa::Float> putArrayToImage(const casa::String name,
-                                                                const casa::String templateName,
+                static casacore::Array<casacore::Float> putArrayToImage(const casacore::String name,
+                                                                const casacore::String templateName,
                                                                 const LOFAR::ParameterSet &parset);
         };
 

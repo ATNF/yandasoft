@@ -76,7 +76,7 @@ namespace askap
       itsScales(2)=30;
     }
 
-    ImageMSMFSolver::ImageMSMFSolver(const casa::Vector<float>& scales) : 
+    ImageMSMFSolver::ImageMSMFSolver(const casacore::Vector<float>& scales) : 
           itsScales(scales)
     {
     }
@@ -159,7 +159,7 @@ namespace askap
                ImageParamsHelper iph(tmIt->first);
                // make it 0-order Taylor term
                iph.makeTaylorTerm(0);
-               const casa::IPosition imageShape = ip.value(iph.paramName()).shape();               
+               const casacore::IPosition imageShape = ip.value(iph.paramName()).shape();               
                const uint nPol = imageShape.nelements()>=3 ? uint(imageShape(2)) : 1;
                ASKAPLOG_INFO_STR(logger, "There are " << nPol << " polarisation planes to solve for." );
                nParameters += imageShape.product(); // add up the number of pixels for zero order
@@ -167,7 +167,7 @@ namespace askap
 	           for (int order=1;order<tmIt->second;++order) {
 	                // make the helper a Taylor term of the given order
 	                iph.makeTaylorTerm(order);
-                    const casa::IPosition thisShape = ip.value(iph.paramName()).shape();               
+                    const casacore::IPosition thisShape = ip.value(iph.paramName()).shape();               
                     const uint thisNPol = thisShape.nelements()>=3 ? uint(thisShape(2)) : 1;
 	                ASKAPCHECK(thisNPol == nPol, "Number of polarisations are supposed to be consistent for all Taylor terms, order="<<
 	                           order<<" has "<<thisNPol<<" polarisation planes");
@@ -206,11 +206,11 @@ namespace askap
                     // Setup the normalization vector	  
                     ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
                     ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0, "Diagonal not present");
-                    casa::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
+                    casacore::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
 
                     ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
 	  
-                    const double maxDiag = casa::max(planeIter.getPlaneVector(normdiag));
+                    const double maxDiag = casacore::max(planeIter.getPlaneVector(normdiag));
                     ASKAPLOG_INFO_STR(logger, "Maximum of weights = " << maxDiag );
                     
                     // a unique string for every Taylor decomposition (unique for every facet for faceting)
@@ -232,10 +232,10 @@ namespace askap
 	                   // Initialize the latticecleaners
                        ASKAPLOG_INFO_STR(logger, "Initialising the solver for plane " << plane<<" tag "<<imageTag);
 	    
-                       itsCleaners[imageTag].reset(new casa::MultiTermLatticeCleaner<float>());
+                       itsCleaners[imageTag].reset(new casacore::MultiTermLatticeCleaner<float>());
                        ASKAPDEBUGASSERT(itsCleaners[imageTag]);
 	    
-                       itsCleaners[imageTag]->setcontrol(casa::CleanEnums::MULTISCALE, niter(), gain(), threshold(), 
+                       itsCleaners[imageTag]->setcontrol(casacore::CleanEnums::MULTISCALE, niter(), gain(), threshold(), 
 	                                      fractionalThreshold(), false);
                        itsCleaners[imageTag]->ignoreCenterBox(true);
                        itsCleaners[imageTag]->setscales(itsScales);
@@ -244,10 +244,10 @@ namespace askap
 		    }
           
                     // Setup the PSFs - all ( 2 x ntaylor - 1 ) of them for the first time.
-                    casa::Array<float> psfZeroArray(planeIter.planeShape());
-                    casa::Array<float> psfWorkArray;
+                    casacore::Array<float> psfZeroArray(planeIter.planeShape());
+                    casacore::Array<float> psfWorkArray;
                     // Only set up a single preconditioner function. May need to do all of them.
-                    casa::Array<float> pcfZeroArray;
+                    casacore::Array<float> pcfZeroArray;
 
                     // buffer for the peak of zero-order PSF
                     float zeroPSFPeak = -1;
@@ -259,17 +259,17 @@ namespace askap
                                           " Taylor terms + "<<nTaylor-1<<" cross-terms), parameter name: "<<thisOrderParam);
                         ASKAPCHECK(normalEquations().normalMatrixSlice().count(thisOrderParam)>0,
                             "PSF Slice for plane="<<plane<<" and order="<<order<<" is not present");
-                        casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
+                        casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
                         ASKAPCHECK(normalEquations().dataVector(thisOrderParam).size()>0,
                             "Data vector not present for cube plane="<<plane<<" and order="<<order);
-                        casa::Vector<double> dv = normalEquations().dataVector(thisOrderParam);
+                        casacore::Vector<double> dv = normalEquations().dataVector(thisOrderParam);
 	   
-                        casa::Array<float> psfArray(planeIter.planeShape());
-                        casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
-                        casa::Array<float> dirtyArray(planeIter.planeShape());
-                        casa::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
-                        casa::Array<float> cleanArray(planeIter.planeShape());
-                        casa::convertArray<float, double>(cleanArray, 
+                        casacore::Array<float> psfArray(planeIter.planeShape());
+                        casacore::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
+                        casacore::Array<float> dirtyArray(planeIter.planeShape());
+                        casacore::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
+                        casacore::Array<float> cleanArray(planeIter.planeShape());
+                        casacore::convertArray<float, double>(cleanArray, 
                                            planeIter.getPlane(ip.value(thisOrderParam)));
 	   	   	   	                
                         if (order == 0) {
@@ -279,11 +279,11 @@ namespace askap
                             ASKAPCHECK(normalEquations().preconditionerSlice().count(thisOrderParam)>0,
                                 "Preconditioner function Slice for plane="<<plane<<
                                 " and order="<<order<<" is not present");
-                            casa::Vector<double>
+                            casacore::Vector<double>
                                 pcf(normalEquations().preconditionerSlice().find(thisOrderParam)->second);
                             if (pcf.shape() > 0) {
                                 pcfZeroArray.resize(planeIter.planeShape());
-                                casa::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
+                                casacore::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
                             }
                         }
 	    	   
@@ -293,9 +293,9 @@ namespace askap
                            ASKAPLOG_INFO_STR(logger, "Exporting preconditioned psfs (to be stored to disk later)");
                            Axes axes(ip.axes(thisOrderParam));
                            const std::string psfName="psf."+thisOrderParam;
-                           casa::Array<double> aargh(planeIter.planeShape());
-                           casa::convertArray<double,float>(aargh,psfArray);
-                           const casa::Array<double> & APSF(aargh);
+                           casacore::Array<double> aargh(planeIter.planeShape());
+                           casacore::convertArray<double,float>(aargh,psfArray);
+                           const casacore::Array<double> & APSF(aargh);
                            if (!ip.has(psfName)) {
                                // create an empty parameter with the full shape
                                ip.add(psfName, planeIter.shape(), axes);
@@ -315,7 +315,7 @@ namespace askap
                             doNormalization(planeIter.getPlaneVector(normdiag),tol(),psfArray,zeroPSFPeak,dirtyArray);
                         }
 
-                        casa::ArrayLattice<float> psf(psfArray);
+                        casacore::ArrayLattice<float> psf(psfArray);
                         itsCleaners[imageTag]->setpsf(order,psf);
 	   
                         // Setup the Residual Images and Model Images  - ( ntaylor ) of them
@@ -326,8 +326,8 @@ namespace askap
 		   
                             // We need lattice equivalents. We can use ArrayLattice which involves
                             // no copying
-                            casa::ArrayLattice<float> dirty(dirtyArray);
-                            casa::ArrayLattice<float> clean(cleanArray);
+                            casacore::ArrayLattice<float> dirty(dirtyArray);
+                            casacore::ArrayLattice<float> clean(cleanArray);
 
                             // Send in Dirty images only for ntaylor terms
                             itsCleaners[imageTag]->setresidual(order,dirty);
@@ -345,13 +345,13 @@ namespace askap
                         // make the helper to correspond to the given order
                         iph.makeTaylorTerm(order);
 	                    const std::string thisOrderParam = iph.paramName();
-                        casa::Array<float> cleanArray(planeIter.planeShape());
-                        casa::ArrayLattice<float> clean(cleanArray);
+                        casacore::Array<float> cleanArray(planeIter.planeShape());
+                        casacore::ArrayLattice<float> clean(cleanArray);
                         ASKAPLOG_INFO_STR(logger, "About to get model for plane="<<plane<<" Taylor order="<<order<<
                                                   " for image "<<tmIt->first);
                         itsCleaners[imageTag]->getmodel(order,clean);
-                        casa::Array<double> slice = planeIter.getPlane(ip.value(thisOrderParam));
-                        casa::convertArray<double, float>(slice, cleanArray);
+                        casacore::Array<double> slice = planeIter.getPlane(ip.value(thisOrderParam));
+                        casacore::convertArray<double, float>(slice, cleanArray);
                     }
                     // add extra parameters (cross-terms) to the to-be-fixed list
                     for (int order = nTaylor; order<tmIt->second; ++order) {

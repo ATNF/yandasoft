@@ -110,7 +110,7 @@ void ParallelWriteIterator::chooseBuffer(const std::string &bufferID)
 /// Switch the output of operator* and operator-> to the original
 /// state (present after the iterator is just constructed) 
 /// where they point to the primary visibility data. This method
-/// is indended to cancel the results of chooseBuffer(casa::uInt)
+/// is indended to cancel the results of chooseBuffer(casacore::uInt)
 ///
 void ParallelWriteIterator::chooseOriginal() {}
 
@@ -139,7 +139,7 @@ void ParallelWriteIterator::init()
 	
 /// Checks whether there are more data available.
 /// @return True if there are more data available
-casa::Bool ParallelWriteIterator::hasMore() const throw()
+casacore::Bool ParallelWriteIterator::hasMore() const throw()
 {
   return itsAccessorValid;
 }
@@ -147,7 +147,7 @@ casa::Bool ParallelWriteIterator::hasMore() const throw()
 /// advance the iterator one step further
 /// @return True if there are more data (so constructions like
 ///         while(it.next()) {} are possible)
-casa::Bool ParallelWriteIterator::next()
+casacore::Bool ParallelWriteIterator::next()
 {
   itsNotAtOrigin = true;
   advance();
@@ -210,9 +210,9 @@ void ParallelWriteIterator::advance()
         itsComms.broadcastBlob(bs,0);
         LOFAR::BlobIBufString bib(bs);
         LOFAR::BlobIStream in(bib);
-        casa::Matrix<casa::Double> uvwBuf;
-        casa::Matrix<casa::Vector<casa::Double> > dirBuf;
-        casa::Vector<casa::Int> stokesBuf;
+        casacore::Matrix<casacore::Double> uvwBuf;
+        casacore::Matrix<casacore::Vector<casacore::Double> > dirBuf;
+        casacore::Vector<casacore::Int> stokesBuf;
         const int version = in.getStart("AccessorMetadata");
         ASKAPCHECK(version == 1, "Version mismatch for AccessorMetadata stream, you have version="<<version);
         in >> itsAccessor.itsAntenna1 >> itsAccessor.itsAntenna2 >> itsAccessor.itsFeed1 >> itsAccessor.itsFeed2 >> 
@@ -227,19 +227,19 @@ void ParallelWriteIterator::advance()
         itsAccessor.itsPointingDir2.resize(dirBuf.nrow());
         itsAccessor.itsDishPointing1.resize(dirBuf.nrow());
         itsAccessor.itsDishPointing2.resize(dirBuf.nrow());
-        for (casa::uInt row = 0; row<dirBuf.nrow(); ++row) {
-             itsAccessor.itsPointingDir1[row] = casa::MVDirection(dirBuf(row,0));                  
-             itsAccessor.itsPointingDir2[row] = casa::MVDirection(dirBuf(row,1));
-             itsAccessor.itsDishPointing1[row] = casa::MVDirection(dirBuf(row,2));                  
-             itsAccessor.itsDishPointing2[row] = casa::MVDirection(dirBuf(row,3));
-             for (casa::uInt col = 0; col<3; ++col) {
+        for (casacore::uInt row = 0; row<dirBuf.nrow(); ++row) {
+             itsAccessor.itsPointingDir1[row] = casacore::MVDirection(dirBuf(row,0));                  
+             itsAccessor.itsPointingDir2[row] = casacore::MVDirection(dirBuf(row,1));
+             itsAccessor.itsDishPointing1[row] = casacore::MVDirection(dirBuf(row,2));                  
+             itsAccessor.itsDishPointing2[row] = casacore::MVDirection(dirBuf(row,3));
+             for (casacore::uInt col = 0; col<3; ++col) {
                   itsAccessor.itsUVW[row](col) = uvwBuf(row,col);
              }
         }
         itsAccessor.itsStokes.resize(stokesBuf.nelements());
         ASKAPASSERT(stokesBuf.nelements() == status.itsNPol);
-        for (casa::uInt pol = 0; pol<status.itsNPol; ++pol) {
-             itsAccessor.itsStokes[pol] = casa::Stokes::StokesTypes(stokesBuf[pol]);
+        for (casacore::uInt pol = 0; pol<status.itsNPol; ++pol) {
+             itsAccessor.itsStokes[pol] = casacore::Stokes::StokesTypes(stokesBuf[pol]);
         }
         // consistency check
         ASKAPASSERT(itsAccessor.itsAntenna1.nelements() == status.itsNRow);
@@ -306,7 +306,7 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
   do {
     status.itsHasMore = it.hasMore();
     if (status.itsHasMore) {
-       ASKAPCHECK(it->nChannel() >= static_cast<casa::uInt>(comms.nProcs() - 1), 
+       ASKAPCHECK(it->nChannel() >= static_cast<casacore::uInt>(comms.nProcs() - 1), 
                   "Idle workers are not currently supported. Number of spectral channels("<<it->nChannel()<<
                   ") should not be less than the number of workers ("<<(comms.nProcs() - 1)<<")");
        
@@ -338,10 +338,10 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
           LOFAR::BlobOBufString bob(bs);
           LOFAR::BlobOStream out(bob);
           out.putStart("AccessorMetadata", 1);
-          casa::Matrix<casa::Double> uvwBuf(it->nRow(),3);
-          casa::Matrix<casa::Vector<casa::Double> > dirBuf(it->nRow(),4);
-          for (casa::uInt row = 0; row<it->nRow(); ++row) {
-               for (casa::uInt col = 0; col<3; ++col) {
+          casacore::Matrix<casacore::Double> uvwBuf(it->nRow(),3);
+          casacore::Matrix<casacore::Vector<casacore::Double> > dirBuf(it->nRow(),4);
+          for (casacore::uInt row = 0; row<it->nRow(); ++row) {
+               for (casacore::uInt col = 0; col<3; ++col) {
                     uvwBuf(row,col) = it->uvw()[row](col);
                }
                dirBuf(row,0) = it->pointingDir1()[row].get();
@@ -349,9 +349,9 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
                dirBuf(row,2) = it->dishPointing1()[row].get();
                dirBuf(row,3) = it->dishPointing2()[row].get();               
           }
-          casa::Vector<casa::Int> stokesBuf(it->stokes().nelements());
-          for (casa::uInt pol = 0; pol<stokesBuf.nelements(); ++pol) {
-               stokesBuf[pol] = casa::Int(it->stokes()[pol]);
+          casacore::Vector<casacore::Int> stokesBuf(it->stokes().nelements());
+          for (casacore::uInt pol = 0; pol<stokesBuf.nelements(); ++pol) {
+               stokesBuf[pol] = casacore::Int(it->stokes()[pol]);
           }
           out << it->antenna1() << it->antenna2() << it->feed1() << it->feed2() << it->feed1PA() <<
                  it->feed2PA() << dirBuf << uvwBuf << it->time() << stokesBuf;
@@ -362,17 +362,17 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
         for (int worker = 0; worker < comms.nProcs() - 1; ++worker) {
              //ASKAPLOG_INFO_STR(logger, "About to send rank-specific metadata to rank "<<worker + 1);
              // start and stop of the slice
-             casa::IPosition start(3,0);
+             casacore::IPosition start(3,0);
              ASKAPDEBUGASSERT((it->nRow()!=0) && (it->nChannel()!=0) && (it->nPol()));
 
              utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
 
-             casa::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
              start(1) = static_cast<int>(rp.first(worker));
              ASKAPASSERT(end(1) < int(it->nChannel()));
              ASKAPDEBUGASSERT(start(1)<=end(1));
-             const casa::IPosition vecStart(1, start(1));
-             const casa::IPosition vecEnd(1, end(1));
+             const casacore::IPosition vecStart(1, start(1));
+             const casacore::IPosition vecEnd(1, end(1));
              // send slices of flags, noise and frequency. Visibility can be assumed to be zero or read as well.
              {
                const bool readVis = ((mode & READ) == READ);
@@ -381,12 +381,12 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
                LOFAR::BlobOBufString bob(bs);
                LOFAR::BlobOStream out(bob);
                out.putStart("AccessorVariableMetadata", readVis ? 2 : 1);
-               casa::Cube<casa::Bool> flagBuf(it->flag());
-               casa::Cube<casa::Complex> noiseBuf(it->noise());
-               casa::Vector<casa::Double> freqBuf(it->frequency());
+               casacore::Cube<casacore::Bool> flagBuf(it->flag());
+               casacore::Cube<casacore::Complex> noiseBuf(it->noise());
+               casacore::Vector<casacore::Double> freqBuf(it->frequency());
                out<<flagBuf(start,end)<<noiseBuf(start,end)<<freqBuf(vecStart,vecEnd);
                if (readVis) {
-                   casa::Cube<casa::Complex> visBuf(it->visibility());
+                   casacore::Cube<casacore::Complex> visBuf(it->visibility());
                    out<<visBuf(start,end);
                }
                out.putEnd();
@@ -398,12 +398,12 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
         for (int worker = 0; worker < comms.nProcs() - 1; ++worker) {
              //ASKAPLOG_INFO_STR(logger, "About to receive visibilities from rank "<<worker + 1);
              // start and stop of the slice
-             casa::IPosition start(3,0);
+             casacore::IPosition start(3,0);
              ASKAPDEBUGASSERT((it->nRow()!=0) && (it->nChannel()!=0) && (it->nPol()));
 
              utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
 
-             casa::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
              start(1) = static_cast<int>(rp.first(worker));
              ASKAPASSERT(end(1) < int(it->nChannel()));
 
@@ -419,19 +419,19 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
                const int version = in.getStart("AccessorVisibilities");
                ASKAPCHECK(version == recvFlags ? 2 : 1, "Version mismatch in serialising of visibilities");
                if (recvFlags) {
-                   casa::Cube<casa::Bool> flagBuf;
+                   casacore::Cube<casacore::Bool> flagBuf;
                    in>>flagBuf;
                    const boost::shared_ptr<accessors::IFlagDataAccessor> fda = boost::dynamic_pointer_cast<accessors::IFlagDataAccessor>(boost::shared_ptr<accessors::IDataAccessor>(it.operator->(), utility::NullDeleter()));
                    ASKAPCHECK(fda, "Flag write operation is requested, but supplied data accessor doesn't support writing flags");
-                   casa::Cube<casa::Bool> flagSlice = fda->rwFlag()(start,end);
+                   casacore::Cube<casacore::Bool> flagSlice = fda->rwFlag()(start,end);
                    ASKAPCHECK(flagSlice.shape() == flagBuf.shape(), "Shape mismatch of the flag cube, received has shape="<<
                         flagBuf.shape()<<" expected shape="<<flagSlice.shape());
                    flagSlice = flagBuf;
                }
-               casa::Cube<casa::Complex> visBuf;
+               casacore::Cube<casacore::Complex> visBuf;
                in>>visBuf;
                in.getEnd();
-               casa::Cube<casa::Complex> visSlice = it->rwVisibility()(start,end);
+               casacore::Cube<casacore::Complex> visSlice = it->rwVisibility()(start,end);
                ASKAPCHECK(visSlice.shape() == visBuf.shape(), "Shape mismatch of the visibility cube, received has shape="<<
                         visBuf.shape()<<" expected shape="<<visSlice.shape());
                visSlice = visBuf;

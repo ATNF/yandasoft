@@ -76,8 +76,8 @@ struct UnpolarizedGaussianSource : public UnpolarizedComponent<6> {
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
                     std::vector<double> &result) const;
   
   /// @brief calculate stokes I visibilities and derivatives for this component
@@ -88,9 +88,9 @@ struct UnpolarizedGaussianSource : public UnpolarizedComponent<6> {
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    std::vector<casa::AutoDiff<double> > &result) const; 
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    std::vector<casacore::AutoDiff<double> > &result) const; 
 
   using UnpolarizedComponent<6>::calculate;
 private:
@@ -103,9 +103,9 @@ private:
   /// @param[in] params RigidVector with parameters
   /// @param[out] result an output buffer used to store values
   template<typename T>
-  static void calcGaussian(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    const casa::RigidVector<T, 6> &params,
+  static void calcGaussian(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    const casacore::RigidVector<T, 6> &params,
                     std::vector<T> &result);
 };
 

@@ -60,34 +60,34 @@ namespace askap {
 
                 /// @brief Construct from a specified shape
                 /// param[in] shape Shape of desired basis function
-                BasisFunction(const casa::IPosition shape);
+                BasisFunction(const casacore::IPosition shape);
 
                 /// @brief Initialise from a specified shape (actually only first two axes)
                 /// @detail Set the shape of the basis function and fill in the actual
                 /// function.
                 /// param[in] shape Shape of desired basis function on the first two axes.
-                virtual void initialise(const casa::IPosition shape);
+                virtual void initialise(const casacore::IPosition shape);
 
                 /// @brief Return the number of bases in the basis function
-                casa::uInt numberBases() const {return itsNumberBases;};
+                casacore::uInt numberBases() const {return itsNumberBases;};
 
                 /// @brief Return the basis function as an array
                 /// @details The basis function is returned as an array
                 /// of shape (nx, ny, nbases) where nx, ny are the
                 /// lengths of the first two axes.
-                virtual casa::Array<T>& basisFunction() {return itsBasisFunction;};
+                virtual casacore::Array<T>& basisFunction() {return itsBasisFunction;};
 
                 /// @brief Multiply by a matrix on the third dimension
-                virtual void multiplyArray(const casa::Matrix<casa::Double>& arr);
+                virtual void multiplyArray(const casacore::Matrix<casacore::Double>& arr);
 
                 /// @brief Orthogonalise using Gram Schmidt algorithm
-                void gramSchmidt(casa::Array<T>& bf);
+                void gramSchmidt(casacore::Array<T>& bf);
 
             protected:
-                casa::IPosition itsShape;
-                casa::Array<T> itsBasisFunction;
-                casa::uInt itsNumberBases;
-                casa::Bool itsOrthogonal;
+                casacore::IPosition itsShape;
+                casacore::Array<T> itsBasisFunction;
+                casacore::uInt itsNumberBases;
+                casacore::Bool itsOrthogonal;
         };
 
     } // namespace synthesis

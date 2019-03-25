@@ -129,7 +129,7 @@ void CalibrationIterator::chooseBuffer(const std::string &bufferID)
 /// Switch the output of operator* and operator-> to the original
 /// state (present after the iterator is just constructed) 
 /// where they point to the primary visibility data. This method
-/// is indended to cancel the results of chooseBuffer(casa::uInt)
+/// is indended to cancel the results of chooseBuffer(casacore::uInt)
 ///
 void CalibrationIterator::chooseOriginal()
 {
@@ -166,7 +166,7 @@ void CalibrationIterator::init()
 	
 /// Checks whether there are more data available.
 /// @return True if there are more data available
-casa::Bool CalibrationIterator::hasMore() const throw()
+casacore::Bool CalibrationIterator::hasMore() const throw()
 {
   #ifdef ASKAP_DEBUG
   if (!itsWrappedIterator) {
@@ -179,7 +179,7 @@ casa::Bool CalibrationIterator::hasMore() const throw()
 /// advance the iterator one step further 
 /// @return True if there are more data (so constructions like 
 ///         while(it.next()) {} are possible)
-casa::Bool CalibrationIterator::next()
+casacore::Bool CalibrationIterator::next()
 {
   itsDataAccessor.reset(); // invalidate cache of calibrated visibilities
   ASKAPDEBUGASSERT(itsWrappedIterator)

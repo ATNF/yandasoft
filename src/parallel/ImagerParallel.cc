@@ -452,7 +452,7 @@ namespace askap
     void ImagerParallel::calcOne(const string& ms, bool discard)
     {
       ASKAPDEBUGTRACE("ImagerParallel::calcOne");
-      casa::Timer timer;
+      casacore::Timer timer;
       timer.mark();
       ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
       // First time around we need to generate the equation
@@ -475,7 +475,7 @@ namespace askap
         sel << parset();
         IDataConverterPtr conv=ds.createConverter();
         conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         // ensure that time is counted in seconds since 0 MJD
         conv->setEpochFrame();
 
@@ -586,7 +586,7 @@ namespace askap
           receiveNE();
         }
         ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
         Quality q;
         ASKAPDEBUGASSERT(itsModel);
@@ -649,21 +649,21 @@ namespace askap
       // we could have returned some special value (e.g. negative), but throw exception for now
       ASKAPCHECK(ine, "Current code to calculate peak residuals works for imaging-specific normal equations only");
       double peak = -1.;
-      const std::map<string, casa::Vector<double> >& dataVector = ine->dataVector();
-      const std::map<string, casa::Vector<double> >& diag = ine->normalMatrixDiagonal();
-      for (std::map<string, casa::Vector<double> >::const_iterator ci = dataVector.begin();
+      const std::map<string, casacore::Vector<double> >& dataVector = ine->dataVector();
+      const std::map<string, casacore::Vector<double> >& diag = ine->normalMatrixDiagonal();
+      for (std::map<string, casacore::Vector<double> >::const_iterator ci = dataVector.begin();
            ci!=dataVector.end(); ++ci) {
            if (ci->first.find("image") == 0) {
                // this is an image
                ASKAPASSERT(ci->second.nelements() != 0);
-               std::map<std::string, casa::Vector<double> >::const_iterator diagIt =
+               std::map<std::string, casacore::Vector<double> >::const_iterator diagIt =
                             diag.find(ci->first);
                ASKAPDEBUGASSERT(diagIt != diag.end());
-               const double maxDiag = casa::max(diagIt->second);
+               const double maxDiag = casacore::max(diagIt->second);
                // hard coded at this stage
                const double cutoff=1e-2*maxDiag;
                ASKAPDEBUGASSERT(diagIt->second.nelements() == ci->second.nelements());
-               for (casa::uInt elem = 0; elem<diagIt->second.nelements(); ++elem) {
+               for (casacore::uInt elem = 0; elem<diagIt->second.nelements(); ++elem) {
                     const double thisDiagElement = std::abs(diagIt->second[elem]);
                     if (thisDiagElement > cutoff) {
                         const double tempPeak =  ci->second[elem]/thisDiagElement;
@@ -694,14 +694,14 @@ namespace askap
       const std::string outParName = "sensitivity" + wtImage.substr(7);
       scimath::Axes axes = itsModel->axes(wtImage);
       //
-      casa::Array<double> wtArr = itsModel->value(wtImage);
-      const double cutoff = casa::max(wtArr) * itsExpSensitivityCutoff;
-      casa::Array<double> sensitivityArr(wtArr.shape());
+      casacore::Array<double> wtArr = itsModel->value(wtImage);
+      const double cutoff = casacore::max(wtArr) * itsExpSensitivityCutoff;
+      casacore::Array<double> sensitivityArr(wtArr.shape());
 
       for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
-           const casa::Vector<double> wtPlane = iter.getPlaneVector(wtArr);
-           casa::Vector<double> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
-           for (casa::uInt elem = 0; elem < wtPlane.nelements(); ++elem) {
+           const casacore::Vector<double> wtPlane = iter.getPlaneVector(wtArr);
+           casacore::Vector<double> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
+           for (casacore::uInt elem = 0; elem < wtPlane.nelements(); ++elem) {
                 const double wt = wtPlane[elem];
                 if (wt > cutoff) {
                     // at this stage - just reciprocal. Still need to work on the normalisation
@@ -784,7 +784,7 @@ namespace askap
             string restore_suffix;
             uint n_passes = 1;
             // if extra passes are required, save anything that is changed so it can be reset
-            std::map<string, boost::shared_ptr<casa::ImageInterface<float> > > saved_models;
+            std::map<string, boost::shared_ptr<casacore::ImageInterface<float> > > saved_models;
 
             // add a second pass if a separate restore preconditioner is defined
             if (tmpset.isDefined("restore.preconditioner.Names")) {
@@ -822,7 +822,7 @@ namespace askap
                     tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
                     restore_suffix = ".alt";
                     // reset image models to be free parameters with their initial values
-                    for (std::map<string, boost::shared_ptr<casa::ImageInterface<float> > >::iterator
+                    for (std::map<string, boost::shared_ptr<casacore::ImageInterface<float> > >::iterator
                         it=saved_models.begin(); it!=saved_models.end(); ++it)
                     {
                         SynthesisParamsHelper::update(*itsModel, it->first, *(it->second));

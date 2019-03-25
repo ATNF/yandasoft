@@ -54,7 +54,7 @@ namespace askap {
         /// image from a dirty image, psf optionally using a mask and a weights image.
         /// The template argument T is the type, and FT is the transform
         /// e.g. Deconvolver<Double, DComplex>
-        /// The interface is by casa::Array<T>'s holding the various arrays
+        /// The interface is by casacore::Array<T>'s holding the various arrays
         /// Usually the arrays are 2-D. However, in the case of e.g. MSMFS the
         /// third axis will be the taylor terms.
         /// @ingroup Deconvolver
@@ -73,7 +73,7 @@ namespace askap {
                 /// same model (e.g. as in MFS)
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverBase(casa::Vector<casa::Array<T> >& dirty, casa::Vector<casa::Array<T> >& psf);
+                DeconvolverBase(casacore::Vector<casacore::Array<T> >& dirty, casacore::Vector<casacore::Array<T> >& psf);
 
                 /// @brief Construct from dirty image and psf
                 /// @detail Construct a deconvolver from a dirty image and
@@ -82,47 +82,47 @@ namespace askap {
                 /// version for compatibility
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverBase(casa::Array<T>& dirty, casa::Array<T>& psf);
+                DeconvolverBase(casacore::Array<T>& dirty, casacore::Array<T>& psf);
 
                 /// @brief Get the current dirty image
                 /// @detail Get the current dirty image
-                casa::Array<T>& dirty(const casa::uInt term = 0);
+                casacore::Array<T>& dirty(const casacore::uInt term = 0);
 
                 /// @brief Get the current PSF
                 /// @detail Get the current PSF
-                casa::Array<T>& psf(const casa::uInt term = 0);
+                casacore::Array<T>& psf(const casacore::uInt term = 0);
 
                 /// @brief Set the initial model
                 /// @detail Set the model from which iteration will start
-                void setModel(const casa::Array<T> model, const casa::uInt term = 0);
+                void setModel(const casacore::Array<T> model, const casacore::uInt term = 0);
 
                 /// @brief Get the current model
                 /// @detail Get the current model
                 /// @param[out] model Model image (array)
-                casa::Array<T>& model(const casa::uInt term = 0);
+                casacore::Array<T>& model(const casacore::uInt term = 0);
 
                 /// @brief Update only the dirty image
                 /// @detail Update an existing deconvolver for a changed dirty image
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] term term to update
-                virtual void updateDirty(casa::Array<T>& dirty, const casa::uInt term = 0);
+                virtual void updateDirty(casacore::Array<T>& dirty, const casacore::uInt term = 0);
 
                 /// @brief Update only the dirty images
                 /// @detail Update an existing deconvolver for a changed dirty images.
                 /// @param[in] dirty Dirty image (vector of arrays)
-                virtual void updateDirty(casa::Vector<casa::Array<T> >& dirty);
+                virtual void updateDirty(casacore::Vector<casacore::Array<T> >& dirty);
 
                 /// @brief Set the weight image
                 /// @detail The weights image (actually the sqrt) is used to
                 /// aid the deconvolution. The weights image is proportional
                 /// to 1/sigma**2
                 /// @param[in] weights Weights (array)
-                void setWeight(casa::Array<T> weight, const casa::uInt term = 0);
+                void setWeight(casacore::Array<T> weight, const casacore::uInt term = 0);
 
                 /// @brief Get the weight image
                 /// @detail Get the weight
                 /// @param[out] weight (array)
-                casa::Array<T> & weight(const casa::uInt term = 0);
+                casacore::Array<T> & weight(const casacore::uInt term = 0);
 
                 /// @brief Set the control
                 /// @detail The control is used to hold all the information
@@ -155,23 +155,23 @@ namespace askap {
                 /// @detail Update the residuals for this model.
                 /// This usually requires convolution of the model with
                 /// the specified PSF and subtraction from the dirty image.
-                virtual void updateResiduals(casa::Vector<casa::Array<T> >& model);
+                virtual void updateResiduals(casacore::Vector<casacore::Array<T> >& model);
 
                 /// @brief Update the residuals: keep for compatibility
                 /// @detail Update the residuals for this model.
                 /// This usually requires convolution of the model with
                 /// the specified PSF and subtraction from the dirty image.
-                virtual void updateResiduals(casa::Array<T>& model);
+                virtual void updateResiduals(casacore::Array<T>& model);
 
                 /// @brief Restore with specified beam
                 /// @detail Restore the model by smoothing
                 /// and adding residuals
-                virtual bool restore(casa::Vector<casa::Array<T> >& restored, casa::Vector<casa::Array<T> >& model);
+                virtual bool restore(casacore::Vector<casacore::Array<T> >& restored, casacore::Vector<casacore::Array<T> >& model);
 
                 /// @brief Restore with specified beam
                 /// @detail Restore the model by smoothing
                 /// and adding residuals
-                virtual bool restore(casa::Vector<casa::Array<T> >& restored);
+                virtual bool restore(casacore::Vector<casacore::Array<T> >& restored);
 
                 /// @brief Initialize the deconvolution
                 /// @detail Initialise e.g. set weights
@@ -190,21 +190,21 @@ namespace askap {
             protected:
 
                 // Number of terms in the expansion > 0
-                casa::uInt itsNumberTerms;
+                casacore::uInt itsNumberTerms;
 
                 // Initialise for both constructors
-                void init(casa::Vector<casa::Array<T> >& dirty, casa::Vector<casa::Array<T> >& psf);
+                void init(casacore::Vector<casacore::Array<T> >& dirty, casacore::Vector<casacore::Array<T> >& psf);
 
                 // Validate the various shapes to ensure consistency
                 void validateShapes();
 
-                casa::Vector<casa::Array<T> > itsDirty;
+                casacore::Vector<casacore::Array<T> > itsDirty;
 
-                casa::Vector<casa::Array<T> > itsPsf;
+                casacore::Vector<casacore::Array<T> > itsPsf;
 
-                casa::Vector<casa::Array<T> > itsModel;
+                casacore::Vector<casacore::Array<T> > itsModel;
 
-                casa::Vector<casa::Array<T> > itsWeight;
+                casacore::Vector<casacore::Array<T> > itsWeight;
 
                 /// The state of the deconvolver
                 boost::shared_ptr<DeconvolverState<T> > itsDS;
@@ -220,7 +220,7 @@ namespace askap {
                 boost::shared_ptr<DeconvolverMonitor<T> > itsDM;
 
                 // Peak and location of peak of PSF(0)
-                casa::IPosition itsPeakPSFPos;
+                casacore::IPosition itsPeakPSFPos;
                 T itsPeakPSFVal;
 
                 // Beam information, in pixels
@@ -230,8 +230,8 @@ namespace askap {
 
                 // Audit the memory in use right now
                 void auditAllMemory();
-                casa::uInt auditMemory(casa::Vector<casa::Array<T> >& vecArray);
-                casa::uInt auditMemory(casa::Vector<casa::Array<FT> >& vecArray);
+                casacore::uInt auditMemory(casacore::Vector<casacore::Array<T> >& vecArray);
+                casacore::uInt auditMemory(casacore::Vector<casacore::Array<FT> >& vecArray);
         };
 
     } // namespace synthesis

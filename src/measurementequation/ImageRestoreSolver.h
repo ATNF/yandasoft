@@ -124,7 +124,7 @@ namespace askap
         /// is set. Otherwise, it just returns the beam parameters passed in the constructor
         /// (i.e. user override).
         /// @param[in] name name of the parameter to work with
-        casa::Vector<casa::Quantum<double> > getBeam(const std::string &name) const;
+        casacore::Vector<casacore::Quantum<double> > getBeam(const std::string &name) const;
 
       private:
         /// @brief proxy for beam parameters

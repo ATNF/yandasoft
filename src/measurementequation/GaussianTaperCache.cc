@@ -95,7 +95,7 @@ GaussianTaperCache& GaussianTaperCache::operator=(const GaussianTaperCache &othe
 /// The output is guaranteed to have the requested shape.
 /// @param[in] shape required shape
 /// @return array with the taper (casa arrays use reference semantics)
-casa::Array<casa::Complex> GaussianTaperCache::taper(const casa::IPosition &shape) const
+casacore::Array<casacore::Complex> GaussianTaperCache::taper(const casacore::IPosition &shape) const
 {
   if (!shape.isEqual(itsTaperCache.shape())) {
       initTaperCache(shape);
@@ -107,7 +107,7 @@ casa::Array<casa::Complex> GaussianTaperCache::taper(const casa::IPosition &shap
 /// @details This method populates the cache using the values of
 /// data members
 /// @param[in] shape shape of the required array
-void GaussianTaperCache::initTaperCache(const casa::IPosition &shape) const
+void GaussianTaperCache::initTaperCache(const casacore::IPosition &shape) const
 {
   ASKAPDEBUGASSERT(shape.nelements() >= 2);
 
@@ -120,10 +120,10 @@ void GaussianTaperCache::initTaperCache(const casa::IPosition &shape) const
 #endif  
 
   itsTaperCache.resize(shape);
-  const casa::Int nx = shape[0];
-  const casa::Int ny = shape[1];
-  casa::IPosition index(shape.nelements(),0);
-  casa::SquareMatrix<casa::Double, 2> rotation(casa::SquareMatrix<casa::Double, 2>::General);
+  const casacore::Int nx = shape[0];
+  const casacore::Int ny = shape[1];
+  casacore::IPosition index(shape.nelements(),0);
+  casacore::SquareMatrix<casacore::Double, 2> rotation(casacore::SquareMatrix<casacore::Double, 2>::General);
   // rotation direction is flipped here as we rotate the gaussian, not
   // the coordinate
 
@@ -136,10 +136,10 @@ void GaussianTaperCache::initTaperCache(const casa::IPosition &shape) const
   //const double normFactor = 2.*M_PI*itsMajorAxis*itsMinorAxis*erf(double(nx)/(2.*sqrt(2.)*itsMajorAxis))*
   //            erf(double(ny)/(2.*sqrt(2.)*itsMinorAxis));
   double sum = 0.;    
-  const double maxRadius = double(casa::min(nx,ny)/2);        
+  const double maxRadius = double(casacore::min(nx,ny)/2);        
   for (index[0] = 0; index[0]<nx; ++index[0]) {
        for (index[1] = 0; index[1]<ny; ++index[1]) {
-            casa::RigidVector<casa::Double, 2> offset;
+            casacore::RigidVector<casacore::Double, 2> offset;
             offset(0) = (double(index[0])-double(nx)/2.);
             offset(1) = (double(index[1])-double(ny)/2.);
             if (sqrt(offset(0)*offset(0)+offset(1)*offset(1)) > maxRadius) {
@@ -151,14 +151,14 @@ void GaussianTaperCache::initTaperCache(const casa::IPosition &shape) const
             // problems with some compilers. We have to use operator*= instead.
             // according to manual it is equivalent to v=Mv, rather than to v=v*M
             offset *= rotation;
-            const double taperingFactor = exp(-casa::square(offset(0)/itsMajorAxis)/2.-
-                       casa::square(offset(1)/itsMinorAxis)/2.);
+            const double taperingFactor = exp(-casacore::square(offset(0)/itsMajorAxis)/2.-
+                       casacore::square(offset(1)/itsMinorAxis)/2.);
             sum += taperingFactor;
             itsTaperCache(index) = taperingFactor;
        }
   }
   //std::cout<<"normFactor/sum: "<<normFactor/sum<<std::endl;
-  //  itsTaperCache /= casa::Complex(sum,0.);
+  //  itsTaperCache /= casacore::Complex(sum,0.);
 }
 
 } // namespace synthesis

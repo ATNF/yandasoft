@@ -188,14 +188,14 @@ namespace askap
                 /// @param[in] parname name of the parameter
                 /// @param[in] defval default value (as string)                
                 /// @return seed
-                casa::Int getSeed(const std::string &parname,const std::string &defval) const;
+                casacore::Int getSeed(const std::string &parname,const std::string &defval) const;
 
             private:
                 /// Simulator
                 boost::shared_ptr<Simulator> itsSim;
 
                 /// MeasurementSet pointer - we need this to flush the MS to disk
-                boost::shared_ptr<casa::MeasurementSet> itsMs;
+                boost::shared_ptr<casacore::MeasurementSet> itsMs;
                 
                 /// @brief model is read by the master and distributed?
                 /// @details Depending on the model file name (containing %w or not), the model

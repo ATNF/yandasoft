@@ -132,7 +132,7 @@ namespace askap
       askap::askapparallel::AskapParallel& itsComms;
 
       /// obtain frequency reference frame
-      inline casa::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
+      inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
 
       /// @brief helper method to create and configure gridder
       /// @details It is expected to be called from the constructor of derived classes
@@ -147,7 +147,7 @@ namespace askap
       /// @brief reference frame for frequency
       /// @details We may want to simulate/image in different reference frames.
       /// This field contains the reference frame selected in the parset.
-      casa::MFrequency::Ref itsFreqRefFrame;    
+      casacore::MFrequency::Ref itsFreqRefFrame;    
     };
 
   }

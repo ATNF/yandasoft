@@ -77,8 +77,8 @@ struct UVPattern {
    /// @param[in] vCellSize size of the uv-cell in the direction of 
    ///            v-coordinate (in wavelengths)
    /// @param[in] overSample oversampling factor (default is 1)
-   UVPattern(casa::uInt uSize, casa::uInt vSize, double uCellSize,
-             double vCellSize, casa::uInt overSample = 1) :
+   UVPattern(casacore::uInt uSize, casacore::uInt vSize, double uCellSize,
+             double vCellSize, casacore::uInt overSample = 1) :
       itsArray(uSize,vSize), itsUCellSize(uCellSize),
       itsVCellSize(vCellSize), itsOverSample(overSample),
       itsMaxSupport(uSize > vSize ? uSize : vSize) {} 
@@ -99,13 +99,13 @@ struct UVPattern {
    /// @brief read-only access to a pattern
    /// @details This method allows a direct access to the pattern array
    /// @return const reference to the pattern
-   inline const casa::Matrix<casa::DComplex>& pattern() const 
+   inline const casacore::Matrix<casacore::DComplex>& pattern() const 
    { return itsArray; }
 
    /// @brief read-write access to a pattern
    /// @details This method allows a direct access to the pattern array
    /// @return non-const reference to the pattern
-   inline casa::Matrix<casa::DComplex>& pattern()
+   inline casacore::Matrix<casacore::DComplex>& pattern()
    { return itsArray; }
    
    /// @brief read-only access to an individual element
@@ -114,7 +114,7 @@ struct UVPattern {
    /// @param[in] iu index in the u-coordinate
    /// @param[in] iv index in the v-coordinate
    /// @return const reference to the requested element
-   inline const casa::DComplex& operator()(casa::uInt iu, casa::uInt iv) const
+   inline const casacore::DComplex& operator()(casacore::uInt iu, casacore::uInt iv) const
    { return itsArray(iu,iv); }
    
    /// @brief read-write access to an individual element
@@ -123,7 +123,7 @@ struct UVPattern {
    /// @param[in] iu index in the u-coordinate
    /// @param[in] iv index in the v-coordinate
    /// @return non-const reference to the requested element
-   inline casa::DComplex& operator()(casa::uInt iu, casa::uInt iv)
+   inline casacore::DComplex& operator()(casacore::uInt iu, casacore::uInt iv)
    { return itsArray(iu,iv); }
    
    /// @brief obtain a size of the uv-cell in the u-direction 
@@ -136,27 +136,27 @@ struct UVPattern {
    
    /// @brief obtain an oversampling factor
    /// @return an oversampling factor
-   inline casa::uInt overSample() const { return itsOverSample;}
+   inline casacore::uInt overSample() const { return itsOverSample;}
    
    /// @brief obtain a size of the grid in the u-direction
    /// @return a size of the array in the u-direction
-   inline casa::uInt uSize() const { return itsArray.nrow(); }
+   inline casacore::uInt uSize() const { return itsArray.nrow(); }
    
    /// @brief obtain a size of the grid in the v-direction
    /// @return a size of the array in the v-direction
-   inline casa::uInt vSize() const { return itsArray.ncolumn(); }
+   inline casacore::uInt vSize() const { return itsArray.ncolumn(); }
    
    /// @brief obtain the upper limit on the support
    /// @return maximum possible support size (known a priori, e.g. dish size)
-   inline casa::uInt maxSupport() const { return itsMaxSupport; }
+   inline casacore::uInt maxSupport() const { return itsMaxSupport; }
    
    /// @brief assign a new value to the upper limit of the support
    /// @param[in] supp support size (always assume that it is centred)
-   inline void setMaxSupport(casa::uInt supp) { itsMaxSupport = supp; }
+   inline void setMaxSupport(casacore::uInt supp) { itsMaxSupport = supp; }
    
 private:
    /// @brief array of values describing the pattern
-   casa::Matrix<casa::DComplex> itsArray;
+   casacore::Matrix<casacore::DComplex> itsArray;
    
    /// @brief a size of the uv-cell in the direction of u-coordinate (in wavelengths)
    double itsUCellSize;
@@ -165,7 +165,7 @@ private:
    double itsVCellSize;   
    
    /// @brief oversampling factor
-   casa::uInt itsOverSample;
+   casacore::uInt itsOverSample;
    
    /// @brief max support
    /// @details The upper limit can often be placed on the support a priori
@@ -173,7 +173,7 @@ private:
    /// amend this field to speed up calculations of the actual support.
    /// By default it is the largest size of the buffer.
    /// @note Do we need two values, one for each axis?
-   casa::uInt itsMaxSupport;
+   casacore::uInt itsMaxSupport;
 };
 		
 } // namespace synthesis

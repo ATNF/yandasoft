@@ -72,7 +72,7 @@ namespace askap
         /// necessary when the data are read (using conversion mechanism provided by the accessor).
         /// A call to this method sets up new default.
         /// @param[in] frame reference frame to use for all created images
-        static void setDefaultFreqFrame(const casa::MFrequency::Ref &frame);
+        static void setDefaultFreqFrame(const casacore::MFrequency::Ref &frame);
 
         /// @brief obtain image handler
         /// @details For some operations it may be necessary to access the (global) instance of the
@@ -157,7 +157,7 @@ namespace askap
           const std::vector<int>& shape,
           const bool ewprojection,
           const double freqmin, const double freqmax, const int nchan,
-          const casa::Vector<casa::Stokes::StokesTypes> &stokes,
+          const casacore::Vector<casacore::Stokes::StokesTypes> &stokes,
           const std::vector<std::string>& centreDir = std::vector<std::string>());
 
         /// @brief Add a parameter as a faceted image
@@ -180,7 +180,7 @@ namespace askap
           const std::vector<int>& shape,
           const bool ewprojection,
           const double freqmin, const double freqmax, const int nchan,
-          const casa::Vector<casa::Stokes::StokesTypes> &stokes,
+          const casacore::Vector<casacore::Stokes::StokesTypes> &stokes,
           const int nfacets, const int facetstep);
 
         /// @brief add a parameter as a merged faceted image
@@ -217,7 +217,7 @@ namespace askap
         /// @param[in] name full name of the parameter representing this image
         /// @param[in] beam major, minor axes and position anlge as quantities
         static void setBeam(askap::scimath::Params &ip, const string &name,
-                            const casa::Vector<casa::Quantum<double> > &beam);
+                            const casacore::Vector<casacore::Quantum<double> > &beam);
 
         /// @brief find a parameter representing a PSF
         /// @details If multiple PSF parameters are present, the first encountered is returned
@@ -237,11 +237,11 @@ namespace askap
         ///            is 0.05, i.e. fitting is done to pixels enclosed in a rectangular support
         ///            defined by 5% cutoff from the peak)
         /// @param[in] name full name of the parameter representing the PSF (default is to figure this out)
-        static casa::Vector<casa::Quantum<double> > fitBeam(const askap::scimath::Params &ip,
+        static casacore::Vector<casacore::Quantum<double> > fitBeam(const askap::scimath::Params &ip,
                                                             const double cutoff = 0.05,
                                                             const std::string &name = "");
 
-        static casa::Vector<casa::Quantum<double> > fitBeam(casa::Array<double> &psfArray,
+        static casacore::Vector<casacore::Quantum<double> > fitBeam(casacore::Array<double> &psfArray,
                                                             const scimath::Axes &axes,
                                                             const double cutoff = 0.05);
 
@@ -256,7 +256,7 @@ namespace askap
         /// @param[in] ip parameters
         /// @param[in] name name of the facet parameter (with suffix like .facet.0.0)
         /// @return an array of doubles representing a subimage of the merged image
-        static casa::Array<double> getFacet(askap::scimath::Params &ip, const string &name);
+        static casacore::Array<double> getFacet(askap::scimath::Params &ip, const string &name);
 
         /// @brief Add a set of parameters from a parset
         /// @param ip Parameters
@@ -292,21 +292,21 @@ namespace askap
         /// Note that this will be a reference if possible
         /// @param ip Parameters
         /// @param name Name of parameter
-        static boost::shared_ptr<casa::TempImage<float> >
+        static boost::shared_ptr<casacore::TempImage<float> >
           tempImage(const askap::scimath::Params& ip,
           const string& name);
 
         /// @brief Create a coordinate system for a parameter
         /// @param ip Parameters
         /// @param name Name of parameter
-        static casa::CoordinateSystem
+        static casacore::CoordinateSystem
           coordinateSystem(const askap::scimath::Params& ip,
           const string& name);
 
         /// @brief Create a direction coordinate for a parameter
         /// @param ip Parameters
         /// @param name Name of parameter
-        static casa::DirectionCoordinate
+        static casacore::DirectionCoordinate
           directionCoordinate(const askap::scimath::Params& ip,
           const string& name);
 
@@ -332,7 +332,7 @@ namespace askap
         /// @param name Name of parameter
         /// @param image Image to be drawn from
         static void update(askap::scimath::Params& ip, const string& name,
-          const casa::ImageInterface<float>& image);
+          const casacore::ImageInterface<float>& image);
 
         /// @brief a helper template method to check whether the element is
         /// present in a container.
@@ -413,8 +413,8 @@ namespace askap
         /// @param[in] dc direction coordinate
         /// @return slicer encapsulating BLC and TRC
         /// @note The dimensionality of the output corresponds to the input image
-        static casa::Slicer facetSlicer(const askap::scimath::Params& ip, const std::string &name,
-                              const casa::DirectionCoordinate &dc);
+        static casacore::Slicer facetSlicer(const askap::scimath::Params& ip, const std::string &name,
+                              const casacore::DirectionCoordinate &dc);
 
         /// @brief make a merged image parameter covering all given facets
         /// @details This method is very similar to another version of the add method which creates
@@ -434,15 +434,15 @@ namespace askap
         /// This method encapsulates the logic and returns a projection class
         /// @param[in] ewprojection true for SCP/NCP variant, false otherwise
         /// @param[in] dec declination in radians (unused for standard SIN projection)
-        /// @return casa::Projection class
-        static casa::Projection getProjection(const bool ewprojection, const double dec = 0.);
+        /// @return casacore::Projection class
+        static casacore::Projection getProjection(const bool ewprojection, const double dec = 0.);
 
     private:
         /// @brief image accessor
         static boost::shared_ptr<accessors::IImageAccess> theirImageAccessor;
 
         /// @brief default frequency frame
-        static casa::MFrequency::Ref theirFreqFrame;
+        static casacore::MFrequency::Ref theirFreqFrame;
     };
 
   }

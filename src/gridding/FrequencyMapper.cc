@@ -69,7 +69,7 @@ void FrequencyMapper::setupImage(const scimath::Axes &axes, int nchan)
 /// @param[in] freqs vector with frequencies
 /// @note The current assumption is that no regridding is required. Therefore, it is
 /// expected that no fractional channel offset can occur.
-void FrequencyMapper::setupMapping(const casa::Vector<casa::Double> &freqs)
+void FrequencyMapper::setupMapping(const casacore::Vector<casacore::Double> &freqs)
 {
    if (itsImageNChan == -2) {
        // special case of the single plane mapper, do nothing
@@ -86,7 +86,7 @@ void FrequencyMapper::setupMapping(const casa::Vector<casa::Double> &freqs)
    } else {
       const double increment = (itsEndFreq - itsStartFreq)/double(itsImageNChan-1);
       ASKAPCHECK(fabs(increment)>0, "Frequency axis in the image has the same start and end frequency "<<itsStartFreq);
-      for (casa::uInt chan=0; chan<freqs.nelements(); ++chan) {
+      for (casacore::uInt chan=0; chan<freqs.nelements(); ++chan) {
            double imgChanDouble = (freqs[chan]-itsStartFreq)/increment;
            imgChanDouble += (imgChanDouble < 0.) ? -0.5 : 0.5;
            const int imgChan = int(imgChanDouble);
@@ -109,7 +109,7 @@ void FrequencyMapper::setupMapping(const casa::Vector<casa::Double> &freqs)
 /// it is called for a channel without a mapping.
 /// @param[in] chan accessor channel
 /// @return true, if the given channel has a mapping
-bool FrequencyMapper::isMapped(casa::uInt chan)  const
+bool FrequencyMapper::isMapped(casacore::uInt chan)  const
 {
   if (itsImageNChan == -2) {
       return true;
@@ -133,7 +133,7 @@ void FrequencyMapper::setupSinglePlaneGridding()
 /// @details
 /// @param[in] chan accessor channel
 /// @note the output is guaranteed to be from [0,itsImageNChan-1] interval.
-casa::uInt FrequencyMapper::operator()(casa::uInt chan) const
+casacore::uInt FrequencyMapper::operator()(casacore::uInt chan) const
 {
   if (itsImageNChan == -2) {
       return 0;
@@ -141,6 +141,6 @@ casa::uInt FrequencyMapper::operator()(casa::uInt chan) const
   ASKAPDEBUGASSERT(chan<itsMap.size());
   ASKAPDEBUGASSERT(itsImageNChan>0);
   ASKAPCHECK(itsMap[chan]>=0, "An attempt to call FrequencyMapper::operator() for unmapped channel "<<chan);
-  return casa::uInt(itsMap[chan]);
+  return casacore::uInt(itsMap[chan]);
 }
 

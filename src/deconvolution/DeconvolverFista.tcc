@@ -109,7 +109,7 @@ namespace askap {
             if (itsBasisFunction) {
                 this->itsBasisFunction->initialise(this->model().shape());
                 itsBasisFunctionTransform.resize(itsBasisFunction->basisFunction().shape());
-                casa::setReal(itsBasisFunctionTransform, itsBasisFunction->basisFunction().nonDegenerate());
+                casacore::setReal(itsBasisFunctionTransform, itsBasisFunction->basisFunction().nonDegenerate());
                 scimath::fft2d(itsBasisFunctionTransform, true);
             }
 
@@ -186,15 +186,15 @@ namespace askap {
                 t_new = (T(1.0) + sqrt(T(1.0) + T(4.0) * square(t_old))) / T(2.0);
                 X = X_temp + ((t_old - T(1.0)) / t_new) * (X_temp - X_old);
                 {
-                    casa::IPosition minPos;
-                    casa::IPosition maxPos;
+                    casacore::IPosition minPos;
+                    casacore::IPosition maxPos;
                     T minVal(0.0), maxVal(0.0);
                     if (isMasked) {
-                        casa::minMaxMasked(minVal, maxVal, minPos, maxPos,
+                        casacore::minMaxMasked(minVal, maxVal, minPos, maxPos,
                                            this->dirty(),
                                            this->itsWeight(0));
                     } else {
-                        casa::minMax(minVal, maxVal, minPos, maxPos, this->dirty());
+                        casacore::minMax(minVal, maxVal, minPos, maxPos, this->dirty());
                     }
 
                     ASKAPLOG_INFO_STR(decfistalogger, "   Maximum = " << maxVal << " at location " << maxPos);
@@ -207,7 +207,7 @@ namespace askap {
                 }
 
                 T l1Norm = sum(abs(X_temp));
-                T fit = casa::sum(this->dirty() * this->dirty());
+                T fit = casacore::sum(this->dirty() * this->dirty());
                 T objectiveFunction(fit + lambda*l1Norm);
                 this->state()->setPeakResidual(absPeakVal);
                 this->state()->setObjectiveFunction(objectiveFunction);
@@ -229,7 +229,7 @@ namespace askap {
 
             this->finalise();
 
-            absPeakVal = casa::max(casa::abs(this->dirty()));
+            absPeakVal = casacore::max(casacore::abs(this->dirty()));
 
             this->state()->setPeakResidual(absPeakVal);
             this->state()->setObjectiveFunction(absPeakVal);
@@ -256,11 +256,11 @@ namespace askap {
         void DeconvolverFista<T, FT>::W(Array<T>& out, const Array<T>& in)
         {
             if (itsBasisFunction) {
-                casa::Array<FT> inTransform(in.nonDegenerate().shape());
-                casa::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
+                casacore::Array<FT> inTransform(in.nonDegenerate().shape());
+                casacore::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
                 out.resize(itsBasisFunction->basisFunction().shape());
-                casa::Cube<T> outCube(out);
-                casa::setReal(inTransform, in.nonDegenerate());
+                casacore::Cube<T> outCube(out);
+                casacore::setReal(inTransform, in.nonDegenerate());
                 scimath::fft2d(inTransform, true);
                 const uInt nPlanes(itsBasisFunction->basisFunction().shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
@@ -280,20 +280,20 @@ namespace askap {
         {
             if (itsBasisFunction) {
                 const Cube<T> inCube(in);
-                casa::Array<FT> inPlaneTransform(out.nonDegenerate().shape());
-                casa::Array<FT> outTransform(out.nonDegenerate().shape());
+                casacore::Array<FT> inPlaneTransform(out.nonDegenerate().shape());
+                casacore::Array<FT> outTransform(out.nonDegenerate().shape());
                 outTransform.set(FT(0.0));
 
                 // To reconstruct, we filter out each basis from the cumulative sum
                 // and then add the corresponding term from the in array.
                 const uInt nPlanes(itsBasisFunction->basisFunction().shape()(2));
 
-                casa::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
+                casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
                 scimath::fft2d(inPlaneTransform, true);
                 outTransform = Cube<FT>(itsBasisFunctionTransform).xyPlane(nPlanes - 1) * (inPlaneTransform);
 
                 for (uInt plane = 1; plane < nPlanes; plane++) {
-                    casa::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
+                    casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
                     scimath::fft2d(inPlaneTransform, true);
                     outTransform = outTransform
                                    + Cube<FT>(itsBasisFunctionTransform).xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);

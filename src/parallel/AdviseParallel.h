@@ -120,7 +120,7 @@ private:
    
    /// @brief optional tangent point
    /// @details Desired tangent point may be given up front. It changes the statistics slightly.
-   casa::MVDirection itsTangent;
+   casacore::MVDirection itsTangent;
    
    /// @brief true, if tangent point is defined
    bool itsTangentDefined;

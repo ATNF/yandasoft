@@ -60,7 +60,7 @@ namespace askap
 
     bool WienerPreconditioner::itsUseCachedPcf = false;
     double WienerPreconditioner::itsAveWgtSum = 0.0;
-    casa::Matrix<float> WienerPreconditioner::itsPcf;
+    casacore::Matrix<float> WienerPreconditioner::itsPcf;
 
     WienerPreconditioner::WienerPreconditioner() :
         itsParameter(0.0), itsDoNormalise(false), itsUseRobustness(false)
@@ -100,9 +100,9 @@ namespace askap
         return IImagePreconditioner::ShPtr(new WienerPreconditioner(*this));
     }
 
-    bool WienerPreconditioner::doPreconditioning(casa::Array<float>& psf,
-                                                 casa::Array<float>& dirty,
-                                                 casa::Array<float>& pcfIn) const
+    bool WienerPreconditioner::doPreconditioning(casacore::Array<float>& psf,
+                                                 casacore::Array<float>& dirty,
+                                                 casacore::Array<float>& pcfIn) const
     {
       // Note this routine uses generic arrays, but they are really always 2d Matrices, all with the same shape
       ASKAPTRACE("WienerPreconditioner::doPreconditioning");
@@ -114,7 +114,7 @@ namespace askap
           "Dirty image and PSF do not conform - shapes: " <<
           dirty.shape() << " & " << psf.shape());
 
-      const casa::IPosition shape(2,psf.shape()(0),psf.shape()(1));
+      const casacore::IPosition shape(2,psf.shape()(0),psf.shape()(1));
 
       bool useCachedFilter = true;
       if (itsWienerfilter.shape() == 0) {
@@ -154,7 +154,7 @@ namespace askap
               "Wiener filter noise power = " << itsParameter);
       }
 
-      float maxPSFBefore = casa::max(psf);
+      float maxPSFBefore = casacore::max(psf);
       ASKAPCHECK(maxPSFBefore > 0.0, "Peak of PSF before Wiener filtering, " <<
           maxPSFBefore << ", is less than or equal to zero");
       ASKAPLOG_INFO_STR(logger, "Peak of PSF before Wiener filtering = " << maxPSFBefore);
@@ -166,12 +166,12 @@ namespace askap
           maxPSFBefore=1.0;
       }
 
-      casa::Matrix<casa::Float> psf2D(psf.nonDegenerate());
-      casa::Matrix<casa::Float> dirty2D(dirty.nonDegenerate());
+      casacore::Matrix<casacore::Float> psf2D(psf.nonDegenerate());
+      casacore::Matrix<casacore::Float> dirty2D(dirty.nonDegenerate());
 
       // Make the scratch array into which we will calculate the Wiener filter
-      casa::Matrix<casa::Complex> scratch(shape);
-      convertArray<casa::Complex,casa::Float>(scratch, itsPcf);
+      casacore::Matrix<casacore::Complex> scratch(shape);
+      convertArray<casacore::Complex,casacore::Float>(scratch, itsPcf);
 
       if (!itsUseCachedPcf) {
 
@@ -202,11 +202,11 @@ namespace askap
           // weighted data without breaking local projections.
 
           // get weighted sum of kernel size from imaginary part of the data
-          casa::Matrix<casa::Float> kernelWidthMatrix(shape(0),shape(1),0.0);
+          casacore::Matrix<casacore::Float> kernelWidthMatrix(shape(0),shape(1),0.0);
           // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
           for (int y=0; y<shape(1); ++y) {
             for (int x=0; x<shape(0); ++x) {
-              casa::Complex c = scratch(x,y);
+              casacore::Complex c = scratch(x,y);
               if (abs(real(c)) > scratchThreshold) {
                 kernelWidthMatrix(x,y)=abs(imag(c)/real(c));
               }
@@ -259,7 +259,7 @@ namespace askap
                 //    kernelWidthMatrix(Slice(boxStart0,boxWidth),Slice(boxStart1,boxWidth))));
 
                 //try writing out max
-                casa::Float kernelW = 0;
+                casacore::Float kernelW = 0;
                 for (int yb=boxStart1; yb < boxStart1+boxWidth; yb++) {
                     for (int xb=boxStart0; xb < boxStart0+boxWidth; xb++) {
                         kernelW = max(kernelW,kernelWidthMatrix(xb,yb));
@@ -307,15 +307,15 @@ namespace askap
               } // x
           } // y
           // Calc ave SNR weight-sum *over visibilities* (not pixels).
-          // const casa::Array<float> wgts(real(scratch.asArray()));
-          casa::Array<double> wgts(shape);
-          casa::convertArray<double,float>(wgts, real(scratch));
+          // const casacore::Array<float> wgts(real(scratch.asArray()));
+          casacore::Array<double> wgts(shape);
+          casacore::convertArray<double,float>(wgts, real(scratch));
           // The following approx assumes that vis have equal SNR weights.
           // * see D. Briggs thesis
           itsAveWgtSum = sum(wgts*wgts) / sum(wgts);
 
           // update the scratch array
-          convertArray<casa::Complex,casa::Float>(scratch, itsPcf);
+          convertArray<casacore::Complex,casacore::Float>(scratch, itsPcf);
 
           itsUseCachedPcf = true;
 
@@ -336,17 +336,17 @@ namespace askap
           // Effect #1 is useful, the others are not, particularly when robustness is set towards uniform
           // weighting. The latter two effects can be removed by reapplying the original thresholding.
           // So, save the original thresholding
-          casa::Matrix<casa::Bool> scratch_mask(shape, casa::True);
+          casacore::Matrix<casacore::Bool> scratch_mask(shape, casacore::True);
           for (int y=0; y<shape[1]; ++y) {
             for (int x=0; x<shape[0]; ++x) {
               if (real(scratch(x,y)) == 0.0) {
-                scratch_mask(x,y) = casa::False;
+                scratch_mask(x,y) = casacore::False;
               }
             }
           }
           ASKAPLOG_INFO_STR(logger, "Applying Gaussian taper to the preconditioner function in the image domain");
           scimath::fft2d(scratch, False);
-          casa::Matrix<casa::Complex> taperArray(itsTaperCache->taper(shape));
+          casacore::Matrix<casacore::Complex> taperArray(itsTaperCache->taper(shape));
           scratch *= taperArray;
           scimath::fft2d(scratch, True);
           // Redo thresholding
@@ -358,9 +358,9 @@ namespace askap
             }
           }
           // Recalculate ave SNR weight-sum
-          // const casa::Array<float> wgts(real(scratch.asArray()));
-          casa::Array<double> wgts(shape);
-          casa::convertArray<double,float>(wgts, real(scratch));
+          // const casacore::Array<float> wgts(real(scratch.asArray()));
+          casacore::Array<double> wgts(shape);
+          casacore::convertArray<double,float>(wgts, real(scratch));
           aveWgtSum = sum(wgts*wgts) / sum(wgts);
         }
 
@@ -401,9 +401,9 @@ namespace askap
       // Estimate the normalised point source sensitivity (AKA the normalised thermal RMS)
       // * see D. Briggs thesis
       if (!useCachedFilter) {
-          casa::Matrix<Float> realWienerArr = real(itsWienerfilter);
-          casa::Matrix<Float> realScrArr = real(scratch);
-          casa::Float sumScr = sum(realScrArr);
+          casacore::Matrix<Float> realWienerArr = real(itsWienerfilter);
+          casacore::Matrix<Float> realScrArr = real(scratch);
+          casacore::Float sumScr = sum(realScrArr);
           realScrArr *= realWienerArr;
           ASKAPLOG_INFO_STR(logger,
               "Normalisation factor for the point source sensitivity " <<
@@ -414,7 +414,7 @@ namespace askap
       scratch *= itsWienerfilter;
       scimath::fft2d(scratch, false);
       psf2D = real(scratch);
-      const float maxPSFAfter=casa::max(psf2D);
+      const float maxPSFAfter=casacore::max(psf2D);
       ASKAPLOG_INFO_STR(logger,
           "Peak of PSF after Wiener filtering = " << maxPSFAfter <<
           " = " << 100.0*maxPSFAfter/maxPSFBefore << "%");
@@ -422,7 +422,7 @@ namespace askap
       ASKAPLOG_INFO_STR(logger, "Normalized to unit peak");
 
       // Apply the filter to the dirty image
-      convertArray<casa::Complex,casa::Float>(scratch, dirty2D);
+      convertArray<casacore::Complex,casacore::Float>(scratch, dirty2D);
       scimath::fft2d(scratch, true);
       scratch *= itsWienerfilter;
       scimath::fft2d(scratch, false);
@@ -440,7 +440,7 @@ namespace askap
     /// Wiener filter. One approach to this is thresholding out small values.
     /// @param[in] input array from which to determine threshold
     /// @return threshold value
-    float WienerPreconditioner::pcfThreshold(casa::Matrix<casa::Complex>& pcf) const
+    float WienerPreconditioner::pcfThreshold(casacore::Matrix<casacore::Complex>& pcf) const
     {
 
       float xfrMax = max(abs(real(pcf)));

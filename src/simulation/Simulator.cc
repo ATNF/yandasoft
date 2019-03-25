@@ -102,7 +102,7 @@ struct MSFeedParameterExtractor : protected MSIter {
 
     /// @brief constructor
     /// @param[in] ms measurement set
-    MSFeedParameterExtractor(const casa::MeasurementSet &ms) {
+    MSFeedParameterExtractor(const casacore::MeasurementSet &ms) {
         msc_p = new ROMSColumns(ms);
         msc_p->antenna().mount().getColumn(antennaMounts_p, True);
         checkFeed_p = True;
@@ -134,10 +134,10 @@ void Simulator::defaults()
     MVTime::read(today, "today");
     mRefTime_p = MEpoch(today, MEpoch::UTC);
     itsNoiseRMS = 1.;
-    itsRelAntennaWeight.assign(casa::Vector<double>());
+    itsRelAntennaWeight.assign(casacore::Vector<double>());
 }
 
-Simulator::Simulator(const casa::String& MSName, int bucketSize,
+Simulator::Simulator(const casacore::String& MSName, int bucketSize,
                      int tileNcorr, int tileNchan) :
         ms_p(0), itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
@@ -220,7 +220,7 @@ Simulator::Simulator(const casa::String& MSName, int bucketSize,
     }
 }
 
-Simulator::Simulator(casa::MeasurementSet& theMS) :
+Simulator::Simulator(casacore::MeasurementSet& theMS) :
         ms_p(0), itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
     defaults();
@@ -243,11 +243,11 @@ Simulator::Simulator(const Simulator & mss)
     operator=(mss);
 }
 
-void Simulator::initAnt(const casa::String& telescope, const casa::Vector<double>& x,
-                        const casa::Vector<double>& y, const casa::Vector<double>& z,
-                        const casa::Vector<double>& dishDiameter, const casa::Vector<double>&,
-                        const casa::Vector<casa::String>& mount, const casa::Vector<casa::String>& name,
-                        const casa::String& coordsystem, const casa::MPosition& mRefLocation)
+void Simulator::initAnt(const casacore::String& telescope, const casacore::Vector<double>& x,
+                        const casacore::Vector<double>& y, const casacore::Vector<double>& z,
+                        const casacore::Vector<double>& dishDiameter, const casacore::Vector<double>&,
+                        const casacore::Vector<casacore::String>& mount, const casacore::Vector<casacore::String>& name,
+                        const casacore::String& coordsystem, const casacore::MPosition& mRefLocation)
 {
     telescope_p = telescope;
 
@@ -317,10 +317,10 @@ void Simulator::initAnt(const casa::String& telescope, const casa::Vector<double
     ASKAPLOG_INFO_STR(logger, "Added rows to ANTENNA table");
 }
 
-void Simulator::local2global(casa::Vector<double>& xGeo, casa::Vector<double>& yGeo,
-                             casa::Vector<double>& zGeo, const casa::MPosition& mRefLocation,
-                             const casa::Vector<double>& xLocal, const casa::Vector<double>& yLocal,
-                             const casa::Vector<double>& zLocal)
+void Simulator::local2global(casacore::Vector<double>& xGeo, casacore::Vector<double>& yGeo,
+                             casacore::Vector<double>& zGeo, const casacore::MPosition& mRefLocation,
+                             const casacore::Vector<double>& xLocal, const casacore::Vector<double>& yLocal,
+                             const casacore::Vector<double>& zLocal)
 {
     uInt nn = xLocal.nelements();
     xGeo.resize(nn);
@@ -353,21 +353,21 @@ void Simulator::local2global(casa::Vector<double>& xGeo, casa::Vector<double>& y
 
 }
 
-void Simulator::longlat2global(casa::Vector<double>& xReturned,
-                               casa::Vector<double>& yReturned,
-                               casa::Vector<double>& zReturned,
-                               const casa::MPosition& mRefLocation,
-                               const casa::Vector<double>& xIn,
-                               const casa::Vector<double>& yIn,
-                               const casa::Vector<double>& zIn)
+void Simulator::longlat2global(casacore::Vector<double>& xReturned,
+                               casacore::Vector<double>& yReturned,
+                               casacore::Vector<double>& zReturned,
+                               const casacore::MPosition& mRefLocation,
+                               const casacore::Vector<double>& xIn,
+                               const casacore::Vector<double>& yIn,
+                               const casacore::Vector<double>& zIn)
 {
     ASKAPLOG_INFO_STR(logger, "Simulator::longlat2global not yet implemented, passed parameters "<<xIn<<" "<<
                               yIn<<" "<<zIn<<" "<<mRefLocation<<", and will overwrite "<<xReturned<<" "<<yReturned<<" "<<zReturned);
 }
 
-void Simulator::initFields(const casa::String& sourceName,
-                           const casa::MDirection& sourceDirection,
-                           const casa::String& calCode)
+void Simulator::initFields(const casacore::String& sourceName,
+                           const casacore::MDirection& sourceDirection,
+                           const casacore::String& calCode)
 {
     MSColumns msc(*ms_p);
     MSFieldColumns& fieldc = msc.field();
@@ -390,9 +390,9 @@ void Simulator::initFields(const casa::String& sourceName,
 
 }
 
-void Simulator::initSpWindows(const casa::String& spWindowName, const int& nChan,
-                              const casa::Quantity& startFreq, const casa::Quantity& freqInc,
-                              const casa::Quantity& freqRes, const casa::String& stokesString)
+void Simulator::initSpWindows(const casacore::String& spWindowName, const int& nChan,
+                              const casacore::Quantity& startFreq, const casacore::Quantity& freqInc,
+                              const casacore::Quantity& freqRes, const casacore::String& stokesString)
 {
     ASKAPCHECK(fabs(freqInc.getValue("Hz")-freqRes.getValue("Hz"))<1, "freqInc="<<freqInc<<" and freqRes="<<
                     freqRes<<" look different");
@@ -485,8 +485,8 @@ void Simulator::initSpWindows(const casa::String& spWindowName, const int& nChan
 }
 
 // NOTE:  initAnt and initSpWindows must be called before this one!
-void Simulator::initFeeds(const casa::String& mode, const casa::Vector<double>& x,
-                          const casa::Vector<double>& y, const casa::Vector<casa::String>& pol)
+void Simulator::initFeeds(const casacore::String& mode, const casacore::Vector<double>& x,
+                          const casacore::Vector<double>& y, const casacore::Vector<casacore::String>& pol)
 {
     MSColumns msc(*ms_p);
     MSAntennaColumns& antc = msc.antenna();
@@ -633,9 +633,9 @@ Simulator & Simulator::operator=(const Simulator & other)
     return *this;
 }
 
-void Simulator::settimes(const casa::Quantity& qIntegrationTime,
+void Simulator::settimes(const casacore::Quantity& qIntegrationTime,
                          const bool useHourAngle,
-                         const casa::MEpoch& mRefTime)
+                         const casacore::MEpoch& mRefTime)
 {
     qIntegrationTime_p = qIntegrationTime;
     useHourAngle_p = useHourAngle;
@@ -648,10 +648,10 @@ void Simulator::settimes(const casa::Quantity& qIntegrationTime,
     t_offset_p = 0.0;
 }
 
-void Simulator::observe(const casa::String& sourceName,
-                        const casa::String& spWindowName,
-                        const casa::Quantity& qStartTime,
-                        const casa::Quantity& qStopTime)
+void Simulator::observe(const casacore::String& sourceName,
+                        const casacore::String& spWindowName,
+                        const casacore::Quantity& qStartTime,
+                        const casacore::Quantity& qStopTime)
 {
     MSColumns msc(*ms_p);
 
@@ -937,8 +937,8 @@ void Simulator::observe(const casa::String& sourceName,
             // x direction is flipped to convert az-el type frame to ra-dec
             feed_phc.shift(-beamOffset(0), beamOffset(1), True);
             //            ASKAPLOG_DEBUG_STR(logger, "pointing/phase centre for beam="<<feed<<" is "<<
-            //                               printDirection(feed_phc.getValue())<<" offsets: "<<beamOffset(0)/casa::C::pi*180<<" "<<
-            //                               beamOffset(1)/casa::C::pi*180<<" mount="<<antenna_mounts[0]);
+            //                               printDirection(feed_phc.getValue())<<" offsets: "<<beamOffset(0)/casacore::C::pi*180<<" "<<
+            //                               beamOffset(1)/casacore::C::pi*180<<" mount="<<antenna_mounts[0]);
 
             double ra, dec; // current phase center
             ra = feed_phc.getAngle().getValue()(0);
@@ -998,9 +998,9 @@ void Simulator::observe(const casa::String& sourceName,
                     // case with variable Tsys/efficiency
                     double noiseRMS = itsNoiseRMS;
                     if (itsRelAntennaWeight.nelements() > 0) {
-                        ASKAPCHECK(ant1 < casa::Int(itsRelAntennaWeight.nelements()), "encountered antenna index "<<ant1<<
+                        ASKAPCHECK(ant1 < casacore::Int(itsRelAntennaWeight.nelements()), "encountered antenna index "<<ant1<<
                                    " which is beyond the array of Tsys and/or efficiencies (variable efficiency case)");
-                        ASKAPCHECK(ant2 < casa::Int(itsRelAntennaWeight.nelements()), "encountered antenna index "<<ant2<<
+                        ASKAPCHECK(ant2 < casacore::Int(itsRelAntennaWeight.nelements()), "encountered antenna index "<<ant2<<
                                    " which is beyond the array of Tsys and/or efficiencies (variable efficiency case)");
                         noiseRMS *= sqrt(itsRelAntennaWeight[ant1]*itsRelAntennaWeight[ant2]);
                     }
@@ -1138,7 +1138,7 @@ void Simulator::observe(const casa::String& sourceName,
 // Till then.
 // Stolen from Fred Schwab
 void Simulator::blockage(double &fraction1, double &fraction2,
-                         const casa::Vector<double>& uvw,
+                         const casacore::Vector<double>& uvw,
                          const double diam1,
                          const double diam2)
 {
@@ -1180,7 +1180,7 @@ void Simulator::blockage(double &fraction1, double &fraction2,
     return;
 }
 
-String Simulator::formatDirection(const casa::MDirection& direction)
+String Simulator::formatDirection(const casacore::MDirection& direction)
 {
     MVAngle mvRa = direction.getAngle().getValue()(0);
     MVAngle mvDec = direction.getAngle().getValue()(1);
@@ -1220,7 +1220,7 @@ double Simulator::areaTimesSqrtBT() const
 
    const double inttime = qIntegrationTime_p.getValue("s");
    ASKAPCHECK(inttime > 0., "Integration time is supposed to be positive. You have "<<inttime<<" seconds");
-   return casa::C::pi*casa::square(itsDishDiamForNoise)/4.*sqrt(itsChanBandwidthForNoise*inttime);
+   return casacore::C::pi*casacore::square(itsDishDiamForNoise)/4.*sqrt(itsChanBandwidthForNoise*inttime);
 }
 
 

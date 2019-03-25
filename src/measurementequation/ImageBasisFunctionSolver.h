@@ -47,7 +47,7 @@ namespace askap {
                 ImageBasisFunctionSolver();
 
                 /// @brief default constructor
-     	        ImageBasisFunctionSolver(casa::Vector<float>& scales);
+     	        ImageBasisFunctionSolver(casacore::Vector<float>& scales);
 
                 /// @brief Initialize this solver
                 virtual void init();
@@ -76,7 +76,7 @@ namespace askap {
                 /// @brief Precondition the PSF and the dirty image
                 /// @param[in] psf point spread function to precondition (in/out)
                 /// @param[in] dirty dirty image to precondition (in/out)
-                void preconditionNE(casa::ArrayLattice<float>& psf, casa::ArrayLattice<float>& dirty);
+                void preconditionNE(casacore::ArrayLattice<float>& psf, casacore::ArrayLattice<float>& dirty);
 
 	  boost::shared_ptr<DeconvolverControl<Float> > itsControl;
       

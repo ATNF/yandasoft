@@ -54,7 +54,7 @@ SupportSearcher::SupportSearcher(double cutoff) : itsCutoff(cutoff),
 /// @details The method throws exception if no prior support search has
 /// been done.
 /// @return peak position determined during the last search for support
-casa::IPosition SupportSearcher::peakPos() const
+casacore::IPosition SupportSearcher::peakPos() const
 {
   ASKAPCHECK(itsPeakPos.nelements()==2, "peakPos is called prior to the search of the peak");
   return itsPeakPos;
@@ -74,7 +74,7 @@ double SupportSearcher::peakVal() const
 /// @details This method returns the bottom left corner of the support. It
 /// throws an exception of no prior search for support has been done.
 /// @return bottom left corner of the support
-casa::IPosition SupportSearcher::blc() const
+casacore::IPosition SupportSearcher::blc() const
 {
   ASKAPCHECK(itsBLC.nelements()==2, "blc() is called prior to the support search");
   return itsBLC;
@@ -84,7 +84,7 @@ casa::IPosition SupportSearcher::blc() const
 /// @details This method returns the bottom left corner of the support. It
 /// throws an exception of no prior search for support has been done.
 /// @return bottom left corner of the support
-casa::IPosition SupportSearcher::trc() const
+casacore::IPosition SupportSearcher::trc() const
 {
   ASKAPCHECK(itsBLC.nelements()==2, "trc() is called prior to the support search");
   return itsTRC;
@@ -95,9 +95,9 @@ casa::IPosition SupportSearcher::trc() const
 /// axes (i.e. max(trc-blc)). It throws an exception if no prior search for
 /// support has been done.
 /// @return support size
-casa::uInt SupportSearcher::support() const
+casacore::uInt SupportSearcher::support() const
 { 
-  const casa::IPosition length = (trc()-blc());
+  const casacore::IPosition length = (trc()-blc());
   ASKAPDEBUGASSERT(length.nelements()==2);
   return std::max(length(0),length(1));
 }
@@ -106,14 +106,14 @@ casa::uInt SupportSearcher::support() const
 /// @details This method returns the smallest square support, which is
 /// symmetrical with respect to the centre.
 /// @param[in] shape defines the centre of symmetry (as shape/2)
-casa::uInt SupportSearcher::symmetricalSupport(const casa::IPosition &shape) const
+casacore::uInt SupportSearcher::symmetricalSupport(const casacore::IPosition &shape) const
 {
-  const casa::IPosition centre = shape/2;
-  const casa::IPosition length1 = trc()-centre;
-  const casa::IPosition length2 = centre-blc();
+  const casacore::IPosition centre = shape/2;
+  const casacore::IPosition length1 = trc()-centre;
+  const casacore::IPosition length2 = centre-blc();
   const int xMax = std::max(abs(length1(0)),abs(length2(0)));
   const int yMax = std::max(abs(length1(1)),abs(length2(1)));
-  return casa::uInt(std::max(xMax,yMax)*2);
+  return casacore::uInt(std::max(xMax,yMax)*2);
 }
 
 /// @brief debug method to save the matrix
@@ -122,7 +122,7 @@ casa::uInt SupportSearcher::symmetricalSupport(const casa::IPosition &shape) con
 /// nothing for the generic value type.
 /// @param[in] in input 2D matrix with an image
 template<>
-void SupportSearcher::debugStoreImage(const casa::Matrix<casa::Complex> &in)
+void SupportSearcher::debugStoreImage(const casacore::Matrix<casacore::Complex> &in)
 {
   scimath::saveAsCasaImage("dbg.img",amplitude(in));
 }
