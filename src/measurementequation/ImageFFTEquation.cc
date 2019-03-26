@@ -415,34 +415,17 @@ namespace askap
 
         /// Now we can calculate the residual visibility and image
         size_t tempCounter = 0;
-#ifdef _OPENMP
-        #pragma omp parallel default(shared)
-        {
-           #pragma omp for reduction(+:tempCounter)
-#endif
-           for (size_t i = 0; i<completions.size(); ++i) {
-                const string imageName("image"+completions[i]);
-                if (parameters().isFree(imageName)) {
-                    #ifdef _OPENMP
-                    #pragma omp task
-                    #endif
-                    itsResidualGridders[imageName]->grid(accBuffer);
-                    #ifdef _OPENMP
-                    #pragma omp task
-                    #endif
-                    itsPSFGridders[imageName]->grid(accBuffer);
-                    if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
-                        #ifdef _OPENMP
-                        #pragma omp task
-                        #endif
-                        itsPreconGridders[imageName]->grid(accBuffer);
-                    }
-                    tempCounter += accBuffer.nRow();
+        for (size_t i = 0; i<completions.size(); ++i) {
+            const string imageName("image"+completions[i]);
+            if (parameters().isFree(imageName)) {
+                itsResidualGridders[imageName]->grid(accBuffer);
+                itsPSFGridders[imageName]->grid(accBuffer);
+                if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
+                    itsPreconGridders[imageName]->grid(accBuffer);
                 }
-           }
-#ifdef _OPENMP
+                tempCounter += accBuffer.nRow();
+            }
         }
-#endif
         counterGrid += tempCounter;
       }
       ASKAPLOG_DEBUG_STR(logger, "Finished degridding model and gridding residuals" );

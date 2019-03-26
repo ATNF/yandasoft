@@ -44,10 +44,6 @@
 // casa includes
 #include <casacore/casa/BasicSL/Complex.h>
 
-#ifdef _OPENMP
-// boost includes
-#include <boost/thread/mutex.hpp>
-#endif
 
 namespace askap
 {
@@ -569,10 +565,6 @@ protected:
       /// @brief keep track of current image channel and index into itsGrid
       int itsImageChan, itsGridIndex;
 
-      #ifdef _OPENMP
-      /// @brief synchronisation mutex
-      mutable boost::mutex itsMutex;
-      #endif
     };
   }
 }

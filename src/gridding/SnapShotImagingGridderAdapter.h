@@ -51,10 +51,6 @@
 #include <casacore/images/Images/TempImage.h>
 #include <casacore/images/Images/ImageRegrid.h>
 
-#ifdef _OPENMP
-#include <boost/thread/mutex.hpp>
-#endif
-
 namespace askap {
 
 namespace synthesis {
@@ -385,11 +381,6 @@ private:
 
    // Interpolation method used for regridding
    casacore::Interpolate2D::Method itsInterpolationMethod;
-
-   #ifdef _OPENMP
-   /// @brief mutex to deal with lack of thread safety in casa's regrid
-   static boost::mutex theirMutex;
-   #endif
 
    ///@brief Use the predicted W plane ... or not
    bool itsPredictWPlane;

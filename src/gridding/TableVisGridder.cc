@@ -483,13 +483,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // inside the section protected by the lock and make a copy of the returned vector
    const casacore::Vector<casacore::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
 
-   #ifdef _OPENMP
-   boost::unique_lock<boost::mutex> lock(itsMutex);
-   const casacore::Vector<double> delay = acc.uvwRotationDelay(tangentPoint, imageCentre).copy();
-   lock.unlock();
-   #else
    const casacore::Vector<double> &delay = acc.uvwRotationDelay(tangentPoint, imageCentre);
-   #endif
 
    itsTimeCoordinates += timer.real();
 
