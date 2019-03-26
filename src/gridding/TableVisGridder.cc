@@ -512,7 +512,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // OPENMP case needs work...
    // #ifdef _OPENMP
    // itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
-                             scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
+   //                          scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
    //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
    // #else
    if (nPol != itsVisPols.nelements()  || !allEQ(acc.stokes(), itsVisPols)) {
