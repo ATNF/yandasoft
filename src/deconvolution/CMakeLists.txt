@@ -9,6 +9,7 @@ if (MPI_COMPILE_FLAGS)
 	set_property(TARGET deconvolution PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
 endif()
 
+
 install (FILES
 BasisFunction.h
 BasisFunction.tcc

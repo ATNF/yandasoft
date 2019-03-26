@@ -510,18 +510,18 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // more effort (i.e. one has to detect whether polarisation frames change from the
    // previous call). Need to think about parallactic angle dependence.
    // OPENMP case needs work...
-   #ifdef _OPENMP
-   itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
+   // #ifdef _OPENMP
+   // itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
                              scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
    //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
-   #else
+   // #else
    if (nPol != itsVisPols.nelements()  || !allEQ(acc.stokes(), itsVisPols)) {
      itsPolConv = (forward ? scimath::PolConverter(getStokes(),acc.stokes(), false) :
                              scimath::PolConverter(acc.stokes(), getStokes()));
      itsVisPols.assign(acc.stokes());
      itsPolVector.resize(nPol);
    }
-   #endif
+   // #endif
 
    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
    casacore::IPosition ipStart(4, 0, 0, 0, 0);

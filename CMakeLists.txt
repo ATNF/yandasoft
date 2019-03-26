@@ -18,7 +18,8 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake")
 
 option (CXX11 "Compile as C++11 if possible" YES)
-
+#PGI OMP flags
+set(CMAKE_CXX_FLAGS " -mp ")
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
     check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
@@ -57,6 +58,7 @@ option (BUILD_SHARED_LIBS "" YES)
         set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     endif (ENABLE_RPATH)
 endif(ENABLE_SHARED)
+
 
 add_subdirectory(src)
 

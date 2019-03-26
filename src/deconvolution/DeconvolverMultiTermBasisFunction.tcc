@@ -46,7 +46,7 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <deconvolution/MultiScaleBasisFunction.h>
-
+#include <omp.h>
 namespace askap {
 
     namespace synthesis {
@@ -513,7 +513,7 @@ namespace askap {
             maxVal = T(0);
             const uInt ncol = mask.ncolumn();
             const uInt nrow = mask.nrow();
-            #pragma acc parallel loop collapse(2) gang vector
+            //#pragma acc parallel loop collapse(2) gang vector
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 const T* pMask = &mask(0,j);
@@ -602,9 +602,24 @@ namespace askap {
             Matrix<T> mask;
             if (isWeighted) {
                 mask = this->itsWeight(0).nonDegenerate();
+		//printf("DEBUG\tMS SUT: Solution Type = %s\n", this->itsSolutionType);
+		printf("Preparing to square mask..");
                 if  (this->itsSolutionType == "MAXCHISQ") {
-                    // square weights for MAXCHISQ
-                    mask*=mask;
+                    printf("..Going with MAXCHISQ\n");
+		    // square weights for MAXCHISQ
+		    int threadcount[4]; threadcount[0] = 0; threadcount[1] = 0; threadcount[2] = 0; threadcount[3] = 0;
+		    printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
+		    omp_set_num_threads(4);
+		    printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
+                    #pragma omp parallel for schedule(static)
+                    for (int index=0; index < mask.nelements(); index++) {
+			int tid = omp_get_thread_num();
+			threadcount[tid]++;
+                        mask.data()[index] = mask.data()[index]*mask.data()[index];
+                    }
+		    printf("DEBUG\tMS SUT: Loadings = %d, %d, %d, %d\n",
+		    threadcount[0], threadcount[1], threadcount[2], threadcount[3]);
+                    //mask*=mask;
                 }
             }
 

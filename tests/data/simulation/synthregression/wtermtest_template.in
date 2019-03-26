@@ -94,7 +94,8 @@ Cimager.gridder.WProject.wsampling.export = log.dat
 #
 Cimager.solver                           	= Clean
 #Cimager.solver                           	= Dirty
-Cimager.solver.Clean.algorithm                 	= Hogbom
+Cimager.solver.Clean.solutiontype               = MAXCHISQ
+Cimager.solver.Clean.algorithm                 	= BasisfunctionMFS
 Cimager.solver.Clean.niter                     	= 100
 Cimager.solver.Clean.gain                      	= 0.1
 Cimager.solver.Clean.tolerance                  = 0.1
