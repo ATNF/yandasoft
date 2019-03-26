@@ -19,7 +19,7 @@ set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake")
 
 option (CXX11 "Compile as C++11 if possible" YES)
 #PGI OMP flags
-set(CMAKE_CXX_FLAGS " -mp ")
+set(CMAKE_CXX_FLAGS "  -ta=tesla:cc60 ")
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
     check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
