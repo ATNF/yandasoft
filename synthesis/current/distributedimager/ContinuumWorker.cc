@@ -566,6 +566,11 @@ void ContinuumWorker::processChannels()
 
   if (workUnits.size() == 0) {
     ASKAPLOG_INFO_STR(logger,"No work todo");
+
+    // write out the beam log
+    ASKAPLOG_INFO_STR(logger, "About to log the full set of restoring beams");
+    logBeamInfo();
+
     return;
   }
 
@@ -1020,6 +1025,11 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " at barrier");
         itsComms.barrier(itsComms.theWorkers());
         ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed barrier");
+
+        // write out the beam log
+        ASKAPLOG_INFO_STR(logger, "About to log the full set of restoring beams");
+        logBeamInfo();
+
         return;
       }
 
@@ -1312,7 +1322,6 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     // Record the restoring beam
     const askap::scimath::Axes &axes = params->axes("image.slice");
     recordBeam(axes, chan);
-    storeBeam(chan);
   }
 
   if (itsParset.getBool("restore", false)) {
@@ -1348,10 +1357,10 @@ void ContinuumWorker::recordBeam(const askap::scimath::Axes &axes, const unsigne
     // this is a restored image with beam parameters set
     ASKAPCHECK(axes.has("PA"), "PA axis should always accompany MAJMIN");
     ASKAPLOG_DEBUG_STR(logger, "Found beam for image.slice, channel " <<
-    cubeChannel << ", with shape " <<
-    axes.start("MAJMIN") * 180. / M_PI * 3600. << "x" <<
-    axes.end("MAJMIN") * 180. / M_PI * 3600. << ", " <<
-    axes.start("PA") * 180. / M_PI);
+                       cubeChannel << ", with shape " <<
+                       axes.start("MAJMIN") * 180. / M_PI * 3600. << "x" <<
+                       axes.end("MAJMIN") * 180. / M_PI * 3600. << ", " <<
+                       axes.start("PA") * 180. / M_PI);
 
     casa::Vector<casa::Quantum<double> > beamVec(3, 0.);
     beamVec[0] = casa::Quantum<double>(axes.start("MAJMIN"), "rad");
@@ -1390,10 +1399,15 @@ void ContinuumWorker::logBeamInfo()
     }
     if (itsComms.isCubeCreator()) {
 
-      ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log "
-      << beamlog.filename());
-      beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
-      beamlog.write();
+        ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log "
+                           << beamlog.filename());
+        beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
+        beamlog.write();
+        
+        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
+        casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
+        itsRestoredCube->addBeam(refbeam);
+      
     }
   }
 
