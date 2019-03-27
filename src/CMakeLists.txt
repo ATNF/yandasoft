@@ -42,6 +42,7 @@ add_definitions(-DHAVE_LOG4CXX)
 include_directories(${CASACORE_INCLUDE_DIRS})
 add_definitions(-DHAVE_AIPSPP)
 add_definitions(-Dcasa=casacore)
+add_definitions(-DUSE_OPENACC)
 
 if (NOT CASACORE_VERSION STREQUAL trunk AND
     CASACORE_VERSION VERSION_GREATER 2.4.0)

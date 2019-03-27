@@ -322,14 +322,11 @@ namespace askap {
             ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
 
             uInt nBases(this->itsBasisFunction->numberBases());
-
             this->itsMask.resize(nBases);
-            this->GPUMask.resize(nBases);
 
             for (uInt base = 0; base < nBases; base++) {
                 this->itsMask(base).resize(this->dirty(0).shape().nonDegenerate());
                 this->itsMask(base).set(T(0.0));
-                this->GPUMask[base] = this->itsMask(base).data(); // may not be contiguous      
             }
 
         }
@@ -534,7 +531,37 @@ namespace askap {
                 }
             }
         }
+        
+        template<class T>
+        void absMaxPosMaskedACC(T& maxVal, int&  maxPos,  const T* im, const T* mask, uInt nele)
+        {
+            float maxValf = 0;
+            int maxPosI = 0;
+            //const uInt ncol = mask.ncolumn();
+            //const uInt nrow = mask.nrow();
+            // Parallel reduction with openacc
+            #pragma acc parallel loop reduction(max:maxValf) present(mask, im) 
+            for (int i = 0; i < nele; i++ ) {
+                T test = abs(im[i] * mask[i]);
+                if (test > maxValf) {
+                   maxValf = test;
+                } 
+            
+            }
+            #pragma acc parallel loop present(mask,im)  
+            for (int i = 0; i < nele; i++ ) {
+                if (abs(im[i] * mask[i]) == maxValf) {
+                    maxPosI = i;
+                }
+            }
+            maxVal = maxValf;
+            maxPos = maxPosI;
 
+           // Now we can change the shape to return (i,j) for the max value.
+           // Do this later
+           printf("DEBUG\tMS SUT Max value = %g, Location = %d\n", maxVal, maxPos);
+
+        }
 
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::getCoupledResidual(T& absPeakRes) {
@@ -695,9 +722,26 @@ namespace askap {
                 if (this->itsSolutionType == "MAXBASE") {
                     if (haveMask) {
                         const casacore::Matrix<T> res = this->itsResidualBasis(base)(0);
+#ifdef USE_OPENACC
+                        bool deleteIm,deleteMa;
+                        int nelements = res.nelements();
+                        const T * im = res.getStorage(deleteIm);
+                        const T * ma = mask.getStorage(deleteMa);
+                        
+                        int Idx;
+                        #pragma acc data copy(im[0:nelements],ma[0:nelements])
+                        {
+                        absMaxPosMaskedACC(maxVal,Idx,im,ma,nelements);
+                        }        
+                        const int y = Idx / mask.nrow();
+                        const int x = Idx % mask.ncolumn();
+                        maxPos(0) = x;
+                        maxPos(1) = y;
+#else                       
                         absMaxPosMasked(maxVal, maxPos, res, mask);
 //                      casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
 
+#endif
                     } else {
                         casacore::minMax(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0));
                     }
@@ -919,7 +963,6 @@ namespace askap {
 
             return True;
         }
-
     }
 }
 // namespace synthesis
