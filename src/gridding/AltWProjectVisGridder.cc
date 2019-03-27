@@ -194,7 +194,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
     }
 
     // Now we can do the convolution correction
-    correctConvolution(dBuffer);
+    correctConvolution(dBuffer, passThrough);
 
     if (itsWriteOut) {
         string name = boost::lexical_cast<std::string>(passThrough) + ".post_convolution_correction";

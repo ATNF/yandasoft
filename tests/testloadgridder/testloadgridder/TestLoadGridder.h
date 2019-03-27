@@ -66,7 +66,7 @@ namespace askap
 
       /// @brief Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casa::Array<double>& image);
+      virtual void correctConvolution(casa::Array<double>& image, int i=0);
 				
     protected:
       /// Initialize convolution function
