@@ -171,14 +171,23 @@ namespace askap {
 
                 void getCoupledResidual(T& absPeakRes);
 
-                // Long vector of PSFs
+                /// Long vector of PSFs
                 casacore::Vector<casacore::Array<T> > itsPsfLongVec;
+                
+                /// Long vector of PSFs for the GPU
+                std::vector<T *> GPUPsfLongVec;
 
                 /// Residual images convolved with basis functions, [nx,ny][nterms][nbases]
                 casacore::Vector<casacore::Vector<casacore::Array<T> > > itsResidualBasis;
 
+                /// Residual images for the GPU
+                std::vector<std::vector<T *> > GPUResidualBasis;
+
                 /// Mask images giving the location of all components per bases
                 casacore::Vector<casacore::Array<T> > itsMask;
+
+                /// GPU Mask images giving the location of all components per bases
+                std::vector<T *> GPUMask;
 
                 /// Point spread functions convolved with cross terms
                 // [nx,ny][nterms,nterms][nbases,nbases]

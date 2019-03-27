@@ -87,7 +87,7 @@ class SynthesisProgramRunner:
 
          cmd - command
       '''
-      res = os.system("srun -n %d -N 4  %s -c %s" % (np, cmd, self.tmp_parset))
+      res = os.system("srun --reservation=gpuhack2019team3 -A gpuhack2019team3 -p gpuq -n %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
          raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
 

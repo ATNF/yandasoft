@@ -47,6 +47,8 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 #include <deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <deconvolution/MultiScaleBasisFunction.h>
 #include <omp.h>
+#include <mpi.h>
+
 namespace askap {
 
     namespace synthesis {
@@ -322,10 +324,14 @@ namespace askap {
             uInt nBases(this->itsBasisFunction->numberBases());
 
             this->itsMask.resize(nBases);
+            this->GPUMask.resize(nBases);
+
             for (uInt base = 0; base < nBases; base++) {
                 this->itsMask(base).resize(this->dirty(0).shape().nonDegenerate());
                 this->itsMask(base).set(T(0.0));
+                this->GPUMask[base] = this->itsMask(base).data(); // may not be contiguous      
             }
+
         }
 
         template<class T, class FT>
@@ -584,6 +590,23 @@ namespace askap {
 
             const uInt nBases(this->itsResidualBasis.nelements());
 
+	    // MS SUT Set up some manual timers
+            const int NO_TIMERS = 12;
+            static double MS_SUT_debug_timer[NO_TIMERS];
+            static int MS_SUT_count = 0;  			 // Lazy iteration count
+            double startTime[NO_TIMERS], endTime[NO_TIMERS]; 	// Wall times
+
+            if (MS_SUT_count == 0){
+                for (int timers = 0; timers < NO_TIMERS; timers++) {
+
+                        MS_SUT_debug_timer[timers] = 0.0;
+                }
+            }
+
+	    // MS SUT Set up some checksum variables
+	    float testsum[] = {0.0, 0.0};
+
+
             absPeakVal = 0.0;
 
             ASKAPDEBUGASSERT(peakValues.nelements() <= this->itsNumberTerms);
@@ -599,9 +622,10 @@ namespace askap {
             Vector<T> maxValues(this->itsNumberTerms);
 
             // Set the mask - we need it for weighted search and deep clean
-            Matrix<T> mask;
+            Matrix<T> mask, alt_mask;   // Create an alternate mask for timing and verification purposes
             if (isWeighted) {
                 mask = this->itsWeight(0).nonDegenerate();
+                alt_mask = this->itsWeight(0).nonDegenerate();
 		//printf("DEBUG\tMS SUT: Solution Type = %s\n", this->itsSolutionType);
 		// printf("Preparing to square mask..");
                 if  (this->itsSolutionType == "MAXCHISQ") {
@@ -613,31 +637,29 @@ namespace askap {
 		    // printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
                     // #pragma omp parallel for schedule(static)
                     
+
+		    // Set up some timers
+		    startTime[0] = MPI_Wtime();
 		    const uInt ncol = mask.ncolumn();
                     const uInt nrow = mask.nrow();
                      for (uInt j = 0; j < ncol; j++ ) {
                          T* pMask = &mask(0,j);
                          #pragma acc data copy(pMask[0:nrow])
                          {
-                         #pragma acc parallel loop 
+                         #pragma acc parallel loop
                          for (uInt i = 0; i < nrow; i++ ) {
-                              T val = abs(*pMask * (*pMask));
+                              // T val = abs(*pMask * (*pMask));     // MS SUT I think this is buggy code
+			      T val = abs(*(pMask+i) * (*(pMask+i))); // MS SUT My alteration 27/3@8am
                               pMask[i] = val;
-                              
                          }
                          }
                      }
-		     
+		    endTime[0] = MPI_Wtime();
 
-                    //for (int index=0; index < mask.nelements(); index++) {
-			// int tid = omp_get_thread_num();
-			// threadcount[tid]++;
-                        //mask.data()[index] = mask.data()[index]*mask.data()[index];
-                    //}
-		    // printf("DEBUG\tMS SUT: Loadings = %d, %d, %d, %d\n",
-		    // threadcount[0], threadcount[1], threadcount[2], threadcount[3]);
-
-                    // mask*=mask;
+		    // Original element-wise matrix multiply using CASA operator *
+		    startTime[1] = MPI_Wtime();
+                    alt_mask*=alt_mask;
+		    endTime[1] = MPI_Wtime();
                 }
             }
 
@@ -781,6 +803,14 @@ namespace askap {
             // For deep cleaning we want to restrict the abspeakval to the mask
             // so we just use the value determined above
             if (!deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
+
+
+	    // Update collective time over all iterations
+	    MS_SUT_debug_timer[0] += (endTime[0]-startTime[0]);
+            MS_SUT_debug_timer[1] += (endTime[1]-startTime[1]);
+
+	    // Report timings
+	    printf("DEBUG\t MS SUT Timings: Mask*Mask OpenACC: %g, Serial: %g\n", MS_SUT_debug_timer[0], MS_SUT_debug_timer[1]);
 
         }
 
