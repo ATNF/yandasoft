@@ -50,12 +50,60 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 #include <mpi.h>
 
 #ifdef USE_OPENACC
-ACCManager::ACCManager() {
+template<class T>
+ACCManager<T>::ACCManager() {
     ASKAPLOG_INFO_STR(decmtbflogger,"In OPEN ACC mode instantiating manager");
 }
-ACCManager::~ACCManager() {
+template<class T>
+ACCManager<T>::~ACCManager() {
     ASKAPLOG_INFO_STR(decmtbflogger,"Destructor FIXME delete the memory if required");
+ // the residuals
+    size_t nimages= nBases*nTerms;
+    for (int i = 0; i< nimages ; i++) {
+        T* tomove = (T *) residuals[i];
+        #pragma acc exit data delete(tomove[0:npixels]) 
+    }
+    // the masks
+    //
+    for (int i = 0; i<nBases;i++) {
+        T* tomove = (T *) masks[i];
+        #pragma acc exit data delete(tomove[0:npixels]) 
+    }
+
+    T* tomove = (T *) maskToUse;
+    #pragma acc exit data delete(tomove[0:npixels]) 
+
+    
 }
+template <class T>
+void ACCManager<T>::CopyToDevice() {
+
+    // the residuals
+    size_t nimages= nBases*nTerms;
+    for (int i = 0; i< nimages ; i++) {
+        T* tomove = (T *) residuals[i];
+        #pragma acc enter data copyin(tomove[0:npixels]) 
+    }
+    // the masks
+    //
+    for (int i = 0; i<nBases;i++) {
+        T* tomove = (T *) masks[i];
+        #pragma acc enter data copyin(tomove[0:npixels]) 
+    }
+
+    T* tomove = (T *) maskToUse;
+    #pragma acc enter data copyin(tomove[0:npixels]) 
+}
+
+template <class T>
+void ACCManager<T>::UpdateMask(int base) {
+    T * basemask = (T *) masks[base];
+    #pragma acc parallel loop present(maskToUse,basemask)
+    for (int i=0;i<npixels;i++) {
+       maskToUse[i] *= basemask[i];
+    }
+}
+
 #endif
 
 namespace askap {
@@ -253,6 +301,9 @@ namespace askap {
             // Initialise masks
             initialiseMask();
 
+#ifdef USE_OPENACC
+            itsACCManager.CopyToDevice();
+#endif            
             // Force change in basis function
             initialiseForBasisFunction(true);
 
@@ -316,22 +367,24 @@ namespace askap {
                     this->itsResidualBasis(base)(term) = real(work);
                 }
             }
-            #ifdef USE_OPENACC
+#ifdef USE_OPENACC
             itsACCManager.nBases = nBases;
-            itsACCManager.nTerms = nTerms;
-            itsACCManager.residuals = (T**) new (nBases*nTerms,sizeof(T*));
-            itsACCManager.deleteResiduals = (Bool *) new(nBases*nTerms,sizeof(Bool));
+            itsACCManager.nTerms = this->itsNumberTerms;
+            itsACCManager.npixels = this->itsResidualBasis(0)(0).nelements();
+            itsACCManager.residuals = new uInt64[itsACCManager.nBases*itsACCManager.nTerms];
+            itsACCManager.deleteResiduals =  new casacore::Bool[itsACCManager.nBases*itsACCManager.nTerms];
+             
             size_t idx = 0; 
             for (uInt base = 0; base < nBases; base++) {
                 // Calculate transform of residual images [nx,ny,nterms]
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
                     Bool deleteIt;
-                    itsACCManager.residuals[idx] = this->itsResidualBasis(base)(term).getStorage(deleteIt);
-                    itsACCManager.deleteResiduals = deleteIt;
+                    itsACCManager.residuals[idx] = (uInt64) this->itsResidualBasis(base)(term).getStorage(deleteIt);
+                    itsACCManager.deleteResiduals[idx] = deleteIt;
                     idx++;
                 }
             }
-            #endif
+#endif
 
         }
         template<class T, class FT>
@@ -351,11 +404,25 @@ namespace askap {
             uInt nBases(this->itsBasisFunction->numberBases());
             this->itsMask.resize(nBases);
 
+#ifdef USE_OPENACC
+            size_t npixels = this->itsMask(0).nelements();
+            Bool deleteIt;
+            itsACCManager.tmpmask = this->itsWeight(0).nonDegenerate();
+            itsACCManager.maskToUse = (T *) itsACCManager.tmpmask.getStorage(deleteIt);
+            itsACCManager.masks = new uInt64[nBases];
+            itsACCManager.deleteMasks = new casacore::Bool[nBases];
+#endif
             for (uInt base = 0; base < nBases; base++) {
                 this->itsMask(base).resize(this->dirty(0).shape().nonDegenerate());
                 this->itsMask(base).set(T(0.0));
-            }
+#ifdef USE_OPENACC
+                casacore::Bool deleteIt;
+                itsACCManager.masks[base] = (uInt64) this->itsMask(base).getStorage(deleteIt);
+                itsACCManager.deleteMasks[base] = deleteIt;
+#endif
 
+            }
+        
         }
 
         template<class T, class FT>
@@ -662,7 +729,9 @@ namespace askap {
                         MS_SUT_debug_timer[timers] = 0.0;
                 }
             }
-
+#ifdef USE_OPENACC
+            int optimumIdx;
+#endif
 	    // MS SUT Set up some checksum variables
 	    float testsum[] = {0.0, 0.0};
 
@@ -728,6 +797,7 @@ namespace askap {
                 // Find peak in residual image cube
                 casacore::IPosition minPos(2, 0);
                 casacore::IPosition maxPos(2, 0);
+                int Idx;
                 T minVal(0.0), maxVal(0.0);
 
                 if (deepCleanMode()) {
@@ -740,7 +810,12 @@ namespace askap {
                                 mask*=mask;
                             }
                         }
+#ifdef USE_OPENACC
+                        itsACCManager.UpdateMask(base);
+#else
                         mask*=this->itsMask(base);
+#endif
+
                     } else {
                         mask=this->itsMask(base);
                     }
@@ -758,24 +833,17 @@ namespace askap {
 #ifdef USE_OPENACC
                         bool deleteIm,deleteMa;
                         int nelements = res.nelements();
-                        const T * im = res.getStorage(deleteIm);
-                        const T * ma = mask.getStorage(deleteMa);
-                        
-                        int Idx;
-                        #pragma acc data copy(im[0:nelements],ma[0:nelements])
-                        {
-			// Why is this in a seperate scope? I didn't think it needed to be.
+                        const T * im = (T *) itsACCManager.residuals[base*itsACCManager.nTerms];
+                        const T * ma = (T *) itsACCManager.maskToUse;
                         absMaxPosMaskedACC(maxVal,Idx,im,ma,nelements);
-                        }        
                         const int y = Idx / mask.nrow();
                         const int x = Idx % mask.ncolumn();
                         maxPos(0) = x;
                         maxPos(1) = y;
-			//printf("Check Max Locations (OpenACC): %d, %d\n", maxPos(0), maxPos(1));
+//			printf("Check Max Locations (OpenACC): val=%f at: %d, %d, %d\n", maxVal, maxPos(0), maxPos(1), Idx);
 
                         //absMaxPosMasked(maxVal, maxPos, res, mask);
                         //printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
-
 #else                       
                         absMaxPosMasked(maxVal, maxPos, res, mask);
 			printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
@@ -848,17 +916,23 @@ namespace askap {
                         }
                     }
                 }
-
+  //              printf("abs(minval): %f absPeak: %f abs(maxval): %f\n");
                 // We use the minVal and maxVal to find the optimum base
                 if (abs(minVal) > absPeakVal) {
                     optimumBase = base;
                     absPeakVal = abs(minVal);
                     absPeakPos = minPos;
+#ifdef USE_OPENACC
+                    optimumIdx = Idx;
+#endif
                 }
                 if (abs(maxVal) > absPeakVal) {
                     optimumBase = base;
                     absPeakVal = abs(maxVal);
                     absPeakPos = maxPos;
+#ifdef USE_OPENACC
+                    optimumIdx = Idx;
+#endif
                 }
             }
 
@@ -876,7 +950,11 @@ namespace askap {
 
             // Record location of peak in mask
             if (this->itsMask.nelements()) this->itsMask(optimumBase)(absPeakPos)=T(1.0);
-
+#ifdef USE_OPENACC
+                T * tomove = (T *) itsACCManager.masks[optimumBase];
+//                printf("device ptr %p offset: %d\n",tomove,optimumIdx);
+                #pragma acc update device(tomove[optimumIdx:1])
+#endif 
             // Take square root to get value comparable to peak residual
             if (this->itsSolutionType == "MAXCHISQ") {
                 absPeakVal = sqrt(max(T(0.0), absPeakVal));
@@ -894,7 +972,7 @@ namespace askap {
             MS_SUT_debug_timer[1] += (endTime[1]-startTime[1]);
 
 	    // Report timings
-	    printf("DEBUG\t MS SUT Timings: Mask*Mask OpenACC: %g, Serial: %g\n", MS_SUT_debug_timer[0], MS_SUT_debug_timer[1]);
+	    // printf("DEBUG\t MS SUT Timings: Mask*Mask OpenACC: %g, Serial: %g\n", MS_SUT_debug_timer[0], MS_SUT_debug_timer[1]);
 
         }
 

@@ -31,6 +31,8 @@ endif()
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} $ENV{CPPFLAGS}")
+message(STATUS "CXXFLAGS are ${CMAKE_CXX_FLAGS}")
 
 # uninstall target
 if(NOT TARGET uninstall)

@@ -56,17 +56,27 @@ template<class T>
 class ACCManager {
     
     public:
-
-    size_t nBases;
-    size_t nTerms;
     
-    T** residuals;
-    T* mask;
-    T** coefficients;
+        ACCManager();
+        ~ACCManager();
+        
+        void CopyToDevice();
+        void UpdateMask(int base);
 
-    Bool * deleteResiduals;
-    Bool * deleteMask;
-    Bool * deleteCoefficients; 
+        size_t nBases;
+        size_t nTerms;
+        size_t npixels;
+
+        uInt64 *residuals;
+        uInt64 *masks;
+        T** coefficients;
+        
+        T* maskToUse;
+        Matrix<T> tmpmask;
+
+        Bool * deleteResiduals;
+        Bool * deleteMasks;
+        Bool * deleteCoefficients; 
 };
 #endif // USE_OPENACC
 
