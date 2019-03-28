@@ -49,6 +49,15 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 #include <omp.h>
 #include <mpi.h>
 
+#ifdef USE_OPENACC
+ACCManager::ACCManager() {
+    ASKAPLOG_INFO_STR(decmtbflogger,"In OPEN ACC mode instantiating manager);
+}
+ACCManager::~ACCManager() {
+    ASKAPLOG_INFO_STR(decmtbflogger,"Destructor FIXME delete the memory if required");
+}
+#endif
+
 namespace askap {
 
     namespace synthesis {
@@ -88,6 +97,7 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There is only one term to be solved");
             this->itsPsfLongVec.resize(1);
             this->itsPsfLongVec(0) = psf;
+            
         };
 
         template<class T, class FT>
@@ -306,6 +316,23 @@ namespace askap {
                     this->itsResidualBasis(base)(term) = real(work);
                 }
             }
+            #ifdef USE_OPENACC
+            itsACCManager.nBases = nBases;
+            itsACCManager.nTerms = nTerms;
+            itsACCManager.residuals = (T**) new (nBases*nTerms,sizeof(T*));
+            itsACCManager.deleteResiduals = (Bool *) new(nBases*nTerms,sizeof(Bool));
+            size_t idx = 0; 
+            for (uInt base = 0; base < nBases; base++) {
+                // Calculate transform of residual images [nx,ny,nterms]
+                for (uInt term = 0; term < this->itsNumberTerms; term++) {
+                    Bool deleteIt;
+                    itsACCManager.residuals[idx] = this->itsResidualBasis(base)(term).getStorage(deleteIt);
+                    itsACCManager.deleteResiduals = deleteIt;
+                    idx++;
+                }
+            }
+            #endif
+
         }
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::initialiseMask()

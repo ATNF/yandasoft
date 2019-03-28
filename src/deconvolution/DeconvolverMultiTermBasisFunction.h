@@ -50,6 +50,26 @@
 #include <deconvolution/DeconvolverMonitor.h>
 #include <deconvolution/BasisFunction.h>
 
+
+#ifdef USE_OPENACC
+template<class T>
+class ACCManager {
+    
+    public:
+
+    size_t nBases;
+    size_t nTerms;
+    
+    T** residuals;
+    T* mask;
+    T** coefficients;
+
+    Bool * deleteResiduals;
+    Bool * deleteMask;
+    Bool * deleteCoefficients; 
+};
+#endif // USE_OPENACC
+
 namespace askap {
 
     namespace synthesis {
@@ -170,6 +190,12 @@ namespace askap {
                 void chooseComponent(uInt& optimumBase, casacore::IPosition& absPeakPos, T& absPeakVal, Vector<T>& peakValues);
 
                 void getCoupledResidual(T& absPeakRes);
+
+                #ifdef USE_OPENACC
+
+                ACCManager<T> itsACCManager;
+
+                #endif // USE_OPENACC
 
                 /// Long vector of PSFs
                 casacore::Vector<casacore::Array<T> > itsPsfLongVec;

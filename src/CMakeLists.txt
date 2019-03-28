@@ -85,6 +85,11 @@ target_link_libraries(yanda_synthesis
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
 	)
+if (MPI_FOUND)
+	target_link_libraries(yanda_synthesis
+		${MPI_LIBRARIES}
+	)
+endif (MPI_FOUND)
 
 
 install (
