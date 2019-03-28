@@ -3,8 +3,6 @@ include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 
 project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
-set (CMAKE_C_COMPILER /group/gpuhack2019team3/software/sles12sp3/apps/binary/pgi/19.1/linux86-64/19.1/bin/pgcc)
-set (CMAKE_CXX_COMPILER /group/gpuhack2019team3/software/sles12sp3/apps/binary/pgi/19.1/linux86-64/19.1/bin/pgc++)
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
@@ -18,8 +16,6 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake")
 
 option (CXX11 "Compile as C++11 if possible" YES)
-#PGI OMP flags
-set(CMAKE_CXX_FLAGS "  -ta=tesla:cc60 ")
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
     check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
