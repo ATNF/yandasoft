@@ -51,7 +51,7 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #ifdef USE_OPENACC
 ACCManager::ACCManager() {
-    ASKAPLOG_INFO_STR(decmtbflogger,"In OPEN ACC mode instantiating manager);
+    ASKAPLOG_INFO_STR(decmtbflogger,"In OPEN ACC mode instantiating manager");
 }
 ACCManager::~ACCManager() {
     ASKAPLOG_INFO_STR(decmtbflogger,"Destructor FIXME delete the memory if required");
