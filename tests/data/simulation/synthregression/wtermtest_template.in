@@ -97,6 +97,7 @@ Cimager.solver                           	= Clean
 Cimager.solver.Clean.solutiontype               = MAXBASE
 Cimager.solver.Clean.algorithm                 	= BasisfunctionMFS
 Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.scales                     = [0,3,10]
 Cimager.solver.Clean.gain                      	= 0.1
 Cimager.solver.Clean.tolerance                  = 0.1
 Cimager.solver.Clean.verbose                   	= True

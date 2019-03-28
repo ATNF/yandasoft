@@ -540,26 +540,32 @@ namespace askap {
             //const uInt ncol = mask.ncolumn();
             //const uInt nrow = mask.nrow();
             // Parallel reduction with openacc
-            #pragma acc parallel loop reduction(max:maxValf) present(mask, im) 
+            #pragma acc parallel loop reduction(max:maxValf) present(mask, im)
             for (int i = 0; i < nele; i++ ) {
                 T test = abs(im[i] * mask[i]);
                 if (test > maxValf) {
                    maxValf = test;
-                } 
-            
+		   //#pragma acc atomic write
+		   //maxPosI = i;
+                }
             }
+	    //printf("MaxPosI = %d\n", maxPosI);
+
             #pragma acc parallel loop present(mask,im)  
             for (int i = 0; i < nele; i++ ) {
                 if (abs(im[i] * mask[i]) == maxValf) {
                     maxPosI = i;
                 }
             }
+
+	    //printf("MaxPosI = %d\n", maxPosI);
+
             maxVal = maxValf;
             maxPos = maxPosI;
 
            // Now we can change the shape to return (i,j) for the max value.
            // Do this later
-           printf("DEBUG\tMS SUT Max value = %g, Location = %d\n", maxVal, maxPos);
+           //printf("DEBUG\tMS SUT Max value = %g, Location = %d\n", maxVal, maxPos);
 
         }
 
@@ -731,14 +737,21 @@ namespace askap {
                         int Idx;
                         #pragma acc data copy(im[0:nelements],ma[0:nelements])
                         {
+			// Why is this in a seperate scope? I didn't think it needed to be.
                         absMaxPosMaskedACC(maxVal,Idx,im,ma,nelements);
                         }        
                         const int y = Idx / mask.nrow();
                         const int x = Idx % mask.ncolumn();
                         maxPos(0) = x;
                         maxPos(1) = y;
+			//printf("Check Max Locations (OpenACC): %d, %d\n", maxPos(0), maxPos(1));
+
+                        //absMaxPosMasked(maxVal, maxPos, res, mask);
+                        //printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
+
 #else                       
                         absMaxPosMasked(maxVal, maxPos, res, mask);
+			printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 //                      casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
 
 #endif
