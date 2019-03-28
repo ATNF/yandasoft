@@ -146,6 +146,7 @@ class ContinuumWorker
 
         void copyModel(askap::scimath::Params::ShPtr SourceParams, askap::scimath::Params::ShPtr SinkParams);
 
+        void initialiseBeamLog(const unsigned int numChannels);
         void recordBeam(const askap::scimath::Axes &axes, const unsigned int globalChannel);
         void storeBeam(const unsigned int cubeChannel);
 

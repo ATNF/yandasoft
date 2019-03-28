@@ -210,6 +210,7 @@ void ContinuumWorker::run(void)
   int nGroups = itsComms.nGroups();
   int nchanTotal = nWorkers * nchanpercore / nGroups;
 
+  initialiseBeamLog(nchanTotal);
 
   if (localSolver) {
     ASKAPLOG_INFO_STR(logger, "In local solver mode - reprocessing allocations)");
@@ -1349,6 +1350,19 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
 
 }
 
+void ContinuumWorker::initialiseBeamLog(const unsigned int numChannels)
+{
+
+    casa::Vector<casa::Quantum<double> > beamVec(3);
+    beamVec[0] = casa::Quantum<double>(0., "rad");
+    beamVec[1] = casa::Quantum<double>(0., "rad");
+    beamVec[2] = casa::Quantum<double>(0., "deg");
+
+    for(unsigned int i=0;i<numChannels;i++) {
+        itsBeamList[i] = beamVec;
+    }
+
+}
 
 void ContinuumWorker::recordBeam(const askap::scimath::Axes &axes, const unsigned int cubeChannel)
 {
