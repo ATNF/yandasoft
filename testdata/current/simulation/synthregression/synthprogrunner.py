@@ -78,13 +78,19 @@ class SynthesisProgramRunner:
          Run csimulator on a current parset
       '''
       self.runCommand(self.simulator)
-         
+
    def runCalibrator(self):
       '''
          Run ccalibrator on a current parset
       '''
       self.runCommand(self.calibrator)
-         
+
+   def runCalibratorParallel(self, nProcs):
+      '''
+         Run ccalibrator on a current parset in parallel
+      '''
+      mpirun = 'mpirun -np %d' % nProcs
+      self.runCommand(mpirun + ' ' + self.calibrator)
 
    def runImager(self):
       '''

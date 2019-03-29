@@ -167,5 +167,91 @@ def runTests(solverType):
     spr.runImager()
     analyseResult(spr)
 
+def runTestsParallel():
+    """
+    Runs parallel tests for bandpass calibration using ccalibrator app, with parallel matrix using LSQR solver.
+    The test is performed by running serial and parallel versions and comparing the results.
+    """
+    msarchive = "vis_4chan.tar.bz2"
+    msfile = "vis_4chan.ms"
+
+    # Extracting measurement set from an archive.
+    if not os.path.exists(msarchive):
+        raise RuntimeError, "A tarball with measurement sets does not seem to exist (%s)" % msarchive
+
+    if os.path.exists(msfile):
+        print "Removing old %s" % msfile
+        os.system("rm -rf %s" % msfile)
+
+    os.system("tar -xjf %s" % msarchive)
+
+    #----------------------------------------------------------------------------------
+    tmp_parset = 'ccal_tmp.in'
+    os.system("rm -f %s" % tmp_parset)
+    os.system("touch %s" % tmp_parset)
+
+    spr = SynthesisProgramRunner(template_parset = tmp_parset)
+
+    spr.addToParset("Ccalibrator.dataset                      = [%s]" % msfile)
+    spr.addToParset("Ccalibrator.nAnt                         = 36")
+    spr.addToParset("Ccalibrator.nBeam                        = 1")
+    spr.addToParset("Ccalibrator.nChan                        = 4")
+
+    spr.addToParset("Ccalibrator.calibaccess                  = parset")
+    spr.addToParset("Ccalibrator.calibaccess.parset           = result.dat")
+
+    spr.addToParset("Ccalibrator.sources.names                = [field1]")
+    spr.addToParset("Ccalibrator.sources.field1.direction     = [12h30m00.000, -45.00.00.000, J2000]")
+    spr.addToParset("Ccalibrator.sources.field1.components    = [src1]")
+    spr.addToParset("Ccalibrator.sources.src1.flux.i          = 1.0")
+    spr.addToParset("Ccalibrator.sources.src1.direction.ra    = 0.00")
+    spr.addToParset("Ccalibrator.sources.src1.direction.dec   = 0.00")
+
+    spr.addToParset("Ccalibrator.gridder                      = SphFunc")
+
+    spr.addToParset("Ccalibrator.ncycles                      = 5")
+
+    spr.addToParset("Ccalibrator.solve                        = bandpass")
+    spr.addToParset("Ccalibrator.solver                       = LSQR")
+
+    # Filenames for writing the calibration results (parsets).
+    result_serial = "result_serial.dat"
+    result_parallel = "result_serial.dat"
+
+    # Serial run.
+    print "Bandpass test: Serial run of ccalibrator."
+    nprocs = 1
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_serial)
+
+    # Set additional parameters for the parallel run.
+    # These are defined for the case of 4 channels with 5 cpus, i.e., 1 channel per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 1")
+    spr.addToParset("Ccalibrator.chunk                        = %w")
+    spr.addToParset("Ccalibrator.solver.LSQR.parallelMatrix   = true")
+
+    # Parallel run.
+    print "Bandpass test: Parallel run of ccalibrator."
+    nprocs = 5
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_parallel)
+
+    # Comparing the results.
+    gains_serial = loadParset(result_serial)
+    gains_parallel = loadParset(result_parallel)
+    for k, v in gains_serial.items():
+        if k not in gains_parallel:
+            raise RintimeError, "Gain parameter %s found in the serial result is missing in the parallel result!" % k
+        val_serial = gains_serial[k]
+        val_parallel = gains_parallel[k]
+        # Probably will need to relax the condition by introducing a small epsilon, to take into account numerical errors.
+        if abs(val_serial - val_parallel) > 0.0:
+            raise RuntimeError, "Gain parameter %s has a parallel value of %s which is different from serial value %s" % (k, val_parallel, val_serial)
+
 runTests("SVD")
 runTests("LSQR")
+runTestsParallel()
