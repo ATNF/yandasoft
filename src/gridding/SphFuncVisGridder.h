@@ -94,7 +94,7 @@ namespace askap
 
 				/// Correct for gridding convolution function
 				/// @param image image to be corrected
-				virtual void correctConvolution(casa::Array<double>& image);
+				virtual void correctConvolution(casacore::Array<double>& image);
 
 				/// Calculate prolate spheroidal function
 				/// @param nu Argument for spheroidal function
@@ -117,7 +117,7 @@ namespace askap
                 /// will use neighbouring values to estimate it (to 2nd order).
                 /// @param[in] func vector to be interpolated
                 template<typename T>
-                void interpolateEdgeValues(casa::Vector<T> &func);
+                void interpolateEdgeValues(casacore::Vector<T> &func);
 
 			private:
 			

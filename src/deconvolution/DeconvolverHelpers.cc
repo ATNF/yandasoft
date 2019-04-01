@@ -41,9 +41,9 @@ namespace askap {
                                                            const LOFAR::ParameterSet& parset)
         {
             String imageName = parset.getString(name, "");
-            casa::Array<Float> imageArray;
+            casacore::Array<Float> imageArray;
             if (imageName != "") {
-                casa::PagedImage<float> im(imageName);
+                casacore::PagedImage<float> im(imageName);
                 im.get(imageArray, True);
                 ASKAPLOG_INFO_STR(logger, "Read image " << imageName << " into array " << name);
             } else {
@@ -52,17 +52,17 @@ namespace askap {
             return imageArray;
         }
 
-        void DeconvolverHelpers::putArrayToImage(const casa::Array<Float> imageArray, const String name,
+        void DeconvolverHelpers::putArrayToImage(const casacore::Array<Float> imageArray, const String name,
                 const String templateName, const LOFAR::ParameterSet &parset)
         {
             String templateFile = parset.getString(templateName, templateName);
             String imageFile = parset.getString(name, name);
             {
                 ASKAPLOG_INFO_STR(logger, "Writing array " << name << " into image " << imageFile);
-                casa::IPosition minPos;
-                casa::IPosition maxPos;
+                casacore::IPosition minPos;
+                casacore::IPosition maxPos;
                 Float minVal, maxVal;
-                casa::minMax(minVal, maxVal, minPos, maxPos, imageArray);
+                casacore::minMax(minVal, maxVal, minPos, maxPos, imageArray);
                 ASKAPLOG_INFO_STR(logger, "Maximum =  " << maxVal << " at location " << maxPos);
                 ASKAPLOG_INFO_STR(logger, "Minimum = " << minVal << " at location " << minPos);
                 ASKAPLOG_INFO_STR(logger, "Sum     = " << sum(imageArray));
@@ -70,10 +70,10 @@ namespace askap {
             //
             {
                 {
-                    casa::Directory tFile(templateFile);
+                    casacore::Directory tFile(templateFile);
                     tFile.copy(imageFile);
                 }
-                casa::PagedImage<Float> im(imageFile);
+                casacore::PagedImage<Float> im(imageFile);
                 ASKAPLOG_INFO_STR(logger, "Array shape " << imageArray.shape());
                 ASKAPLOG_INFO_STR(logger, "Image shape " << im.shape());
 

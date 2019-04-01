@@ -82,11 +82,11 @@ namespace askap {
                 /// @detail The state of the deconvolver is passed via the
                 /// DeconvolverState instance. Information in that is
                 /// used to evaluate termination.
-                casa::Bool terminate(const DeconvolverState<T>& ds);
+                casacore::Bool terminate(const DeconvolverState<T>& ds);
 
                 /// @brief Return the termination as a string
                 /// @param[out] Termination cause returned as a string
-                casa::String terminationString() const;
+                casacore::String terminationString() const;
 
                 /// @brief Set the termination cause as an enumeration
                 /// @param[in] Termination cause enumeration
@@ -102,41 +102,41 @@ namespace askap {
 
                 /// @brief Return the desired algorithm name as a string
                 /// @param[out] Name of desired algorithm e.g. MultiScale
-                casa::String algorithm() const {return itsAlgorithm;};
+                casacore::String algorithm() const {return itsAlgorithm;};
 
                 /// @brief Set the desired algorithm name as a string
                 /// @param[in] algorithm Name of desired algorithm e.g. MultiScale
-                void setAlgorithm(const casa::String algorithm) {
+                void setAlgorithm(const casacore::String algorithm) {
                     itsAlgorithm = algorithm;
                 };
 
                 /// @brief Set the desired gain
                 /// @param[in] gain Desired gain
-                void setGain(casa::Float gain) {
+                void setGain(casacore::Float gain) {
                     itsGain = gain;
                 }
 
-                casa::Float gain() const {
+                casacore::Float gain() const {
                     return itsGain;
                 }
 
                 /// @brief Set the desired tolerance
                 /// @param[in] tolerance Desired tolerance
-                void setTolerance(casa::Float tolerance) {
+                void setTolerance(casacore::Float tolerance) {
                     itsTolerance = tolerance;
                 }
 
-                casa::Float tolerance() const {
+                casacore::Float tolerance() const {
                     return itsTolerance;
                 }
 
                 /// @brief Set the desired target number of iterations
                 /// @param[in] targetiter Desired number of iterations
-                void setTargetIter(casa::Int targetiter) {
+                void setTargetIter(casacore::Int targetiter) {
                     itsTargetIter = targetiter;
                 }
 
-                casa::Int targetIter() const {
+                casacore::Int targetIter() const {
                     return itsTargetIter;
                 }
 
@@ -203,11 +203,11 @@ namespace askap {
                 /// is less than this number times the original maximum absolute
                 /// residual.
                 /// @param[in] fractionalThreshold Fractional threshold (0.1 is 10%).
-                void setFractionalThreshold(casa::Float fractionalThreshold) {
+                void setFractionalThreshold(casacore::Float fractionalThreshold) {
                     itsFractionalThreshold = fractionalThreshold;
                 }
 
-                casa::Float fractionalThreshold() {
+                casacore::Float fractionalThreshold() {
                     return itsFractionalThreshold;
                 }
 
@@ -217,22 +217,22 @@ namespace askap {
                 /// this is the full width. The peak of the PSF will be located
                 /// at psfWidth/2, psfWidth/2.
                 /// @param[in] Width of the PSF in pixels (e.g. 1024).
-                void setPSFWidth(const casa::Int psfWidth) {itsPSFWidth = psfWidth;}
+                void setPSFWidth(const casacore::Int psfWidth) {itsPSFWidth = psfWidth;}
 
                 /// @brief Get the desired PSF width in pixels
-                casa::Int psfWidth() const {return itsPSFWidth;};
+                casacore::Int psfWidth() const {return itsPSFWidth;};
 
             private:
-                casa::String itsAlgorithm;
+                casacore::String itsAlgorithm;
                 TerminationCause itsTerminationCause;
-                casa::Int itsTargetIter;
+                casacore::Int itsTargetIter;
                 T itsTargetObjectiveFunction;
                 T itsTargetObjectiveFunction2;
                 T itsTargetFlux;
-                casa::Float itsFractionalThreshold;
-                casa::Float itsGain;
-                casa::Float itsTolerance;
-                casa::Int itsPSFWidth;
+                casacore::Float itsFractionalThreshold;
+                casacore::Float itsGain;
+                casacore::Float itsTolerance;
+                casacore::Int itsPSFWidth;
                 T itsLambda;
                 askap::SignalCounter itsSignalCounter;
                 askap::ISignalHandler* itsOldHandler;

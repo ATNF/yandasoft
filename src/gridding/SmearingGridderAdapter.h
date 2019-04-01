@@ -60,7 +60,7 @@ public:
    /// @note time-average smearing is not yet implemented
    SmearingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
            const double bandwidth,
-           const casa::uInt nFreqSteps = 1);
+           const casacore::uInt nFreqSteps = 1);
 
 
    /// @brief copy constructor
@@ -79,7 +79,7 @@ public:
    /// @param[in] shape Shape of output image: cube: u,v,pol,chan
    /// @param[in] dopsf Make the psf?
    virtual void initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf = true,
+                const casacore::IPosition& shape, const bool dopsf = true,
                 const bool dopcf=false);
 
    /// @brief grid the visibility data.
@@ -88,19 +88,19 @@ public:
 
    /// @brief form the final output image
    /// @param[in] out output double precision image or PSF
-   virtual void finaliseGrid(casa::Array<double>& out);
+   virtual void finaliseGrid(casacore::Array<double>& out);
 
    /// @brief finalise weights
    /// @details Form the sum of the convolution function squared, multiplied by the weights for each
    /// different convolution function. This is used in the evaluation of the second derivative.
    /// @param[in] out output double precision sum of weights images
-   virtual void finaliseWeights(casa::Array<double>& out);
+   virtual void finaliseWeights(casacore::Array<double>& out);
 
    /// @brief initialise the degridding
    /// @param[in] axes axes specifications
    /// @param[in] image input image cube: u,v,pol,chan
    virtual void initialiseDegrid(const scimath::Axes& axes,
-					const casa::Array<double>& image);
+					const casacore::Array<double>& image);
 
    /// @brief make context-dependant changes to the gridder behaviour
    /// @param[in] context context description
@@ -132,7 +132,7 @@ private:
    const double itsBandwidth;
    
    /// @brief number of frequency steps to simulate (1 means a void operation, pass accessor as it is)
-   const casa::uInt itsNFreqSteps;
+   const casacore::uInt itsNFreqSteps;
                   
    /// @brief flag that the model is empty for degridding
    /// @details It allows to bypass expensive image regridding

@@ -102,14 +102,14 @@ namespace askap
 	/// size before this method is called. Pass a void shared pointer (default) to skip
 	/// mask-related functionality. Hint: use utility::NullDeleter to wrap a shared pointer
 	/// over an existing array reference.
-    float ImageSolver::doNormalization(const casa::Vector<double>& diag, const float& tolerance,
-                      casa::Array<float>& psf, float psfRefPeak, casa::Array<float>& dirty,
-				      const boost::shared_ptr<casa::Array<float> > &mask) const
+    float ImageSolver::doNormalization(const casacore::Vector<double>& diag, const float& tolerance,
+                      casacore::Array<float>& psf, float psfRefPeak, casacore::Array<float>& dirty,
+				      const boost::shared_ptr<casacore::Array<float> > &mask) const
     {
         ASKAPTRACE("ImageSolver::doNormalization");
 
-        const double maxDiag(casa::max(diag));
-        const double sumDiag(casa::sum(diag));
+        const double maxDiag(casacore::max(diag));
+        const double sumDiag(casacore::sum(diag));
 
         ASKAPCHECK(maxDiag>0., "Maximum diagonal element is supposed to be positive, check that at least some data were gridded, maxDiag="
                    <<maxDiag<<" sumDiag="<<sumDiag);
@@ -122,13 +122,13 @@ namespace askap
 
 	//	ASKAPLOG_INFO_STR(logger, "Normalizing PSF by maximum of diagonal equal to "<<maxDiag<<
 	//			  ", cutoff weight is "<<tolerance*100<<"\% of the largest diagonal element");
-	//	ASKAPLOG_INFO_STR(logger, "Peak of PSF before normalization = " << casa::max(psf));
+	//	ASKAPLOG_INFO_STR(logger, "Peak of PSF before normalization = " << casacore::max(psf));
 	//        psf /= float(maxDiag);
-	//        ASKAPLOG_INFO_STR(logger, "Peak of PSF = " << casa::max(psf));
+	//        ASKAPLOG_INFO_STR(logger, "Peak of PSF = " << casacore::max(psf));
 
         ASKAPLOG_INFO_STR(logger, "Maximum diagonal element " <<maxDiag<<
 			  ", cutoff weight is "<<tolerance*100<<"\% of the largest diagonal element");
-        const float unnormalisedMaxPSF = casa::max(psf);
+        const float unnormalisedMaxPSF = casacore::max(psf);
         if (psfRefPeak<=0.) {
             ASKAPLOG_INFO_STR(logger, "Normalising PSF to unit peak");
         } else {
@@ -138,11 +138,11 @@ namespace askap
 
 	    ASKAPLOG_INFO_STR(logger, "Peak of PSF before normalisation = " << unnormalisedMaxPSF);
         psf /= float(psfRefPeak<=0. ? unnormalisedMaxPSF : psfRefPeak);
-        ASKAPLOG_INFO_STR(logger, "Peak of PSF after normalisation = " << casa::max(psf));
+        ASKAPLOG_INFO_STR(logger, "Peak of PSF after normalisation = " << casacore::max(psf));
 
 	    uint nAbove = 0;
-        casa::IPosition vecShape(1,diag.nelements());
-        casa::Vector<float> dirtyVector(dirty.reform(vecShape));
+        casacore::IPosition vecShape(1,diag.nelements());
+        casacore::Vector<float> dirtyVector(dirty.reform(vecShape));
 
         if(mask) {
           ASKAPLOG_DEBUG_STR(logger, "Deconvolution will be based on signal to noise ratio");
@@ -151,10 +151,10 @@ namespace askap
           ASKAPLOG_DEBUG_STR(logger, "Deconvolution will be based on flux only");
         }
 
-        ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector before normalisation "<<casa::max(dirtyVector));
+        ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector before normalisation "<<casacore::max(dirtyVector));
 
-        casa::Vector<float> maskVector(mask ? mask->reform(vecShape) : casa::Vector<float>());
-        for (casa::uInt elem=0; elem<diag.nelements(); ++elem) {
+        casacore::Vector<float> maskVector(mask ? mask->reform(vecShape) : casacore::Vector<float>());
+        for (casacore::uInt elem=0; elem<diag.nelements(); ++elem) {
              if(diag(elem)>cutoff) {
                 dirtyVector(elem)/=diag(elem);
                 if (mask) {
@@ -183,18 +183,18 @@ namespace askap
             ASKAPLOG_INFO_STR(logger, "Converted truncated weights image to clean mask");
         } // if mask required
         ASKAPLOG_INFO_STR(logger, 100.0*float(nAbove)/float(diag.nelements()) << "% of the pixels were above the cutoff " << cutoff);
-        ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector after normalisation "<<casa::max(dirtyVector));
+        ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector after normalisation "<<casacore::max(dirtyVector));
         return unnormalisedMaxPSF;
     }
 
     // Apply all the preconditioners in the order in which they were created.
-    bool ImageSolver::doPreconditioning(casa::Array<float>& psf,
-                                        casa::Array<float>& dirty,
-                                        casa::Array<float>& pcf) const
+    bool ImageSolver::doPreconditioning(casacore::Array<float>& psf,
+                                        casacore::Array<float>& dirty,
+                                        casacore::Array<float>& pcf) const
     {
         ASKAPTRACE("ImageSolver::doPreconditioning");
 
-        //casa::Array<float> oldPSF(psf.copy());
+        //casacore::Array<float> oldPSF(psf.copy());
 	    bool status=false;
 	    for(std::map<int, IImagePreconditioner::ShPtr>::const_iterator pciter=itsPreconditioners.begin(); pciter!=itsPreconditioners.end(); pciter++)
 	    {
@@ -244,21 +244,21 @@ namespace askap
       for (map<string, uint>::const_iterator indit=indices.begin(); indit
           !=indices.end(); indit++) {
         // Axes are dof, dof for each parameter
-        //casa::IPosition arrShape(itsParams->value(indit->first).shape());
+        //casacore::IPosition arrShape(itsParams->value(indit->first).shape());
         for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
              planeIter.hasMore(); planeIter.next()) {
 
              ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for solution");
-             casa::Vector<double>  diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+             casacore::Vector<double>  diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
              ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
                  "Data vector not present for solution");
-             casa::Vector<double> dv = normalEquations().dataVector(indit->first);
+             casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
 	         ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
                  "PSF Slice not present");
-             casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+             casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	         ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
                  "Preconditioner Slice not present");
-             casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+             casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 
              if (planeIter.tag() != "") {
                  // it is not a single plane case, there is something to report
@@ -266,16 +266,16 @@ namespace askap
                                            " tagged as "<<planeIter.tag());
              }
 
-	         casa::Array<float> dirtyArray(planeIter.planeShape());
-             casa::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
-             casa::Array<float> psfArray(planeIter.planeShape());
-             casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
+	         casacore::Array<float> dirtyArray(planeIter.planeShape());
+             casacore::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
+             casacore::Array<float> psfArray(planeIter.planeShape());
+             casacore::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
              // some preconditioners use the PSF do generate the filter, so only
              // set this up if it is needed.
-             casa::Array<float> pcfArray;
+             casacore::Array<float> pcfArray;
              if (pcf.shape() > 0) {
                ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
-               casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
+               casacore::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
              }
 
              // Do the preconditioning
@@ -306,8 +306,8 @@ namespace askap
              }
              // end of the code storing residual image
 
-	         casa::Vector<double> value(planeIter.getPlaneVector(ip.value(indit->first)));
-             const casa::Vector<float> dirtyVector(dirtyArray.reform(value.shape()));
+	         casacore::Vector<double> value(planeIter.getPlaneVector(ip.value(indit->first)));
+             const casacore::Vector<float> dirtyVector(dirtyArray.reform(value.shape()));
              for (uint elem=0; elem<dv.nelements(); ++elem) {
                   value(elem) += dirtyVector(elem);
              }
@@ -334,7 +334,7 @@ namespace askap
     /// "psf" or "weights"
     /// @param[in] nePart part of the normal equations to save (map of vectors)
     void ImageSolver::saveNEPartIntoParameter(askap::scimath::Params& ip, const std::string &prefix,
-                      const std::map<std::string, casa::Vector<double> > &nePart) const
+                      const std::map<std::string, casacore::Vector<double> > &nePart) const
     {
       ASKAPTRACE("ImageSolver::saveNEPartIntoParameter");
 
@@ -342,14 +342,14 @@ namespace askap
       const vector<string> names(ip.completions("image"));
       for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
            const std::string name = "image" + *it;
-           std::map<std::string, casa::Vector<double> >::const_iterator parIt = nePart.find(name);
+           std::map<std::string, casacore::Vector<double> >::const_iterator parIt = nePart.find(name);
 
            if (parIt != nePart.end()) {
-               std::map<std::string, casa::IPosition>::const_iterator shpIt = normalEquations().shape().find(name);
+               std::map<std::string, casacore::IPosition>::const_iterator shpIt = normalEquations().shape().find(name);
                ASKAPDEBUGASSERT(shpIt != normalEquations().shape().end());
-               const casa::IPosition arrShape(shpIt->second);
+               const casacore::IPosition arrShape(shpIt->second);
                std::string parName = prefix + *it;
-               casa::Array<double> temp(parIt->second.reform(arrShape));
+               casacore::Array<double> temp(parIt->second.reform(arrShape));
                if (ip.has(parName)) {
                    ip.update(parName, temp);
                } else {
@@ -371,8 +371,8 @@ namespace askap
     /// @param[in] arr array to save
     /// @param[in] pos position to save (arr is a part of the parameter)
     void ImageSolver::saveArrayIntoParameter(askap::scimath::Params& ip, const std::string &imgName,
-              const casa::IPosition &shape, const std::string &prefix, const casa::Array<double> &arr,
-              const casa::IPosition &pos)
+              const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<double> &arr,
+              const casacore::IPosition &pos)
     {
       ASKAPDEBUGTRACE("ImageSolver::saveArrayIntoParameter");
 
@@ -400,11 +400,11 @@ namespace askap
     /// @param[in] arr array to save
     /// @param[in] pos position to save (arr is a part of the parameter)
     void ImageSolver::saveArrayIntoParameter(askap::scimath::Params& ip, const std::string &imgName,
-              const casa::IPosition &shape, const std::string &prefix, const casa::Array<float> &arr,
-              const casa::IPosition &pos)
+              const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr,
+              const casacore::IPosition &pos)
     {
-      casa::Array<double> tmpArr(arr.shape());
-      casa::convertArray<double,float>(tmpArr,arr);
+      casacore::Array<double> tmpArr(arr.shape());
+      casacore::convertArray<double,float>(tmpArr,arr);
       saveArrayIntoParameter(ip, imgName, shape, prefix, tmpArr, pos);
     }
 
@@ -437,9 +437,9 @@ namespace askap
     /// out of the array. It accepts a const reference to the array (which is a conseptual const).
     /// @param[in] in const reference to the input array
     /// @return the array with the first plane
-    casa::Array<float> ImageSolver::getFirstPlane(const casa::Array<float> &in)
+    casacore::Array<float> ImageSolver::getFirstPlane(const casacore::Array<float> &in)
     {
-      casa::Array<float> nonConstArray(in);
+      casacore::Array<float> nonConstArray(in);
       return MultiDimArrayPlaneIter::getFirstPlane(nonConstArray);
     }
 
@@ -452,7 +452,7 @@ namespace askap
     /// @param[in] psfOld an array with original psf prior to preconditioning
     /// @param[in] psfNew an array with the psf after preconditioning has been applied
     /// @return sensitivity loss factor (should be grater than or equal to 1)
-    double ImageSolver::sensitivityLoss(const casa::Array<float>& psfOld, const casa::Array<float>& psfNew)
+    double ImageSolver::sensitivityLoss(const casacore::Array<float>& psfOld, const casacore::Array<float>& psfNew)
     {
        ASKAPTRACE("ImageSolver::sensitivityLoss");
        ASKAPLOG_INFO_STR(logger, "Estimating sensitivity loss due to preconditioning");
@@ -465,21 +465,21 @@ namespace askap
            (psfNew.shape().nonDegenerate().nelements() >= 2)) {
            ASKAPLOG_INFO_STR(logger, "Sensitivity loss estimate will use a single plane of a multi-dimensional PSF image");
        }
-       casa::Array<float> psfOldSlice = getFirstPlane(psfOld);
-       casa::Array<float> psfNewSlice = getFirstPlane(psfNew);
+       casacore::Array<float> psfOldSlice = getFirstPlane(psfOld);
+       casacore::Array<float> psfNewSlice = getFirstPlane(psfNew);
 
-       casa::IPosition paddedShape = psfOldSlice.shape();
+       casacore::IPosition paddedShape = psfOldSlice.shape();
        ASKAPCHECK(paddedShape == psfNewSlice.shape(),
             "sensitivityLoss: shapes of two PSFs are supposed to be the same, you have "<<paddedShape<<
             " and "<<psfNew.shape());
        ASKAPDEBUGASSERT(paddedShape.nonDegenerate().nelements() >= 2);
        paddedShape(0) *= 2;
        paddedShape(1) *= 2;
-       casa::ArrayLattice<casa::Complex> uvOld(paddedShape);
-       casa::ArrayLattice<casa::Complex> uvNew(paddedShape);
+       casacore::ArrayLattice<casacore::Complex> uvOld(paddedShape);
+       casacore::ArrayLattice<casacore::Complex> uvNew(paddedShape);
 
-       casa::ArrayLattice<float> lpsfOld(psfOldSlice);
-       casa::ArrayLattice<float> lpsfNew(psfNewSlice);
+       casacore::ArrayLattice<float> lpsfOld(psfOldSlice);
+       casacore::ArrayLattice<float> lpsfNew(psfNewSlice);
 
 
        scimath::PaddingUtils::inject(uvOld, lpsfOld);
@@ -487,8 +487,8 @@ namespace askap
 
        // ratio of FTs is an estimate of the gridded imaging weight. We have to use
        // gridded weight because we don't form ungridded one.
-       casa::LatticeFFT::cfft2d(uvOld, casa::True);
-       casa::LatticeFFT::cfft2d(uvNew, casa::True);
+       casacore::LatticeFFT::cfft2d(uvOld, casacore::True);
+       casacore::LatticeFFT::cfft2d(uvNew, casacore::True);
 
        // The following equation is from Dan Briggs' thesis page 41, eq 3.5
        double sumwtNew = 0.;
@@ -496,20 +496,20 @@ namespace askap
        double sumwt2Old = 0.;
        double sumwt2New = 0.;
 
-       casa::IPosition cursor(paddedShape.nelements(),0);
+       casacore::IPosition cursor(paddedShape.nelements(),0);
        for (int nx = 0; nx<paddedShape(0); ++nx) {
             cursor(0) = nx;
             for (int ny = 0; ny<paddedShape(1); ++ny) {
                  cursor(1)=ny;
-                 const double wtOld = casa::abs(uvOld(cursor));
+                 const double wtOld = casacore::abs(uvOld(cursor));
                  ASKAPCHECK(!std::isnan(wtOld), "abs(uvOld) is NaN, uvOld(cursor)="<<uvOld(cursor));
 
-                 const double wtNew = casa::abs(uvNew(cursor));
+                 const double wtNew = casacore::abs(uvNew(cursor));
                  ASKAPCHECK(!std::isnan(wtNew), "abs(uvNew) is NaN, uvOld(cursor)="<<uvNew(cursor));
                  sumwtOld += wtOld;
                  sumwtNew += wtNew;
-                 sumwt2Old += casa::square(wtOld);
-                 sumwt2New += casa::square(wtNew);
+                 sumwt2Old += casacore::square(wtOld);
+                 sumwt2New += casacore::square(wtNew);
             }
        }
        ASKAPCHECK(sumwtNew>0, "Sum of weights is zero in ImageSolver::sensitivityLoss");

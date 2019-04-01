@@ -144,7 +144,7 @@ protected:
    /// updateSingleAntBeam method if an update is necessary
    /// @param[in] ant antenna index   
    /// @param[in] beam beam index
-   void processAntBeamPair(const casa::uInt ant, const casa::uInt beam) const;
+   void processAntBeamPair(const casacore::uInt ant, const casacore::uInt beam) const;
    
    
    /// @brief helper method to update a given parameter if necessary
@@ -153,7 +153,7 @@ protected:
    /// slave measurement equation.
    /// @param[in] name parameter name
    /// @param[in] val new value
-   void updateParameter(const std::string &name, const casa::Complex &val) const;
+   void updateParameter(const std::string &name, const casacore::Complex &val) const;
 private:
     
     /// @brief slave measurement equation

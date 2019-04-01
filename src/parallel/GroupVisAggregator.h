@@ -55,7 +55,7 @@ public:
   
   /// @brief update visibility cube
   /// @param[in,out] cube reference to visiblity cube to update 
-  virtual void update(casa::Cube<casa::Complex> &cube) const;
+  virtual void update(casacore::Cube<casacore::Complex> &cube) const;
   
   /// @brief aggregate flag with the logical or operation
   /// @param[in,out] flag flag to reduce

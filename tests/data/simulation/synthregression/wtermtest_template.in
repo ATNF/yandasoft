@@ -94,12 +94,14 @@ Cimager.gridder.WProject.wsampling.export = log.dat
 #
 Cimager.solver                           	= Clean
 #Cimager.solver                           	= Dirty
-Cimager.solver.Clean.algorithm                 	= Hogbom
+Cimager.solver.Clean.solutiontype               = MAXBASE
+Cimager.solver.Clean.algorithm                 	= BasisfunctionMFS
 Cimager.solver.Clean.niter                     	= 100
+Cimager.solver.Clean.scales                     = [0,3,10]
 Cimager.solver.Clean.gain                      	= 0.1
 Cimager.solver.Clean.tolerance                  = 0.1
 Cimager.solver.Clean.verbose                   	= True
-Cimager.threshold.minorcycle                    = [15%]
+Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
 #Cimager.threshold.majorcycle                    = 10mJy
 
 #

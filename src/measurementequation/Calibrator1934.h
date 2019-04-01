@@ -63,8 +63,8 @@ struct Calibrator1934 : virtual public IUnpolarizedComponent,
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for (in Hz)
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
                     std::vector<double> &result) const;
   
   /// @brief calculate stokes I visibilities and derivatives for this component
@@ -76,9 +76,9 @@ struct Calibrator1934 : virtual public IUnpolarizedComponent,
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for (in Hz)
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    std::vector<casa::AutoDiff<double> > &result) const;                    
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    std::vector<casacore::AutoDiff<double> > &result) const;                    
 
 
   // to import full API

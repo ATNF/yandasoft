@@ -72,8 +72,8 @@ namespace askap {
                 /// same model (e.g. as in MFS)
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverFista(casa::Vector<casa::Array<T> >& dirty,
-                                              casa::Vector<casa::Array<T> >& psf);
+                DeconvolverFista(casacore::Vector<casacore::Array<T> >& dirty,
+                                              casacore::Vector<casacore::Array<T> >& psf);
 
                 /// @brief Construct from dirty image and psf
                 /// @detail Construct a deconvolver from a dirty image and
@@ -82,7 +82,7 @@ namespace askap {
                 /// version for compatibility
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverFista(casa::Array<T>& dirty, casa::Array<T>& psf);
+                DeconvolverFista(casacore::Array<T>& dirty, casacore::Array<T>& psf);
 
                 /// @brief Set the basis function to be used
                 /// @details The algorithm can work with different basis functions
@@ -110,16 +110,16 @@ namespace askap {
 
             private:
 
-                void W(casa::Array<T>& out, const casa::Array<T>& in);
-                void WT(casa::Array<T>& out, const casa::Array<T>& in);
+                void W(casacore::Array<T>& out, const casacore::Array<T>& in);
+                void WT(casacore::Array<T>& out, const casacore::Array<T>& in);
 
-                casa::Array<FT> itsBasisFunctionTransform;
+                casacore::Array<FT> itsBasisFunctionTransform;
 
                 /// Basis function used in the deconvolution
                 boost::shared_ptr<BasisFunction<T> > itsBasisFunction;
 
                 // Scaling for various planes
-                casa::Vector<T> itsPlaneScaling;
+                casacore::Vector<T> itsPlaneScaling;
         };
 
     } // namespace synthesis

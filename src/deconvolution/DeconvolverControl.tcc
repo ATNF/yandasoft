@@ -40,7 +40,7 @@ ASKAP_LOGGER(decctllogger, ".deconvolution.control");
 #include <deconvolution/DeconvolverState.h>
 #include <deconvolution/DeconvolverControl.h>
 
-using namespace casa;
+using namespace casacore;
 
 namespace askap {
 

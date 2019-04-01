@@ -586,7 +586,7 @@ void ContinuumWorker::processChannels()
   ASKAPLOG_DEBUG_STR(logger,
       "UVWMachine cache will store " << uvwMachineCacheSize << " machines");
       ASKAPLOG_DEBUG_STR(logger, "Tolerance on the directions is "
-      << uvwMachineCacheTolerance / casa::C::pi * 180. * 3600. << " arcsec");
+      << uvwMachineCacheTolerance / casacore::C::pi * 180. * 3600. << " arcsec");
 
 
   // the workUnits may include different epochs (for the same channel)
@@ -1254,9 +1254,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   } else // Write image
   {
     ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    const casa::Array<double> imagePixels(params->value("model.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("model.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsImageCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1269,9 +1269,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     // Write PSF
 
     ASKAPLOG_INFO_STR(logger, "Writing PSF");
-    const casa::Array<double> imagePixels(params->value("psf.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("psf.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsPSFCube->writeSlice(floatImagePixels, chan);
 
   }
@@ -1282,9 +1282,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   {
     // Write residual
     ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    const casa::Array<double> imagePixels(params->value("residual.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("residual.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsResidualCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1295,9 +1295,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else
   {
     ASKAPLOG_INFO_STR(logger, "Writing Weights");
-    const casa::Array<double> imagePixels(params->value("weights.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("weights.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsWeightsCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1321,9 +1321,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       // Write preconditioned PSF image
       {
         ASKAPLOG_INFO_STR(logger, "Writing preconditioned PSF");
-        const casa::Array<double> imagePixels(params->value("psf.image.slice"));
-        casa::Array<float> floatImagePixels(imagePixels.shape());
-        casa::convertArray<float, double>(floatImagePixels, imagePixels);
+        const casacore::Array<double> imagePixels(params->value("psf.image.slice"));
+        casacore::Array<float> floatImagePixels(imagePixels.shape());
+        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
         itsPSFimageCube->writeSlice(floatImagePixels, chan);
       }
     }
@@ -1331,9 +1331,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     // Write Restored image
 
     ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
-    const casa::Array<double> imagePixels(params->value("image.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("image.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsRestoredCube->writeSlice(floatImagePixels, chan);
 
   }
@@ -1353,10 +1353,10 @@ void ContinuumWorker::recordBeam(const askap::scimath::Axes &axes, const unsigne
     axes.end("MAJMIN") * 180. / M_PI * 3600. << ", " <<
     axes.start("PA") * 180. / M_PI);
 
-    casa::Vector<casa::Quantum<double> > beamVec(3, 0.);
-    beamVec[0] = casa::Quantum<double>(axes.start("MAJMIN"), "rad");
-    beamVec[1] = casa::Quantum<double>(axes.end("MAJMIN"), "rad");
-    beamVec[2] = casa::Quantum<double>(axes.start("PA"), "rad");
+    casacore::Vector<casacore::Quantum<double> > beamVec(3, 0.);
+    beamVec[0] = casacore::Quantum<double>(axes.start("MAJMIN"), "rad");
+    beamVec[1] = casacore::Quantum<double>(axes.end("MAJMIN"), "rad");
+    beamVec[2] = casacore::Quantum<double>(axes.start("PA"), "rad");
 
     itsBeamList[cubeChannel] = beamVec;
 
@@ -1441,7 +1441,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     for (size_t i = 0; i < stokesVec.size(); ++i) {
       stokesStr += stokesVec[i];
     }
-    const casa::Vector<casa::Stokes::StokesTypes>
+    const casacore::Vector<casacore::Stokes::StokesTypes>
     stokes = scimath::PolConverter::fromString(stokesStr);
 
     const bool ewProj = parset.getBool("ewprojection", false);
@@ -1461,7 +1461,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
         //                            freq[0], freq[1], nchan, stokes);
     } else {
         // this is a multi-facet case
-        const int facetstep = parset.getInt32("facetstep", casa::min(shape[0], shape[1]));
+        const int facetstep = parset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
         ASKAPCHECK(facetstep > 0,"facetstep parameter is supposed to be positive, you have " << facetstep);
         ASKAPLOG_DEBUG_STR(logger, "Facet centers will be " << facetstep << " pixels apart, each facet size will be " << shape[0] << " x " << shape[1]);
         // SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,

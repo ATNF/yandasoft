@@ -111,22 +111,22 @@ namespace askap {
             const bool isMasked(this->weight(0).shape().conform(this->dirty(0).shape()));
 
             // Find peak in residual image
-            casa::IPosition minPos;
-            casa::IPosition maxPos;
+            casacore::IPosition minPos;
+            casacore::IPosition maxPos;
             T minVal, maxVal;
             if (isMasked) {
-                casa::minMaxMasked(minVal, maxVal, minPos, maxPos, this->dirty(0), this->weight(0));
+                casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->dirty(0), this->weight(0));
                 minVal = this->dirty(0)(minPos);
                 maxVal = this->dirty(0)(maxPos);
             } else {
-                casa::minMax(minVal, maxVal, minPos, maxPos, this->dirty(0));
+                casacore::minMax(minVal, maxVal, minPos, maxPos, this->dirty(0));
             }
             //
             ASKAPLOG_INFO_STR(dechogbomlogger, "Maximum = " << maxVal << " at location " << maxPos);
             ASKAPLOG_INFO_STR(dechogbomlogger, "Minimum = " << minVal << " at location " << minPos);
 
             T absPeakVal = 0.0;
-            casa::IPosition absPeakPos;
+            casacore::IPosition absPeakPos;
             if (abs(minVal) < abs(maxVal)) {
                 absPeakVal = maxVal;
                 absPeakPos = maxPos;
@@ -150,20 +150,20 @@ namespace askap {
             IPosition subPsfShape(this->findSubPsfShape());
 
             // Now we adjust model and residual for this component
-            const casa::IPosition residualShape(this->dirty(0).shape().nonDegenerate());
+            const casacore::IPosition residualShape(this->dirty(0).shape().nonDegenerate());
             const IPosition subPsfStart(2, nx / 2 - subPsfShape(0) / 2, ny / 2 - subPsfShape(1) / 2);
             const IPosition subPsfEnd(2, nx / 2 + subPsfShape(0) / 2 - 1, ny / 2 + subPsfShape(1) / 2 - 1);
             const IPosition subPsfStride(2, 1, 1);
 
             Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
 
-            const casa::IPosition psfShape(2, nx, ny);
+            const casacore::IPosition psfShape(2, nx, ny);
 
-            casa::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
-            casa::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
+            casacore::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
+            casacore::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
 
-            const casa::IPosition modelShape(this->model(0).shape().nonDegenerate());
-            casa::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
+            const casacore::IPosition modelShape(this->model(0).shape().nonDegenerate());
+            casacore::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
 
             // Wrangle the start, end, and shape into consistent form.
             for (uInt dim = 0; dim < 2; dim++) {
@@ -179,9 +179,9 @@ namespace askap {
                 modelEnd(dim) = residualEnd(dim);
             }
 
-            casa::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
-            casa::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
-            casa::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
+            casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
+            casacore::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
+            casacore::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
 
             if (!(residualSlicer.length() == psfSlicer.length()) || !(residualSlicer.stride() == psfSlicer.stride())) {
                 ASKAPLOG_INFO_STR(dechogbomlogger, "Peak of PSF  : " << this->itsPeakPSFPos);

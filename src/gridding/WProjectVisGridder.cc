@@ -126,11 +126,11 @@ void WProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
     itsCMap.set(-1);
 #endif
 
-    const casa::Vector<casa::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
-    const casa::Vector<casa::Double> & chanFreq = acc.frequency();
+    const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
+    const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
 
     for (int i = 0; i < nSamples; ++i) {
-        const double w = (rotatedUVW(i)(2)) / (casa::C::c);
+        const double w = (rotatedUVW(i)(2)) / (casacore::C::c);
         for (int chan = 0; chan < nChan; ++chan) {
             /// Calculate the index into the convolution functions
             const double freq = chanFreq[chan];
@@ -209,7 +209,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                 // I think they should be -ve, since the offset in nux & nuy is +ve.
                 const int ix = -float(fracu)/float(itsOverSample);
                 const int iy = -float(fracv)/float(itsOverSample);
-                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casa::Complex(1.0, wKernelPix);
+                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casacore::Complex(1.0, wKernelPix);
             }
         }
 
@@ -232,7 +232,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
     // initialise the buffer for full-sized CF
     ASKAPDEBUGASSERT((nx > 0) && (ny > 0));
-    initCFBuffer(casa::uInt(nx), casa::uInt(ny));
+    initCFBuffer(casacore::uInt(nx), casacore::uInt(ny));
 
     /// We want nx * ccellx = overSample * itsShape(0) * cellx
 
@@ -245,8 +245,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     const double ccellx = double(itsShape(0)) * cellx / double(qnx);
     const double ccelly = double(itsShape(1)) * celly / double(qny);
 
-    casa::Vector<float> ccfx(qnx);
-    casa::Vector<float> ccfy(qny);
+    casacore::Vector<float> ccfx(qnx);
+    casacore::Vector<float> ccfy(qny);
 
     for (int ix = 0; ix < qnx; ix++) {
         float nux = std::abs(float(ix - qnx / 2)) / float(qnx / 2);
@@ -271,19 +271,19 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
     // We pad here to do sinc interpolation of the convolution
     // function in uv space
-    casa::Matrix<casa::DComplex> thisPlane;
+    casacore::Matrix<casacore::DComplex> thisPlane;
     if (itsDoubleCF) thisPlane.reference(getCFBuffer());
-    casa::Matrix<casa::Complex> thisPlaneF;
+    casacore::Matrix<casacore::Complex> thisPlaneF;
     if (!itsDoubleCF) thisPlaneF.reference(getCFBufferF());
-    ASKAPDEBUGASSERT(thisPlane.nrow() == casa::uInt(nx)||thisPlaneF.nrow() == casa::uInt(nx));
-    ASKAPDEBUGASSERT(thisPlane.ncolumn() == casa::uInt(ny)||thisPlaneF.ncolumn() == casa::uInt(ny));
+    ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx)||thisPlaneF.nrow() == casacore::uInt(nx));
+    ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny)||thisPlaneF.ncolumn() == casacore::uInt(ny));
 
     for (int iw = 0; iw < nWPlanes(); ++iw) {
         if (itsDoubleCF) thisPlane.set(0.0);
         else thisPlaneF.set(0.0);
 
-        //const double w = isPSFGridder() ? 0. : 2.0f*casa::C::pi*getWTerm(iw);
-        const double w = 2.0f * casa::C::pi * getWTerm(iw);
+        //const double w = isPSFGridder() ? 0. : 2.0f*casacore::C::pi*getWTerm(iw);
+        const double w = 2.0f * casacore::C::pi * getWTerm(iw);
 
         // Loop over the central nx, ny region, setting it to the product
         // of the phase screen and the spheroidal function
@@ -305,13 +305,13 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     ASKAPDEBUGASSERT(iy + ny / 2 >= qny / 2);
                     if (itsDoubleCF) {
                         thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
-                        casa::DComplex(wt * cos(phase), -wt * sin(phase));
+                        casacore::DComplex(wt * cos(phase), -wt * sin(phase));
                     } else {
                         thisPlaneF(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
-                        casa::Complex(wt * cos(phase), -wt * sin(phase));
+                        casacore::Complex(wt * cos(phase), -wt * sin(phase));
 
                     }
-                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=casa::DComplex(wt*cos(phase));
+                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=casacore::DComplex(wt*cos(phase));
                 }
             }
         }
@@ -328,7 +328,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         /*
             for (uint xx=0;xx<thisPlane.nrow();++xx) {
              for (uint yy=0;yy<thisPlane.ncolumn();++yy) {
-                  ASKAPCHECK(!std::isinf(casa::abs(thisPlane(xx,yy))),
+                  ASKAPCHECK(!std::isinf(casacore::abs(thisPlane(xx,yy))),
                       "Infinite value detected for plane="<<iw<<
                       " at "<<xx<<","<<yy<<" "<<thisPlane(xx,yy));
                  }
@@ -414,12 +414,12 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
             continue;
         }
 
-        const double norm = sum(casa::real(itsConvFunc[plane]));
+        const double norm = sum(casacore::real(itsConvFunc[plane]));
         // ASKAPLOG_INFO_STR(logger, "Sum of convolution function = " << norm);
         ASKAPDEBUGASSERT(norm > 0.);
 
         if (norm > 0.) {
-            const casa::Complex invNorm = casa::Complex(1.0/norm);
+            const casacore::Complex invNorm = casacore::Complex(1.0/norm);
             itsConvFunc[plane] *= invNorm;
         }
     } // for plane
@@ -427,7 +427,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     if (isSupportPlaneDependent()) {
         ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
         ASKAPLOG_DEBUG_STR(logger, "Variable support size is used:");
-        const size_t step = casa::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
+        const size_t step = casacore::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
 
         for (size_t plane = 0; plane < itsConvFunc.size(); plane += step * itsOverSample * itsOverSample) {
             ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
@@ -449,7 +449,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 /// cutoff parameter and whether or not an offset is allowed.
 /// @param[in] cfPlane const reference to 2D plane with the convolution function
 /// @return an instance of CFSupport with support parameters
-WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casa::Matrix<casa::DComplex> &cfPlane) const
+WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casacore::Matrix<casacore::DComplex> &cfPlane) const
 {
     ASKAPDEBUGTRACE("WProjectVisGridder::extractSupport");
     CFSupport result(-1);
@@ -463,7 +463,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casa::Mat
 
     if (isOffsetSupportAllowed()) {
         result.itsSize = ss.support();
-        const casa::IPosition peakPos = ss.peakPos();
+        const casacore::IPosition peakPos = ss.peakPos();
         ASKAPDEBUGASSERT(peakPos.nelements() == 2);
         result.itsOffsetU = (peakPos[0] - int(cfPlane.nrow()) / 2) / itsOverSample;
         result.itsOffsetV = (peakPos[1] - int(cfPlane.ncolumn()) / 2) / itsOverSample;
@@ -485,7 +485,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casa::Mat
 /// cutoff parameter and whether or not an offset is allowed.
 /// @param[in] cfPlane const reference to 2D plane with the convolution function
 /// @return an instance of CFSupport with support parameters
-WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casa::Matrix<casa::Complex> &cfPlane) const
+WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casacore::Matrix<casacore::Complex> &cfPlane) const
 {
     ASKAPDEBUGTRACE("WProjectVisGridder::extractSupport");
     CFSupport result(-1);
@@ -499,7 +499,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::extractSupport(const casa::Mat
 
     if (isOffsetSupportAllowed()) {
         result.itsSize = ss.support();
-        const casa::IPosition peakPos = ss.peakPos();
+        const casacore::IPosition peakPos = ss.peakPos();
         ASKAPDEBUGASSERT(peakPos.nelements() == 2);
         result.itsOffsetU = (peakPos[0] - int(cfPlane.nrow()) / 2) / itsOverSample;
         result.itsOffsetV = (peakPos[1] - int(cfPlane.ncolumn()) / 2) / itsOverSample;
@@ -616,7 +616,7 @@ void WProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
 /// @brief obtain buffer used to create convolution functions
 /// @return a reference to the buffer held as a shared pointer
-casa::Matrix<casa::DComplex> WProjectVisGridder::getCFBuffer() const
+casacore::Matrix<casacore::DComplex> WProjectVisGridder::getCFBuffer() const
 {
     ASKAPDEBUGASSERT(itsCFBuffer);
     return *itsCFBuffer;
@@ -624,7 +624,7 @@ casa::Matrix<casa::DComplex> WProjectVisGridder::getCFBuffer() const
 
 /// @brief obtain buffer used to create convolution functions
 /// @return a reference to the buffer held as a shared pointer
-casa::Matrix<casa::Complex> WProjectVisGridder::getCFBufferF() const
+casacore::Matrix<casacore::Complex> WProjectVisGridder::getCFBufferF() const
 {
     ASKAPDEBUGASSERT(itsCFBufferF);
     return *itsCFBufferF;

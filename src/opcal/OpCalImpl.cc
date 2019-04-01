@@ -108,23 +108,23 @@ void OpCalImpl::run()
       ASKAPLOG_INFO_STR(logger, "#no time_since_start(min) beamID fieldID scanID amp1 phase1 amp2 phase2 ... ampN phaseN (phase in degrees)");
       
       float firstTime = 0;
-      for (casa::uInt row=0; row<itsCalData.nrow(); ++row) {
+      for (casacore::uInt row=0; row<itsCalData.nrow(); ++row) {
            std::string result;
            ASKAPDEBUGASSERT(itsScanStats.size() > row);
            const double timeCentroid = itsScanStats[row].startTime() + 0.5*(itsScanStats[row].endTime() - itsScanStats[row].startTime());
            if (row == 0) {
                firstTime = timeCentroid;
            }
-           result += utility::toString<casa::uInt>(row)+" "+
+           result += utility::toString<casacore::uInt>(row)+" "+
                   utility::toString<double>((timeCentroid - firstTime)/60.)+" "+
-                  utility::toString<casa::uInt>(itsScanStats[row].beam()) + " "+
-                  utility::toString<casa::uInt>(itsScanStats[row].fieldID()) + " "+
-                  utility::toString<casa::uInt>(itsScanStats[row].scanID());
+                  utility::toString<casacore::uInt>(itsScanStats[row].beam()) + " "+
+                  utility::toString<casacore::uInt>(itsScanStats[row].fieldID()) + " "+
+                  utility::toString<casacore::uInt>(itsScanStats[row].scanID());
        
-           for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
+           for (casacore::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
                 if (itsCalData(row,ant).gainDefined()) {
-                    const casa::Complex thisAntGain = itsCalData(row,ant).gain();
-                    result += " " + utility::toString<double>(std::abs(thisAntGain)) + " " + utility::toString<double>(std::arg(thisAntGain)/casa::C::pi*180.);
+                    const casacore::Complex thisAntGain = itsCalData(row,ant).gain();
+                    result += " " + utility::toString<double>(std::abs(thisAntGain)) + " " + utility::toString<double>(std::arg(thisAntGain)/casacore::C::pi*180.);
                 } else {
                     result += " flagged flagged";
                 }
@@ -149,7 +149,7 @@ void OpCalImpl::inspectData()
         sel << parset();
         accessors::IDataConverterPtr conv=ds.createConverter();
         conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         conv->setEpochFrame(); // time in seconds since 0 MJD
         accessors::IDataSharedIter it=ds.createIterator(sel, conv);
         ASKAPLOG_INFO_STR(logger, "Inspecting "<<*ci);
@@ -163,12 +163,12 @@ void OpCalImpl::inspectData()
 /// fills itsCalData
 void OpCalImpl::runCalibration()
 {   
-   const casa::uInt nAnt = parset().getUint("nant",12);
+   const casacore::uInt nAnt = parset().getUint("nant",12);
    ASKAPCHECK(nAnt > 0, "Expect a positive number of antennas");
    itsCalData.resize(itsScanStats.size(), nAnt);
    // ensure each element is undefined although this is not necessary, strictly speaking
-   for (casa::uInt scan=0; scan < itsCalData.nrow(); ++scan) {
-        for (casa::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
+   for (casacore::uInt scan=0; scan < itsCalData.nrow(); ++scan) {
+        for (casacore::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
              itsCalData(scan,ant).invalidate();
         }
    }
@@ -178,17 +178,17 @@ void OpCalImpl::runCalibration()
    // the iteration over scans is expected to be a relatively cheap operation, so we iterate multiple times if necessary
    
    // the key is the name of the dataset, the value is the set of beams used in that dataset 
-   std::map<std::string, std::set<casa::uInt> > namesAndBeams;
+   std::map<std::string, std::set<casacore::uInt> > namesAndBeams;
    for (ScanStats::const_iterator ci = itsScanStats.begin(); ci != itsScanStats.end(); ++ci) {
         ASKAPDEBUGASSERT(ci->isValid());
         // map::insert returns a pair of iterator and bool showing whether a new element was inserted or an just iterator
         // on existing element was returned. We take only the iterator because we don't care whether the element is new or not
-        std::map<std::string, std::set<casa::uInt> >::iterator thisElemIt = 
-                namesAndBeams.insert(std::pair<std::string, std::set<casa::uInt> >(ci->name(),std::set<casa::uInt>())).first; 
+        std::map<std::string, std::set<casacore::uInt> >::iterator thisElemIt = 
+                namesAndBeams.insert(std::pair<std::string, std::set<casacore::uInt> >(ci->name(),std::set<casacore::uInt>())).first; 
         ASKAPDEBUGASSERT(thisElemIt != namesAndBeams.end());
         thisElemIt->second.insert(ci->beam());
    }
-   for (std::map<std::string, std::set<casa::uInt> >::const_iterator nameIt = namesAndBeams.begin(); 
+   for (std::map<std::string, std::set<casacore::uInt> >::const_iterator nameIt = namesAndBeams.begin(); 
                      nameIt != namesAndBeams.end(); ++nameIt) {
         ASKAPLOG_INFO_STR(logger, "Performing "<<nameIt->second.size()<<" beam calibration for "<<nameIt->first);
         // note, scans are expected to be in the order of cycles because this is the way we find them
@@ -202,14 +202,14 @@ void OpCalImpl::runCalibration()
 /// to solve up front). The calibration solution is stored in itsCalData. 
 /// @param[in] ms name of the dataset
 /// @param[in] beams set of beams to process
-void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &beams)
+void OpCalImpl::processOne(const std::string &ms, const std::set<casacore::uInt> &beams)
 {  
   accessors::TableDataSource ds(ms, accessors::TableDataSource::DEFAULT,dataColumn());
   accessors::IDataSelectorPtr sel=ds.createSelector();
   sel << parset();
   accessors::IDataConverterPtr conv=ds.createConverter();
   conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
-  conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+  conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
   // ensure that time is counted in seconds since 0 MJD
   conv->setEpochFrame();
   accessors::IDataSharedIter it=ds.createIterator(sel, conv);
@@ -220,16 +220,16 @@ void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &be
   
   boost::shared_ptr<IMeasurementEquation const> perfectME = makePerfectME();
   
-  std::map<casa::uInt, size_t> thisChunkBeams;
+  std::map<casacore::uInt, size_t> thisChunkBeams;
   size_t chunkCounter = 0, cycle = 0;
   for (;it.hasMore();it.next(),++cycle) {
-       std::map<casa::uInt, size_t> thisCycleBeams = matchScansForAllBeams(ms,cycle);
+       std::map<casacore::uInt, size_t> thisCycleBeams = matchScansForAllBeams(ms,cycle);
        bool sameCycle = (thisCycleBeams.size() == thisChunkBeams.size());
        bool someScanMatchesBoth = false;
        // iterate over all beams present in the dataset, adjust sameCycle and sameScanMatchesBoth 
-       for (std::set<casa::uInt>::const_iterator ci = beams.begin(); ci!=beams.end(); ++ci) {
-            const std::map<casa::uInt, size_t>::const_iterator thisCycleElem = thisCycleBeams.find(*ci);
-            const std::map<casa::uInt, size_t>::const_iterator thisChunkElem = thisChunkBeams.find(*ci);
+       for (std::set<casacore::uInt>::const_iterator ci = beams.begin(); ci!=beams.end(); ++ci) {
+            const std::map<casacore::uInt, size_t>::const_iterator thisCycleElem = thisCycleBeams.find(*ci);
+            const std::map<casacore::uInt, size_t>::const_iterator thisChunkElem = thisChunkBeams.find(*ci);
             // each tested beam should either be present in both or in none 
             if ((thisCycleElem == thisCycleBeams.end()) != (thisChunkElem == thisChunkBeams.end())) {
                 sameCycle = false;
@@ -256,15 +256,15 @@ void OpCalImpl::processOne(const std::string &ms, const std::set<casa::uInt> &be
     
           ASKAPDEBUGASSERT(itsModel);
           itsModel->reset();
-          casa::uInt maxBeamID = 0;
-          for (std::map<casa::uInt,size_t>::const_iterator ci = thisChunkBeams.begin(); ci!=thisChunkBeams.end(); ++ci) {
-               const std::set<casa::uInt> flaggedAntsXX = itsScanStats[ci->second].flaggedAntennas(casa::Stokes::XX, itsCalData.ncolumn());
-               const std::set<casa::uInt> flaggedAntsYY = itsScanStats[ci->second].flaggedAntennas(casa::Stokes::YY, itsCalData.ncolumn());
-               for (casa::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
-                    const std::string xxParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::XX);
-                    itsModel->add(xxParam, casa::Complex(1., 0.));
-                    const std::string yyParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casa::Stokes::YY);
-                    itsModel->add(yyParam, casa::Complex(1., 0.));            
+          casacore::uInt maxBeamID = 0;
+          for (std::map<casacore::uInt,size_t>::const_iterator ci = thisChunkBeams.begin(); ci!=thisChunkBeams.end(); ++ci) {
+               const std::set<casacore::uInt> flaggedAntsXX = itsScanStats[ci->second].flaggedAntennas(casacore::Stokes::XX, itsCalData.ncolumn());
+               const std::set<casacore::uInt> flaggedAntsYY = itsScanStats[ci->second].flaggedAntennas(casacore::Stokes::YY, itsCalData.ncolumn());
+               for (casacore::uInt ant=0; ant < itsCalData.ncolumn(); ++ant) {
+                    const std::string xxParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casacore::Stokes::XX);
+                    itsModel->add(xxParam, casacore::Complex(1., 0.));
+                    const std::string yyParam = accessors::CalParamNameHelper::paramName(ant, ci->first, casacore::Stokes::YY);
+                    itsModel->add(yyParam, casacore::Complex(1., 0.));            
                     if (flaggedAntsXX.find(ant) != flaggedAntsXX.end()) {
                         itsModel->fix(xxParam);
                         ASKAPLOG_INFO_STR(logger, "No data for XX polarisation for antenna "<<ant);
@@ -324,17 +324,17 @@ boost::shared_ptr<IMeasurementEquation> OpCalImpl::makePerfectME() const
 /// interval has been accumulated. It solves the measurement equation and stores the result in
 /// itsCalData
 /// @param[in] beammap map of beam IDs to scan indices (into itsScanStats)
-void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
+void OpCalImpl::solveOne(const std::map<casacore::uInt, size_t>& beammap)
 {
-  const casa::uInt refAnt = parset().getUint("refant",0);
+  const casacore::uInt refAnt = parset().getUint("refant",0);
   ASKAPCHECK(refAnt < itsCalData.ncolumn(), "Reference antenna index exceeds the number of antennas");
   // at this stage, deal with just XX polarisation
   
   ASKAPASSERT(itsME);
   ASKAPASSERT(itsModel);
-  const casa::uInt nIter = parset().getUint("niter",20);
+  const casacore::uInt nIter = parset().getUint("niter",20);
   scimath::LinearSolver solver;
-  for (casa::uInt iter = 0; iter < nIter; ++iter) {
+  for (casacore::uInt iter = 0; iter < nIter; ++iter) {
        ASKAPLOG_DEBUG_STR(logger, "Calibration iteration "<<(iter+1));
        itsME->setParameters(*itsModel);
        scimath::GenericNormalEquations gne;
@@ -350,12 +350,12 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
            ASKAPLOG_DEBUG_STR(logger, "Solved normal equations, quality: "<<q);
        }
        // phase rotation
-       for (std::map<casa::uInt, size_t>::const_iterator beamIt = beammap.begin(); beamIt != beammap.end(); ++beamIt) {
-            const std::string refGain = accessors::CalParamNameHelper::paramName(refAnt, beamIt->first, casa::Stokes::XX);
-            const casa::Complex refPhaseTerm = casa::polar(1.f, -std::arg(itsModel->complexValue(refGain)));
+       for (std::map<casacore::uInt, size_t>::const_iterator beamIt = beammap.begin(); beamIt != beammap.end(); ++beamIt) {
+            const std::string refGain = accessors::CalParamNameHelper::paramName(refAnt, beamIt->first, casacore::Stokes::XX);
+            const casacore::Complex refPhaseTerm = casacore::polar(1.f, -std::arg(itsModel->complexValue(refGain)));
             
-            for (casa::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
-                 const std::string parname = accessors::CalParamNameHelper::paramName(ant, beamIt->first, casa::Stokes::XX);
+            for (casacore::uInt ant=0; ant<itsCalData.ncolumn(); ++ant) {
+                 const std::string parname = accessors::CalParamNameHelper::paramName(ant, beamIt->first, casacore::Stokes::XX);
                  if (itsModel->isFree(parname)) {
                      itsModel->update(parname, itsModel->complexValue(parname) * refPhaseTerm);
                  } else {
@@ -370,11 +370,11 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
   // store the solution
   const std::vector<std::string> parlist = itsModel->freeNames();
   for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
-       const casa::Complex val = itsModel->complexValue(*it);           
-       const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> paramType = 
+       const casacore::Complex val = itsModel->complexValue(*it);           
+       const std::pair<accessors::JonesIndex, casacore::Stokes::StokesTypes> paramType = 
              accessors::CalParamNameHelper::parseParam(*it);
-       if (paramType.second == casa::Stokes::XX) {      
-           std::map<casa::uInt, size_t>::const_iterator thisBeamIt = beammap.find(paramType.first.beam());
+       if (paramType.second == casacore::Stokes::XX) {      
+           std::map<casacore::uInt, size_t>::const_iterator thisBeamIt = beammap.find(paramType.first.beam());
            ASKAPASSERT(thisBeamIt != beammap.end());
            ASKAPASSERT(paramType.first.antenna() < static_cast<int>(itsCalData.ncolumn()));
            ASKAPASSERT(thisBeamIt->second < itsCalData.nrow());
@@ -391,7 +391,7 @@ void OpCalImpl::solveOne(const std::map<casa::uInt, size_t>& beammap)
 /// @param[in] beam beam ID to match
 /// @param[in] cycle cycle to match
 /// @return index of the matching scan or itsScanStats.size() if no match is found
-size_t OpCalImpl::matchScan(const std::string &name, casa::uInt beam, casa::uInt cycle) const
+size_t OpCalImpl::matchScan(const std::string &name, casacore::uInt beam, casacore::uInt cycle) const
 {
   size_t index = 0;
   for (ScanStats::const_iterator ci = itsScanStats.begin(); ci != itsScanStats.end(); ++ci,++index) {
@@ -412,14 +412,14 @@ size_t OpCalImpl::matchScan(const std::string &name, casa::uInt beam, casa::uInt
 /// @param[in] name name key of the dataset 
 /// @param[in] cycle cycle to match
 /// @return a map of beam IDs to scan indices
-std::map<casa::uInt, size_t> OpCalImpl::matchScansForAllBeams(const std::string &name, casa::uInt cycle) const
+std::map<casacore::uInt, size_t> OpCalImpl::matchScansForAllBeams(const std::string &name, casacore::uInt cycle) const
 {
-  std::map<casa::uInt, size_t> result;
+  std::map<casacore::uInt, size_t> result;
   size_t index = 0;
   for (ScanStats::const_iterator ci = itsScanStats.begin(); ci != itsScanStats.end(); ++ci,++index) {
        ASKAPDEBUGASSERT(ci->isValid());
        if ((ci->name() == name) && (cycle >= ci->startCycle()) && (cycle <= ci->endCycle())) {
-           const bool wasNew = result.insert(std::pair<casa::uInt, size_t>(ci->beam(), index)).second;
+           const bool wasNew = result.insert(std::pair<casacore::uInt, size_t>(ci->beam(), index)).second;
            ASKAPCHECK(wasNew, "Found a second scan matching cycle="<<cycle<<" and beam="<<ci->beam()<<" for "<<name<<
                               ", this shouldn't have happened");
        }

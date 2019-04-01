@@ -106,7 +106,7 @@ CalcCore::~CalcCore()
 void CalcCore::doCalc()
 {
 
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
 
     ASKAPLOG_DEBUG_STR(logger, "Calculating NE .... for channel " << itsChannel);
@@ -123,8 +123,8 @@ void CalcCore::doCalc()
         sel->chooseChannels(1, itsChannel);
 
         IDataConverterPtr conv = ds.createConverter();
-        conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO), "Hz");
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         conv->setEpochFrame();
 
         IDataSharedIter it = ds.createIterator(sel, conv);
@@ -232,10 +232,10 @@ void CalcCore::check()
     const ImagingNormalEquations &checkRef =
     dynamic_cast<const ImagingNormalEquations&>(*itsNe);
 
-    casa::Vector<double> diag(checkRef.normalMatrixDiagonal(names[0]));
-    casa::Vector<double> dv = checkRef.dataVector(names[0]);
-    casa::Vector<double> slice(checkRef.normalMatrixSlice(names[0]));
-    casa::Vector<double> pcf(checkRef.preconditionerSlice(names[0]));
+    casacore::Vector<double> diag(checkRef.normalMatrixDiagonal(names[0]));
+    casacore::Vector<double> dv = checkRef.dataVector(names[0]);
+    casacore::Vector<double> slice(checkRef.normalMatrixSlice(names[0]));
+    casacore::Vector<double> pcf(checkRef.preconditionerSlice(names[0]));
 
     ASKAPLOG_DEBUG_STR(logger, "Max data: " << max(dv) << " Max PSF: " << max(slice) << " Normalised: " << max(dv)/max(slice));
 
@@ -244,7 +244,7 @@ void CalcCore::solveNE()
 {
 
 
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
 
     itsSolver->init();

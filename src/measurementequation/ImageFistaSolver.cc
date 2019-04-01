@@ -142,22 +142,22 @@ namespace askap
       for (map<string, uint>::const_iterator indit=indices.begin();indit!=indices.end();++indit)
 	{
 	  // Axes are dof, dof for each parameter
-	  //const casa::IPosition vecShape(1, ip.value(indit->first).nelements());
+	  //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
 	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
 	       planeIter.hasMore(); planeIter.next()) {
 	    
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0,
 		       "Diagonal not present for " << indit->first);
-	    casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+	    casacore::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
 		       "Data vector not present for " << indit->first);
-	    casa::Vector<double> dv = normalEquations().dataVector(indit->first);
+	    casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
 	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
 		       "PSF Slice not present for " << indit->first);
-	    casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+	    casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
                "Preconditioner fuction Slice not present for " << indit->first);
-	    casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+	    casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 	    
 	    if (planeIter.tag()!="") {
 	      // it is not a single plane case, there is something to report
@@ -165,15 +165,15 @@ namespace askap
 				" tagged as "<<planeIter.tag());
 	    }
 	    
-	    casa::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
-	    casa::Array<float> psfArray = padImage(planeIter.getPlane(slice));
-	    casa::Array<float> fistaArray = padImage(planeIter.getPlane(ip.value(indit->first)));
-	    casa::Array<float> maskArray(dirtyArray.shape());
+	    casacore::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
+	    casacore::Array<float> psfArray = padImage(planeIter.getPlane(slice));
+	    casacore::Array<float> fistaArray = padImage(planeIter.getPlane(ip.value(indit->first)));
+	    casacore::Array<float> maskArray(dirtyArray.shape());
 	    ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
 			      dirtyArray.shape()<<" after padding");
 
 	    // send an anternative preconditioner function, if it isn't empty.
-	    casa::Array<float> pcfArray;
+	    casacore::Array<float> pcfArray;
         if (pcf.shape() > 0) {
 	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
 	      pcfArray = padImage(planeIter.getPlane(pcf));
@@ -183,7 +183,7 @@ namespace askap
 	    if(doPreconditioning(psfArray,dirtyArray,pcfArray)) {
 	      // Normalize	         
 	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
-			      boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
+			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	      // Store the new PSF in parameter class to be saved to disk later
 	      saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "psf.image", unpadImage(psfArray),
 				     planeIter.position());
@@ -191,7 +191,7 @@ namespace askap
 	    else {
 	      // Normalize	         
 	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
-			      boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
+			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	    }
 	    // optionally clip the image and psf if there was padding
 	    ASKAPLOG_INFO_STR(logger, "Peak data vector flux (derivative) before clipping "<<max(dirtyArray));
@@ -213,8 +213,8 @@ namespace askap
 	    
 	    // Startup costs so little it's better to create a new
 	    // deconvolver each time we need it	    
-	    boost::shared_ptr<DeconvolverFista<float, casa::Complex> >
-	      fistaDec(new DeconvolverFista<float, casa::Complex>(dirtyArray, psfArray));
+	    boost::shared_ptr<DeconvolverFista<float, casacore::Complex> >
+	      fistaDec(new DeconvolverFista<float, casacore::Complex>(dirtyArray, psfArray));
 	    ASKAPDEBUGASSERT(fistaDec);     
 	    fistaDec->setMonitor(itsMonitor);
 	    fistaDec->setControl(itsControl);

@@ -75,7 +75,7 @@ namespace synthesis {
 
 float frequency_tolerance = 0.0;
 
-bool compare_tol (const casa::MFrequency& X, const casa::MFrequency& Y) {
+bool compare_tol (const casacore::MFrequency& X, const casacore::MFrequency& Y) {
 
     if (abs(X.getValue() - Y.getValue()) <= frequency_tolerance) {
       return true;
@@ -85,11 +85,11 @@ bool compare_tol (const casa::MFrequency& X, const casa::MFrequency& Y) {
     }
 }
 
-bool compare (const casa::MFrequency& X, const casa::MFrequency& Y) {
+bool compare (const casacore::MFrequency& X, const casacore::MFrequency& Y) {
     return (X.getValue() == Y.getValue());
 }
 
-bool custom_lessthan (const casa::MFrequency& X, const casa::MFrequency& Y) {
+bool custom_lessthan (const casacore::MFrequency& X, const casacore::MFrequency& Y) {
     return (X.getValue() < Y.getValue());
 }
 bool in_range(double end1, double end2, double test) {
@@ -126,7 +126,7 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
 {
     isPrepared = false;
     barycentre = false;
-    itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::TOPO);
+    itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
     itsWorkUnitCount=0;
 }
 
@@ -157,7 +157,7 @@ void AdviseDI::prepare() {
 
 
 
-    casa::uInt srow = 0;
+    casacore::uInt srow = 0;
     chanFreq.resize(ms.size());
     chanWidth.resize(ms.size());
     effectiveBW.resize(ms.size());
@@ -175,7 +175,7 @@ void AdviseDI::prepare() {
 
     // need to calculate the allocations too.
 
-    casa::uInt totChanIn = 0;
+    casacore::uInt totChanIn = 0;
     ASKAPLOG_INFO_STR(logger,"Testing for Channels");
     vector<int> itsChannels = getChannels();
     ASKAPLOG_INFO_STR(logger,"Testing for Frequencies");
@@ -204,17 +204,17 @@ void AdviseDI::prepare() {
         centre[n].resize(0);
     // Open the input measurement set
         ASKAPLOG_DEBUG_STR(logger, "Opening " << ms[n] << " filecount " << n );
-        const casa::MeasurementSet in(ms[n]);
-        const casa::ROMSColumns srcCols(in);
-        const casa::ROMSSpWindowColumns& sc = srcCols.spectralWindow();
-        const casa::ROMSFieldColumns& fc = srcCols.field();
-        const casa::ROMSObservationColumns& oc = srcCols.observation();
-        const casa::ROMSAntennaColumns& ac = srcCols.antenna();
-        const casa::ROArrayColumn<casa::Double> times = casa::ROArrayColumn<casa::Double>(oc.timeRange());
-        const casa::ROArrayColumn<casa::Double> ants = casa::ROArrayColumn<casa::Double>(ac.position());
-        const casa::uInt thisRef = casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"MEAS_FREQ_REF")(0);
+        const casacore::MeasurementSet in(ms[n]);
+        const casacore::ROMSColumns srcCols(in);
+        const casacore::ROMSSpWindowColumns& sc = srcCols.spectralWindow();
+        const casacore::ROMSFieldColumns& fc = srcCols.field();
+        const casacore::ROMSObservationColumns& oc = srcCols.observation();
+        const casacore::ROMSAntennaColumns& ac = srcCols.antenna();
+        const casacore::ROArrayColumn<casacore::Double> times = casacore::ROArrayColumn<casacore::Double>(oc.timeRange());
+        const casacore::ROArrayColumn<casacore::Double> ants = casacore::ROArrayColumn<casacore::Double>(ac.position());
+        const casacore::uInt thisRef = casacore::ROScalarColumn<casacore::Int>(in.spectralWindow(),"MEAS_FREQ_REF")(0);
 
-        casa::uInt thisChanIn = 0;
+        casacore::uInt thisChanIn = 0;
         srow = sc.nrow()-1;
 
         ASKAPCHECK(srow==0,"More than one spectral window not currently supported in adviseDI");
@@ -227,15 +227,15 @@ void AdviseDI::prepare() {
        
                  
         chanStart = 0;
-        chanStop = casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0);
+        chanStop = casacore::ROScalarColumn<casacore::Int>(in.spectralWindow(),"NUM_CHAN")(0);
         chanStep = 1;
         thisChanIn = 0;
 
         for (uint i = chanStart; i < chanStop; i = i + chanStep) {
-            chanFreq[n].push_back(sc.chanFreq()(srow)(casa::IPosition(1, i)));
-            chanWidth[n].push_back(sc.chanWidth()(srow)(casa::IPosition(1, i)));
-            effectiveBW[n].push_back(sc.effectiveBW()(srow)(casa::IPosition(1, i)));
-            resolution[n].push_back(sc.resolution()(srow)(casa::IPosition(1, i)));
+            chanFreq[n].push_back(sc.chanFreq()(srow)(casacore::IPosition(1, i)));
+            chanWidth[n].push_back(sc.chanWidth()(srow)(casacore::IPosition(1, i)));
+            effectiveBW[n].push_back(sc.effectiveBW()(srow)(casacore::IPosition(1, i)));
+            resolution[n].push_back(sc.resolution()(srow)(casacore::IPosition(1, i)));
             thisChanIn++;
         }
 
@@ -245,7 +245,7 @@ void AdviseDI::prepare() {
         itsTangent.push_back(itsDirVec[n](0).getValue());
 
         // Read the position on Antenna 0
-        Array<casa::Double> posval;
+        Array<casacore::Double> posval;
         ants.get(0,posval,true);
         vector<double> pval = posval.tovector();
 
@@ -253,16 +253,16 @@ void AdviseDI::prepare() {
         Quantity(pval[1], "m").getBaseValue(),
         Quantity(pval[2], "m").getBaseValue());
 
-        itsPosition.push_back(MPosition(mvobs,casa::MPosition::ITRF));
+        itsPosition.push_back(MPosition(mvobs,casacore::MPosition::ITRF));
 
         // Get the Epoch
-        Array<casa::Double> tval;
+        Array<casacore::Double> tval;
         vector<double> tvals;
 
         times.get(0,tval,true);
         tvals = tval.tovector();
         double mjd = tvals[0]/(86400.);
-        casa::MVTime dat(mjd);
+        casacore::MVTime dat(mjd);
 
         itsEpoch.push_back(MVEpoch(dat.day()));
 
@@ -286,16 +286,16 @@ void AdviseDI::prepare() {
     const std::string freqFrame = itsParset.getString("freqframe","topo");
     if (freqFrame == "topo") {
         ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as topocentric");
-        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::TOPO);
-        itsFreqType = casa::MFrequency::TOPO;
+        itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
+        itsFreqType = casacore::MFrequency::TOPO;
     } else if (freqFrame == "lsrk") {
         ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as lsrk");
-        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::LSRK);
-        itsFreqType = casa::MFrequency::LSRK;
+        itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::LSRK);
+        itsFreqType = casacore::MFrequency::LSRK;
     } else if (freqFrame == "bary") {
         ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as barycentric");
-        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::BARY);
-        itsFreqType = casa::MFrequency::BARY;
+        itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::BARY);
+        itsFreqType = casacore::MFrequency::BARY;
     } else {
         ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
     }
@@ -339,7 +339,7 @@ void AdviseDI::prepare() {
 
     /// uniquifying the lists
 
-    bool (*custom_compare)(const casa::MFrequency& , const casa::MFrequency& ) = NULL;
+    bool (*custom_compare)(const casacore::MFrequency& , const casacore::MFrequency& ) = NULL;
 
     if (frequency_tolerance > 0) {
       custom_compare = compare_tol;
@@ -352,7 +352,7 @@ void AdviseDI::prepare() {
 
 
     std::sort(itsInputFrequencies.begin(),itsInputFrequencies.end(), custom_lessthan);
-    std::vector<casa::MFrequency>::iterator topo_it;
+    std::vector<casacore::MFrequency>::iterator topo_it;
     topo_it = std::unique(itsInputFrequencies.begin(),itsInputFrequencies.end(),custom_compare);
     itsInputFrequencies.resize(std::distance(itsInputFrequencies.begin(),topo_it));
     ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size() << " Output " << itsFFrameFrequencies.size());
@@ -605,7 +605,7 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     return rtn;
 }
 vector<int> AdviseDI::matchall(int ms_number, 
-casa::MVFrequency oneEdge, casa::MVFrequency otherEdge) {
+casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
     /// return all the input channels in the range
     vector<int> matches;
     for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
@@ -660,8 +660,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
 
     if (isPrepared == true) {
         ASKAPLOG_INFO_STR(logger,"Prepared therefore can add frequency label for the output image");
-        std::vector<casa::MFrequency>::iterator begin_it;
-        std::vector<casa::MFrequency>::iterator end_it;
+        std::vector<casacore::MFrequency>::iterator begin_it;
+        std::vector<casacore::MFrequency>::iterator end_it;
         if (barycentre) {
             begin_it = itsFFrameFrequencies.begin();
             end_it = itsFFrameFrequencies.end()-1;
@@ -749,7 +749,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
 
          const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
          const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
-         const casa::MVDirection itsDirection = casa::MVDirection(ra,dec);
+         const casacore::MVDirection itsDirection = casacore::MVDirection(ra,dec);
 
          std::ostringstream pstr;
          // Only J2000 is implemented at the moment.

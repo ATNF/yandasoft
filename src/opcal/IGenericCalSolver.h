@@ -78,7 +78,7 @@ struct IGenericCalSolver {
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  virtual void process(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata) = 0;
+  virtual void process(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata) = 0;
 };
 
 } // namespace synthesis

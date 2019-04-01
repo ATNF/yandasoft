@@ -101,28 +101,28 @@ protected:
    /// here.
    /// @param[in] image input image (to be padded, with double precision at the moment)
    /// @return padded image converted to floats
-   casa::Array<float> padImage(const casa::Array<double> &image) const;
+   casacore::Array<float> padImage(const casacore::Array<double> &image) const;
 
    /// @brief helper method to pad an image
    /// @details This method encapsulates all padding logic. In addition double to float conversion happens
    /// here.
    /// @param[in] image input padded image (with single precision at the moment)
    /// @return image of original (unpadded) shape converted to double precision
-   casa::Array<double> unpadImage(const casa::Array<float> &image) const;
+   casacore::Array<double> unpadImage(const casacore::Array<float> &image) const;
 
    /// @brief helper method to clip the edges of padded image
    /// @details This method fills the edges of a padded image with 0 (original subimage is left intact, so
    /// unpadImage would return the same result before and after this method). This operation is required
    /// after non-linear transformation of an image in the other domain (i.e. some types of preconditioning).
    /// @param[in] img input padded image to be clipped
-   void clipImage(casa::Array<float> &img) const;
+   void clipImage(casacore::Array<float> &img) const;
 
    /// @brief helper method to pad diagonal
    /// @details The difference from padImage is that we don't need double to float conversion for diagonal and
    /// the output array is flattened into a 1D vector
    /// @param[in] diag diagonal array
    /// @return flattened padded vector
-   casa::Vector<double> padDiagonal(const casa::Array<double> &diag) const;
+   casacore::Vector<double> padDiagonal(const casacore::Array<double> &diag) const;
 
 
 

@@ -41,6 +41,7 @@ include_directories(${log4cxx_INCLUDE_DIRS})
 add_definitions(-DHAVE_LOG4CXX)
 include_directories(${CASACORE_INCLUDE_DIRS})
 add_definitions(-DHAVE_AIPSPP)
+add_definitions(-Dcasa=casacore)
 
 if (NOT GSL_VERSION VERSION_LESS 2.0)
 	add_definitions(-DHAVE_GSL2)
@@ -93,6 +94,11 @@ target_link_libraries(yanda_synthesis
 	${ASKAPPARALLEL_LIBRARY}
 	${MPI_LIBRARIES}
 	)
+if (MPI_FOUND)
+	target_link_libraries(yanda_synthesis
+		${MPI_LIBRARIES}
+	)
+endif (MPI_FOUND)
 
 
 install (

@@ -61,8 +61,8 @@ class ContinuumMaster {
     private:
 
         struct MSInfo {
-            casa::uInt nChan;
-            std::vector<casa::Quantity> freqs;
+            casacore::uInt nChan;
+            std::vector<casacore::Quantity> freqs;
         };
 
         /// @brief Utility function to get dataset names from parset.
@@ -104,7 +104,7 @@ class ContinuumMaster {
         boost::scoped_ptr<CubeBuilder> itsPSFimageCube;
         boost::scoped_ptr<CubeBuilder> itsRestoredCube;
 
-        std::map<unsigned int, casa::Vector<casa::Quantum<double> > > itsBeamList;
+        std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
 
       
 

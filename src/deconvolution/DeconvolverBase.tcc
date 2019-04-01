@@ -104,11 +104,11 @@ namespace askap {
                 this->model(term).set(T(0.0));
             }
 
-            casa::IPosition minPos;
-            casa::IPosition maxPos;
+            casacore::IPosition minPos;
+            casacore::IPosition maxPos;
             T minVal, maxVal;
             ASKAPLOG_INFO_STR(decbaselogger, "Validating PSF");
-            casa::minMax(minVal, maxVal, minPos, maxPos, this->psf(0));
+            casacore::minMax(minVal, maxVal, minPos, maxPos, this->psf(0));
 
             const Int nx(this->psf(0).shape()(0));
             const Int ny(this->psf(0).shape()(1));
@@ -143,7 +143,7 @@ namespace askap {
             this->itsDM->configure(parset);
 
             // Get the beam information
-            const casa::Vector<float> beam = parset.getFloatVector("beam");
+            const casacore::Vector<float> beam = parset.getFloatVector("beam");
             ASKAPCHECK(beam.size() == 3, "Need three elements for beam. You have " << beam);
             ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " << beam(0) <<
                               " x " << beam(1) << " pixels at position angle " << beam(2) << " degrees");
@@ -276,10 +276,10 @@ namespace askap {
         template<class T, class FT>
         void DeconvolverBase<T, FT>::validateShapes()
         {
-            casa::IPosition minPos;
-            casa::IPosition maxPos;
+            casacore::IPosition minPos;
+            casacore::IPosition maxPos;
             T minVal, maxVal;
-            casa::minMax(minVal, maxVal, minPos, maxPos, this->psf(0));
+            casacore::minMax(minVal, maxVal, minPos, maxPos, this->psf(0));
             const Int nx(this->psf(0).shape()(0));
             const Int ny(this->psf(0).shape()(1));
             if ((maxPos(0) != nx / 2) || (maxPos(1) != ny / 2)) {
@@ -339,13 +339,13 @@ namespace askap {
             for (uInt term = 0; term < itsNumberTerms; term++) {
                 Array<FT> xfr;
                 xfr.resize(psf(term).shape());
-                casa::setReal(xfr, psf(term));
+                casacore::setReal(xfr, psf(term));
                 scimath::fft2d(xfr, true);
                 Array<FT> work;
                 // Find residuals for current model model
                 work.resize(model(term).shape());
                 work.set(FT(0.0));
-                casa::setReal(work, model(term));
+                casacore::setReal(work, model(term));
                 scimath::fft2d(work, true);
                 work = xfr * work;
                 scimath::fft2d(work, false);
@@ -405,7 +405,7 @@ namespace askap {
             for (uInt term = 0; term < itsNumberTerms; term++) {
                 Array<FT> vis(model(term).shape());
                 vis.set(FT(0.0));
-                casa::setReal(vis, model(term));
+                casacore::setReal(vis, model(term));
                 scimath::fft2d(vis, true);
                 vis = vis * gaussian;
                 scimath::fft2d(vis, false);
@@ -424,7 +424,7 @@ namespace askap {
         }
 
         template<class T, class FT>
-        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casa::Array<T> >& vecArray)
+        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casacore::Array<T> >& vecArray)
         {
             uInt memory = 0;
             for (uInt term = 0; term < vecArray.nelements(); term++) {
@@ -434,7 +434,7 @@ namespace askap {
         }
 
         template<class T, class FT>
-        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casa::Array<FT> >& vecArray)
+        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casacore::Array<FT> >& vecArray)
         {
             uInt memory = 0;
             for (uInt term = 0; term < vecArray.nelements(); term++) {

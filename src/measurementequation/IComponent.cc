@@ -48,9 +48,9 @@ askap::synthesis::IComponent::~IComponent()  {}
 /// other values an exception is thrown.
 /// @param[in] pol required polarization
 /// @return an index (I: 0, Q: 1, U: 2 and V: 3)
-size_t askap::synthesis::IComponent::stokesIndex(casa::Stokes::StokesTypes pol) 
+size_t askap::synthesis::IComponent::stokesIndex(casacore::Stokes::StokesTypes pol) 
                     throw(AskapError)
 {
-  ASKAPDEBUGASSERT(pol!=casa::Stokes::Undefined && pol<=casa::Stokes::V);
-  return static_cast<size_t>(pol-casa::Stokes::I);
+  ASKAPDEBUGASSERT(pol!=casacore::Stokes::Undefined && pol<=casacore::Stokes::V);
+  return static_cast<size_t>(pol-casacore::Stokes::I);
 }

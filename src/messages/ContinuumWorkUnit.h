@@ -125,7 +125,7 @@ namespace askap {
                 double itsChannelWidth;
                 int itsWriter;
 
-                casa::MVDirection itsDirection;
+                casacore::MVDirection itsDirection;
 
         };
 

@@ -81,6 +81,18 @@ class SynthesisProgramRunner:
       if res != 0:
          raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
 
+   def runSRUNCommand(self,cmd,np):
+      '''
+         Run given command on a current parset
+
+         cmd - command
+      '''
+      res = os.system("srun --reservation=gpuhack2019team3 -A gpuhack2019team3 -p gpuq -n %d %s -c %s" % (np, cmd, self.tmp_parset))
+      if res != 0:
+         raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
+
+
+
 
    def runSimulator(self):
       '''
@@ -106,7 +118,7 @@ class SynthesisProgramRunner:
          Run imager on a current parset
       '''
       self.runMPICommand(self.NewImager,2)
-
+      #self.runSRUNCommand(self.NewImager,2)
 
    def imageStats(self, name):
       '''

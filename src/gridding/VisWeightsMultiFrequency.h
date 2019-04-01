@@ -54,7 +54,7 @@ namespace askap
       
       /// @brief constructor 
       /// @param[in] reffreq reference frequency
-      VisWeightsMultiFrequency(casa::Double & reffreq);
+      VisWeightsMultiFrequency(casacore::Double & reffreq);
 
       /// @brief copy constructor
       /// @param[in] other input object
@@ -80,9 +80,9 @@ namespace askap
 
   private:
       // reference frequency.
-      casa::Double itsRefFreq;
+      casacore::Double itsRefFreq;
       // Taylor term 'order'
-      casa::Int itsOrder;
+      casacore::Int itsOrder;
 
 
     };

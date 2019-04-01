@@ -56,7 +56,7 @@ namespace synthesis {
 PointingSolver::PointingSolver(const LOFAR::ParameterSet& parset) : 
    itsMaxPatternSize(SynthesisParamsHelper::convertQuantity(parset.getString("maxpatternsize", "5deg"),"rad"))
 {
-  ASKAPLOG_INFO_STR(logger, "Maximum angular size of the pointing pattern is assumed to be "<<itsMaxPatternSize / casa::C::pi * 180.<<" deg");
+  ASKAPLOG_INFO_STR(logger, "Maximum angular size of the pointing pattern is assumed to be "<<itsMaxPatternSize / casacore::C::pi * 180.<<" deg");
 }    
     
 /// @brief method to be called when the results are ready
@@ -67,7 +67,7 @@ PointingSolver::PointingSolver(const LOFAR::ParameterSet& parset) :
 ///            not necessarily match the scans known to online system
 /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
 ///            (column index is antenna ID used in the measurement set).
-void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)
+void PointingSolver::process(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata)
 {
    // need a better way to separate scans, but for now assume a fixed order:
    // +Dec, -Dec, boresight, +RA, -RA, boresight_long (the last one to be skipped)
@@ -79,14 +79,14 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
    std::ofstream os("result.dat");
    
    for (size_t startScan = 0, pattern = 0; startScan + nScansPerPattern <= scans.size(); startScan += nScansPerPattern,++pattern) {
-        const casa::MVDirection& phaseCentre = scans[startScan].direction();
+        const casacore::MVDirection& phaseCentre = scans[startScan].direction();
         const double time = 0.5*(scans[startScan + nScansPerPattern/2].startTime()+
                                  scans[startScan + nScansPerPattern/2].endTime());
-        const casa::MVDirection azEl = mroAzEl(phaseCentre, time);
+        const casacore::MVDirection azEl = mroAzEl(phaseCentre, time);
         ASKAPLOG_INFO_STR(logger, "Pointing pattern "<<pattern + 1<<" at "<<printDirection(phaseCentre)<<" J2000, Az="<<
-                          azEl.getLong()/casa::C::pi*180.<<" deg, El="<<
-                          azEl.getLat()/casa::C::pi*180.<<" deg:");
-        os<<azEl.getLong()/casa::C::pi*180.<<" "<<azEl.getLat()/casa::C::pi*180.<<" ";                  
+                          azEl.getLong()/casacore::C::pi*180.<<" deg, El="<<
+                          azEl.getLat()/casacore::C::pi*180.<<" deg:");
+        os<<azEl.getLong()/casacore::C::pi*180.<<" "<<azEl.getLat()/casacore::C::pi*180.<<" ";                  
         // consistency check 
         ASKAPDEBUGASSERT(scans.size() > startScan + 4);
         const double totalDuration = scans[startScan + 4].endTime() - scans[startScan].startTime(); 
@@ -95,25 +95,25 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
              ASKAPCHECK(scans[index].direction().separation(phaseCentre)<1e-6, "Phase centres seem to vary throughout the pattern");
         }
                  
-        for (casa::uInt ant=0; ant<caldata.ncolumn(); ++ant) {
-             casa::Vector<GenericCalInfo> thisPatternData = caldata(casa::Slice(startScan, 5),
-                     casa::Slice(ant));
+        for (casacore::uInt ant=0; ant<caldata.ncolumn(); ++ant) {
+             casacore::Vector<GenericCalInfo> thisPatternData = caldata(casacore::Slice(startScan, 5),
+                     casacore::Slice(ant));
              ASKAPASSERT(thisPatternData.nelements() + nExtraScans == nScansPerPattern);  
              // get result in ra and dec      
              const std::pair<double, double> resultEq = solveOne(thisPatternData);
              
              /*
              // for offsets in ra,dec
-             casa::MVDirection testDir = phaseCentre;
+             casacore::MVDirection testDir = phaseCentre;
              testDir.shift(resultEq.first, resultEq.second,true);
              
-             const casa::MVDirection azElOff = mroAzEl(testDir, time);
-             const double azOff = sin(azElOff.getLong() - azEl.getLong()) * cos(azElOff.getLat()) / casa::C::pi * 180.;
+             const casacore::MVDirection azElOff = mroAzEl(testDir, time);
+             const double azOff = sin(azElOff.getLong() - azEl.getLong()) * cos(azElOff.getLat()) / casacore::C::pi * 180.;
              const double elOff = (sin(azElOff.getLat())*cos(azEl.getLat()) - cos(azElOff.getLat())*sin(azEl.getLat()) *
-                                   cos(azElOff.getLong() - azEl.getLong())) / casa::C::pi * 180.;
+                                   cos(azElOff.getLong() - azEl.getLong())) / casacore::C::pi * 180.;
              */
-             const double azOff = resultEq.first / casa::C::pi * 180.;
-             const double elOff = resultEq.second / casa::C::pi * 180.;
+             const double azOff = resultEq.first / casacore::C::pi * 180.;
+             const double elOff = resultEq.second / casacore::C::pi * 180.;
              
              os<<azOff<<" "<<elOff<<" ";             
              ASKAPLOG_INFO_STR(logger, " antenna "<<ant<<":  az="<<azOff<<", el="<<elOff);
@@ -125,19 +125,19 @@ void PointingSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
 /// @brief solve for corrections for just one antenna
 /// @param[in] caldata vector of data for all points of the pattern
 /// @return pair with offsets in two coordinates
-std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCalInfo> &caldata) const
+std::pair<double, double> PointingSolver::solveOne(const casacore::Vector<GenericCalInfo> &caldata) const
 {
   ASKAPASSERT(caldata.nelements() == 5);
-  casa::Vector<double> amplitudes(caldata.nelements());
-  for (casa::uInt point=0; point<caldata.nelements(); ++point) {
+  casacore::Vector<double> amplitudes(caldata.nelements());
+  for (casacore::uInt point=0; point<caldata.nelements(); ++point) {
        ASKAPASSERT(caldata[point].gainDefined());
-       amplitudes[point] = casa::abs(caldata[point].gain());
+       amplitudes[point] = casacore::abs(caldata[point].gain());
   }
   // normalise
-  amplitudes /= casa::max(amplitudes);
+  amplitudes /= casacore::max(amplitudes);
   //ASKAPLOG_INFO_STR(logger, "Amplitudes: "<<amplitudes);
   bool peakAtCentre = true;
-  for (casa::uInt point = 0; point<amplitudes.nelements(); ++point) {
+  for (casacore::uInt point = 0; point<amplitudes.nelements(); ++point) {
        if (point != 2) {
            peakAtCentre &= (amplitudes[point] < 1.);
        }
@@ -154,8 +154,8 @@ std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCal
   /*
   // order:
   // +Dec, -Dec, boresight, +RA, -RA
-  const double decshift = 1./180.*casa::C::pi; // one degree
-  const double rashift = decshift * cos(12.39111 / 180. * casa::C::pi); // we just did +/- 4 min of RA
+  const double decshift = 1./180.*casacore::C::pi; // one degree
+  const double rashift = decshift * cos(12.39111 / 180. * casacore::C::pi); // we just did +/- 4 min of RA
   const double raOffsets[5] = {0.,0.,0., +rashift, -rashift};
   const double decOffsets[5] = {+decshift, -decshift, 0., 0., 0.};
   */
@@ -169,37 +169,37 @@ std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCal
   std::pair<double,double> result(0.,0.);
   const size_t nIter = 10;
   for (size_t iter=0; iter<nIter; ++iter) {
-       casa::Matrix<double> nm(2,2,0.); // normal matrix
-       casa::Vector<double> data(2.,0.); // projected right-hand side
-       for (casa::uInt point=0; point<amplitudes.nelements(); ++point) {
+       casacore::Matrix<double> nm(2,2,0.); // normal matrix
+       casacore::Vector<double> data(2.,0.); // projected right-hand side
+       for (casacore::uInt point=0; point<amplitudes.nelements(); ++point) {
             const double off1 = raOffsets[point] + result.first;
             const double off2 = decOffsets[point] + result.second;
-            const double offsetSq = casa::square(off1) + casa::square(off2);
-            const double coeff = -4. * log(2.) / casa::square(fwhm);
-            const double expectedGain = 0.5*(exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
-                                        exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
+            const double offsetSq = casacore::square(off1) + casacore::square(off2);
+            const double coeff = -4. * log(2.) / casacore::square(fwhm);
+            const double expectedGain = 0.5*(exp(coeff * offsetSq * casacore::square(1. - fractBandwidth / 2.)) +
+                                        exp(coeff * offsetSq * casacore::square(1. + fractBandwidth / 2.)));
        
             // derivatives of the gain
-            const double dg_dx =  off1 * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
-                                        casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
-            const double dg_dy =  off2 * coeff * (casa::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. - fractBandwidth / 2.)) +
-                                        casa::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casa::square(1. + fractBandwidth / 2.)));
+            const double dg_dx =  off1 * coeff * (casacore::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casacore::square(1. - fractBandwidth / 2.)) +
+                                        casacore::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casacore::square(1. + fractBandwidth / 2.)));
+            const double dg_dy =  off2 * coeff * (casacore::square(1. - fractBandwidth / 2.) * exp(coeff * offsetSq * casacore::square(1. - fractBandwidth / 2.)) +
+                                        casacore::square(1. + fractBandwidth / 2.) * exp(coeff * offsetSq * casacore::square(1. + fractBandwidth / 2.)));
             const double measuredDifference = amplitudes[point] - expectedGain;
-            nm(0,0) += casa::square(dg_dx);
+            nm(0,0) += casacore::square(dg_dx);
             nm(0,1) += dg_dx * dg_dy;
             nm(1,0) += dg_dy * dg_dx;
-            nm(1,1) += casa::square(dg_dy);
+            nm(1,1) += casacore::square(dg_dy);
             data[0] += measuredDifference * dg_dx;
             data[1] += measuredDifference * dg_dy;                                               
        }    
-       ASKAPCHECK(casa::determinate(nm) > 1e-7, "Inversion failed; nm="<<nm);
-       casa::Vector<double> corrections = casa::product(casa::invert(nm),data);
+       ASKAPCHECK(casacore::determinate(nm) > 1e-7, "Inversion failed; nm="<<nm);
+       casacore::Vector<double> corrections = casacore::product(casacore::invert(nm),data);
        ASKAPASSERT(corrections.nelements() == 2); 
        result.first += corrections[0];
        result.second += corrections[1];
        //std::cout<<"Iter="<<iter<<" "<<corrections<<std::endl;
        if (iter + 1 == nIter) {
-           const double misFit = sqrt(casa::square(corrections[0])+casa::square(corrections[1]));
+           const double misFit = sqrt(casacore::square(corrections[0])+casacore::square(corrections[1]));
            if (misFit > 1e-7) {
                ASKAPLOG_WARN_STR(logger, "LSF failed to converge after "<<nIter<<" iterations, misFit="<<misFit);
            }
@@ -211,10 +211,10 @@ std::pair<double, double> PointingSolver::solveOne(const casa::Vector<GenericCal
 
 /// @brief obtain MRO reference position
 /// @return position measure
-casa::MPosition PointingSolver::mroPosition()
+casacore::MPosition PointingSolver::mroPosition()
 {
-   casa::MPosition mroPos(casa::MVPosition(casa::Quantity(370.81, "m"), casa::Quantity(116.6310372795, "deg"), 
-                          casa::Quantity(-26.6991531922, "deg")), casa::MPosition::Ref(casa::MPosition::WGS84));
+   casacore::MPosition mroPos(casacore::MVPosition(casacore::Quantity(370.81, "m"), casacore::Quantity(116.6310372795, "deg"), 
+                          casacore::Quantity(-26.6991531922, "deg")), casacore::MPosition::Ref(casacore::MPosition::WGS84));
    return mroPos;
 }
 
@@ -222,32 +222,32 @@ casa::MPosition PointingSolver::mroPosition()
 /// @param[in] dir direction of interest in J2000
 /// @param[in] time time in seconds since 0 MJD
 /// @return direction in AzEl
-casa::MVDirection PointingSolver::mroAzEl(const casa::MVDirection &dir, double time)
+casacore::MVDirection PointingSolver::mroAzEl(const casacore::MVDirection &dir, double time)
 {
-  const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-  casa::MeasFrame frame(mroPosition(), epoch);    
-  return casa::MDirection::Convert(casa::MDirection(dir, casa::MDirection::J2000), 
-         casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+  const casacore::MEpoch epoch(casacore::Quantity(time/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+  casacore::MeasFrame frame(mroPosition(), epoch);    
+  return casacore::MDirection::Convert(casacore::MDirection(dir, casacore::MDirection::J2000), 
+         casacore::MDirection::Ref(casacore::MDirection::AZEL,frame))().getValue();
 }
 
 /// @brief obtain parallactic angle at MRO for the given direction
 /// @param[in] dir direction of interest in J2000
 /// @param[in] time time in seconds since 0 MJD
 /// @return parallactic angle in radians
-double PointingSolver::mroPA(const casa::MVDirection &dir, double time)
+double PointingSolver::mroPA(const casacore::MVDirection &dir, double time)
 {
-  const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
-  const casa::MPosition mroPos = mroPosition();
-  const casa::Vector<double> mroPosRad = mroPos.getAngle("rad").getValue();
+  const casacore::MEpoch epoch(casacore::Quantity(time/86400.,"d"), casacore::MEpoch::Ref(casacore::MEpoch::UTC));
+  const casacore::MPosition mroPos = mroPosition();
+  const casacore::Vector<double> mroPosRad = mroPos.getAngle("rad").getValue();
   ASKAPASSERT(mroPosRad.nelements() == 2);
-  casa::MeasFrame frame(mroPos, epoch);    
+  casacore::MeasFrame frame(mroPos, epoch);    
   /*
-  casa::ParAngleMachine pam(casa::MDirection(dir,casa::MDirection::Ref(casa::MDirection::J2000)));
+  casacore::ParAngleMachine pam(casacore::MDirection(dir,casacore::MDirection::Ref(casacore::MDirection::J2000)));
   pam.set(frame);
   return pam(epoch).getValue("rad");
   */
-  const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(dir, casa::MDirection::J2000), 
-         casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+  const casacore::MVDirection hadec = casacore::MDirection::Convert(casacore::MDirection(dir, casacore::MDirection::J2000), 
+         casacore::MDirection::Ref(casacore::MDirection::HADEC,frame))().getValue();
   const double sq = cos(mroPosRad[1])*sin(hadec.getLong());
   const double cq = sin(mroPosRad[1])*cos(hadec.getLat()) - cos(mroPosRad[1])*sin(hadec.getLat())*cos(hadec.getLong());
   return atan2(sq,cq);  

@@ -108,14 +108,14 @@ void AWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
     itsCMap.resize(nSamples, nPol, nChan);
     itsCMap.set(0);
 
-    const casa::Vector<casa::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
+    const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
 
     for (int i = 0; i < nSamples; ++i) {
         const int feed = acc.feed1()(i);
         ASKAPCHECK(feed < itsMaxFeeds, "Exceeded specified maximum number of feeds");
         ASKAPCHECK(feed > -1, "Illegal negative feed number");
 
-        const double w = (rotatedUVW(i)(2)) / (casa::C::c);
+        const double w = (rotatedUVW(i)(2)) / (casacore::C::c);
 
         for (int chan = 0; chan < nChan; ++chan) {
             const double freq = acc.frequency()[chan];
@@ -162,7 +162,7 @@ void AWProjectVisGridder::initialiseSumOfWeights()
 /// @param axes axes specifications
 /// @param shape Shape of output image: u,v,pol,chan
 /// @param dopsf Make the psf?
-void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casa::IPosition& shape,
+void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casacore::IPosition& shape,
         const bool dopsf, const bool dopcf)
 {
     ASKAPTRACE("AWProjectVisGridder::initialiseGrid");
@@ -171,8 +171,8 @@ void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casa:
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casa::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casa::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
+    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
 
     ASKAPLOG_DEBUG_STR(logger, "Shape for calculating gridding convolution function = "
                            << nx << " by " << ny << " pixels");
@@ -194,15 +194,15 @@ void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casa:
 /// @param axes axes specifications
 /// @param image Input image: cube: u,v,pol,chan
 void AWProjectVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casa::Array<double>& image)
+        const casacore::Array<double>& image)
 {
     ASKAPTRACE("AWProjectVisGridder::initialiseDegrid");
     WProjectVisGridder::initialiseDegrid(axes, image);
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casa::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casa::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
+    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
 
     ASKAPLOG_DEBUG_STR(logger, "Shape for calculating degridding convolution function = "
                            << nx << " by " << ny << " pixels");
@@ -227,7 +227,7 @@ void AWProjectVisGridder::initialiseDegrid(const scimath::Axes& axes,
 void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAccessor& acc)
 {
     ASKAPTRACE("AWProjectVisGridder::initConvolutionFunction");    
-    casa::MVDirection out = getImageCentre();
+    casacore::MVDirection out = getImageCentre();
     const int nSamples = acc.nRow();
 
     ASKAPDEBUGASSERT(itsIllumination);
@@ -254,11 +254,11 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casa::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casa::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
+    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
 
-    const casa::uInt qnx = nx / itsOverSample;
-    const casa::uInt qny = ny / itsOverSample;
+    const casacore::uInt qnx = nx / itsOverSample;
+    const casacore::uInt qny = ny / itsOverSample;
 
     // Find the actual cellsizes in x and y (radians)
     // corresponding to the limited support
@@ -266,20 +266,20 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     const double ccelly = 1.0 / (double(qny) * itsUVCellSize(1));
 
     /*
-    casa::Vector<double> ccfx(nx);
-    casa::Vector<double> ccfy(ny);
-    for (casa::uInt ix = 0; ix < nx; ++ix) {
+    casacore::Vector<double> ccfx(nx);
+    casacore::Vector<double> ccfy(ny);
+    for (casacore::uInt ix = 0; ix < nx; ++ix) {
         const double nux = std::abs(double(ix) - double(nx / 2)) / double(nx / 2);
         ccfx(ix) = grdsf(nux); // /double(qnx);
     }
-    for (casa::uInt iy = 0; iy < ny; ++iy) {
+    for (casacore::uInt iy = 0; iy < ny; ++iy) {
         const double nuy = std::abs(double(iy) - double(ny / 2)) / double(ny / 2);
         ccfy(iy) = grdsf(nuy); // /double(qny);
     }
     */
 
     UVPattern &pattern = uvPattern();
-    casa::Matrix<casa::DComplex> thisPlane = getCFBuffer();
+    casacore::Matrix<casacore::DComplex> thisPlane = getCFBuffer();
     ASKAPDEBUGASSERT(thisPlane.nrow() == nx);
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == ny);
 
@@ -291,7 +291,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
         if (!isCFValid(feed, currentField())) {
             makeCFValid(feed, currentField());
             nDone++;
-            casa::MVDirection offset(acc.pointingDir1()(row).getAngle());
+            casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
             rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
                                                   - out.getLong()) * cos(offset.getLat());
             rwSlopes()(1, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
@@ -320,25 +320,25 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                     // Loop over the central nx, ny region, setting it to the product
                     // of the phase screen and the spheroidal function
                     double maxCF = 0.0;
-                    const double w = 2.0f * casa::C::pi * getWTerm(iw);
+                    const double w = 2.0f * casacore::C::pi * getWTerm(iw);
                     //std::cout<<"plane "<<iw<<" w="<<w<<std::endl;
 
                     for (int iy = 0; iy < int(ny); ++iy) {
-                        const double y2 = casa::square((double(iy) - double(ny) / 2) * ccelly);
+                        const double y2 = casacore::square((double(iy) - double(ny) / 2) * ccelly);
 
                         for (int ix = 0; ix < int(nx); ++ix) {
-                            const double x2 = casa::square((double(ix) - double(nx) / 2) * ccellx);
+                            const double x2 = casacore::square((double(ix) - double(nx) / 2) * ccellx);
                             const double r2 = x2 + y2;
 
                             if (r2 < 1.0) {
                                 const double phase = w * (1.0 - sqrt(1.0 - r2));
                                 // grid correction is temporary disabled as otherwise the fluxes are overestimated
-                                const casa::DComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
-                                //*casa::DComplex(ccfx(ix)*ccfy(iy));
+                                const casacore::DComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
+                                //*casacore::DComplex(ccfx(ix)*ccfy(iy));
                                 // this ensures the oversampling is done
-                                thisPlane(ix, iy) = wt * casa::DComplex(cos(phase), -sin(phase));
-                                //thisPlane(ix, iy)=wt*casa::DComplex(cos(phase));
-                                maxCF += casa::abs(wt);
+                                thisPlane(ix, iy) = wt * casacore::DComplex(cos(phase), -sin(phase));
+                                //thisPlane(ix, iy)=wt*casacore::DComplex(cos(phase));
+                                maxCF += casacore::abs(wt);
                             }
                         }
                     }
@@ -355,7 +355,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                     scimath::fft2d(thisPlane, true);
 
                     // Now correct for normalization of FFT
-                    thisPlane *= casa::DComplex(1.0 / (double(nx) * double(ny)));
+                    thisPlane *= casacore::DComplex(1.0 / (double(nx) * double(ny)));
                     // use this norm later on during normalisation
                     const double thisPlaneNorm = sum(real(thisPlane));
                     ASKAPDEBUGASSERT(thisPlaneNorm > 0.);
@@ -392,7 +392,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                         }
 
                         // just for log output
-                        const double cell = std::abs(itsUVCellSize(0) * (casa::C::c
+                        const double cell = std::abs(itsUVCellSize(0) * (casacore::C::c
                                                      / acc.frequency()[chan]));
                         ASKAPLOG_DEBUG_STR(logger, "CF cache w-plane=" << iw << " feed=" << feed << " field=" << currentField() <<
                                            ": maximum extent = " << support*cell << " (m) sampled at " << cell / itsOverSample << " (m)" <<
@@ -442,7 +442,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                             //       " full buffer has sum="<<thisPlaneNorm<<" ratio="<<norm/thisPlaneNorm);
                             ASKAPDEBUGASSERT(norm>0.);
                             if (norm>0.) {
-                                //itsConvFunc[plane]*=casa::Complex(norm/thisPlaneNorm);
+                                //itsConvFunc[plane]*=casacore::Complex(norm/thisPlaneNorm);
                             }
                             */
 
@@ -460,7 +460,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
         if (isSupportPlaneDependent()) {
             ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
             ASKAPLOG_DEBUG_STR(logger, "Variable support size is used:");
-            const size_t step = casa::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
+            const size_t step = casacore::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
 
             for (size_t plane = 0; plane < itsConvFunc.size(); plane += step * itsOverSample * itsOverSample) {
                 ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
@@ -481,7 +481,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 /// 1. For each plane of the convolution function, transform to image plane
 /// and multiply by conjugate to get abs value squared.
 /// 2. Sum all planes weighted by the weight for that convolution function.
-void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
+void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
 {
     ASKAPTRACE("AWProjectVisGridder::finaliseWeights");
     ASKAPLOG_DEBUG_STR(logger, "Calculating sum of weights image");
@@ -504,23 +504,23 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
 
     /*
     // the following code is for grid-correction of the weight
-    casa::Vector<double> ccfx(cnx);
-    casa::Vector<double> ccfy(cny);
+    casacore::Vector<double> ccfx(cnx);
+    casacore::Vector<double> ccfy(cny);
     for (int ix=0; ix<cnx; ++ix) {
          const double nux = std::abs(double(ix)-double(ccenx))/double(ccenx);
          const double val = grdsf(nux);
-         ccfx(ix) = val; //casa::abs(val) > 1e-10 ? 1./val : 0.;
+         ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
     }
     for (int iy=0; iy<cny; ++iy) {
          const double nuy = std::abs(double(iy)-double(cceny))/double(cceny);
          const double val = grdsf(nuy);
-         ccfx(iy) = val; //casa::abs(val) > 1e-10 ? 1./val : 0.;
+         ccfx(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
     }
     //
     */
 
     /// This is the output array before sinc padding
-    casa::Array<double> cOut(casa::IPosition(4, cnx, cny, nPol, nChan));
+    casacore::Array<double> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
 
     // for debugging
@@ -552,7 +552,7 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
             // so the total field of view is itsOverSample times larger than the
             // original field of view.
             /// Work space
-            casa::Matrix<casa::DComplex> thisPlane(cnx, cny);
+            casacore::Matrix<casacore::DComplex> thisPlane(cnx, cny);
             thisPlane.set(0.0);
 
             // use either support determined for this particular plane or a generic one,
@@ -577,12 +577,12 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
             }
 
             scimath::fft2d(thisPlane, false);
-            thisPlane *= casa::DComplex(cnx * cny);
+            thisPlane *= casacore::DComplex(cnx * cny);
 
             // Now we need to cut out only the part inside the field of view
             for (int chan = 0; chan < nChan; chan++) {
                 for (int pol = 0; pol < nPol; pol++) {
-                    casa::IPosition ip(4, 0, 0, pol, chan);
+                    casacore::IPosition ip(4, 0, 0, pol, chan);
                     const double wt = sumOfWeights()(iz, pol, chan);
                     ASKAPCHECK(!std::isnan(wt), "sumOfWeights returns NaN for row=" << iz <<
                                " pol=" << pol << " chan=" << chan);
@@ -592,8 +592,8 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
 
                         for (int iy = 0; iy < cny; iy++) {
                             ip(1) = iy;
-                            const casa::DComplex val = thisPlane(ix, iy);
-                            cOut(ip) += double(wt) * casa::real(val * conj(val));//*ccfx(ix)*ccfy(iy);
+                            const casacore::DComplex val = thisPlane(ix, iy);
+                            cOut(ip) += double(wt) * casacore::real(val * conj(val));//*ccfx(ix)*ccfy(iy);
                         }
                     }
                 }
@@ -612,7 +612,7 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
 
 /// Correct for gridding convolution function
 /// @param image image to be corrected
-void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/)
+void AWProjectVisGridder::correctConvolution(casacore::Array<double>& /*image*/)
 {
     //SphFuncVisGridder::correctConvolution(image);
 
@@ -630,12 +630,12 @@ void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/)
 
     ASKAPDEBUGASSERT(itsShape.nelements()>=2);
     ASKAPDEBUGASSERT(image.shape() == itsShape);
-    const casa::Int xHalfSize = itsShape(0)/2;
-    const casa::Int yHalfSize = itsShape(1)/2;
-    const casa::Int nx = itsShape(0);
-    const casa::Int ny = itsShape(1);
-    casa::Vector<double> ccfx(itsShape(0));
-    casa::Vector<double> ccfy(itsShape(1));
+    const casacore::Int xHalfSize = itsShape(0)/2;
+    const casacore::Int yHalfSize = itsShape(1)/2;
+    const casacore::Int nx = itsShape(0);
+    const casacore::Int ny = itsShape(1);
+    casacore::Vector<double> ccfx(itsShape(0));
+    casacore::Vector<double> ccfy(itsShape(1));
     ASKAPDEBUGASSERT(itsShape(0)>1);
     ASKAPDEBUGASSERT(itsShape(1)>1);
 
@@ -648,31 +648,31 @@ void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/)
          const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
          ccfy(iy) = grdsf(nuy);
     }
-    casa::Matrix<casa::DComplex> buffer(nx,ny);
-    for (casa::Int ix = 0; ix < nx; ++ix) {
-         for (casa::Int iy = 0; iy < ny; ++iy) {
+    casacore::Matrix<casacore::DComplex> buffer(nx,ny);
+    for (casacore::Int ix = 0; ix < nx; ++ix) {
+         for (casacore::Int iy = 0; iy < ny; ++iy) {
               buffer(ix,iy) = ccfx(ix)*ccfy(iy);
          }
     }
     scimath::fft2d(buffer, true);
-    buffer *= casa::DComplex(1./(double(nx)*double(ny)));
-    for (casa::Int x = 0; x < nx; ++x) {
-         for (casa::Int y = 0; y < ny; ++y) {
+    buffer *= casacore::DComplex(1./(double(nx)*double(ny)));
+    for (casacore::Int x = 0; x < nx; ++x) {
+         for (casacore::Int y = 0; y < ny; ++y) {
               buffer(x,y) *= conj(buffer(x,y));
          }
     }
     scimath::fft2d(buffer, false);
-    buffer *= casa::DComplex(double(nx)*double(ny));
+    buffer *= casacore::DComplex(double(nx)*double(ny));
 
 
-    for (casa::ArrayIterator<double> it(image, 2); !it.pastEnd(); it.next()) {
-       casa::Matrix<double> mat(it.array());
+    for (casacore::ArrayIterator<double> it(image, 2); !it.pastEnd(); it.next()) {
+       casacore::Matrix<double> mat(it.array());
        ASKAPDEBUGASSERT(int(mat.nrow()) == nx);
        ASKAPDEBUGASSERT(int(mat.ncolumn()) == ny);
        for (int ix=0; ix<nx; ++ix) {
             for (int iy=0; iy<ny; ++iy) {
                  const double val = ccfx(ix)*ccfy(iy);
-                 if (casa::abs(val)<1e-20) {
+                 if (casacore::abs(val)<1e-20) {
                      mat(ix,iy) = 0.;
                  } else {
                     mat(ix, iy) *= real(buffer(ix,iy))/val;
@@ -680,8 +680,8 @@ void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/)
             }
        }
 
-       //casa::Array<float> img(mat.shape());
-       //casa::convertArray<float, double>(img, mat);
+       //casacore::Array<float> img(mat.shape());
+       //casacore::convertArray<float, double>(img, mat);
        //SynthesisParamsHelper::saveAsCasaImage("dbg.img",img);
        //throw 1;
     }

@@ -65,31 +65,31 @@ namespace askap {
                 void setScale(T scale);
 
                 // calculate the entropy for the whole image
-                virtual T entropy(const casa::Array<T>& model);
+                virtual T entropy(const casacore::Array<T>& model);
 
                 // calculate the entropy for the whole image
-                virtual T entropy(const casa::Array<T>& model, const casa::Array<T>& mask);
+                virtual T entropy(const casacore::Array<T>& model, const casacore::Array<T>& mask);
 
                 // calculate the gradient entropy for the whole image
-                virtual void gradEntropy(casa::Array<T>& gradH, casa::Array<T>& rHess,
-                                         const casa::Array<T>& model);
+                virtual void gradEntropy(casacore::Array<T>& gradH, casacore::Array<T>& rHess,
+                                         const casacore::Array<T>& model);
 
                 // calculate the gradient entropy for the whole image
-                virtual void gradEntropy(casa::Array<T>& gradH, casa::Array<T>& rHess,
-                                         const casa::Array<T>& model, const casa::Array<T>& mask);
+                virtual void gradEntropy(casacore::Array<T>& gradH, casacore::Array<T>& rHess,
+                                         const casacore::Array<T>& model, const casacore::Array<T>& mask);
 
                 // Form length
-                T formLength(const casa::Matrix<T>& GDG);
+                T formLength(const casacore::Matrix<T>& GDG);
 
                 // calculate the Gradient dot Gradient matrix
-                casa::Matrix<T> formGDG(const casa::Array<T>& model, const casa::Array<T>& residual);
+                casacore::Matrix<T> formGDG(const casacore::Array<T>& model, const casacore::Array<T>& residual);
 
                 // calculate the Gradient dot Gradient matrix, calculate Step
-                casa::Matrix<T> formGDGStep(const casa::Array<T>& model, const casa::Array<T>& residual,
-                                      casa::Array<T>& step);
+                casacore::Matrix<T> formGDGStep(const casacore::Array<T>& model, const casacore::Array<T>& residual,
+                                      casacore::Array<T>& step);
 
                 // calculate Gradient dot Step
-                T formGDS(const casa::Array<T>& model, const casa::Array<T>& residual, const casa::Array<T>& step);
+                T formGDS(const casacore::Array<T>& model, const casacore::Array<T>& residual, const casacore::Array<T>& step);
 
                 void setAlpha(const T alpha) {itsAlpha = alpha;};
 
@@ -103,20 +103,20 @@ namespace askap {
 
                 void setTolerance(const T tolerance) {itsTolerance = tolerance;};
 
-                void setFluxConstraint(const casa::Bool useFluxConstraint) {itsUseFluxConstraint = useFluxConstraint;};
+                void setFluxConstraint(const casacore::Bool useFluxConstraint) {itsUseFluxConstraint = useFluxConstraint;};
 
-                void setMask(const casa::Array<T>& mask) {itsMask = mask.copy();};
+                void setMask(const casacore::Array<T>& mask) {itsMask = mask.copy();};
 
-                void setPrior(const casa::Array<T>& prior) {itsPrior = prior.copy();};
+                void setPrior(const casacore::Array<T>& prior) {itsPrior = prior.copy();};
 
-                void changeAlphaBeta(const casa::Matrix<T>& GDG, const T targetChisq, const T chisq,
+                void changeAlphaBeta(const casacore::Matrix<T>& GDG, const T targetChisq, const T chisq,
                                      const T targetFlux, const T flux);
 
-                void updateAlphaBeta(const casa::Matrix<T>& GDG, const T targetChisq, const T chisq,
+                void updateAlphaBeta(const casacore::Matrix<T>& GDG, const T targetChisq, const T chisq,
                                      const T targetFlux, const T flux);
 
                 // Do we need to initialise alpha and beta? If so, do so.
-                casa::Bool initialiseAlphaBeta(const casa::Matrix<T>& GDG);
+                casacore::Bool initialiseAlphaBeta(const casacore::Matrix<T>& GDG);
 
             protected:
 
@@ -130,11 +130,11 @@ namespace askap {
 
                 T itsTolerance;
 
-                casa::Bool itsUseFluxConstraint;
+                casacore::Bool itsUseFluxConstraint;
 
-                casa::Array<T> itsMask;
+                casacore::Array<T> itsMask;
 
-                casa::Array<T> itsPrior;
+                casacore::Array<T> itsPrior;
 
         };
 

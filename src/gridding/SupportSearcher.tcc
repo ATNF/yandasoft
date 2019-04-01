@@ -42,7 +42,7 @@ namespace askap {
 
 namespace synthesis {
 
-// std::norm (and therefore casa::norm) in gcc g++ library appear to
+// std::norm (and therefore casacore::norm) in gcc g++ library appear to
 // be implemented optimised for polar encoding of complex number
 // (abs(x)**2) ! This is faster in theory and practice on my
 // workstation
@@ -53,7 +53,7 @@ Type ampFunction(const std::complex<Type>& c)
   return real(c)*real(c) + imag(c)*imag(c);
 }
 
-// could use template<typename Type>, but want to exclude types like casa::Complex
+// could use template<typename Type>, but want to exclude types like casacore::Complex
 inline double ampFunction(const double& c)
 {
   return fabs(c);
@@ -65,16 +65,16 @@ inline float ampFunction(const float& c)
 
 // Include const reference to matrix c to ensure that the correct amplitude function is used
 template<typename Type>
-double processAmplitudeThreshold(const casa::Matrix<std::complex<Type> >& c, const double& cutoff)
+double processAmplitudeThreshold(const casacore::Matrix<std::complex<Type> >& c, const double& cutoff)
 {
   return fabs(cutoff)*fabs(cutoff);
 }
 
-inline double processAmplitudeThreshold(const casa::Matrix<double>& c, const double& cutoff)
+inline double processAmplitudeThreshold(const casacore::Matrix<double>& c, const double& cutoff)
 {
   return fabs(cutoff);
 }
-inline float processAmplitudeThreshold(const casa::Matrix<float>& c, const double& cutoff)
+inline float processAmplitudeThreshold(const casacore::Matrix<float>& c, const double& cutoff)
 {
   return fabs(cutoff);
 }
@@ -85,11 +85,11 @@ inline float processAmplitudeThreshold(const casa::Matrix<float>& c, const doubl
 /// separately.
 /// @param[in] in input 2D matrix with an image
 template<typename T>
-void SupportSearcher::findPeak(const casa::Matrix<T> &in)
+void SupportSearcher::findPeak(const casacore::Matrix<T> &in)
 {
   ASKAPDEBUGTRACE("SupportSearcher::findPeak");
 
-  itsPeakPos.resize(in.shape().nelements(),casa::False);
+  itsPeakPos.resize(in.shape().nelements(),casacore::False);
   itsPeakPos = 0;
   itsPeakVal = -1;
   #ifdef _OPENMP
@@ -101,7 +101,7 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
        double tempPeakNorm = -1;
        int tempPeakX = 0, tempPeakY = 0;
        for (int ix=0;ix<int(in.nrow());++ix) {
-       const double curNorm = ampFunction(casa::DComplex(in(ix,iy)));
+       const double curNorm = ampFunction(casacore::DComplex(in(ix,iy)));
             if(tempPeakNorm< curNorm) {
                tempPeakX = ix;
                tempPeakY = iy;
@@ -146,7 +146,7 @@ void SupportSearcher::findPeak(const casa::Matrix<T> &in)
 /// nothing for the generic value type.
 /// @param[in] in input 2D matrix with an image
 template<>
-void SupportSearcher::debugStoreImage(const casa::Matrix<casa::Complex> &in);
+void SupportSearcher::debugStoreImage(const casacore::Matrix<casacore::Complex> &in);
 
 
 /// @brief full search which determines the peak
@@ -159,7 +159,7 @@ void SupportSearcher::debugStoreImage(const casa::Matrix<casa::Complex> &in);
 /// @param[in] value optional peak value, if a positive value is given it will be used
 /// instead of the peak amplitude (although the positon of the peak will still be searched for)
 template<typename T>
-void SupportSearcher::search(const casa::Matrix<T> &in, const double value)
+void SupportSearcher::search(const casacore::Matrix<T> &in, const double value)
 {
   findPeak(in);
   if (value > 0) {
@@ -174,14 +174,14 @@ void SupportSearcher::search(const casa::Matrix<T> &in, const double value)
 /// implements the actual search of blc and trc of the support region.
 /// @param[in] in input 2D matrix with an image
 template<typename T>
-void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
+void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
 {
   ASKAPDEBUGTRACE("SupportSearcher::doSupportSearch");
 
   ASKAPDEBUGASSERT(in.shape().nelements() == 2);
   ASKAPDEBUGASSERT(itsPeakPos.nelements() == 2);
-  itsBLC.resize(2,casa::False);
-  itsTRC.resize(2,casa::False);
+  itsBLC.resize(2,casacore::False);
+  itsTRC.resize(2,casacore::False);
   itsBLC = -1;
   itsTRC = -1;
   ASKAPCHECK(itsPeakVal>0.0,
@@ -263,7 +263,7 @@ void SupportSearcher::doSupportSearch(const casa::Matrix<T> &in)
 /// in x or y from the peak that are above the cutoff and connected to the peak
 /// @param[in] in input 2D matrix with an image
 template<typename T>
-void SupportSearcher::extendedSupport(const casa::Matrix<T> &in)
+void SupportSearcher::extendedSupport(const casacore::Matrix<T> &in)
 {
   const double absCutoff = processAmplitudeThreshold(in, itsCutoff*itsPeakVal);
 
@@ -301,8 +301,8 @@ void SupportSearcher::extendedSupport(const casa::Matrix<T> &in)
   //ASKAPLOG_INFO_STR(gsslogger, "Original support area: "<<itsBLC<<", "<<itsTRC);
   // Found furthest point
   itsTRC(0) = x;
-  if (pos) itsTRC(1) = casa::max(y,itsTRC(1));
-  if (!pos) itsBLC(1) = casa::min(y,itsBLC(1));
+  if (pos) itsTRC(1) = casacore::max(y,itsTRC(1));
+  if (!pos) itsBLC(1) = casacore::min(y,itsBLC(1));
   // Do we need to do the same on other side? For now just assume symmetry
   itsBLC(0) = x0 - (itsTRC(0) - x0);
   if (pos) itsBLC(1) = y0 - (itsTRC(1) - y0);
@@ -319,10 +319,10 @@ void SupportSearcher::extendedSupport(const casa::Matrix<T> &in)
 /// @param[in] in input 2D matrix with an image
 /// @param[in] value assumed peak value
 template<typename T>
-void SupportSearcher::searchCentered(const casa::Matrix<T> &in, double value)
+void SupportSearcher::searchCentered(const casacore::Matrix<T> &in, double value)
 {
   itsPeakVal = value;
-  itsPeakPos.resize(in.shape().nelements(), casa::False);
+  itsPeakPos.resize(in.shape().nelements(), casacore::False);
   ASKAPDEBUGASSERT(itsPeakPos.nelements() == 2);
   itsPeakPos = in.shape();
   itsPeakPos(0)/=2;

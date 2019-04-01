@@ -93,9 +93,9 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& na
     ASKAPLOG_INFO_STR(logger, "Instantiated Cube Builder with existing cube " << itsFilename);
 }
 CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
-                         const casa::uInt nchan,
-                         const casa::Quantity& f0,
-                         const casa::Quantity& inc,
+                         const casacore::uInt nchan,
+                         const casacore::Quantity& f0,
+                         const casacore::Quantity& inc,
                          const std::string& name)
 {
     ASKAPLOG_INFO_STR(logger, "Instantiating Cube Builder by creating cube ");
@@ -130,9 +130,9 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
 #ifdef HAVE_CASACORE3
-        itsRestFrequency = casa::QC::HI();
+        itsRestFrequency = casacore::QC::HI();
 #else
-        itsRestFrequency = casa::QC::HI;
+        itsRestFrequency = casacore::QC::HI;
 #endif // HAVE_CASACORE3
     } else {
         itsRestFrequency = SynthesisParamsHelper::convertQuantity(restFreqString, "Hz");
@@ -149,20 +149,20 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
         stokesStr += stokesVec[i];
     }
     itsStokes = scimath::PolConverter::fromString(stokesStr);
-    const casa::uInt npol=itsStokes.size();
+    const casacore::uInt npol=itsStokes.size();
 
     // Get the image shape
-    const vector<casa::uInt> imageShapeVector = parset.getUintVector("Images.shape");
-    const casa::uInt nx = imageShapeVector[0];
-    const casa::uInt ny = imageShapeVector[1];
-    const casa::IPosition cubeShape(4, nx, ny, npol, nchan);
+    const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
+    const casacore::uInt nx = imageShapeVector[0];
+    const casacore::uInt ny = imageShapeVector[1];
+    const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
     // Use a tile shape appropriate for plane-by-plane access
-    casa::IPosition tileShape(cubeShape.nelements(), 1);
+    casacore::IPosition tileShape(cubeShape.nelements(), 1);
     tileShape(0) = 256;
     tileShape(1) = 256;
 
-    const casa::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
 
     ASKAPLOG_INFO_STR(logger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<
@@ -183,18 +183,18 @@ CubeBuilder::~CubeBuilder()
 {
 }
 
-void CubeBuilder::writeSlice(const casa::Array<float>& arr, const casa::uInt chan)
+void CubeBuilder::writeSlice(const casacore::Array<float>& arr, const casacore::uInt chan)
 {
-    casa::IPosition where(4, 0, 0, 0, chan);
+    casacore::IPosition where(4, 0, 0, 0, chan);
     itsCube->write(itsFilename,arr, where);
 }
 
-casa::CoordinateSystem
+casacore::CoordinateSystem
 CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
-                                    const casa::uInt nx,
-                                    const casa::uInt ny,
-                                    const casa::Quantity& f0,
-                                    const casa::Quantity& inc)
+                                    const casacore::uInt nx,
+                                    const casacore::uInt ny,
+                                    const casacore::Quantity& f0,
+                                    const casacore::Quantity& inc)
 {
     CoordinateSystem coordsys;
     const vector<string> dirVector = parset.getStringVector("Images.direction");
@@ -216,8 +216,8 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         ASKAPLOG_DEBUG_STR(logger, "Cellsize: " << xcellsize.getValue()
                            << " arcsec, " << ycellsize.getValue() << " arcsec");
 
-        casa::MDirection::Types type;
-        casa::MDirection::getType(type, dirVector.at(2));
+        casacore::MDirection::Types type;
+        casacore::MDirection::getType(type, dirVector.at(2));
         const DirectionCoordinate radec(type, Projection(Projection::SIN),
                                         ra, dec, xcellsize, ycellsize,
                                         xform, nx / 2, ny / 2);
@@ -230,7 +230,7 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
         // To make a StokesCoordinate, need to convert the StokesTypes
         // into integers explicitly
-        casa::Vector<casa::Int> stokes(itsStokes.size());
+        casacore::Vector<casacore::Int> stokes(itsStokes.size());
         for(unsigned int i=0;i<stokes.size();i++){
             stokes[i] = itsStokes[i];
         }
@@ -267,7 +267,7 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
     return coordsys;
 }
 
-void CubeBuilder::addBeam(casa::Vector<casa::Quantum<double> > &beam)
+void CubeBuilder::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
 {
         itsCube->setBeamInfo(itsFilename,beam[0].getValue("rad"),beam[1].getValue("rad"),beam[2].getValue("rad"));
         setUnits("Jy/beam");

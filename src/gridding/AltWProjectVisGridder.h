@@ -96,7 +96,7 @@ namespace askap
                 // This should override the default implementation
                 // I thought I had already done this.
 
-                virtual void finaliseGrid(casa::Array<double>& out);
+                virtual void finaliseGrid(casacore::Array<double>& out);
 
 
             private:

@@ -63,58 +63,58 @@ class Image2DConvolver {
         /// it will be given one if possible.  The miscInfo, imageInfo,
         /// units and logger will be copied from the input to the output
         /// unless you indicate not to (copyMiscellaneous).
-        void convolve(casa::ImageInterface<T>& imageOut,
-                      casa::ImageInterface<T>& imageIn,
-                      casa::VectorKernel::KernelTypes kernelType,
-                      const casa::IPosition& pixelAxes,
-                      const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                      casa::Bool autoScale, casa::Double scale,
-                      casa::Bool copyMiscellaneous = casa::True);
+        void convolve(casacore::ImageInterface<T>& imageOut,
+                      casacore::ImageInterface<T>& imageIn,
+                      casacore::VectorKernel::KernelTypes kernelType,
+                      const casacore::IPosition& pixelAxes,
+                      const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                      casacore::Bool autoScale, casacore::Double scale,
+                      casacore::Bool copyMiscellaneous = casacore::True);
 
     private:
 
         /// Check kernel parameters
-        void checkKernelParameters(casa::VectorKernel::KernelTypes kernelType,
-                                   const casa::Vector<casa::Quantum<casa::Double> >& parameters) const;
+        void checkKernelParameters(casacore::VectorKernel::KernelTypes kernelType,
+                                   const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters) const;
         //
-        void dealWithRestoringBeam(casa::String& brightnessUnitOut,
-                                   casa::Vector<casa::Quantum<casa::Double> >& beamOut,
-                                   casa::Array<T>& kernelArray,
+        void dealWithRestoringBeam(casacore::String& brightnessUnitOut,
+                                   casacore::Vector<casacore::Quantum<casacore::Double> >& beamOut,
+                                   casacore::Array<T>& kernelArray,
                                    T kernelVolume,
-                                   casa::VectorKernel::KernelTypes kernelType,
-                                   const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                                   const casa::IPosition& axes,
-                                   const casa::CoordinateSystem& cSys,
-                                   const casa::ImageInfo& imageInfo,
-                                   const casa::Unit& brightnessUnit,
-                                   casa::Bool autoscale, casa::Double scale) const;
+                                   casacore::VectorKernel::KernelTypes kernelType,
+                                   const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                                   const casacore::IPosition& axes,
+                                   const casacore::CoordinateSystem& cSys,
+                                   const casacore::ImageInfo& imageInfo,
+                                   const casacore::Unit& brightnessUnit,
+                                   casacore::Bool autoscale, casacore::Double scale) const;
         //
-        T fillKernel(casa::Matrix<T>& kernelMatrix,
-                     casa::VectorKernel::KernelTypes kernelType,
-                     const casa::IPosition& kernelShape,
-                     const casa::IPosition& axes,
-                     const casa::Vector<casa::Double>& parameters) const;
+        T fillKernel(casacore::Matrix<T>& kernelMatrix,
+                     casacore::VectorKernel::KernelTypes kernelType,
+                     const casacore::IPosition& kernelShape,
+                     const casacore::IPosition& axes,
+                     const casacore::Vector<casacore::Double>& parameters) const;
         //
         void fillGaussian(T& maxVal, T& volume,
-                          casa::Matrix<T>& pixels, T height, T xCentre,
+                          casacore::Matrix<T>& pixels, T height, T xCentre,
                           T yCentre, T majorAxis, T ratio,
                           T positionAngle) const;
         //
-        T makeKernel(casa::Array<T>& kernel,
-                     casa::VectorKernel::KernelTypes kernelType,
-                     const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                     const casa::IPosition& axes,
-                     const casa::ImageInterface<T>& inImage) const;
+        T makeKernel(casacore::Array<T>& kernel,
+                     casacore::VectorKernel::KernelTypes kernelType,
+                     const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                     const casacore::IPosition& axes,
+                     const casacore::ImageInterface<T>& inImage) const;
         //
-        casa::IPosition shapeOfKernel(casa::VectorKernel::KernelTypes kernelType,
-                                      const casa::Vector<casa::Double>& parameters,
-                                      casa::uInt ndim,
-                                      const casa::IPosition& axes) const;
+        casacore::IPosition shapeOfKernel(casacore::VectorKernel::KernelTypes kernelType,
+                                      const casacore::Vector<casacore::Double>& parameters,
+                                      casacore::uInt ndim,
+                                      const casacore::IPosition& axes) const;
         //
-        casa::uInt sizeOfGaussian(casa::Double width, casa::Double nSigma) const;
+        casacore::uInt sizeOfGaussian(casacore::Double width, casacore::Double nSigma) const;
 
         //
-        // Legacy methods from casa::ImageUtilities. The functionality of these
+        // Legacy methods from casacore::ImageUtilities. The functionality of these
         // four methods below is now provided by WCBox/Polygon - but the interface is 
         // sufficiently different to make them incompatible for the moment.
         //
@@ -122,32 +122,32 @@ class Image2DConvolver {
         // coordinate) to pixels. The length is in some 2D plane in the 
         // CoordinateSystem specified  by pixelAxes.
 
-        void worldWidthsToPixel (casa::LogIO& os, casa::Vector<casa::Double>& dParameters,
-                                   const casa::Vector<casa::Quantum<casa::Double> >& parameters,
-                                   const casa::CoordinateSystem& cSys,
-                                   const casa::IPosition& pixelAxes,
-                                   casa::Bool doRef=casa::False) const;
+        void worldWidthsToPixel (casacore::LogIO& os, casacore::Vector<casacore::Double>& dParameters,
+                                   const casacore::Vector<casacore::Quantum<casacore::Double> >& parameters,
+                                   const casacore::CoordinateSystem& cSys,
+                                   const casacore::IPosition& pixelAxes,
+                                   casacore::Bool doRef=casacore::False) const;
 
 
 
-        casa::Bool pixelWidthsToWorld (casa::LogIO& os,
-                                   casa::Vector<casa::Quantum<casa::Double> >& wParameters,
-                                   const casa::Vector<casa::Double>& pParameters,
-                                   const casa::CoordinateSystem& cSys,
-                                   const casa::IPosition& pixelAxes,
-                                   casa::Bool doRef=casa::False) const;
+        casacore::Bool pixelWidthsToWorld (casacore::LogIO& os,
+                                   casacore::Vector<casacore::Quantum<casacore::Double> >& wParameters,
+                                   const casacore::Vector<casacore::Double>& pParameters,
+                                   const casacore::CoordinateSystem& cSys,
+                                   const casacore::IPosition& pixelAxes,
+                                   casacore::Bool doRef=casacore::False) const;
 
-        casa::Double worldWidthToPixel (casa::LogIO& os, casa::Double positionAngle,
-                                    const casa::Quantum<casa::Double>& length,
-                                    const casa::CoordinateSystem& cSys,
-                                    const casa::IPosition& pixelAxes) const;
+        casacore::Double worldWidthToPixel (casacore::LogIO& os, casacore::Double positionAngle,
+                                    const casacore::Quantum<casacore::Double>& length,
+                                    const casacore::CoordinateSystem& cSys,
+                                    const casacore::IPosition& pixelAxes) const;
 
 
 
-        casa::Quantum<casa::Double> pixelWidthToWorld (casa::LogIO& os, casa::Double positionAngle,
-                                             casa::Double length,
-                                             const casa::CoordinateSystem& cSys,
-                                             const casa::IPosition& pixelAxes) const;
+        casacore::Quantum<casacore::Double> pixelWidthToWorld (casacore::LogIO& os, casacore::Double positionAngle,
+                                             casacore::Double length,
+                                             const casacore::CoordinateSystem& cSys,
+                                             const casacore::IPosition& pixelAxes) const;
 
         // Convert 2d sky shape (parameters=major axis, minor axis, position angle)
         // from pixels to world at reference pixel. pixelAxes describes which
@@ -155,11 +155,11 @@ class Image2DConvolver {
         // On input pa is positive for +x -> +y in pixel frame
         // On output pa is positive N->E
         // Returns True if major/minor exchanged themselves on conversion to world.
-        casa::Bool skyPixelWidthsToWorld (casa::LogIO& os,
-                                      casa::Vector<casa::Quantum<casa::Double> >& wParameters,
-                                      const casa::CoordinateSystem& cSys,
-                                      const casa::Vector<casa::Double>& pParameters,
-                                      const casa::IPosition& pixelAxes, casa::Bool doRef) const;
+        casacore::Bool skyPixelWidthsToWorld (casacore::LogIO& os,
+                                      casacore::Vector<casacore::Quantum<casacore::Double> >& wParameters,
+                                      const casacore::CoordinateSystem& cSys,
+                                      const casacore::Vector<casacore::Double>& pParameters,
+                                      const casacore::IPosition& pixelAxes, casacore::Bool doRef) const;
 
 };
 

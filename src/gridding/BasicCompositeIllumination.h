@@ -65,8 +65,8 @@ struct BasicCompositeIllumination : public IBasicIllumination {
    /// @param[in] weights complex weights for each feed
    /// @note The size of two vectors should be the same
    BasicCompositeIllumination(const boost::shared_ptr<IBasicIllumination> &pattern,
-            const casa::Vector<casa::RigidVector<casa::Double, 2> > &feedOffsets,
-            const casa::Vector<casa::Complex> &weights);   
+            const casacore::Vector<casacore::RigidVector<casacore::Double, 2> > &feedOffsets,
+            const casacore::Vector<casacore::Complex> &weights);   
             
    /// @brief obtain illumination pattern
    /// @details This is the main method which populates the 
@@ -96,10 +96,10 @@ private:
    boost::shared_ptr<IBasicIllumination> itsPattern;
  
    /// @brief offsets of physical feeds in radians
-   casa::Vector<casa::RigidVector<casa::Double, 2> > itsFeedOffsets;
+   casacore::Vector<casacore::RigidVector<casacore::Double, 2> > itsFeedOffsets;
    
    /// @brief complex weights for each physical feed
-   casa::Vector<casa::Complex> itsWeights;
+   casacore::Vector<casacore::Complex> itsWeights;
    
    /// @brief flag showing that this pattern is symmetric
    /// @details Whether or not it is the case depends on the assigned offsets

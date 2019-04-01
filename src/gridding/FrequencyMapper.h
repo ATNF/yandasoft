@@ -78,7 +78,7 @@ struct FrequencyMapper {
    /// @param[in] freqs vector with frequencies
    /// @note The current assumption is that no regridding is required. Therefore, it is
    /// expected that no fractional channel offset can occur.
-   void setupMapping(const casa::Vector<casa::Double> &freqs);
+   void setupMapping(const casacore::Vector<casacore::Double> &freqs);
    
    /// @brief test whether the given channel is mapped 
    /// @details The measurement does not necessarily contribute to the cube which is being imaged.
@@ -86,13 +86,13 @@ struct FrequencyMapper {
    /// it is called for a channel without a mapping.
    /// @param[in] chan accessor channel
    /// @return true, if the given channel has a mapping
-   bool isMapped(casa::uInt chan)  const;
+   bool isMapped(casacore::uInt chan)  const;
    
    /// @brief map accessor channel to image channel
    /// @details
    /// @param[in] chan accessor channel
    /// @note the output is guaranteed to be from [0,itsImageNChan-1] interval.
-   casa::uInt operator()(casa::uInt chan) const;
+   casacore::uInt operator()(casacore::uInt chan) const;
    
 private:
    /// @brief start frequency of the image cube

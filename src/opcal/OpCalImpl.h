@@ -106,14 +106,14 @@ protected:
    /// to solve up front). The calibration solution is stored in itsCalData. 
    /// @param[in] ms name of the dataset
    /// @param[in] beams set of beams to process
-   void processOne(const std::string &ms, const std::set<casa::uInt> &beams);
+   void processOne(const std::string &ms, const std::set<casacore::uInt> &beams);
    
    /// @brief solve ME for one interval
    /// @details This method is called from processOne when data corresponding to the given solution 
    /// interval has been accumulated. It solves the measurement equation and stores the result in
    /// itsCalData
    /// @param[in] beammap map of beam IDs to scan indices (into itsScanStats)
-   void solveOne(const std::map<casa::uInt, size_t>& beammap);
+   void solveOne(const std::map<casacore::uInt, size_t>& beammap);
    
         
    /// @brief helper method to search for the scans corresponding to a cycle
@@ -123,7 +123,7 @@ protected:
    /// @param[in] beam beam ID to match
    /// @param[in] cycle cycle to match
    /// @return index of the matching scan or itsScanStats.size() if no match is found
-   size_t matchScan(const std::string &name, casa::uInt beam, casa::uInt cycle) const; 
+   size_t matchScan(const std::string &name, casacore::uInt beam, casacore::uInt cycle) const; 
    
    /// @brief helper method to search for scans for a number of beams at once
    /// @details This method matches cycle in the given dataset to scans. We treat individual beams as
@@ -133,7 +133,7 @@ protected:
    /// @param[in] name name key of the dataset 
    /// @param[in] cycle cycle to match
    /// @return a map of beam IDs to scan indices
-   std::map<casa::uInt, size_t> matchScansForAllBeams(const std::string &name, casa::uInt cycle) const;  
+   std::map<casacore::uInt, size_t> matchScansForAllBeams(const std::string &name, casacore::uInt cycle) const;  
     
    /// @brief make uncorrupted measurement equation
    /// @details This method uses parset parameters and makes uncorrupted (i.e. ideal) measurement equation
@@ -153,7 +153,7 @@ private:
    
    /// @brief calibration data
    /// @details rows are scans (matching itsScanStats.size()), columns are antennas
-   casa::Matrix<GenericCalInfo> itsCalData;
+   casacore::Matrix<GenericCalInfo> itsCalData;
       
    /// @brief measurement equation
    boost::shared_ptr<PreAvgCalMEBase> itsME;

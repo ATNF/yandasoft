@@ -68,8 +68,8 @@ namespace askap {
                 /// same model (e.g. as in MFS)
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverHogbom(casa::Vector<casa::Array<T> >& dirty,
-                                  casa::Vector<casa::Array<T> >& psf);
+                DeconvolverHogbom(casacore::Vector<casacore::Array<T> >& dirty,
+                                  casacore::Vector<casacore::Array<T> >& psf);
 
                 /// @brief Construct from dirty image and psf
                 /// @detail Construct a deconvolver from a dirty image and
@@ -78,7 +78,7 @@ namespace askap {
                 /// version for compatibility
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverHogbom(casa::Array<T>& dirty, casa::Array<T>& psf);
+                DeconvolverHogbom(casacore::Array<T>& dirty, casacore::Array<T>& psf);
 
                 /// @brief Perform the deconvolution
                 /// @detail This is the main deconvolution method.

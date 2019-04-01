@@ -43,7 +43,7 @@ namespace askap
     SphFuncVisGridder::SphFuncVisGridder(const float alpha,
                                          const int support,
                                          const int oversample) :
-        itsSphFunc(casa::C::pi*support, alpha), itsAlpha(static_cast<double>(alpha))
+        itsSphFunc(casacore::C::pi*support, alpha), itsAlpha(static_cast<double>(alpha))
     {
        ASKAPASSERT(support>=3);
        ASKAPASSERT(oversample>=1);       
@@ -120,7 +120,7 @@ namespace askap
                 // I think they should be -ve, since the offset in nux & nuy is +ve.
                 const int ix = -float(fracu)/float(itsOverSample);
                 const int iy = -float(fracv)/float(itsOverSample);
-                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casa::Complex(1.0, 3.0);
+                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casacore::Complex(1.0, 3.0);
             }
         }
 
@@ -135,8 +135,8 @@ namespace askap
             ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
             itsConvFunc[plane].resize(cSize, cSize);
             itsConvFunc[plane].set(0.0);
-            casa::Vector<casa::DComplex> bufx(cSize);
-            casa::Vector<casa::DComplex> bufy(cSize);
+            casacore::Vector<casacore::DComplex> bufx(cSize);
+            casacore::Vector<casacore::DComplex> bufy(cSize);
             for (int ix=0; ix<cSize; ++ix) {
               const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
               bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
@@ -161,21 +161,21 @@ namespace askap
                // this plane of the cache is unused
                continue;
            }
-           const double norm = real(sum(casa::abs(itsConvFunc[plane])));
+           const double norm = real(sum(casacore::abs(itsConvFunc[plane])));
            ASKAPDEBUGASSERT(norm>0.);
-           itsConvFunc[plane]/=casa::Complex(norm);
+           itsConvFunc[plane]/=casacore::Complex(norm);
       } // for plane					        
       
     }
 
-    void SphFuncVisGridder::correctConvolution(casa::Array<double>& grid)
+    void SphFuncVisGridder::correctConvolution(casacore::Array<double>& grid)
     { 
       ASKAPTRACE("SphFuncVisGridder::correctConvolution");
       ASKAPDEBUGASSERT(itsShape.nelements()>=2);      
-      const casa::Int xHalfSize = itsShape(0)/2;
-      const casa::Int yHalfSize = itsShape(1)/2;
-      casa::Vector<double> ccfx(itsShape(0));
-      casa::Vector<double> ccfy(itsShape(1));
+      const casacore::Int xHalfSize = itsShape(0)/2;
+      const casacore::Int yHalfSize = itsShape(1)/2;
+      casacore::Vector<double> ccfx(itsShape(0));
+      casacore::Vector<double> ccfy(itsShape(1));
       ASKAPDEBUGASSERT(itsShape(0)>1);
       ASKAPDEBUGASSERT(itsShape(1)>1);
 
@@ -183,22 +183,22 @@ namespace askap
       
       // initialise buffers to enable a filtering of the correction
       // function in Fourier space.
-      casa::Vector<casa::DComplex> bufx(itsShape(0));
-      casa::Vector<casa::DComplex> bufy(itsShape(1));
+      casacore::Vector<casacore::DComplex> bufx(itsShape(0));
+      casacore::Vector<casacore::DComplex> bufy(itsShape(1));
 
       // note grdsf(1)=0.
       for (int ix=0; ix<itsShape(0); ++ix)
       {
         const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
         const double val = grdsf(nux);
-        bufx(ix) = casa::DComplex(val,0.0);
+        bufx(ix) = casacore::DComplex(val,0.0);
       }
 
       for (int iy=0; iy<itsShape(1); ++iy)
       {
         const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
         const double val = grdsf(nuy);
-        bufy(iy) = casa::DComplex(val,0.0);
+        bufy(iy) = casacore::DComplex(val,0.0);
       }
 
       if (itsInterp) {
@@ -215,7 +215,7 @@ namespace askap
          // Some more advanced gridders have support>3 (e.g. w-proj).
          // 
          int support = 3;
-         const casa::DComplex maxBefore = bufx(itsShape(0)/2);
+         const casacore::DComplex maxBefore = bufx(itsShape(0)/2);
          scimath::fft(bufx, true);
          scimath::fft(bufy, true);
          for (int ix=0; ix<itsShape(0)/2-support; ++ix) {
@@ -233,24 +233,24 @@ namespace askap
          scimath::fft(bufx, false);
          scimath::fft(bufy, false);
          // Normalise after filtering.
-         const casa::DComplex normalisation = maxBefore / bufx(itsShape(0)/2);
+         const casacore::DComplex normalisation = maxBefore / bufx(itsShape(0)/2);
          bufx *= normalisation;
          bufy *= normalisation;
       }
 
       for (int ix=0; ix<itsShape(0); ++ix) {
         double val = real(bufx(ix));
-        ccfx(ix) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
+        ccfx(ix) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
       }
       for (int iy=0; iy<itsShape(1); ++iy) {
         double val = real(bufy(iy));
-        ccfy(iy) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
+        ccfy(iy) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
       }
 
-      casa::ArrayIterator<double> it(grid, 2);
+      casacore::ArrayIterator<double> it(grid, 2);
       while (!it.pastEnd())
       {
-        casa::Matrix<double> mat(it.array());
+        casacore::Matrix<double> mat(it.array());
         ASKAPDEBUGASSERT(int(mat.nrow()) <= itsShape(0));
         ASKAPDEBUGASSERT(int(mat.ncolumn()) <= itsShape(1));        
         for (int ix=0; ix<itsShape(0); ix++)

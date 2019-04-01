@@ -131,7 +131,7 @@ namespace askap
         /// product is not present.
         /// @param[in] pol polarisation product
         /// @return index (from 0 to nPol()-1)
-        casa::uInt polIndex(casa::Stokes::StokesTypes pol) const;
+        casacore::uInt polIndex(casacore::Stokes::StokesTypes pol) const;
               
         
         /// @brief a helper method to populate a visibility cube
@@ -147,9 +147,9 @@ namespace askap
         ///            channel) 
         /// @param[in] rwVis a non-const reference to the visibility cube to alter
         void addModelToCube(const IParameterizedComponent& comp,
-               const casa::Vector<casa::RigidVector<casa::Double, 3> > &uvw,
-               const casa::Vector<casa::Double>& freq,
-               casa::Cube<casa::Complex> &rwVis) const;
+               const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
+               const casacore::Vector<casacore::Double>& freq,
+               casacore::Cube<casacore::Complex> &rwVis) const;
 
         /// @brief a helper method to populate a visibility cube
         /// @details This is method computes visibilities for the one given
@@ -163,9 +163,9 @@ namespace askap
         ///            spectral channel) 
         /// @param[in] rwVis a non-const reference to the visibility cube to alter
         void addModelToCube(const IUnpolarizedComponent& comp,
-               const casa::Vector<casa::RigidVector<casa::Double, 3> > &uvw,
-               const casa::Vector<casa::Double>& freq,
-               casa::Cube<casa::Complex> &rwVis) const;
+               const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
+               const casacore::Vector<casacore::Double>& freq,
+               casacore::Cube<casacore::Complex> &rwVis) const;
         
         /// @brief a helper method to update design matrix and residuals
         /// @details This method iterates over a given number of polarisation 
@@ -187,9 +187,9 @@ namespace askap
         /// @param[in] residual vector of residuals to update 
         void updateDesignMatrixAndResiduals(
                    const IParameterizedComponent& comp,
-                   const casa::Vector<casa::RigidVector<casa::Double, 3> > &uvw,
-                   const casa::Vector<casa::Double>& freq,
-                   scimath::DesignMatrix &dm, casa::Vector<casa::Double> &residual) const;
+                   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
+                   const casacore::Vector<casacore::Double>& freq,
+                   scimath::DesignMatrix &dm, casacore::Vector<casacore::Double> &residual) const;
         
         /// @brief read-write access to parameters
         /// @details This method is overridden to invalidate component cache.

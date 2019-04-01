@@ -63,8 +63,8 @@ struct IUnpolarizedComponent : virtual public IComponent {
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
                     std::vector<double> &result) const = 0;
   
   /// @brief calculate stokes I visibilities and derivatives for this component
@@ -76,9 +76,9 @@ struct IUnpolarizedComponent : virtual public IComponent {
   /// @param[in] uvw  baseline spacings (in metres)
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    std::vector<casa::AutoDiff<double> > &result) const = 0;                    
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    std::vector<casacore::AutoDiff<double> > &result) const = 0;                    
 
 
   /// @brief calculate visibilities for this component
@@ -91,9 +91,9 @@ struct IUnpolarizedComponent : virtual public IComponent {
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[in] pol required polarization 
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
                     std::vector<double> &result) const;
   
   /// @brief calculate visibilities and derivatives for this component
@@ -105,10 +105,10 @@ struct IUnpolarizedComponent : virtual public IComponent {
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[in] pol required polarization 
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
-                    std::vector<casa::AutoDiff<double> > &result) const;                    
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
+                    std::vector<casacore::AutoDiff<double> > &result) const;                    
 
 };
 

@@ -62,7 +62,7 @@ namespace askap {
                     itsCurrentIter++;
                 }
 
-                casa::Int currentIter() const {
+                casacore::Int currentIter() const {
                     return itsCurrentIter;
                 }
 
@@ -74,7 +74,7 @@ namespace askap {
                     return itsTotalFlux;
                 }
 
-                casa::Int startIter() const {
+                casacore::Int startIter() const {
                     return itsStartIter;
                 }
 
@@ -101,7 +101,7 @@ namespace askap {
                     return itsInitialObjectiveFunction;
                 }
 
-                void setCurrentIter(casa::Int currentIter) {
+                void setCurrentIter(casacore::Int currentIter) {
                     itsCurrentIter = currentIter;
                 }
 
@@ -113,7 +113,7 @@ namespace askap {
                     itsTotalFlux = totalFlux;
                 }
 
-                void setStartIter(casa::Int startIter) {
+                void setStartIter(casacore::Int startIter) {
                     itsStartIter = startIter;
                 }
 
@@ -122,9 +122,9 @@ namespace askap {
 
             private:
 
-                casa::Int itsCurrentIter;
-                casa::Int itsStartIter;
-                casa::Int itsEndIter;
+                casacore::Int itsCurrentIter;
+                casacore::Int itsStartIter;
+                casacore::Int itsEndIter;
                 T itsPeakResidual;
                 T itsTotalFlux;
                 T itsObjectiveFunction;

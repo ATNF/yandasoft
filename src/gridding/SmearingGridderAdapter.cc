@@ -52,7 +52,7 @@ using namespace askap::accessors;
 /// @param[in] nFreqSteps number of frequency points in the simulation (default is 1, i.e. no simulation)
 /// @note time-average smearing is not yet implemented
 SmearingGridderAdapter::SmearingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder,
-           const double bandwidth, const casa::uInt nFreqSteps) :
+           const double bandwidth, const casacore::uInt nFreqSteps) :
            itsBandwidth(bandwidth), itsNFreqSteps(nFreqSteps), itsModelIsEmpty(true)
 {
   ASKAPCHECK(gridder, "SmearingGridderAdapter should only be initialised with a valid gridder");
@@ -88,7 +88,7 @@ boost::shared_ptr<IVisGridder> SmearingGridderAdapter::clone()
 /// @param[in] shape Shape of output image: cube: u,v,pol,chan
 /// @param[in] dopsf Make the psf?
 void SmearingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
-                const casa::IPosition& shape, const bool dopsf, const bool dopcf)
+                const casacore::IPosition& shape, const bool dopsf, const bool dopcf)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->initialiseGrid(axes,shape,dopsf,dopcf);
@@ -104,7 +104,7 @@ void SmearingGridderAdapter::grid(accessors::IConstDataAccessor& acc)
 
 /// @brief form the final output image
 /// @param[in] out output double precision image or PSF
-void SmearingGridderAdapter::finaliseGrid(casa::Array<double>& out)
+void SmearingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->finaliseGrid(out);
@@ -114,7 +114,7 @@ void SmearingGridderAdapter::finaliseGrid(casa::Array<double>& out)
 /// @details Form the sum of the convolution function squared, multiplied by the weights for each
 /// different convolution function. This is used in the evaluation of the second derivative.
 /// @param[in] out output double precision sum of weights images
-void SmearingGridderAdapter::finaliseWeights(casa::Array<double>& out)
+void SmearingGridderAdapter::finaliseWeights(casacore::Array<double>& out)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->finaliseWeights(out);
@@ -124,7 +124,7 @@ void SmearingGridderAdapter::finaliseWeights(casa::Array<double>& out)
 /// @param[in] axes axes specifications
 /// @param[in] image input image cube: u,v,pol,chan
 void SmearingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
-					const casa::Array<double>& image)
+					const casacore::Array<double>& image)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->initialiseDegrid(axes,image);
@@ -160,24 +160,24 @@ void SmearingGridderAdapter::degrid(accessors::IDataAccessor& acc)
        // this part is to be written
        SmearingAccessorAdapter accBuffer(acc);
        accBuffer.useFrequencyBuffer();
-       const casa::uInt centralStep = itsNFreqSteps / 2; 
+       const casacore::uInt centralStep = itsNFreqSteps / 2; 
        ASKAPDEBUGASSERT(centralStep > 0);
        const double freqInc = itsBandwidth / double(itsNFreqSteps - 1);
        // for an odd number of integration steps we get one point exactly at the centre of the channel,
        // for an even number - equidistant on both sides, hence the offset
        const double freqOff = itsNFreqSteps % 2 == 0 ? freqInc / 2. : 0.;
-       const casa::uInt nChan = acc.nChannel();
+       const casacore::uInt nChan = acc.nChannel();
        ASKAPDEBUGASSERT(accBuffer.rwFrequency().nelements() == nChan);
        accBuffer.rwVisibility().set(0.0);
-       for (casa::uInt it = 0; it < itsNFreqSteps; ++it) {
+       for (casacore::uInt it = 0; it < itsNFreqSteps; ++it) {
             // do the integration via Trapezium method
             // first deal with the first and the last point because we scale down the result later
-            const casa::uInt step = (it == 0 ? 0 : (it == 1 ? itsNFreqSteps - 1 : it - 1));
+            const casacore::uInt step = (it == 0 ? 0 : (it == 1 ? itsNFreqSteps - 1 : it - 1));
             ASKAPDEBUGASSERT(step < itsNFreqSteps); 
             // fill the new frequency vector
-            for (casa::uInt chan = 0; chan<nChan; ++chan) {
+            for (casacore::uInt chan = 0; chan<nChan; ++chan) {
                  accBuffer.rwFrequency()[chan] = acc.frequency()[chan] + freqOff + 
-                          double(casa::Int(step) - casa::Int(centralStep)) * freqInc;
+                          double(casacore::Int(step) - casacore::Int(centralStep)) * freqInc;
             }
             itsGridder->degrid(accBuffer);
             if (it == 1) {

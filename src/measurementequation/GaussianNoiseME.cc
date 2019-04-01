@@ -50,7 +50,7 @@ using namespace askap::accessors;
 /// squared here because the mean is always zero)
 /// @param[in] seed1 a first seed to initialize the random generator
 /// @param[in] seed2 a second seed to initialize the random generator 
-GaussianNoiseME::GaussianNoiseME(double variance, casa::Int seed1, casa::Int seed2) :
+GaussianNoiseME::GaussianNoiseME(double variance, casacore::Int seed1, casacore::Int seed2) :
   itsGen(variance,seed1, seed2), itsExplicitVariance(true) {}
 
 /// @brief constructor, initializes random distribution required.
@@ -60,7 +60,7 @@ GaussianNoiseME::GaussianNoiseME(double variance, casa::Int seed1, casa::Int see
 /// squared here because the mean is always zero)
 /// @param[in] seed1 a first seed to initialize the random generator
 /// @param[in] seed2 a second seed to initialize the random generator 
-GaussianNoiseME::GaussianNoiseME(casa::Int seed1, casa::Int seed2)  :
+GaussianNoiseME::GaussianNoiseME(casacore::Int seed1, casacore::Int seed2)  :
   itsGen(1., seed1, seed2), itsExplicitVariance(false) {}
 
 /// @brief Predict model visibilities for one accessor (chunk).
@@ -71,18 +71,18 @@ GaussianNoiseME::GaussianNoiseME(casa::Int seed1, casa::Int seed2)  :
 /// @param[in] chunk a read-write accessor to work with
 void GaussianNoiseME::predict(IDataAccessor &chunk) const
 {
-  casa::Cube<casa::Complex> &rwVis = chunk.rwVisibility();
-  const casa::Cube<casa::Complex> &noise = chunk.noise();
-  for (casa::uInt row = 0; row<rwVis.nrow(); ++row) {
+  casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
+  const casacore::Cube<casacore::Complex> &noise = chunk.noise();
+  for (casacore::uInt row = 0; row<rwVis.nrow(); ++row) {
        bool isAutoCorrelation = false;
        if (chunk.antenna1()(row) == chunk.antenna2()(row)) {
            if (chunk.feed1()(row) == chunk.feed2()(row)) {
                isAutoCorrelation = true;
            }
        }
-       for (casa::uInt chan = 0; chan<rwVis.ncolumn(); ++chan) {
-            for (casa::uInt pol = 0; pol<rwVis.nplane(); ++pol) {
-                 const casa::Float scale = itsExplicitVariance ? 1. : std::real(noise(row,chan,pol));
+       for (casacore::uInt chan = 0; chan<rwVis.ncolumn(); ++chan) {
+            for (casacore::uInt pol = 0; pol<rwVis.nplane(); ++pol) {
+                 const casacore::Float scale = itsExplicitVariance ? 1. : std::real(noise(row,chan,pol));
                  if (isAutoCorrelation) {
                      rwVis(row,chan,pol) = scale * std::real(getRandomComplexNumber());
                  } else {

@@ -85,7 +85,7 @@ namespace askap
       itsBasisFunction=BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(defaultScales));
     }
     
-    ImageBasisFunctionSolver::ImageBasisFunctionSolver(casa::Vector<float>& scales)
+    ImageBasisFunctionSolver::ImageBasisFunctionSolver(casacore::Vector<float>& scales)
     {
       // Now set up controller
       itsControl = boost::shared_ptr<DeconvolverControl<Float> >(new DeconvolverControl<Float>());
@@ -147,22 +147,22 @@ namespace askap
       for (map<string, uint>::const_iterator indit=indices.begin();indit!=indices.end();++indit)
 	{
 	  // Axes are dof, dof for each parameter
-	  //const casa::IPosition vecShape(1, ip.value(indit->first).nelements());
+	  //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
 	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
 	       planeIter.hasMore(); planeIter.next()) {
 	    
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0,
 		       "Diagonal not present for " << indit->first);
-	    casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+	    casacore::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
 		       "Data vector not present for " << indit->first);
-	    casa::Vector<double> dv = normalEquations().dataVector(indit->first);
+	    casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
 	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
 		       "PSF Slice not present for " << indit->first);
-	    casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+	    casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
                "Preconditioner fuction Slice not present for " << indit->first);
-	    casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+	    casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 	    
 	    if (planeIter.tag()!="") {
 	      // it is not a single plane case, there is something to report
@@ -170,15 +170,15 @@ namespace askap
 				" tagged as "<<planeIter.tag());
 	    }
 	    
-	    casa::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
-	    casa::Array<float> psfArray = padImage(planeIter.getPlane(slice));
-	    casa::Array<float> basisFunctionArray = padImage(planeIter.getPlane(ip.value(indit->first)));
-	    casa::Array<float> maskArray(dirtyArray.shape());
+	    casacore::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
+	    casacore::Array<float> psfArray = padImage(planeIter.getPlane(slice));
+	    casacore::Array<float> basisFunctionArray = padImage(planeIter.getPlane(ip.value(indit->first)));
+	    casacore::Array<float> maskArray(dirtyArray.shape());
 	    ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
 			      dirtyArray.shape()<<" after padding");
 
 	    // send an anternative preconditioner function, if it isn't empty.
-	    casa::Array<float> pcfArray;
+	    casacore::Array<float> pcfArray;
         if (pcf.shape() > 0) {
 	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
 	      pcfArray = padImage(planeIter.getPlane(pcf));
@@ -187,7 +187,7 @@ namespace askap
 	    if(doPreconditioning(psfArray,dirtyArray,pcfArray)) {
 	      // Normalize
 	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
-			      boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
+			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	      // Store the new PSF in parameter class to be saved to disk later
 	      saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "psf.image", unpadImage(psfArray),
 				     planeIter.position());
@@ -195,7 +195,7 @@ namespace askap
 	    else {
 	      // Normalize
 	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
-			      boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
+			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	    }
 	    
 	    // optionally clip the image and psf if there was padding
@@ -216,16 +216,16 @@ namespace askap
 	    
 	    // Startup now costs so little it's better to create a new
 	    // deconvolver each time we need it	    
-	    boost::shared_ptr<DeconvolverBasisFunction<float, casa::Complex> >
+	    boost::shared_ptr<DeconvolverBasisFunction<float, casacore::Complex> >
 	      basisFunctionDec(new DeconvolverBasisFunction<float,
-		    casa::Complex>(dirtyArray, psfArray));
+		    casacore::Complex>(dirtyArray, psfArray));
 	    ASKAPASSERT(basisFunctionDec);     
 	    basisFunctionDec->setMonitor(itsMonitor);
 	    basisFunctionDec->setControl(itsControl);
 	    basisFunctionDec->setWeight(maskArray);
 
-        casa::Array<float> cleanArray(planeIter.planeShape());
-        casa::convertArray<float, double>(cleanArray, planeIter.getPlane(ip.value(indit->first)));
+        casacore::Array<float> cleanArray(planeIter.planeShape());
+        casacore::convertArray<float, double>(cleanArray, planeIter.getPlane(ip.value(indit->first)));
         basisFunctionDec->setModel(cleanArray);
 
 	    itsBasisFunction->initialise(dirtyArray.shape());

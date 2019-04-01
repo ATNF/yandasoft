@@ -69,8 +69,8 @@ namespace askap {
 
             private:
 
-                casa::Bool itsVerbose;
-                casa::uInt itsLogEvery;
+                casacore::Bool itsVerbose;
+                casacore::uInt itsLogEvery;
         };
 
     } // namespace synthesis

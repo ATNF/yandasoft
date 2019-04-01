@@ -64,8 +64,8 @@ public:
    /// returned by a separate method.
    /// @param[in] tangentPoint tangent point to rotate the coordinates to
    /// @return uvw after rotation to the new coordinate system for each row
-   virtual const casa::Vector<casa::RigidVector<casa::Double, 3> >&
-                 rotatedUVW(const casa::MDirection &tangentPoint) const;
+   virtual const casacore::Vector<casacore::RigidVector<casacore::Double, 3> >&
+                 rotatedUVW(const casacore::MDirection &tangentPoint) const;
    
    /// @brief delay associated with uvw rotation
    /// @details This is a companion method to rotatedUVW. It returns delays corresponding
@@ -75,15 +75,15 @@ public:
    /// @param[in] tangentPoint tangent point to rotate the coordinates to
    /// @param[in] imageCentre image centre (additional translation is done if imageCentre!=tangentPoint)
    /// @return delays corresponding to the uvw rotation for each row
-   virtual const casa::Vector<casa::Double>& uvwRotationDelay(
-                 const casa::MDirection &tangentPoint, const casa::MDirection &imageCentre) const;
+   virtual const casacore::Vector<casacore::Double>& uvwRotationDelay(
+                 const casacore::MDirection &tangentPoint, const casacore::MDirection &imageCentre) const;
    
    /// Velocity for each channel
    /// @return a reference to vector containing velocities for each
    ///         spectral channel (vector size is nChannel). Velocities
    ///         are given as Doubles, the frame/units are specified by
    ///         the DataSource object (via IDataConverter).
-   virtual const casa::Vector<casa::Double>& velocity() const;
+   virtual const casacore::Vector<casacore::Double>& velocity() const;
    
 private:
    /// @brief handler of uvw rotations

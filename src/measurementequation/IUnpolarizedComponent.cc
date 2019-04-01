@@ -49,9 +49,9 @@
 /// @param[in] pol required polarization 
 /// @param[out] result an output buffer used to store values
 void askap::synthesis::IUnpolarizedComponent::calculate(
-                    const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
                     std::vector<double> &result) const
 {
   if (stokesIndex(pol)) {
@@ -73,20 +73,20 @@ void askap::synthesis::IUnpolarizedComponent::calculate(
 /// @param[in] pol required polarization 
 /// @param[out] result an output buffer used to store values
 void askap::synthesis::IUnpolarizedComponent::calculate(
-                    const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
-                    std::vector<casa::AutoDiff<double> > &result) const
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
+                    std::vector<casacore::AutoDiff<double> > &result) const
 {
   if (stokesIndex(pol)) {
       // Q,U or V requested
       const askap::synthesis::IParameterizedComponent *pc = 
              dynamic_cast<const askap::synthesis::IParameterizedComponent*>(this);
       if (pc != NULL) {
-          result.resize(2*freq.nelements(), casa::AutoDiff<double>(0.,
+          result.resize(2*freq.nelements(), casacore::AutoDiff<double>(0.,
                         pc->nParameters()));
       }        
-      result.resize(2*freq.nelements(), casa::AutoDiff<double>(0.,0));
+      result.resize(2*freq.nelements(), casacore::AutoDiff<double>(0.,0));
   } else {
       // stokes I requested
       calculate(uvw,freq,result);

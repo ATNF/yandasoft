@@ -113,7 +113,7 @@ public:
    /// Switch the output of operator* and operator-> to the original
    /// state (present after the iterator is just constructed) 
    /// where they point to the primary visibility data. This method
-   /// is indended to cancel the results of chooseBuffer(casa::uInt)
+   /// is indended to cancel the results of chooseBuffer(casacore::uInt)
    ///
    virtual void chooseOriginal();
 
@@ -135,12 +135,12 @@ public:
 
    /// Checks whether there are more data available.
    /// @return True if there are more data available
-   casa::Bool hasMore() const throw(); 
+   casacore::Bool hasMore() const throw(); 
 
    /// advance the iterator one step further
    /// @return True if there are more data (so constructions like
    ///         while(it.next()) {} are possible)
-   casa::Bool next();
+   casacore::Bool next();
 
    /// @brief server method
    /// @details It iterates through the given iterator, serves metadata
@@ -163,7 +163,7 @@ public:
    /// the chunk dealt with by this worker to avoid re-implementing this functionality in the user code as it would require
    /// additional communication.
    /// @return channel offset of the first channel dealt with by this worker w.r.t. the first channel of the whole spectrum
-   casa::uInt inline chanOffset() const { return itsChanOffset; }
+   casacore::uInt inline chanOffset() const { return itsChanOffset; }
 	
 protected:
     
@@ -192,7 +192,7 @@ private:
    /// @brief current channel offset w.r.t the full axis
    /// @details Workers may need to know which part of the full spectrum they are working with. Although ideally, we should've used
    /// the accessor itself (e.g. the frequency axis) to figure this out.
-   casa::uInt itsChanOffset;
+   casacore::uInt itsChanOffset;
 
    /// @brief true if flags need to be synchronised from the current accessor
    /// @note This field is only checked/makes sense if accessor is valid and iterator is not at origin

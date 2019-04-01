@@ -62,7 +62,7 @@ public:
    /// @details The method throws exception if no prior support search has
    /// been done.
    /// @return peak position determined during the last search for support
-   casa::IPosition peakPos() const;
+   casacore::IPosition peakPos() const;
 
    /// @brief obtain peak value
    /// @details The method throws exception if no prior support search has
@@ -74,26 +74,26 @@ public:
    /// @details This method returns the bottom left corner of the support. It
    /// throws an exception of no prior search for support has been done.
    /// @return bottom left corner of the support
-   casa::IPosition blc() const;
+   casacore::IPosition blc() const;
 
    /// @brief obtain the top right corner of the support
    /// @details This method returns the bottom left corner of the support. It
    /// throws an exception of no prior search for support has been done.
    /// @return bottom left corner of the support
-   casa::IPosition trc() const;
+   casacore::IPosition trc() const;
 
    /// @brief obtain a size of the smallest square support
    /// @details This method essentially returns the largest length across both
    /// axes (i.e. max(trc-blc)). It throws an exception if no prior search for
    /// support has been done.
    /// @return support size
-   casa::uInt support() const;
+   casacore::uInt support() const;
 
    /// @brief obtain a size of the smallest symmetrical square support
    /// @details This method returns the smallest square support, which is
    /// symmetrical with respect to the centre.
    /// @param[in] shape defines the centre of symmetry (as shape/2)
-   casa::uInt symmetricalSupport(const casa::IPosition &shape) const;
+   casacore::uInt symmetricalSupport(const casacore::IPosition &shape) const;
 
    /// @brief search assuming the peak is in the centre
    /// @details This search method assumes the peak is in the centre of the
@@ -104,7 +104,7 @@ public:
    /// @param[in] in input 2D matrix with an image
    /// @param[in] value assumed peak value
    template<typename T>
-   void searchCentered(const casa::Matrix<T> &in, double value = 1.);
+   void searchCentered(const casacore::Matrix<T> &in, double value = 1.);
 
    /// @brief determine the peak and its position
    /// @details This method fillss only itsPeakPos and itsPeakVal. It is
@@ -112,7 +112,7 @@ public:
    /// separately.
    /// @param[in] in input 2D matrix with an image
    template<typename T>
-   void findPeak(const casa::Matrix<T> &in);
+   void findPeak(const casacore::Matrix<T> &in);
 
    /// @brief full search which determines the peak
    /// @details This search method doesn't assume anything about the peak and
@@ -124,7 +124,7 @@ public:
    /// @param[in] value optional peak value, if a positive value is given it will be used
    /// instead of the peak amplitude (although the positon of the peak will still be searched for)
    template<typename T>
-   void search(const casa::Matrix<T> &in, const double value = -1.);
+   void search(const casacore::Matrix<T> &in, const double value = -1.);
 
    /// @brief extend support area to include diagonals
    /// @details This search method assumes the peak has been found
@@ -133,7 +133,7 @@ public:
    /// x or y from the peak that are above the cutoff and connected to the peak
    /// @param[in] in input 2D matrix with an image
    template<typename T>
-   void extendedSupport(const casa::Matrix<T> &in);
+   void extendedSupport(const casacore::Matrix<T> &in);
 
 protected:
 
@@ -142,7 +142,7 @@ protected:
    /// implements the actual search of blc and trc of the support region.
    /// @param[in] in input 2D matrix with an image
    template<typename T>
-   void doSupportSearch(const casa::Matrix<T> &in);
+   void doSupportSearch(const casacore::Matrix<T> &in);
 
    /// @brief debug method to save the matrix
    /// @details This method is used for debugging only and stores given
@@ -150,19 +150,19 @@ protected:
    /// nothing for the generic value type.
    /// @param[in] in input 2D matrix with an image
    template<typename T>
-   static void debugStoreImage(const casa::Matrix<T> &in) {}
+   static void debugStoreImage(const casacore::Matrix<T> &in) {}
 
 private:
    /// @brief relative cutoff level (from the absolute peak)
    double itsCutoff;
    /// @brief Peak position (either assumed or found)
-   casa::IPosition itsPeakPos;
+   casacore::IPosition itsPeakPos;
    /// @brief peak value (either assumed or found)
    double itsPeakVal;
    /// @brief Bottom left corner of the support
-   casa::IPosition itsBLC;
+   casacore::IPosition itsBLC;
    /// @brief Top right corner of the support
-   casa::IPosition itsTRC;
+   casacore::IPosition itsTRC;
 };
 
 } // namespace synthesis

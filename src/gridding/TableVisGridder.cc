@@ -311,8 +311,8 @@ void TableVisGridder::save(const std::string& name) {
         ASKAPLOG_DEBUG_STR(logger, "Saving " << itsConvFunc.size() << " entries in convolution function");
         for (unsigned int i=0; i<itsConvFunc.size(); i++) {
 
-            casa::Array<double> realC(itsConvFunc[i].shape());
-            casa::convertArray<double,float>(realC,real(itsConvFunc[i]));
+            casacore::Array<double> realC(itsConvFunc[i].shape());
+            casacore::convertArray<double,float>(realC,real(itsConvFunc[i]));
             // ASKAPLOG_DEBUG_STR(logger, "Entry[" <<  i <<  "] has shape " <<  itsConvFunc[i].shape());
             std::ostringstream os;
             os<<"Real.Convolution";
@@ -357,14 +357,14 @@ void TableVisGridder::save(const std::string& name) {
                      support = y;
                  }
             }
-            casa::Cube<casa::Float> imgBuffer(support, support, nPlanes);
+            casacore::Cube<casacore::Float> imgBuffer(support, support, nPlanes);
             imgBuffer.set(0.);
             for (unsigned int plane = 0; plane<nPlanes; ++plane) {
                 //unsigned int peakX = 0, peakY = 0;
-                casa::Float peakVal = -1.;
+                casacore::Float peakVal = -1.;
                 for (int x = 0; x<int(imgBuffer.nrow()); ++x) {
                      for (int y = 0; y<int(imgBuffer.ncolumn()); ++y) {
-                          const casa::Matrix<casa::Complex> thisCF = itsConvFunc[plane*itsOverSample*itsOverSample];
+                          const casacore::Matrix<casacore::Complex> thisCF = itsConvFunc[plane*itsOverSample*itsOverSample];
                           const int xOff = (support - int(thisCF.nrow()))/2;
                           const int yOff = (support - int(thisCF.ncolumn()))/2;
                           ASKAPDEBUGASSERT((xOff >= 0) && (yOff >= 0));
@@ -374,13 +374,13 @@ void TableVisGridder::save(const std::string& name) {
                           if ( (x - xOff < 0) || (y - yOff < 0) ) {
                                continue;
                           }
-                          imgBuffer(x,y,plane) = casa::abs(thisCF(x - xOff,y - yOff));
+                          imgBuffer(x,y,plane) = casacore::abs(thisCF(x - xOff,y - yOff));
                           if (peakVal < imgBuffer(x,y,plane)) {
                                //peakX = x;
                                //peakY = y;
                                peakVal = imgBuffer(x,y,plane);
                           }
-                          imgBuffer(x,y,plane) = casa::real(thisCF(x - xOff,y - yOff));
+                          imgBuffer(x,y,plane) = casacore::real(thisCF(x - xOff,y - yOff));
                      }
                 }
                 //ASKAPLOG_DEBUG_STR(logger, "CF plane "<<plane<<
@@ -403,21 +403,21 @@ void TableVisGridder::logCFCacheStats() const
    unsigned long memUsed = 0;
    for (unsigned int plane = 0; plane<nPlanes; ++plane) {
        ASKAPDEBUGASSERT(plane*itsOverSample*itsOverSample < itsConvFunc.size());
-       const casa::IPosition shape = itsConvFunc[plane*itsOverSample*itsOverSample].shape();
+       const casacore::IPosition shape = itsConvFunc[plane*itsOverSample*itsOverSample].shape();
        if (shape.nelements() < 2) {
            ASKAPLOG_DEBUG_STR(logger, "CF plane="<<plane<<" (before oversampling) is malformed");
            continue;
        }
        if (shape.product() == 0) {
            ASKAPLOG_DEBUG_STR(logger, "CF plane="<<plane<<" (before oversampling) is unused");
-           memUsed += sizeof(casa::Matrix<casa::Complex>);
+           memUsed += sizeof(casacore::Matrix<casacore::Complex>);
            continue;
        }
        if ((shape[0] != shape[1]) || (shape[0] % 2 != 1)) {
            ASKAPLOG_DEBUG_STR(logger, "CF plane="<<plane<<
                                       " (before oversampling) has a rectangular support or even size");
-           memUsed += sizeof(casa::Matrix<casa::Complex>) +
-                      sizeof(casa::Complex)*shape.product()*itsOverSample*itsOverSample;
+           memUsed += sizeof(casacore::Matrix<casacore::Complex>) +
+                      sizeof(casacore::Complex)*shape.product()*itsOverSample*itsOverSample;
            continue;
        }
        const int support = (shape[0] - 1) / 2;
@@ -425,12 +425,12 @@ void TableVisGridder::logCFCacheStats() const
        ASKAPLOG_DEBUG_STR(logger, "CF plane="<<plane<<" (before oversampling): support="<<
                                   support<<", size="<<shape[0]<<
                                   " at offset ("<<cfOffset.first<<","<<cfOffset.second<<")");
-       memUsed += sizeof(casa::Matrix<casa::Complex>) +
-                  sizeof(casa::Complex)*shape[0]*shape[1]*itsOverSample*itsOverSample;
+       memUsed += sizeof(casacore::Matrix<casacore::Complex>) +
+                  sizeof(casacore::Complex)*shape[0]*shape[1]*itsOverSample*itsOverSample;
    }
    if (nPlanes > 0) {
-       float effectiveSize = (float(memUsed)-float(sizeof(casa::Matrix<casa::Complex>)*nPlanes)) /
-                             (sizeof(casa::Complex)*itsOverSample*itsOverSample*nPlanes);
+       float effectiveSize = (float(memUsed)-float(sizeof(casacore::Matrix<casacore::Complex>)*nPlanes)) /
+                             (sizeof(casacore::Complex)*itsOverSample*itsOverSample*nPlanes);
        ASKAPLOG_DEBUG_STR(logger, "Cache of convolution functions take " <<
                                   float(memUsed)/1024/1024<<" Mb of memory or ");
        ASKAPLOG_DEBUG_STR(logger, float(memUsed)/nPlanes/1024/1024 <<
@@ -459,7 +459,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            "Logic error: the gridder is not supposed to be used for degridding in the PCF mode")
    }
 
-   casa::Timer timer;
+   casacore::Timer timer;
 
    // Time CFs and indices
    timer.mark();
@@ -475,21 +475,15 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // Now time the coordinate conversions, etc.
    // some conversion may have already happened during CF calculation
    timer.mark();
-   const casa::MVDirection imageCentre = getImageCentre();
-   const casa::MVDirection tangentPoint = getTangentPoint();
+   const casacore::MVDirection imageCentre = getImageCentre();
+   const casacore::MVDirection tangentPoint = getTangentPoint();
 
    // its fine to work with the reference in the openmp case because all our current use cases
    // have the same tangent point for all gridders, otherwise we have to move this call
    // inside the section protected by the lock and make a copy of the returned vector
-   const casa::Vector<casa::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
+   const casacore::Vector<casacore::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
 
-   #ifdef _OPENMP
-   boost::unique_lock<boost::mutex> lock(itsMutex);
-   const casa::Vector<double> delay = acc.uvwRotationDelay(tangentPoint, imageCentre).copy();
-   lock.unlock();
-   #else
-   const casa::Vector<double> &delay = acc.uvwRotationDelay(tangentPoint, imageCentre);
-   #endif
+   const casacore::Vector<double> &delay = acc.uvwRotationDelay(tangentPoint, imageCentre);
 
    itsTimeCoordinates += timer.real();
 
@@ -502,7 +496,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    const uint nSamples = acc.nRow();
    const uint nChan = acc.nChannel();
    const uint nPol = acc.nPol();
-   const casa::Vector<casa::Double>& frequencyList = acc.frequency();
+   const casacore::Vector<casacore::Double>& frequencyList = acc.frequency();
    itsFreqMapper.setupMapping(frequencyList);
 
    // for now setup the converter inside this method, although it would cause a rebuild
@@ -510,28 +504,28 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // more effort (i.e. one has to detect whether polarisation frames change from the
    // previous call). Need to think about parallactic angle dependence.
    // OPENMP case needs work...
-   #ifdef _OPENMP
-   itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
-                             scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
+   // #ifdef _OPENMP
+   // itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
+   //                          scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
    //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
-   #else
+   // #else
    if (nPol != itsVisPols.nelements()  || !allEQ(acc.stokes(), itsVisPols)) {
      itsPolConv = (forward ? scimath::PolConverter(getStokes(),acc.stokes(), false) :
                              scimath::PolConverter(acc.stokes(), getStokes()));
      itsVisPols.assign(acc.stokes());
      itsPolVector.resize(nPol);
    }
-   #endif
+   // #endif
 
    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
-   casa::IPosition ipStart(4, 0, 0, 0, 0);
-   const casa::IPosition onePlane(2,shape()(0),shape()(1));
+   casacore::IPosition ipStart(4, 0, 0, 0, 0);
+   const casacore::IPosition onePlane(2,shape()(0),shape()(1));
    if (its2dGrid.shape()(0)!=onePlane(0) || its2dGrid.shape()(1)!=onePlane(1)) {
        // Initialise the 2d reference
        its2dGrid.resize(onePlane);
    }
    // number of polarisation planes in the grid
-   const casa::uInt nImagePols = (shape().nelements()<=2) ? 1 : shape()[2];
+   const casacore::uInt nImagePols = (shape().nelements()<=2) ? 1 : shape()[2];
    if (itsImagePolFrameVis.nelements()!=nImagePols) {
         itsImagePolFrameVis.resize(nImagePols);
         itsImagePolFrameNoise.resize(nImagePols);
@@ -546,17 +540,17 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // the convolution function and adding the scaled
    // visibility to the grid.
 
-   ASKAPDEBUGASSERT(casa::uInt(nChan) <= frequencyList.nelements());
-   ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
-   const casa::Cube<casa::Bool>& flagCube = acc.flag();
-   casa::Cube<casa::Complex>& visCube = acc.rwVisibility();
-   const casa::Cube<casa::Complex>& roVisCube = acc.visibility();
-   const casa::Cube<casa::Complex>& roVisNoise = acc.noise();
+   ASKAPDEBUGASSERT(casacore::uInt(nChan) <= frequencyList.nelements());
+   ASKAPDEBUGASSERT(casacore::uInt(nSamples) == acc.uvw().nelements());
+   const casacore::Cube<casacore::Bool>& flagCube = acc.flag();
+   casacore::Cube<casacore::Complex>& visCube = acc.rwVisibility();
+   const casacore::Cube<casacore::Complex>& roVisCube = acc.visibility();
+   const casacore::Cube<casacore::Complex>& roVisNoise = acc.noise();
 
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
            // need to reject samples, if too far from the image centre
-           const casa::MVDirection thisPointing  = acc.pointingDir1()(i);
+           const casacore::MVDirection thisPointing  = acc.pointingDir1()(i);
            if (imageCentre.separation(thisPointing) > itsMaxPointingSeparation) {
                ++itsRowsRejectedDueToMaxPointingSeparation;
                continue;
@@ -579,7 +573,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
        for (uint chan=0; chan<nChan; ++chan) {
 
-           const double reciprocalToWavelength = frequencyList[chan]/casa::C::c;
+           const double reciprocalToWavelength = frequencyList[chan]/casacore::C::c;
            if (chan == 0) {
               // check for ridiculous frequency to pick up a possible error with input file,
               // not essential for processing as such
@@ -590,7 +584,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            }
 
            /// Scale U,V to integer pixels plus fractional terms
-           const double uScaled=frequencyList[chan]*outUVW(i)(0)/(casa::C::c *itsUVCellSize(0));
+           const double uScaled=frequencyList[chan]*outUVW(i)(0)/(casacore::C::c *itsUVCellSize(0));
            int iu = askap::nint(uScaled);
            int fracu=askap::nint(itsOverSample*(double(iu)-uScaled));
            if (fracu<0) {
@@ -608,7 +602,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    " iu="<<iu<<" oversample="<<itsOverSample<<" fracu="<<fracu);
            iu+=itsShape(0)/2;
 
-           const double vScaled=frequencyList[chan]*outUVW(i)(1)/(casa::C::c *itsUVCellSize(1));
+           const double vScaled=frequencyList[chan]*outUVW(i)(1)/(casacore::C::c *itsUVCellSize(1));
            int iv = askap::nint(vScaled);
            int fracv=askap::nint(itsOverSample*(double(iv)-vScaled));
            if (fracv<0) {
@@ -627,9 +621,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            iv+=itsShape(1)/2;
 
            // Calculate the delay phasor
-           const double phase=2.0f*casa::C::pi*frequencyList[chan]*delay(i)/(casa::C::c);
+           const double phase=2.0f*casacore::C::pi*frequencyList[chan]*delay(i)/(casacore::C::c);
 
-           const casa::Complex phasor(cos(phase), sin(phase));
+           const casacore::Complex phasor(cos(phase), sin(phase));
 
            bool allPolGood=true;
            for (uint pol=0; pol<nPol; ++pol) {
@@ -683,7 +677,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    ASKAPCHECK(cInd<int(itsConvFunc.size()),
                            "Index into convolution functions exceeds number of planes");
 
-                   casa::Matrix<casa::Complex> & convFunc(itsConvFunc[cInd]);
+                   casacore::Matrix<casacore::Complex> & convFunc(itsConvFunc[cInd]);
 
                    // support only square convolution functions at the moment
                    ASKAPDEBUGASSERT(convFunc.nrow() == convFunc.ncolumn());
@@ -702,7 +696,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    ipStart(2) = pol;
                    // Check if we need to update the grid reference
                    if ( nImagePols>1 || imageChan!=itsImageChan || gInd!=itsGridIndex ) {
-                       its2dGrid.takeStorage(onePlane,&itsGrid[gInd](ipStart),casa::SHARE);
+                       its2dGrid.takeStorage(onePlane,&itsGrid[gInd](ipStart),casacore::SHARE);
                        itsImageChan = imageChan;
                        itsGridIndex = gInd;
                    }
@@ -725,7 +719,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    if (((iuOffset-support)>0)&&((ivOffset-support)>0)&&
                        ((iuOffset+support) <itsShape(0))&&((ivOffset+support)<itsShape(1))) {
                        if (forward) {
-                           casa::Complex cVis(0.,0.);
+                           casacore::Complex cVis(0.,0.);
                            GridKernel::degrid(cVis, convFunc, its2dGrid, iuOffset, ivOffset, support);
                            itsSamplesDegridded+=1.0;
                            itsNumberDegridded+=double((2*support+1)*(2*support+1));
@@ -734,10 +728,10 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                            }
                            itsImagePolFrameVis[pol] = cVis*phasor;
                        } else {
-                           const casa::Complex visComplexNoise = itsImagePolFrameNoise[pol];
+                           const casacore::Complex visComplexNoise = itsImagePolFrameNoise[pol];
 
-                           const float visNoise = casa::square(casa::real(visComplexNoise));
-                           //const float visNoise = casa::norm(visComplexNoise);
+                           const float visNoise = casacore::square(casacore::real(visComplexNoise));
+                           //const float visNoise = casacore::norm(visComplexNoise);
                            const float visNoiseWt = (visNoise > 0.) ? 1./visNoise : 0.;
                            ASKAPCHECK(visNoiseWt>0., "Weight is supposed to be a positive number; visNoiseWt="<<
                                       visNoiseWt<<" visNoise="<<visNoise<<" visComplexNoise="<<visComplexNoise);
@@ -756,7 +750,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
                            if (!isPSFGridder() && !isPCFGridder()) {
                                /// Gridding visibility data onto grid
-                               casa::Complex rVis = phasor*conj(itsImagePolFrameVis[pol])*visNoiseWt;
+                               casacore::Complex rVis = phasor*conj(itsImagePolFrameVis[pol])*visNoiseWt;
                                if (itsVisWeight) {
                                    rVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
                                }
@@ -773,7 +767,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                (itsUseAllDataForPSF ||
                                 ((itsFeedUsedForPSF == acc.feed1()(i)) &&
                                  (itsPointingUsedForPSF.separation(acc.dishPointing1()(i))<1e-6)))) {
-                                casa::Complex uVis(1.,0.);
+                                casacore::Complex uVis(1.,0.);
                                 uVis *= visNoiseWt;
                                 if (itsVisWeight) {
                                     uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
@@ -788,7 +782,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                            } // end if psf needs to be done
                            /// Grid the preconditioner function?
                            if (isPCFGridder()) {
-                                casa::Complex uVis(1.,0.);
+                                casacore::Complex uVis(1.,0.);
                                 uVis *= visNoiseWt;
                                 // We don't want different preconditioning for different Taylor terms.
                                 //if (itsVisWeight) {
@@ -800,7 +794,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                 if ((ivOffset<itsShape(1)/2 && iuOffset>=itsShape(0)/2) ||
                                     (ivOffset<=itsShape(1)/2 && iuOffset<itsShape(0)/2)) {
                                 //if (isPCFGridder() && ivOffset<itsShape(1)/2) {
-                                  casa::Matrix<casa::Complex> conjFunc = conj(convFunc);
+                                  casacore::Matrix<casacore::Complex> conjFunc = conj(convFunc);
                                   GridKernel::grid(its2dGrid, conjFunc, uVis, iuOffset, ivOffset, support);
                                 } else {
                                   GridKernel::grid(its2dGrid, convFunc, uVis, iuOffset, ivOffset, support);
@@ -868,11 +862,11 @@ void TableVisGridder::grid(accessors::IConstDataAccessor& acc) {
 /// @details This method extracts RA and DEC axes from itsAxes and
 /// forms a direction measure corresponding to the middle of each axis.
 /// @return direction measure corresponding to the image centre
-casa::MVDirection TableVisGridder::getImageCentre() const
+casacore::MVDirection TableVisGridder::getImageCentre() const
 {
    ASKAPCHECK(itsAxes.hasDirection(),"Direction axis is missing. axes="<<itsAxes);
-   casa::MDirection out;
-   casa::Vector<casa::Double> centrePixel(2);
+   casacore::MDirection out;
+   casacore::Vector<casacore::Double> centrePixel(2);
    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
    ASKAPDEBUGASSERT(paddingFactor()>0);
    for (size_t dim=0; dim<2; ++dim) {
@@ -888,14 +882,14 @@ casa::MVDirection TableVisGridder::getImageCentre() const
 /// point. This method extracts the tangent point (reference position) from the
 /// coordinate system.
 /// @return direction measure corresponding to the tangent point
-casa::MVDirection TableVisGridder::getTangentPoint() const
+casacore::MVDirection TableVisGridder::getTangentPoint() const
 {
    ASKAPCHECK(itsAxes.hasDirection(),"Direction axis is missing. axes="<<itsAxes);
-   const casa::Vector<casa::Double> refVal(itsAxes.directionAxis().referenceValue());
+   const casacore::Vector<casacore::Double> refVal(itsAxes.directionAxis().referenceValue());
    ASKAPDEBUGASSERT(refVal.nelements() == 2);
-   const casa::Quantum<double> refLon(refVal[0], "rad");
-   const casa::Quantum<double> refLat(refVal[1], "rad");
-   const casa::MVDirection out(refLon, refLat);
+   const casacore::Quantum<double> refLon(refVal[0], "rad");
+   const casacore::Quantum<double> refLat(refVal[1], "rad");
+   const casacore::MVDirection out(refLon, refLat);
    return out;
 }
 
@@ -905,14 +899,14 @@ casa::MVDirection TableVisGridder::getTangentPoint() const
 /// @param[out] out complex output array
 /// @param[in] in double input array
 /// @param[in] padding padding factor
-void TableVisGridder::toComplex(casa::Array<casa::DComplex>& out,
-        const casa::Array<double>& in, const float padding) {
+void TableVisGridder::toComplex(casacore::Array<casacore::DComplex>& out,
+        const casacore::Array<double>& in, const float padding) {
     ASKAPDEBUGTRACE("TableVisGridder::toComplex");
 
     out.resize(scimath::PaddingUtils::paddedShape(in.shape(),padding));
     out.set(0.);
-    casa::Array<casa::DComplex> subImage = scimath::PaddingUtils::extract(out,padding);
-    casa::convertArray<casa::DComplex, double>(subImage, in);
+    casacore::Array<casacore::DComplex> subImage = scimath::PaddingUtils::extract(out,padding);
+    casacore::convertArray<casacore::DComplex, double>(subImage, in);
 }
 
 /// @brief Conversion helper function
@@ -921,11 +915,11 @@ void TableVisGridder::toComplex(casa::Array<casa::DComplex>& out,
 /// @param[out] out real output array
 /// @param[in] in complex input array
 /// @param[in] padding padding factor
-void TableVisGridder::toDouble(casa::Array<double>& out,
-        const casa::Array<casa::DComplex>& in, const float padding) {
+void TableVisGridder::toDouble(casacore::Array<double>& out,
+        const casacore::Array<casacore::DComplex>& in, const float padding) {
   ASKAPDEBUGTRACE("TableVisGridder::toDouble");
-  casa::Array<casa::DComplex> wrapper(in);
-  const casa::Array<casa::DComplex> subImage = scimath::PaddingUtils::extract(wrapper,padding);
+  casacore::Array<casacore::DComplex> wrapper(in);
+  const casacore::Array<casacore::DComplex> subImage = scimath::PaddingUtils::extract(wrapper,padding);
   out.resize(subImage.shape());
   out = real(subImage);
 }
@@ -938,7 +932,7 @@ void TableVisGridder::initStokes()
        itsStokes = itsAxes.stokesAxis();
    } else {
        itsStokes.resize(1);
-       itsStokes[0] = casa::Stokes::I;
+       itsStokes[0] = casacore::Stokes::I;
    }
    ASKAPCHECK(int(itsStokes.nelements()) == nPol, "Stokes axis is not consistent with the shape of the grid. There are "<<
               nPol<<" planes in the grid and "<<itsStokes.nelements()<<
@@ -947,7 +941,7 @@ void TableVisGridder::initStokes()
 
 
 void TableVisGridder::initialiseGrid(const scimath::Axes& axes,
-        const casa::IPosition& shape, const bool dopsf, const bool dopcf) {
+        const casacore::IPosition& shape, const bool dopsf, const bool dopcf) {
      ASKAPTRACE("TableVisGridder::initialiseGrid");
 
      ASKAPDEBUGASSERT(shape.nelements()>=2);
@@ -991,7 +985,7 @@ void TableVisGridder::initialiseCellSize(const scimath::Axes& axes)
 {
     itsAxes=axes;
     ASKAPCHECK(itsAxes.hasDirection(), "Direction axis is missing. itsAxes:"<<itsAxes);
-    casa::Vector<casa::Double> increments = itsAxes.directionAxis().increment();
+    casacore::Vector<casacore::Double> increments = itsAxes.directionAxis().increment();
     ASKAPCHECK(increments.nelements() == 2, "Expect 2 elements in the increment vector, you have "<<increments);
     itsUVCellSize.resize(2);
     ASKAPDEBUGASSERT(itsShape.nelements()>=2);
@@ -1047,10 +1041,10 @@ void TableVisGridder::initRepresentativeFieldAndFeed()
   // temporary code for debuggig
   std::cout<<"TableVisGridder::initRepresentativeFieldAndFeed"<<std::endl;
   itsFirstGriddedVis = false;
-  casa::Quantity ra(0.,"rad"), dec(0.,"rad");
-  casa::MVAngle::read(ra,"13:32:22.48");
-  casa::MVAngle::read(dec,"-042.16.56.93");
-  itsPointingUsedForPSF = casa::MVDirection(ra,dec);
+  casacore::Quantity ra(0.,"rad"), dec(0.,"rad");
+  casacore::MVAngle::read(ra,"13:32:22.48");
+  casacore::MVAngle::read(dec,"-042.16.56.93");
+  itsPointingUsedForPSF = casacore::MVDirection(ra,dec);
   ASKAPLOG_DEBUG_STR(logger, "Field override for PSF, will use "<<printDirection(itsPointingUsedForPSF));
   itsFeedUsedForPSF = 0;
   // end of temporary code
@@ -1058,29 +1052,29 @@ void TableVisGridder::initRepresentativeFieldAndFeed()
 }
 
 /// This is the default implementation
-void TableVisGridder::finaliseGrid(casa::Array<double>& out) {
+void TableVisGridder::finaliseGrid(casacore::Array<double>& out) {
     ASKAPTRACE("TableVisGridder::finaliseGrid");
     ASKAPDEBUGASSERT(itsGrid.size() > 0);
     // buffer for result as doubles
-    casa::Array<double> dBuffer(itsGrid[0].shape());
+    casacore::Array<double> dBuffer(itsGrid[0].shape());
     ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
 
     /// Loop over all grids Fourier transforming and accumulating
     for (unsigned int i=0; i<itsGrid.size(); i++) {
-        casa::Array<casa::DComplex> scratch(itsGrid[i].shape());
-        casa::convertArray<casa::DComplex,casa::Complex>(scratch, itsGrid[i]);
+        casacore::Array<casacore::DComplex> scratch(itsGrid[i].shape());
+        casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, itsGrid[i]);
 
         /*
         // for debugging
         if (isPSFGridder()) {
-            casa::Array<float> buf(scratch.shape());
-            casa::convertArray<float,double>(buf,imag(scratch));
+            casacore::Array<float> buf(scratch.shape());
+            casacore::convertArray<float,double>(buf,imag(scratch));
             scimath::saveAsCasaImage("uvcoverage.imag",buf);
-            casa::convertArray<float,double>(buf,real(scratch));
+            casacore::convertArray<float,double>(buf,real(scratch));
             scimath::saveAsCasaImage("uvcoverage.real",buf);
             // adjust values to extract part which gives a real symmetric FT and the remainder
-            casa::Matrix<float> bufM(buf.nonDegenerate());
+            casacore::Matrix<float> bufM(buf.nonDegenerate());
             for (int x=0; x<int(bufM.nrow()); ++x) {
                  for (int y=0; y<int(bufM.ncolumn())/2; ++y) {
                       const float val = 0.5*(bufM(x,y)+bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1));
@@ -1089,7 +1083,7 @@ void TableVisGridder::finaliseGrid(casa::Array<double>& out) {
                  }
             }
             scimath::saveAsCasaImage("uvcoverage.sympart",buf);
-            casa::Matrix<casa::DComplex> scratchM(scratch.nonDegenerate());
+            casacore::Matrix<casacore::DComplex> scratchM(scratch.nonDegenerate());
             for (int x=0; x<int(scratchM.nrow()); ++x) {
                  for (int y=0; y<int(scratchM.ncolumn()); ++y) {
                       scratchM(x,y) -= double(bufM(x,y));
@@ -1098,18 +1092,18 @@ void TableVisGridder::finaliseGrid(casa::Array<double>& out) {
             // as we ignore imaginary part after FT, make scratch hermitian to be fair
             for (int x=0; x<int(scratchM.nrow()); ++x) {
                  for (int y=0; y<int(scratchM.ncolumn())/2; ++y) {
-                      const casa::DComplex val = 0.5*(scratchM(x,y)+
+                      const casacore::DComplex val = 0.5*(scratchM(x,y)+
                             conj(scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1)));
                       scratchM(x,y) = val;
                       scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1) = conj(val);
                  }
             }
-            casa::convertArray<float,double>(buf,imag(scratch));
+            casacore::convertArray<float,double>(buf,imag(scratch));
             scimath::saveAsCasaImage("uvcoverage.asympart.imag",buf);
-            casa::convertArray<float,double>(buf,real(scratch));
+            casacore::convertArray<float,double>(buf,real(scratch));
             scimath::saveAsCasaImage("uvcoverage.asympart.real",buf);
             fft2d(scratch, false);
-            casa::convertArray<float,double>(buf,real(scratch));
+            casacore::convertArray<float,double>(buf,real(scratch));
             scimath::saveAsCasaImage("psf.asympart.real",buf);
 
             ASKAPCHECK(false, "Debug termination");
@@ -1121,7 +1115,7 @@ void TableVisGridder::finaliseGrid(casa::Array<double>& out) {
         if (i==0) {
             toDouble(dBuffer, scratch);
         } else {
-            casa::Array<double> work(dBuffer.shape());
+            casacore::Array<double> work(dBuffer.shape());
             toDouble(work, scratch);
             dBuffer+=work;
         }
@@ -1137,11 +1131,11 @@ void TableVisGridder::finaliseGrid(casa::Array<double>& out) {
 /// grid into a CASA image (prior to FFT done as part of finaliseGrid)
 /// @param[in] name image name
 /// @param[in] numGrid number of the grid to store
-void TableVisGridder::storeGrid(const std::string &name, casa::uInt numGrid) const
+void TableVisGridder::storeGrid(const std::string &name, casacore::uInt numGrid) const
 {
    ASKAPCHECK(numGrid < itsGrid.size(), "Requested grid number of "<<numGrid<<
               " exceeds or equal to "<<itsGrid.size()<<", the number of grids available");
-   casa::Array<float> buffer(itsGrid[numGrid].shape());
+   casacore::Array<float> buffer(itsGrid[numGrid].shape());
    buffer = amplitude(itsGrid[numGrid]);
    scimath::saveAsCasaImage(name, buffer);
 }
@@ -1149,7 +1143,7 @@ void TableVisGridder::storeGrid(const std::string &name, casa::uInt numGrid) con
 
 
 /// This is the default implementation
-void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
+void TableVisGridder::finaliseWeights(casacore::Array<double>& out) {
    ASKAPTRACE("TableVisGridder::finaliseWeights");
    ASKAPDEBUGASSERT(itsShape.nelements() >= 4);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
@@ -1157,9 +1151,9 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
     int nPol=itsShape(2);
     int nChan=itsShape(3);
     ASKAPDEBUGASSERT(out.shape().nelements() == 4);
-    casa::IPosition ipStart(4, 0, 0, 0, 0);
-    casa::IPosition onePlane(4, out.shape()(0), out.shape()(1), 1, 1);
-    casa::Slicer slicer(ipStart, onePlane);
+    casacore::IPosition ipStart(4, 0, 0, 0, 0);
+    casacore::IPosition onePlane(4, out.shape()(0), out.shape()(1), 1, 1);
+    casacore::Slicer slicer(ipStart, onePlane);
 
     ASKAPCHECK(itsSumWeights.nelements()>0, "Sum of weights not yet initialised");
     int nZ=itsSumWeights.shape()(0);
@@ -1168,7 +1162,7 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
         for (int pol=0; pol<nPol; pol++) {
             double sumwt=0.0;
             for (int iz=0; iz<nZ; iz++) {
-              //              float sumConvFunc=real(casa::sum(casa::abs(itsConvFunc[iz])));
+              //              float sumConvFunc=real(casacore::sum(casacore::abs(itsConvFunc[iz])));
               //              ASKAPLOG_DEBUG_STR(logger, "Sum of conv func " << sumConvFunc);
                 sumwt+=itsSumWeights(iz, pol, chan);
             }
@@ -1180,7 +1174,7 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
 }
 
 void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casa::Array<double>& in) {
+        const casacore::Array<double>& in) {
    ASKAPTRACE("TableVisGridder::initialiseDegrid");
     configureForPSF(false);
     configureForPCF(false);
@@ -1198,19 +1192,19 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
     // Make sure we reinitalise the pol converter
     itsVisPols.resize(0);
 
-    if (casa::max(casa::abs(in))>0.0) {
+    if (casacore::max(casacore::abs(in))>0.0) {
         itsModelIsEmpty=false;
-        casa::Array<double> scratch(itsShape,0.);
+        casacore::Array<double> scratch(itsShape,0.);
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
-        casa::Array<casa::DComplex> scratch2(itsGrid[0].shape());
+        casacore::Array<casacore::DComplex> scratch2(itsGrid[0].shape());
         toComplex(scratch2, scratch);
         fft2d(scratch2, true);
-        casa::convertArray<casa::Complex,casa::DComplex>(itsGrid[0],scratch2);
+        casacore::convertArray<casacore::Complex,casacore::DComplex>(itsGrid[0],scratch2);
     } else {
         ASKAPLOG_DEBUG_STR(logger, "No need to degrid: model is empty");
         itsModelIsEmpty=true;
-        itsGrid[0].set(casa::Complex(0.0));
+        itsGrid[0].set(casacore::Complex(0.0));
     }
 }
 
@@ -1239,13 +1233,13 @@ void TableVisGridder::logUnusedSpectralPlanes() const
 {
    if (itsSumWeights.nelements()>0) {
        std::string planesList;
-       for (casa::uInt plane = 0; plane<itsSumWeights.nplane(); ++plane) {
-            const double sumWt = casa::sum(itsSumWeights.xyPlane(plane));
+       for (casacore::uInt plane = 0; plane<itsSumWeights.nplane(); ++plane) {
+            const double sumWt = casacore::sum(itsSumWeights.xyPlane(plane));
             if (sumWt<=0.) {
                 if (planesList.size()!=0) {
                     planesList+=",";
                 }
-                planesList += utility::toString<casa::uInt>(plane);
+                planesList += utility::toString<casacore::uInt>(plane);
             }
        }
        if (planesList.size() == 0) {

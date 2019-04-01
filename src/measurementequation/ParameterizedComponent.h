@@ -76,14 +76,14 @@ public:
       } 
       
   /// type of the vector with names
-  typedef typename casa::RigidVector<std::string, NComp> ParameterNameVector;     
+  typedef typename casacore::RigidVector<std::string, NComp> ParameterNameVector;     
    
   /// @brief construct the object with a given parameters
   /// @details
   /// @param[in] param parameters of the component (meaning is defined in the
   /// derived classes)
   /// @param[in] names string names of the parameters (default is empty string)
-  ParameterizedComponent(const casa::RigidVector<double, NComp> &param,
+  ParameterizedComponent(const casacore::RigidVector<double, NComp> &param,
             const ParameterNameVector &names = ParameterNameVector(std::string())) :
             itsParameters(param), itsParameterNames(names) {}
   
@@ -100,7 +100,7 @@ public:
   /// represented by a type convertible to std::string.
   template<typename Iter>
   ParameterizedComponent(const std::string &nameSuffix,
-                const casa::RigidVector<double,NComp> &param,
+                const casacore::RigidVector<double,NComp> &param,
                 const Iter &names) :
          itsParameters(param), itsParameterNames(ParameterNameVector(nameSuffix))        
   { 
@@ -114,30 +114,30 @@ protected:
   /// @brief access to parameters from derived classes
   /// @details
   /// @return a reference to RigidVector of parameters
-  inline const casa::RigidVector<double, NComp>& parameters() const throw()
+  inline const casacore::RigidVector<double, NComp>& parameters() const throw()
          {return itsParameters;}
    
   /// @brief read-write access to the parameters for derived classes
   /// @details
   /// @return a non-const reference to RigidVector of parameters
-  inline casa::RigidVector<double, NComp>& parameters() throw()
+  inline casacore::RigidVector<double, NComp>& parameters() throw()
          {return itsParameters;}
          
   /// @brief access to names of the parameters from derived classes
   /// @details
   /// @return a reference to RigidVector of names
-  inline const casa::RigidVector<std::string, NComp>& parameterNames() const throw()
+  inline const casacore::RigidVector<std::string, NComp>& parameterNames() const throw()
          { return itsParameterNames;}
   
   /// @brief read-write access to names of the parameters from derived classes
   /// @details
   /// @return a non-const reference to RigidVector of names
-  inline casa::RigidVector<std::string, NComp>& parameterNames() throw()
+  inline casacore::RigidVector<std::string, NComp>& parameterNames() throw()
          { return itsParameterNames;}
                        
 private:
   /// values of the parameters 
-  casa::RigidVector<double, NComp> itsParameters;
+  casacore::RigidVector<double, NComp> itsParameters;
   /// names of the parameters
   ParameterNameVector itsParameterNames;
 };

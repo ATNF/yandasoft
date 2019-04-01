@@ -68,60 +68,60 @@ namespace askap
 	    return IImagePreconditioner::ShPtr(new RobustPreconditioner(*this));
     }
     
-    bool RobustPreconditioner::doPreconditioning(casa::Array<float>& psf,
-                                                 casa::Array<float>& dirty,
-                                                 casa::Array<float>& pcf) const
+    bool RobustPreconditioner::doPreconditioning(casacore::Array<float>& psf,
+                                                 casacore::Array<float>& dirty,
+                                                 casacore::Array<float>& pcf) const
     {
       ASKAPTRACE("RobustPreconditioner::doPreconditioning");
       ASKAPLOG_INFO_STR(logger, "Applying Robust filter with robustness parameter " << itsRobust);
       
-      const float maxPSFBefore=casa::max(psf);
+      const float maxPSFBefore=casacore::max(psf);
       ASKAPLOG_INFO_STR(logger, "Peak of PSF before Robust filtering = " << maxPSFBefore);
-      casa::ArrayLattice<float> lpsf(psf);
-      casa::ArrayLattice<float> ldirty(dirty);
+      casacore::ArrayLattice<float> lpsf(psf);
+      casacore::ArrayLattice<float> ldirty(dirty);
       
       // we need to pad to twice the size in the image plane in order to avoid wraparound
-      casa::IPosition shape = lpsf.shape();
-      casa::ArrayLattice<casa::Complex> scratch(shape);
-      scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(lpsf)));
+      casacore::IPosition shape = lpsf.shape();
+      casacore::ArrayLattice<casacore::Complex> scratch(shape);
+      scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(lpsf)));
       
       LatticeFFT::cfft2d(scratch, True);
 
       // Construct a Robust filter
       
-      casa::ArrayLattice<casa::Complex> robustfilter(shape);
+      casacore::ArrayLattice<casacore::Complex> robustfilter(shape);
       // Normalize relative to the average weight
       const double noisepower(pow(10.0, 2*itsRobust));
       const double rnp(1.0/(noisepower*maxPSFBefore));
-      robustfilter.copyData(casa::LatticeExpr<casa::Complex>(1.0/(sqrt(real(scratch*conj(scratch)))*rnp+1.0)));
+      robustfilter.copyData(casacore::LatticeExpr<casacore::Complex>(1.0/(sqrt(real(scratch*conj(scratch)))*rnp+1.0)));
             
       // Apply the filter to the lpsf
       // (reuse the ft(lpsf) currently held in 'scratch')
-      scratch.copyData(casa::LatticeExpr<casa::Complex> (robustfilter * scratch));
+      scratch.copyData(casacore::LatticeExpr<casacore::Complex> (robustfilter * scratch));
       
       /*
-	SynthesisParamsHelper::saveAsCasaImage("dbg.img",casa::amplitude(scratch.asArray()));       
+	SynthesisParamsHelper::saveAsCasaImage("dbg.img",casacore::amplitude(scratch.asArray()));       
 	//SynthesisParamsHelper::saveAsCasaImage("dbg.img",lpsf.asArray());
 	throw AskapError("This is a debug exception");
       */
       
       LatticeFFT::cfft2d(scratch, False);       
-      lpsf.copyData(casa::LatticeExpr<float>(real(scratch)));
-      const float maxPSFAfter = casa::max(psf);
+      lpsf.copyData(casacore::LatticeExpr<float>(real(scratch)));
+      const float maxPSFAfter = casacore::max(psf);
       ASKAPLOG_INFO_STR(logger, "Peak of PSF after Robust filtering  = " << maxPSFAfter);
       psf *= maxPSFBefore/maxPSFAfter;
  
       ASKAPLOG_INFO_STR(logger, "Normalized to unit peak");
      
       // Apply the filter to the dirty image
-      scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(ldirty)));       
+      scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(ldirty)));       
       
       LatticeFFT::cfft2d(scratch, True);
       
-      scratch.copyData(casa::LatticeExpr<casa::Complex> (robustfilter * scratch));
+      scratch.copyData(casacore::LatticeExpr<casacore::Complex> (robustfilter * scratch));
       LatticeFFT::cfft2d(scratch, False);
 
-      ldirty.copyData(casa::LatticeExpr<float>(real(scratch)));      
+      ldirty.copyData(casacore::LatticeExpr<float>(real(scratch)));      
       dirty *= maxPSFBefore/maxPSFAfter;
       
       return true;

@@ -70,17 +70,17 @@ MSGroupInfo::MSGroupInfo(const std::vector<std::string>& ms)
     ASKAPCHECK(!ms.empty(), "No measurement sets specified");
 
     // Frequency for each channel
-    vector<casa::Quantity> freqinfo;
+    vector<casacore::Quantity> freqinfo;
 
     // Iterate over measurement sets
-    const casa::Unit frequnit("Hz");
+    const casacore::Unit frequnit("Hz");
     for (size_t i = 0; i < ms.size(); ++i) {
         // Open dataset and get access to the first row
         askap::accessors::TableConstDataSource ds(ms[i]);
         askap::accessors::IDataSelectorPtr sel = ds.createSelector();
         askap::accessors::IDataConverterPtr conv = ds.createConverter();
-        conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO), frequnit);
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), frequnit);
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         const askap::accessors::IConstDataSharedIter it = ds.createConstIterator(sel, conv);
 
         // Extract # of channels
@@ -88,7 +88,7 @@ MSGroupInfo::MSGroupInfo(const std::vector<std::string>& ms)
 
         // Extract frequency info
         for (size_t i = 0; i < it->nChannel(); ++i) {
-            freqinfo.push_back(casa::Quantity(it->frequency()(i), frequnit));
+            freqinfo.push_back(casacore::Quantity(it->frequency()(i), frequnit));
         }
     }
 
@@ -122,22 +122,22 @@ MSGroupInfo::~MSGroupInfo()
 {
 }
 
-casa::uInt MSGroupInfo::getNumChannels(const casa::uInt n) const
+casacore::uInt MSGroupInfo::getNumChannels(const casacore::uInt n) const
 {
     return itsNumChannels.at(n);
 }
 
-casa::uInt MSGroupInfo::getTotalNumChannels() const
+casacore::uInt MSGroupInfo::getTotalNumChannels() const
 {
     return itsTotalNumChannels;
 }
 
-casa::Quantity MSGroupInfo::getFirstFreq() const
+casacore::Quantity MSGroupInfo::getFirstFreq() const
 {
     return itsFirstFreq;
 }
 
-casa::Quantity MSGroupInfo::getFreqInc() const
+casacore::Quantity MSGroupInfo::getFreqInc() const
 {
     return itsFreqInc;
 }

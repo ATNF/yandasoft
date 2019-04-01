@@ -45,7 +45,7 @@ RestoringBeamHelper::RestoringBeamHelper() : itsCutoff(-1.) {}
 
 /// @brief construct with explicitly defined beam parameters
 /// @param[in] beam beam parameters (should be 3 elements)
-RestoringBeamHelper::RestoringBeamHelper(const casa::Vector<casa::Quantum<double> > &beam) : itsBeam(beam.copy()), itsCutoff(1.) 
+RestoringBeamHelper::RestoringBeamHelper(const casacore::Vector<casacore::Quantum<double> > &beam) : itsBeam(beam.copy()), itsCutoff(1.) 
 {
   ASKAPCHECK(beam.nelements() == 3, "Bean parameters should be given in a vector with 3 elements, you have "<<beam.nelements());
 }
@@ -75,7 +75,7 @@ RestoringBeamHelper::RestoringBeamHelper(const double cutoff) : itsCutoff(cutoff
    
 /// @brief initialise with explicitly defined beam parameters
 /// @param[in] beam beam parameters (should be 3 elements)
-void RestoringBeamHelper::assign(const casa::Vector<casa::Quantum<double> > &beam)
+void RestoringBeamHelper::assign(const casacore::Vector<casacore::Quantum<double> > &beam)
 {
   ASKAPCHECK(beam.nelements() == 3, "Bean parameters should be given in a vector with 3 elements, you have "<<beam.nelements());
   itsBeam.assign(beam.copy());
@@ -122,7 +122,7 @@ void RestoringBeamHelper::fitBeam(const scimath::Params &ip)
    
 /// @brief access the result
 /// @return parameters of the restoring beam (3-element vector)
-const casa::Vector<casa::Quantum<double> >& RestoringBeamHelper::value() const
+const casacore::Vector<casacore::Quantum<double> >& RestoringBeamHelper::value() const
 {
    ASKAPCHECK(itsBeam.nelements() == 3, "call to RestoringBeamHelper::value() is made for uninitialised object or prior to the PSF fit");
    return itsBeam;

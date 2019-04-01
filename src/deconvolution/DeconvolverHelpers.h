@@ -48,7 +48,7 @@ namespace askap {
                 /// an array will be created from from the image file gaskap.residual
                 /// @param name Name of image in the parset file
                 /// @param parset ParameterSet containing description of images
-                static casa::Array<casa::Float> getArrayFromImage(const casa::String name,
+                static casacore::Array<casacore::Float> getArrayFromImage(const casacore::String name,
                                                                   const LOFAR::ParameterSet &parset);
 
                 /// @brief Put an array as an image
@@ -58,8 +58,8 @@ namespace askap {
                 /// @param name Name of image in the parset file
                 /// @param templateName Name of template image
                 /// @param parset ParameterSet containing description of images
-                static void putArrayToImage(const casa::Array<casa::Float> imageArray,
-                                            const casa::String name, const casa::String templateName,
+                static void putArrayToImage(const casacore::Array<casacore::Float> imageArray,
+                                            const casacore::String name, const casacore::String templateName,
                                             const LOFAR::ParameterSet &parset);
 
             private:

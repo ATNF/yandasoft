@@ -86,13 +86,13 @@ namespace askap
       const std::string freqFrame = parset.getString("freqframe","topo");
       if (freqFrame == "topo") {
           ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as topocentric");
-          itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::TOPO);
+          itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
       } else if (freqFrame == "lsrk") {
           ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as lsrk");
-          itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::LSRK);
+          itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::LSRK);
       } else if (freqFrame == "bary") {
           ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as barycentric");
-          itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::BARY);
+          itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::BARY);
       } else {
           ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
       }    
@@ -123,7 +123,7 @@ namespace askap
       {
         ASKAPCHECK(itsModel, "Model not defined prior to broadcast")
         ASKAPLOG_DEBUG_STR(logger, "Current model held by the master: "<<*itsModel);
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
 
         const std::vector<std::string> names = parametersToBroadcast();
@@ -226,7 +226,7 @@ namespace askap
       if (itsComms.isParallel() && itsComms.isWorker())
       {
         ASKAPCHECK(itsModel, "Model not defined prior to receiving")
-        casa::Timer timer;
+        casacore::Timer timer;
         timer.mark();
 
         if (itsComms.nGroups() == 1) {

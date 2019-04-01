@@ -78,7 +78,7 @@ namespace askap
 			/// @param shape Shape of output image: cube: u,v,pol,chan
 			/// @param dopsf Make the psf?
 			virtual void initialiseGrid(const scimath::Axes& axes,
-										const casa::IPosition& shape,
+										const casacore::IPosition& shape,
 										const bool dopsf=true,
 										const bool dopcf=false) = 0;
 
@@ -88,18 +88,18 @@ namespace askap
 
 			/// Form the final output image
 			/// @param out Output double precision image or PSF
-			virtual void finaliseGrid(casa::Array<double>& out) = 0;
+			virtual void finaliseGrid(casacore::Array<double>& out) = 0;
 
 			/// Form the sum of the convolution function squared, multiplied by the weights for each
 			/// different convolution function. This is used in the evaluation of the second derivative.
 			/// @param out Output double precision sum of weights images
-			virtual void finaliseWeights(casa::Array<double>& out) = 0;
+			virtual void finaliseWeights(casacore::Array<double>& out) = 0;
 
 			/// @brief Initialise the degridding
 			/// @param axes axes specifications
 			/// @param image Input image: cube: u,v,pol,chan
 			virtual void initialiseDegrid(const scimath::Axes& axes,
-					const casa::Array<double>& image) = 0;
+					const casacore::Array<double>& image) = 0;
 
 			/// @brief Make context-dependant changes to the gridder behaviour
 			/// @param[in] context context description

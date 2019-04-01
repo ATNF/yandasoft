@@ -44,10 +44,6 @@
 // casa includes
 #include <casacore/casa/BasicSL/Complex.h>
 
-#ifdef _OPENMP
-// boost includes
-#include <boost/thread/mutex.hpp>
-#endif
 
 namespace askap
 {
@@ -105,7 +101,7 @@ namespace askap
       /// @param shape Shape of output image: u,v,pol,chan
       /// @param dopsf Make the psf?
       virtual void initialiseGrid(const scimath::Axes& axes,
-          const casa::IPosition& shape, const bool dopsf=true,
+          const casacore::IPosition& shape, const bool dopsf=true,
           const bool dopcf=false);
 
       /// @brief Grid the visibility data.
@@ -116,14 +112,14 @@ namespace askap
 
       /// Form the final output image
       /// @param out Output double precision image or PSF
-      virtual void finaliseGrid(casa::Array<double>& out);
+      virtual void finaliseGrid(casacore::Array<double>& out);
 
       /// @brief store given grid
       /// @details This is a helper method for debugging, it stores the amplitude of a given
       /// grid into a CASA image (prior to FFT done as part of finaliseGrid)
       /// @param[in] name image name
       /// @param[in] numGrid number of the grid to store
-      void storeGrid(const std::string &name, casa::uInt numGrid) const;
+      void storeGrid(const std::string &name, casacore::uInt numGrid) const;
 
       /// @brief Calculate weights image
       /// @details Form the sum of the convolution function squared,
@@ -131,13 +127,13 @@ namespace askap
       /// function. This is used in the evaluation of the position
       /// dependent sensitivity
       /// @param out Output double precision sum of weights images
-      virtual void finaliseWeights(casa::Array<double>& out);
+      virtual void finaliseWeights(casacore::Array<double>& out);
 
       /// @brief Initialise the degridding
       /// @param axes axes specifications
       /// @param image Input image: cube: u,v,pol,chan
       virtual void initialiseDegrid(const scimath::Axes& axes,
-          const casa::Array<double>& image);
+          const casacore::Array<double>& image);
 
       /// @brief Make context-dependant changes to the gridder behaviour
       /// @param context context
@@ -200,7 +196,7 @@ namespace askap
       /// @details The could be a number of grids indexed though gIndex (for each row, polarisation and channel). However, all should
       /// have exactly the same shape.
       /// @return the shape of grid owned by this gridder
-      inline const casa::IPosition& shape() const { return itsShape;}
+      inline const casacore::IPosition& shape() const { return itsShape;}
 
 
       /// @brief correct visibilities, if necessary
@@ -241,7 +237,7 @@ namespace askap
 
       /// @brief obtain sum of weights cube
       /// @return const reference to the sum of weights cube
-      inline const casa::Cube<double>& sumOfWeights() const { return itsSumWeights;}
+      inline const casacore::Cube<double>& sumOfWeights() const { return itsSumWeights;}
 
       /// @brief log unused spectral planes
       /// @details It is handy to write down the channel numbers into log if the sum of weights
@@ -300,14 +296,14 @@ namespace askap
       /// @details This method extracts RA and DEC axes from itsAxes and
       /// forms a direction measure corresponding to the middle of each axis.
       /// @return direction measure corresponding to the image centre
-      casa::MVDirection getImageCentre() const;
+      casacore::MVDirection getImageCentre() const;
 
       /// @brief obtain the tangent point
       /// @details For faceting all images should be constructed for the same tangent
       /// point. This method extracts the tangent point (reference position) from the
       /// coordinate system.
       /// @return direction measure corresponding to the tangent point
-      casa::MVDirection getTangentPoint() const;
+      casacore::MVDirection getTangentPoint() const;
 
       // data members should be made private in the future!
 
@@ -315,21 +311,21 @@ namespace askap
       askap::scimath::Axes itsAxes;
 
       /// Shape of image
-      casa::IPosition itsShape;
+      casacore::IPosition itsShape;
 
       /// Cell sizes in wavelengths
-      casa::Vector<double> itsUVCellSize;
+      casacore::Vector<double> itsUVCellSize;
 
 //temporary comment out
 //private:
       /// @brief Sum of weights (axes are index, pol, chan)
-      casa::Cube<double> itsSumWeights;
+      casacore::Cube<double> itsSumWeights;
 protected:
 
       /// @brief Convolution function
       /// The convolution function is stored as a vector of arrays so that we can
       /// use any of a number of functions. The index is calculated by cIndex.
-      std::vector<casa::Matrix<casa::Complex> > itsConvFunc;
+      std::vector<casacore::Matrix<casacore::Complex> > itsConvFunc;
 
       /// @brief Obtain offset for the given convolution function
       /// @details To conserve memory and speed the gridding up, convolution functions stored in the cache
@@ -382,7 +378,7 @@ protected:
 
       /// @brief Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casa::Array<double>& image) = 0;
+      virtual void correctConvolution(casacore::Array<double>& image) = 0;
 
       /// @brief Conversion helper function
       /// @details Copies in to out expanding double into complex values and
@@ -390,7 +386,7 @@ protected:
       /// @param[out] out complex output array
       /// @param[in] in double input array
       /// @param[in] padding padding factor
-      static void toComplex(casa::Array<casa::DComplex>& out, const casa::Array<double>& in,
+      static void toComplex(casacore::Array<casacore::DComplex>& out, const casacore::Array<double>& in,
                      const float padding = 1.);
 
       /// @brief Conversion helper function
@@ -399,7 +395,7 @@ protected:
       /// @param[out] out real output array
       /// @param[in] in complex input array
       /// @param[in] padding padding factor
-      static void toDouble(casa::Array<double>& out, const casa::Array<casa::DComplex>& in,
+      static void toDouble(casacore::Array<double>& out, const casacore::Array<casacore::DComplex>& in,
                     const float padding = 1.);
 
       /// @brief a helper method to initialize gridding of the PSF
@@ -419,7 +415,7 @@ protected:
       /// @brief obtain stokes for each plane of the current grid
       /// @details The output of this method has a meaning only after initialiseGrid or
       /// initialiseDegrid has been called.
-      inline const casa::Vector<casa::Stokes::StokesTypes>& getStokes() const {return itsStokes;}
+      inline const casacore::Vector<casacore::Stokes::StokesTypes>& getStokes() const {return itsStokes;}
 
       /// Support of convolution function
       int itsSupport;
@@ -430,7 +426,7 @@ protected:
       bool itsModelIsEmpty;
 
       /// The grid is stored as a cube as well so we can index into that as well.
-      std::vector<casa::Array<casa::Complex> > itsGrid;
+      std::vector<casacore::Array<casacore::Complex> > itsGrid;
 
   private:
 
@@ -456,7 +452,7 @@ protected:
       /// @details Assumed to be the same for all elements of itsGrid vector.
       /// This field is filled in initialiseGrid or initialiseDegrid using the Axes
       /// object.
-      casa::Vector<casa::Stokes::StokesTypes> itsStokes;
+      casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
 
       /// Number of samples gridded
       double itsSamplesGridded;
@@ -506,12 +502,12 @@ protected:
       /// @brief an index of the feed, which provides data for the PSF calculations
       /// @details This data member is initialized when the first visibility is gridded,
       /// only this feed is used to calculate the PSF.
-      casa::uInt itsFeedUsedForPSF;
+      casacore::uInt itsFeedUsedForPSF;
 
       /// @brief pointing direction, which provides data for the PSF calculations
       /// @details This data member is initialized when the first visibility is gridded,
       /// only this field is used to calculate the PSF
-      casa::MVDirection itsPointingUsedForPSF;
+      casacore::MVDirection itsPointingUsedForPSF;
 
       /// @brief use all data for PSF calculation
       /// @details By default we use just a representative feed and field to calculate PSF.
@@ -555,24 +551,20 @@ protected:
       /// @brief view of the currently used 2d grid
       /// @details to avoid creation/destruction overheads we keep a matrix that
       /// gives a view of the currently used plane in itsGrid
-      casa::Matrix<casa::Complex> its2dGrid;
+      casacore::Matrix<casacore::Complex> its2dGrid;
 
       /// @brief keep track of visibility polarisations we are setup to handle
-      casa::Vector<casa::Stokes::StokesTypes> itsVisPols;
+      casacore::Vector<casacore::Stokes::StokesTypes> itsVisPols;
 
       /// @brief the polarization converter
       scimath::PolConverter itsPolConv;
 
       /// @brief vectors to store image polarisation values and noise, and visibility values
-      casa::Vector<casa::Complex> itsImagePolFrameVis, itsImagePolFrameNoise, itsPolVector;
+      casacore::Vector<casacore::Complex> itsImagePolFrameVis, itsImagePolFrameNoise, itsPolVector;
 
       /// @brief keep track of current image channel and index into itsGrid
       int itsImageChan, itsGridIndex;
 
-      #ifdef _OPENMP
-      /// @brief synchronisation mutex
-      mutable boost::mutex itsMutex;
-      #endif
     };
   }
 }

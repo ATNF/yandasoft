@@ -63,7 +63,7 @@ struct GenericCalInfo {
   /// @details
   /// @param[in] gain complex gain to set
   /// @param[in] delay delay to set  
-  GenericCalInfo(const casa::Complex &gain, double delay);
+  GenericCalInfo(const casacore::Complex &gain, double delay);
   
   /// @brief obtain delay
   /// @return delay (in seconds)
@@ -73,7 +73,7 @@ struct GenericCalInfo {
   /// @brief obtain complex gain
   /// @return complex gain
   /// @note an exception is thrown if the value is undefined
-  const casa::Complex& gain() const;
+  const casacore::Complex& gain() const;
   
   /// @brief check if delay is defined
   /// @return true, if delay has been defined
@@ -88,7 +88,7 @@ struct GenericCalInfo {
   
   /// @brief set complex gain
   /// @param[in] gain complex gain to set
-  void setGain(const casa::Complex &gain);
+  void setGain(const casacore::Complex &gain);
   
   /// @brief set delay
   /// @param[in] delay delay in seconds
@@ -96,7 +96,7 @@ struct GenericCalInfo {
 
 private:
   /// @brief complex gain
-  casa::Complex itsGain;
+  casacore::Complex itsGain;
   
   /// @brief true, if gain is defined
   bool itsGainDefined;

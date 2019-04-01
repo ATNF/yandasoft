@@ -72,8 +72,8 @@ namespace askap {
                 /// same model (e.g. as in MFS)
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverBasisFunction(casa::Vector<casa::Array<T> >& dirty,
-                                         casa::Vector<casa::Array<T> >& psf);
+                DeconvolverBasisFunction(casacore::Vector<casacore::Array<T> >& dirty,
+                                         casacore::Vector<casacore::Array<T> >& psf);
 
                 /// @brief Construct from dirty image and psf
                 /// @detail Construct a deconvolver from a dirty image and
@@ -82,7 +82,7 @@ namespace askap {
                 /// version for compatibility
                 /// @param[in] dirty Dirty image (array)
                 /// @param[in] psf Point Spread Function (array)
-                DeconvolverBasisFunction(casa::Array<T>& dirty, casa::Array<T>& psf);
+                DeconvolverBasisFunction(casacore::Array<T>& dirty, casacore::Array<T>& psf);
 
                 virtual ~DeconvolverBasisFunction();
 
@@ -125,47 +125,47 @@ namespace askap {
                 void initialiseResidual();
 
                 void minMaxMaskedScales(T& minVal, T& maxVal,
-                                        casa::IPosition& minPos, casa::IPosition& maxPos,
-                                        const casa::Array<T>& dataArray,
-                                        const casa::Array<T>& maskArray);
+                                        casacore::IPosition& minPos, casacore::IPosition& maxPos,
+                                        const casacore::Array<T>& dataArray,
+                                        const casacore::Array<T>& maskArray);
 
                 // Find the coefficients for each scale by applying the
                 // inverse of the coupling matrix
-                casa::Vector<T> findCoefficients(const casa::Matrix<casa::Double>& invCoupling,
-                                                 const casa::Vector<T>& peakValues);
+                casacore::Vector<T> findCoefficients(const casacore::Matrix<casacore::Double>& invCoupling,
+                                                 const casacore::Vector<T>& peakValues);
 
-                casa::Array<T> applyInverse(const casa::Matrix<casa::Double>& invCoupling,
-                                            const casa::Array<T> dataArray);
+                casacore::Array<T> applyInverse(const casacore::Matrix<casacore::Double>& invCoupling,
+                                            const casacore::Array<T> dataArray);
 
-                casa::Array<T> apply(const casa::Matrix<casa::Double>& invCoupling,
-                                     const casa::Vector<T> dataVector);
+                casacore::Array<T> apply(const casacore::Matrix<casacore::Double>& invCoupling,
+                                     const casacore::Vector<T> dataVector);
 
-                void gramSchmidt(casa::Array<T>& bf);
+                void gramSchmidt(casacore::Array<T>& bf);
 
                 /// Residual images convolved with basis functions
-                casa::Array<T> itsResidualBasisFunction;
+                casacore::Array<T> itsResidualBasisFunction;
 
                 /// Point spread functions convolved with basis functions
-                casa::Array<T> itsPSFBasisFunction;
+                casacore::Array<T> itsPSFBasisFunction;
 
                 /// Use cross terms in the source removal step?
-                casa::Bool itsUseCrossTerms;
+                casacore::Bool itsUseCrossTerms;
 
                 /// The coupling between different scales.
-                casa::Matrix<casa::Double> itsCouplingMatrix;
+                casacore::Matrix<casacore::Double> itsCouplingMatrix;
 
                 /// Inverse of the coupling matrix
-                casa::Matrix<casa::Double> itsInverseCouplingMatrix;
+                casacore::Matrix<casacore::Double> itsInverseCouplingMatrix;
 
                 /// Determinant of the coupling Matrix
-                casa::Double itsDetCouplingMatrix;
+                casacore::Double itsDetCouplingMatrix;
 
                 /// Point spread functions convolved with cross terms of basis functions
-                casa::Array<T> itsPSFCrossTerms;
+                casacore::Array<T> itsPSFCrossTerms;
 
-                casa::Bool itsDecouple;
+                casacore::Bool itsDecouple;
 
-                casa::String itsDecouplingAlgorithm;
+                casacore::String itsDecouplingAlgorithm;
 
                 /// Basis function used in the deconvolution
                 boost::shared_ptr<BasisFunction<T> > itsBasisFunction;
@@ -174,13 +174,13 @@ namespace askap {
                 /// identified. This allows calculation of the L1 norm of the
                 /// model. We use clean to minimise the L1 so this is a good
                 /// check to make. Ideally for stokes I, this should be equal to the flux.
-                casa::Vector<casa::Array<T> > itsL1image;
+                casacore::Vector<casacore::Array<T> > itsL1image;
 
                 /// The flux subtracted on each scale
-                casa::Vector<T> itsScaleFlux;
+                casacore::Vector<T> itsScaleFlux;
 
                 /// The peak of the convolved PSF as a function of scale
-                casa::Vector<T> itsPSFScales;
+                casacore::Vector<T> itsPSFScales;
         };
 
     } // namespace synthesis

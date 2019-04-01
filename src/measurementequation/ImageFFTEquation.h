@@ -169,7 +169,7 @@ namespace askap
         mutable std::map<string, IVisGridder::ShPtr> itsPreconGridders;
 
         /// Map of coordinate systems
-        mutable std::map<string, casa::CoordinateSystem> itsCoordSystems;
+        mutable std::map<string, casacore::CoordinateSystem> itsCoordSystems;
 
         /// Iterator giving access to the data
         mutable accessors::IDataSharedIter itsIdi;

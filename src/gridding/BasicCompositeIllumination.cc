@@ -53,16 +53,16 @@ namespace synthesis {
 /// @param[in] weights complex weights for each feed
 /// @note The size of two vectors should be the same
 BasicCompositeIllumination::BasicCompositeIllumination(const boost::shared_ptr<IBasicIllumination> &pattern,
-            const casa::Vector<casa::RigidVector<casa::Double, 2> > &feedOffsets,
-            const casa::Vector<casa::Complex> &weights) : itsPattern(pattern),
+            const casacore::Vector<casacore::RigidVector<casacore::Double, 2> > &feedOffsets,
+            const casacore::Vector<casacore::Complex> &weights) : itsPattern(pattern),
             itsFeedOffsets(feedOffsets), itsWeights(weights), itsSymmetricFlag(true)
 {
    ASKAPDEBUGASSERT(itsPattern);
    ASKAPDEBUGASSERT(itsFeedOffsets.nelements() == itsWeights.nelements());
    if (itsPattern->isSymmetric()) {
       // iterate through all offsets and check whether any of them is non-zero
-      for (casa::uInt iFeed = 0; iFeed<feedOffsets.nelements(); ++iFeed) {
-           const casa::RigidVector<casa::Double, 2> &offset = feedOffsets[iFeed];
+      for (casacore::uInt iFeed = 0; iFeed<feedOffsets.nelements(); ++iFeed) {
+           const casacore::RigidVector<casacore::Double, 2> &offset = feedOffsets[iFeed];
            // use tolerance around 1 nanoarcsecond
            if ((std::abs(offset(0))>5e-15) || (std::abs(offset(1))>5e-15)) {
                itsSymmetricFlag = false;
@@ -94,53 +94,53 @@ void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern, dou
    itsPattern->getPattern(freq,pattern,l,m,pa);
    // now apply the phase screen appropriate to the feed configuration/weights
    
-   const casa::uInt oversample = pattern.overSample();
+   const casacore::uInt oversample = pattern.overSample();
    const double cellU = pattern.uCellSize()/oversample;
    const double cellV = pattern.vCellSize()/oversample;
        
    // sizes of the grid to apply the phase screen to
-   const casa::uInt nU = pattern.uSize();
-   const casa::uInt nV = pattern.vSize();
+   const casacore::uInt nU = pattern.uSize();
+   const casacore::uInt nV = pattern.vSize();
    // number of feeds
-   const casa::uInt nFeeds = itsWeights.nelements();
+   const casacore::uInt nFeeds = itsWeights.nelements();
    
    double sum=0.; // normalisation factor
    
-   casa::SquareMatrix<casa::Double, 2> rotation(casa::SquareMatrix<casa::Double, 2>::General);
+   casacore::SquareMatrix<casacore::Double, 2> rotation(casacore::SquareMatrix<casacore::Double, 2>::General);
    if (!itsSymmetricFlag) {
        rotation(0,0) = rotation(1,1) = cos(pa);
        rotation(0,1) = sin(pa);
        rotation(1,0) = -rotation(0,1);
    }
         
-   for (casa::uInt iU=0; iU<nU; ++iU) {
+   for (casacore::uInt iU=0; iU<nU; ++iU) {
 	    const double offsetU = double(iU)-double(nU)/2.;
-		for (casa::uInt iV=0; iV<nV; ++iV) {
+		for (casacore::uInt iV=0; iV<nV; ++iV) {
 	         const double offsetV = double(iV)-double(nV)/2.;
-	         casa::Complex weight(0.,0.);
-             for (casa::uInt iFeed = 0; iFeed<nFeeds; ++iFeed) {
+	         casacore::Complex weight(0.,0.);
+             for (casacore::uInt iFeed = 0; iFeed<nFeeds; ++iFeed) {
                   // operator* is commented out in RigidVector.h due to problems with some
                   // compilers. We have to use operator*= instead (operator*= is
                   // equivalent to v=Mv, rather than v=vM according to inline doc).
-                  casa::RigidVector<casa::Double, 2> feedOffset(itsFeedOffsets[iFeed]);
+                  casacore::RigidVector<casacore::Double, 2> feedOffset(itsFeedOffsets[iFeed]);
                   if (!itsSymmetricFlag) {
                       feedOffset *= rotation;
                   }
                   // don't need to multiply by wavelength here because the
 			      // illumination pattern is given
 			      // in a relative coordinates in frequency
-                  const double phase = 2.*casa::C::pi*(cellU *feedOffset(0)*offsetU+
+                  const double phase = 2.*casacore::C::pi*(cellU *feedOffset(0)*offsetU+
                                     cellV *feedOffset(1)*offsetV);
-                  weight+=itsWeights[iFeed]*casa::Complex(cos(phase), -sin(phase));
+                  weight+=itsWeights[iFeed]*casacore::Complex(cos(phase), -sin(phase));
 			 }
-			 pattern(iU, iV) *= casa::DComplex(weight);
+			 pattern(iU, iV) *= casacore::DComplex(weight);
 			 sum += std::abs(weight);
 		}
 	}
 	
 	
     ASKAPCHECK(sum > 0., "Integral of the synthetic pattern should be non-zero");
-    pattern.pattern() *= casa::DComplex(float(nU)*float(nV)/float(sum),0.); 
+    pattern.pattern() *= casacore::DComplex(float(nU)*float(nV)/float(sum),0.); 
 }
 
 /// @brief check whether the pattern is symmetric

@@ -57,41 +57,41 @@ namespace synthesis {
 /// @return ComplexDiffMatrix filled with Mueller matrix corresponding to
 /// this effect
 inline scimath::ComplexDiffMatrix NoXPolFreqDependentGain::get(const accessors::IConstDataAccessor &chunk, 
-                                      casa::uInt row) const
+                                      casacore::uInt row) const
 {
-   const casa::uInt chanOffset = static_cast<casa::uInt>(parameters()->has("chan_offset") ? parameters()->scalarValue("chan_offset") : 0);
-   const casa::uInt nPol = chunk.nPol();
+   const casacore::uInt chanOffset = static_cast<casacore::uInt>(parameters()->has("chan_offset") ? parameters()->scalarValue("chan_offset") : 0);
+   const casacore::uInt nPol = chunk.nPol();
    ASKAPDEBUGASSERT(nPol != 0);   
-   const casa::uInt nChan = chunk.nChannel();
-   const casa::Vector<casa::Stokes::StokesTypes> stokes = chunk.stokes();   
+   const casacore::uInt nChan = chunk.nChannel();
+   const casacore::Vector<casacore::Stokes::StokesTypes> stokes = chunk.stokes();   
    ASKAPDEBUGASSERT(stokes.nelements() == nPol);
    ASKAPDEBUGASSERT(!scimath::PolConverter::isStokes(stokes));
    
-   const casa::uInt ant1 = chunk.antenna1()[row];
-   const casa::uInt ant2 = chunk.antenna2()[row];
+   const casacore::uInt ant1 = chunk.antenna1()[row];
+   const casacore::uInt ant2 = chunk.antenna2()[row];
    
-   const casa::uInt beam1 = chunk.feed1()[row];
-   const casa::uInt beam2 = chunk.feed2()[row];
+   const casacore::uInt beam1 = chunk.feed1()[row];
+   const casacore::uInt beam2 = chunk.feed2()[row];
    
    
    scimath::ComplexDiffMatrix calFactor(nPol, nPol * nChan, 0.);
 
-   for (casa::uInt pol=0; pol<nPol; ++pol) {
+   for (casacore::uInt pol=0; pol<nPol; ++pol) {
         
-        const casa::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
+        const casacore::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
         // polIndex is index in the polarisation frame, i.e.
         // XX is 0, XY is 1, YX is 2 and YY is 3
         // we need an index into matrix 
 
         // gains for antenna 1, polarisation X if XX or XY, or Y if YX or YY
         const std::string g1name = accessors::CalParamNameHelper::paramName(ant1, beam1, 
-                      polIndex / 2 == 0 ? casa::Stokes::XX : casa::Stokes::YY, true);
+                      polIndex / 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY, true);
             
         // gains for antenna 2, polarisation X if XX or YX, or Y if XY or YY
         const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, beam2, 
-                      polIndex % 2 == 0 ? casa::Stokes::XX : casa::Stokes::YY, true);
+                      polIndex % 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY, true);
                                                       
-        for (casa::uInt chan = 0; chan < nChan; ++chan) {
+        for (casacore::uInt chan = 0; chan < nChan; ++chan) {
              // we need to think of how to deal with distributed problem on the cluster (i.e. adding
              // some base to the channel number and propagating it through the framework)    
              calFactor(pol, pol + chan * nPol) = getParameter(accessors::CalParamNameHelper::addChannelInfo(g1name,chan+chanOffset)) *

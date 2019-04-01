@@ -31,11 +31,11 @@ namespace askap
   {
 
     VisWeightsMultiFrequency::VisWeightsMultiFrequency():
-	    itsRefFreq((casa::Double)(1.405e+09)),itsOrder(0)
+	    itsRefFreq((casacore::Double)(1.405e+09)),itsOrder(0)
     {
     }
 
-    VisWeightsMultiFrequency::VisWeightsMultiFrequency(casa::Double & reffreq)
+    VisWeightsMultiFrequency::VisWeightsMultiFrequency(casacore::Double & reffreq)
     {
 	    itsRefFreq = reffreq;
             ASKAPDEBUGASSERT(itsRefFreq!=0.);

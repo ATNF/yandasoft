@@ -151,8 +151,8 @@ namespace askap
       } else {
           // this is a single facet of a larger image, just fill in the bigger image with the model
           ASKAPLOG_INFO_STR(logger, "Inserting facet " << iph.paramName()<<" into merged image "<<name);
-          casa::Array<double> patch = SynthesisParamsHelper::getFacet(ip,iph.paramName());
-          const casa::Array<double> model = scimath::PaddingUtils::centeredSubArray(ip.value(iph.paramName()),
+          casacore::Array<double> patch = SynthesisParamsHelper::getFacet(ip,iph.paramName());
+          const casacore::Array<double> model = scimath::PaddingUtils::centeredSubArray(ip.value(iph.paramName()),
                                           patch.shape());
           patch = model;
       }
@@ -217,7 +217,7 @@ namespace askap
        // when convolving model images with the restoring beam and
        // adding residuals, the full, merged model needs to be used.
        std::string name;
-       casa::Array<double> out;
+       casacore::Array<double> out;
        if (facetname == "") {
          name = imagename;
          out.reference(ip.value(name));
@@ -226,28 +226,28 @@ namespace askap
          name = facetname;
          out.reference(SynthesisParamsHelper::getFacet(ip,name));
        }
-       const casa::IPosition shape = ip.value(name).shape();
+       const casacore::IPosition shape = ip.value(name).shape();
        const scimath::Axes axes = ip.axes(name);
 
 	   // Axes are dof, dof for each parameter
-	   //casa::IPosition vecShape(1, out.shape().product());
+	   //casacore::IPosition vecShape(1, out.shape().product());
        bool saveNewPSFRequired = true;
 
 	   for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
 
 	        ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
                 "Diagonal not present " << name);
-	        casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
+	        casacore::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
 	        ASKAPCHECK(normalEquations().dataVector(name).size()>0,
                 "Data vector not present " << name);
-	        casa::Vector<double> dv = normalEquations().dataVector(name);
+	        casacore::Vector<double> dv = normalEquations().dataVector(name);
 	        ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0,
                 "PSF Slice not present " << name);
 
-            casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(name)->second);
+            casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(name)->second);
 	        ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
                 "Preconditioner fuction Slice not present for " << name);
-	        casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(name)->second);
+	        casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(name)->second);
 
             if (planeIter.tag()!="") {
                 // it is not a single plane case, there is something to report
@@ -256,31 +256,31 @@ namespace askap
 
             }
 
-	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casa::max(dv));
+	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casacore::max(dv));
 
-            casa::Array<float> dirtyArray(planeIter.planeShape());
-	        casa::convertArray<float, double>(dirtyArray,planeIter.getPlane(dv));
+            casacore::Array<float> dirtyArray(planeIter.planeShape());
+	        casacore::convertArray<float, double>(dirtyArray,planeIter.getPlane(dv));
 
 	        ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" and plane "<<
-	                 planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
+	                 planeIter.sequenceNumber()<<" is "<<casacore::max(dirtyArray));
 
-            casa::Array<float> psfArray(planeIter.planeShape());
-            casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
+            casacore::Array<float> psfArray(planeIter.planeShape());
+            casacore::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
 
 	        // send an anternative preconditioner function, if it isn't empty.
-	        casa::Array<float> pcfArray;
+	        casacore::Array<float> pcfArray;
             if (pcf.shape() > 0) {
 	          ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
               pcfArray.resize(planeIter.planeShape());
-	          casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
+	          casacore::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
             }
 
             // uninitialised mask shared pointer means that we don't need it (i.e. no weight equalising)
-            boost::shared_ptr<casa::Array<float> > mask;
+            boost::shared_ptr<casacore::Array<float> > mask;
             if (itsEqualiseNoise) {
                 ASKAPLOG_INFO_STR(logger, "Residual will be multiplied by sqrt(normalised weight) during restoration");
                 // mask will have a noramised sqrt(weight) pattern after doNormalization
-                mask.reset(new casa::Array<float>(dirtyArray.shape()));
+                mask.reset(new casacore::Array<float>(dirtyArray.shape()));
             } else {
                 ASKAPLOG_INFO_STR(logger, "Restored image will have primary beam corrected noise (no equalisation)");
             }
@@ -293,10 +293,10 @@ namespace askap
 
 	        // we have to do noise equalisation for final residuals after preconditioning
 	        if (itsEqualiseNoise) {
-	            const casa::IPosition vecShape(1,dirtyArray.nelements());
-                casa::Vector<float> dirtyVector(dirtyArray.reform(vecShape));
+	            const casacore::IPosition vecShape(1,dirtyArray.nelements());
+                casacore::Vector<float> dirtyVector(dirtyArray.reform(vecShape));
                 ASKAPDEBUGASSERT(mask);
-	            const casa::Vector<float> maskVector(mask->reform(vecShape));
+	            const casacore::Vector<float> maskVector(mask->reform(vecShape));
 	            for (int i = 0; i<vecShape[0]; ++i) {
 	                 dirtyVector[i] *= maskVector[i];
 	            }
@@ -324,13 +324,13 @@ namespace askap
 
 	        // Add the residual image
             // First, convolve the model image to the resolution of the synthesised beam if not already done.
-            casa::Vector<casa::Quantum<double> > restoringBeam;
+            casacore::Vector<casacore::Quantum<double> > restoringBeam;
             if (itsModelNeedsConvolving) {
 
                 if (itsBeamHelper.fitRequired()) {
                     ASKAPLOG_INFO_STR(logger, "Fitting of Restoring beam required");
-                    casa::Array<double> psfDArray(psfArray.shape());
-                    casa::convertArray<double, float>(psfDArray, psfArray);
+                    casacore::Array<double> psfDArray(psfArray.shape());
+                    casacore::convertArray<double, float>(psfDArray, psfArray);
                     ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
                     restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes, itsBeamHelper.cutoff());
                     ASKAPDEBUGASSERT(restoringBeam.size() == 3);
@@ -343,11 +343,11 @@ namespace askap
                 }
                 ASKAPLOG_INFO_STR(logger, "Convolving the model image to the resolution of the synthesised beam");
 	            // Create a temporary image
-                boost::shared_ptr<casa::TempImage<float> >
+                boost::shared_ptr<casacore::TempImage<float> >
                     image(SynthesisParamsHelper::tempImage(ip, imagename));
                 askap::synthesis::Image2DConvolver<float> convolver;
-                const casa::IPosition pixelAxes(2, 0, 1);
-                convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,
+                const casacore::IPosition pixelAxes(2, 0, 1);
+                convolver.convolve(*image, *image, casacore::VectorKernel::GAUSSIAN,
                                    pixelAxes, restoringBeam, true, 1.0, false);
                 SynthesisParamsHelper::update(ip, imagename, *image);
                 // for some reason update makes the parameter free as well
@@ -358,17 +358,17 @@ namespace askap
 
 	        // The code below involves an extra copying. We can replace it later with a copyless version
 	        // doing element by element adding explicitly.
-	        const casa::IPosition outSliceShape = planeIter.planeShape(out.shape());
+	        const casacore::IPosition outSliceShape = planeIter.planeShape(out.shape());
 	        // convertedResidual contains just one plane of residuals
-	        casa::Array<double> convertedResidual(outSliceShape);
+	        casacore::Array<double> convertedResidual(outSliceShape);
 	        convertArray(convertedResidual, scimath::PaddingUtils::centeredSubArray(dirtyArray,
 	                     outSliceShape));
 	        // figure out where to put the slice to (can't use planeIter functionality directly because out
 	        // array can have a different shape
-	        casa::IPosition blc(out.shape().nelements(),0);
-	        casa::IPosition trc(out.shape());
-	        const casa::IPosition curPos(planeIter.position());
-	        for (casa::uInt dim = 0; dim<trc.nelements(); ++dim) {
+	        casacore::IPosition blc(out.shape().nelements(),0);
+	        casacore::IPosition trc(out.shape());
+	        const casacore::IPosition curPos(planeIter.position());
+	        for (casacore::uInt dim = 0; dim<trc.nelements(); ++dim) {
 	             trc[dim] -= 1;
 	             ASKAPDEBUGASSERT(trc[dim]<out.shape()[dim]);
 	             if ( (dim>=2) && (dim<curPos.nelements()) ) {
@@ -388,7 +388,7 @@ namespace askap
     /// is set. Otherwise, it just returns the beam parameters passed in the constructor
     /// (i.e. user override).
     /// @param[in] name name of the parameter to work with
-    casa::Vector<casa::Quantum<double> > ImageRestoreSolver::getBeam(const std::string &) const
+    casacore::Vector<casacore::Quantum<double> > ImageRestoreSolver::getBeam(const std::string &) const
     {
         return itsBeamHelper.value();
     }
@@ -417,9 +417,9 @@ namespace askap
            rbh.configureFit(parset.getDouble("beam.cutoff",0.05));
        } else {
           ASKAPCHECK(beam.size() == 3, "Need three elements for beam or a single word 'fit'. You have "<<beam);
-          casa::Vector<casa::Quantum<double> > qBeam(3);
+          casacore::Vector<casacore::Quantum<double> > qBeam(3);
           for (int i=0; i<3; ++i) {
-               casa::Quantity::read(qBeam(i), beam[i]);
+               casacore::Quantity::read(qBeam(i), beam[i]);
           }
           rbh.assign(qBeam);
        }

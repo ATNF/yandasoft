@@ -35,7 +35,7 @@ namespace askap
     /// @brief estimate the spheroidal function at nu=1
     /// @param[in] func vector to be interpolated
     template<typename T>
-    void SphFuncVisGridder::interpolateEdgeValues(casa::Vector<T> &func)
+    void SphFuncVisGridder::interpolateEdgeValues(casacore::Vector<T> &func)
     { 
       ASKAPDEBUGASSERT(itsInterp);
 

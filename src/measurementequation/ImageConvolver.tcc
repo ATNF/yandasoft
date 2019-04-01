@@ -63,11 +63,11 @@ ImageConvolver<T>::~ImageConvolver()
 using namespace casa;
 
 template <typename T>
-void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
-                                 casa::ImageInterface<T>& imageIn,
-                                 const casa::ImageInterface<T>& kernel,
-                                 ScaleTypes scaleType, casa::Double scale,
-                                 casa::Bool copyMiscellaneous, casa::Bool warnOnly)
+void ImageConvolver<T>::convolve(casacore::ImageInterface<T>& imageOut,
+                                 casacore::ImageInterface<T>& imageIn,
+                                 const casacore::ImageInterface<T>& kernel,
+                                 ScaleTypes scaleType, casacore::Double scale,
+                                 casacore::Bool copyMiscellaneous, casacore::Bool warnOnly)
 {
     // Check Coordinates
     checkCoordinates(imageIn.coordinates(), kernel.coordinates(), warnOnly);
@@ -77,27 +77,27 @@ void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
 }
 
 template <typename T>
-void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
-                                 casa::ImageInterface<T>& imageIn,
-                                 const casa::Array<T>& kernel,
-                                 ScaleTypes scaleType, casa::Double scale,
-                                 casa::Bool copyMiscellaneous)
+void ImageConvolver<T>::convolve(casacore::ImageInterface<T>& imageOut,
+                                 casacore::ImageInterface<T>& imageIn,
+                                 const casacore::Array<T>& kernel,
+                                 ScaleTypes scaleType, casacore::Double scale,
+                                 casacore::Bool copyMiscellaneous)
 {
-    casa::ArrayLattice<T> kernelLattice(kernel);
+    casacore::ArrayLattice<T> kernelLattice(kernel);
     convolve(imageOut, imageIn, kernelLattice, scaleType, scale, copyMiscellaneous);
 }
 
 
 template <typename T>
-void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
-                                 casa::ImageInterface<T>& imageIn,
+void ImageConvolver<T>::convolve(casacore::ImageInterface<T>& imageOut,
+                                 casacore::ImageInterface<T>& imageIn,
                                  const Lattice<T>& kernel,
-                                 ScaleTypes scaleType, casa::Double scale,
-                                 casa::Bool copyMiscellaneous)
+                                 ScaleTypes scaleType, casacore::Double scale,
+                                 casacore::Bool copyMiscellaneous)
 {
     // Check
-    const casa::IPosition& inShape = imageIn.shape();
-    const casa::IPosition& outShape = imageOut.shape();
+    const casacore::IPosition& inShape = imageIn.shape();
+    const casacore::IPosition& outShape = imageOut.shape();
     if (!inShape.isEqual(outShape)) {
         ASKAPTHROW(AskapError, "Input and output images must have same shape");
     }
@@ -107,23 +107,23 @@ void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
     }
 
     // Add degenerate axes if needed
-    casa::Lattice<T>* pNewKernel = 0;
-    casa::LatticeUtilities::addDegenerateAxes(pNewKernel, kernel, inShape.nelements());
+    casacore::Lattice<T>* pNewKernel = 0;
+    casacore::LatticeUtilities::addDegenerateAxes(pNewKernel, kernel, inShape.nelements());
 
     // Normalize kernel.
-    casa::LatticeExprNode node;
+    casacore::LatticeExprNode node;
     if (scaleType == AUTOSCALE) {
-        node = casa::LatticeExprNode((*pNewKernel) / sum(*pNewKernel));
+        node = casacore::LatticeExprNode((*pNewKernel) / sum(*pNewKernel));
     } else if (scaleType == SCALE) {
         T t = static_cast<T>(scale);
-        node = casa::LatticeExprNode(t * (*pNewKernel));
+        node = casacore::LatticeExprNode(t * (*pNewKernel));
     } else if (scaleType == NONE) {
-        node = casa::LatticeExprNode(*pNewKernel);
+        node = casacore::LatticeExprNode(*pNewKernel);
     }
-    casa::LatticeExpr<T> kernelExpr(node);
+    casacore::LatticeExpr<T> kernelExpr(node);
 
     // Create convolver
-    casa::LatticeConvolver<T> lc(kernelExpr, imageIn.shape(),  casa::ConvEnums::LINEAR);
+    casacore::LatticeConvolver<T> lc(kernelExpr, imageIn.shape(),  casacore::ConvEnums::LINEAR);
 
     if (imageIn.isMasked()) {
         // Generate output mask if needed
@@ -131,8 +131,8 @@ void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
 
         // Copy input mask to output.  Copy input pixels
         // and set to zero where masked
-        casa::LogIO os;
-        casa::LatticeUtilities::copyDataAndMask(os, imageOut, imageIn, True);
+        casacore::LogIO os;
+        casacore::LatticeUtilities::copyDataAndMask(os, imageOut, imageIn, True);
 
         // Convolve in situ
         lc.convolve(imageOut);
@@ -145,11 +145,11 @@ void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
     imageOut.setCoordinateInfo(imageIn.coordinates());
 
     // Copy miscellaneous things across as required
-    if (copyMiscellaneous) casa::ImageUtilities::copyMiscellaneous(imageOut, imageIn);
+    if (copyMiscellaneous) casacore::ImageUtilities::copyMiscellaneous(imageOut, imageIn);
 
     // Delete the restoring beam (should really check that the beam is in the
     // plane of convolution)
-    casa::ImageInfo ii = imageOut.imageInfo();
+    casacore::ImageInfo ii = imageOut.imageInfo();
     ii.removeRestoringBeam();
     imageOut.setImageInfo(ii);
 
@@ -158,14 +158,14 @@ void ImageConvolver<T>::convolve(casa::ImageInterface<T>& imageOut,
 }
 
 template <typename T>
-void ImageConvolver<T>::makeMask(casa::ImageInterface<T>& out)  const
+void ImageConvolver<T>::makeMask(casacore::ImageInterface<T>& out)  const
 {
     if (out.canDefineRegion()) {
         // Generate mask name
-        casa::String maskName = out.makeUniqueRegionName(String("mask"), 0);
+        casacore::String maskName = out.makeUniqueRegionName(String("mask"), 0);
 
         // Make the mask if it does not exist
-        if (!out.hasRegion(maskName, casa::RegionHandler::Masks)) {
+        if (!out.hasRegion(maskName, casacore::RegionHandler::Masks)) {
             out.makeMask(maskName, true, true, false, true);
             ASKAPLOG_DEBUG_STR(imageconvlogger, "Created mask `" << maskName << "'");
         }
@@ -175,31 +175,31 @@ void ImageConvolver<T>::makeMask(casa::ImageInterface<T>& out)  const
 }
 
 template <typename T>
-void ImageConvolver<T>::checkCoordinates(const casa::CoordinateSystem& cSysImage,
-        const casa::CoordinateSystem& cSysKernel,
-        casa::Bool warnOnly) const
+void ImageConvolver<T>::checkCoordinates(const casacore::CoordinateSystem& cSysImage,
+        const casacore::CoordinateSystem& cSysKernel,
+        casacore::Bool warnOnly) const
 {
-    const casa::uInt nPixelAxesK = cSysKernel.nPixelAxes();
-    const casa::uInt nPixelAxesI = cSysImage.nPixelAxes();
+    const casacore::uInt nPixelAxesK = cSysKernel.nPixelAxes();
+    const casacore::uInt nPixelAxesI = cSysImage.nPixelAxes();
     if (nPixelAxesK > nPixelAxesI) {
         ASKAPTHROW(AskapError, "Kernel has more pixel axes than the image");
     }
 
-    const casa::uInt nWorldAxesK = cSysKernel.nWorldAxes();
-    const casa::uInt nWorldAxesI = cSysImage.nWorldAxes();
+    const casacore::uInt nWorldAxesK = cSysKernel.nWorldAxes();
+    const casacore::uInt nWorldAxesI = cSysImage.nWorldAxes();
     if (nWorldAxesK > nWorldAxesI) {
         ASKAPTHROW(AskapError, "Kernel has more world axes than the image");
     }
 
-    const casa::Vector<casa::Double>& incrI = cSysImage.increment();
-    const casa::Vector<casa::Double>& incrK = cSysKernel.increment();
-    const casa::Vector<String>& unitI = cSysImage.worldAxisUnits();
-    const casa::Vector<String>& unitK = cSysKernel.worldAxisUnits();
+    const casacore::Vector<casacore::Double>& incrI = cSysImage.increment();
+    const casacore::Vector<casacore::Double>& incrK = cSysKernel.increment();
+    const casacore::Vector<String>& unitI = cSysImage.worldAxisUnits();
+    const casacore::Vector<String>& unitK = cSysKernel.worldAxisUnits();
 
-    for (casa::uInt i = 0; i < nWorldAxesK; i++) {
+    for (casacore::uInt i = 0; i < nWorldAxesK; i++) {
         // Compare Coordinate types and reference
-        if (casa::CoordinateUtil::findWorldAxis(cSysImage, i) !=
-                casa::CoordinateUtil::findWorldAxis(cSysKernel, i)) {
+        if (casacore::CoordinateUtil::findWorldAxis(cSysImage, i) !=
+                casacore::CoordinateUtil::findWorldAxis(cSysKernel, i)) {
             if (warnOnly) {
                 ASKAPLOG_WARN_STR(imageconvlogger, "Coordinate types are not the same for axis " << i + 1);
             } else {
@@ -208,8 +208,8 @@ void ImageConvolver<T>::checkCoordinates(const casa::CoordinateSystem& cSysImage
         }
 
         // Compare units
-        const casa::Unit u1(unitI[i]);
-        const casa::Unit u2(unitK[i]);
+        const casacore::Unit u1(unitI[i]);
+        const casacore::Unit u2(unitK[i]);
         if (u1 != u2) {
             if (warnOnly) {
                 ASKAPLOG_WARN_STR(imageconvlogger, "Axis units are not consistent for axis " << i + 1);
@@ -221,8 +221,8 @@ void ImageConvolver<T>::checkCoordinates(const casa::CoordinateSystem& cSysImage
         // Compare increments ; this is not a very correct test as there may be
         // values in the LinearTransform inside the coordinate.  Should really
         // convert some values...  See how we go.
-        casa::Quantum<casa::Double> q2(incrK[i], u2);
-        casa::Double val2 = q2.getValue(u1);
+        casacore::Quantum<casacore::Double> q2(incrK[i], u2);
+        casacore::Double val2 = q2.getValue(u1);
         if (!near(incrI[i], val2, 1.0e-6)) {
             if (warnOnly) {
                 ASKAPLOG_WARN_STR(imageconvlogger, "Axis increments are not consistent for axis " << i + 1);

@@ -111,7 +111,7 @@ public:
   /// @param[in] nBeam number of beams
   /// @param[in] nChan number of channels, 1 channel is a special case of
   /// frequency-independent buffering
-  void initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt nChan = 1);
+  void initialise(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan = 1);
 
   /// @brief destructor 
   /// @details This method just prints statistics on the number of
@@ -146,7 +146,7 @@ protected:
   /// @return ComplexDiffMatrix encapsulating information about measurement 
   ///         equation corresponding to the given row
   virtual scimath::ComplexDiffMatrix buildComplexDiffMatrix(const accessors::IConstDataAccessor &acc,
-                    casa::uInt row) const = 0;
+                    casacore::uInt row) const = 0;
   
   /// @brief a helper method to manage dataset-related statistics   
   /// @details It manages statistics data fields and processes one data accessor.

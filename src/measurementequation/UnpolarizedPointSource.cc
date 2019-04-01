@@ -49,20 +49,20 @@ namespace synthesis {
 /// @param[out] result an output buffer used to store values
 template<typename T>
 void UnpolarizedPointSource::calcPoint(
-                    const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    const casa::RigidVector<T, 3> &params,
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    const casacore::RigidVector<T, 3> &params,
                     std::vector<T> &result)
 {
   const T ra=params(1);
   const T dec=params(2);
   const T flux=params(0);
   
-  const T n =  casa::sqrt(T(1.0) - (ra*ra+dec*dec));
-  const T delay = casa::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
-                                   (n-T(1.0)) * uvw(2))/casa::C::c;
+  const T n =  casacore::sqrt(T(1.0) - (ra*ra+dec*dec));
+  const T delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
+                                   (n-T(1.0)) * uvw(2))/casacore::C::c;
   typename std::vector<T>::iterator it=result.begin();
-  for (casa::Vector<casa::Double>::const_iterator ci=freq.begin(); 
+  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin(); 
        ci!=freq.end();++ci,++it)
       {
         const T phase = delay * (*ci);
@@ -82,9 +82,9 @@ void UnpolarizedPointSource::calcPoint(
 /// centre (in radians)
 UnpolarizedPointSource::UnpolarizedPointSource(const std::string &name, 
           double flux, double ra, double dec) : 
-          UnpolarizedComponent<3>(casa::RigidVector<double, 3>(flux,ra,dec)) 
+          UnpolarizedComponent<3>(casacore::RigidVector<double, 3>(flux,ra,dec)) 
 {
-  parameterNames() = casa::RigidVector<std::string, 3>("flux.i"+name,
+  parameterNames() = casacore::RigidVector<std::string, 3>("flux.i"+name,
             "direction.ra"+name, "direction.dec"+name);
 }
 
@@ -98,8 +98,8 @@ UnpolarizedPointSource::UnpolarizedPointSource(const std::string &name,
 /// @param[in] freq vector of frequencies to do calculations for
 /// @param[out] result an output buffer used to store values
 void UnpolarizedPointSource::calculate(
-                    const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
                     std::vector<double> &result) const
 {
   calcPoint(uvw,freq,parameters(),result);
@@ -115,15 +115,15 @@ void UnpolarizedPointSource::calculate(
 /// @param[in] freq vector of frequencies to do calculations for
 /// @param[out] result an output buffer used to store values
 void UnpolarizedPointSource::calculate(
-                    const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    std::vector<casa::AutoDiff<double> > &result) const
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    std::vector<casacore::AutoDiff<double> > &result) const
 {
-  const casa::RigidVector<double, 3> &params = parameters();
-  const casa::RigidVector<casa::AutoDiff<double>, 3>  paramsAutoDiff(
-                              casa::AutoDiff<double>(params(0),3, 0),
-                              casa::AutoDiff<double>(params(1),3, 1),
-                              casa::AutoDiff<double>(params(2),3, 2));
+  const casacore::RigidVector<double, 3> &params = parameters();
+  const casacore::RigidVector<casacore::AutoDiff<double>, 3>  paramsAutoDiff(
+                              casacore::AutoDiff<double>(params(0),3, 0),
+                              casacore::AutoDiff<double>(params(1),3, 1),
+                              casacore::AutoDiff<double>(params(2),3, 2));
   calcPoint(uvw,freq,paramsAutoDiff,result);
 }
 

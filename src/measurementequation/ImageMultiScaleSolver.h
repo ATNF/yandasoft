@@ -42,7 +42,7 @@ namespace askap {
         /// @brief Multiscale solver for images.
         ///
         /// @details This solver performs multi-scale clean using the
-        /// casa::LatticeCleaner classes
+        /// casacore::LatticeCleaner classes
         ///
         /// @ingroup measurementequation
         class ImageMultiScaleSolver : public ImageCleaningSolver {
@@ -54,7 +54,7 @@ namespace askap {
 
                 /// @brief Constructor from scales.
                 /// @param scales Scales to be solved in pixels
-                ImageMultiScaleSolver(const casa::Vector<float>& scales);
+                ImageMultiScaleSolver(const casacore::Vector<float>& scales);
 
                 /// @brief Initialize this solver
                 virtual void init();
@@ -72,7 +72,7 @@ namespace askap {
 
                 /// @brief Set the scales
                 /// @param[in] scales vector with scales
-                void setScales(const casa::Vector<float>& scales);
+                void setScales(const casacore::Vector<float>& scales);
                 
                 /// @brief switch the speed up on
                 /// @param[in] factor speed up factor
@@ -82,13 +82,13 @@ namespace askap {
                 /// @brief Precondition the PSF and the dirty image
                 /// @param[in] psf point spread function to precondition (in/out)
                 /// @param[in] dirty dirty image to precondition (in/out)
-                void preconditionNE(casa::ArrayLattice<float>& psf, casa::ArrayLattice<float>& dirty);
+                void preconditionNE(casacore::ArrayLattice<float>& psf, casacore::ArrayLattice<float>& dirty);
 
                 /// Scales in pixels
-                casa::Vector<float> itsScales;
+                casacore::Vector<float> itsScales;
 
                 /// @brief Cache of Cleaners
-                scimath::FixedSizeCache<string, casa::LatticeCleaner<float> > itsCleaners;
+                scimath::FixedSizeCache<string, casacore::LatticeCleaner<float> > itsCleaners;
             
             private:
                 /// @brief if true, use speed up factor (default is false)

@@ -175,10 +175,10 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
   const bool fdp = isFrequencyDependent();
   ASKAPDEBUGASSERT(itsBuffer.nChannel()>0);
   
-  for (casa::uInt row = 0; row < itsBuffer.nRow(); ++row) { 
+  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) { 
 
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row); 
-       for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+       for (casacore::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row,chan);
@@ -202,7 +202,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
 /// @param[in] nAnt number of antennas
 /// @param[in] nBeam number of beams
 /// @param[in] nChan number of channels
-void PreAvgCalMEBase::initialise(casa::uInt nAnt, casa::uInt nBeam, casa::uInt nChan)
+void PreAvgCalMEBase::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan)
 {
   itsBuffer.initialise(nAnt,nBeam,nChan);
   itsNoDataProcessedFlag = true;

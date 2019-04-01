@@ -63,27 +63,27 @@ namespace askap {
                 /// @details Set up internals - shape not set yet
                 /// @param[in] scales Scale (in pixels) of each blob
                 /// @param[in] orthogonal Orthogonalise using Gram-Schmidt
-                MultiScaleBasisFunction(const casa::Vector<casa::Float>& scales,
-                                        const casa::Bool orthogonal = false);
+                MultiScaleBasisFunction(const casacore::Vector<casacore::Float>& scales,
+                                        const casacore::Bool orthogonal = false);
 
                 /// @brief Construct with specified shape
                 /// @details Set up internals for specified shape
                 /// @param[in] shape Shape of first two axes
                 /// @param[in] scales Scale (in pixels) of each blob
                 /// @param[in] orthogonal Orthogonalise using Gram-Schmidt
-                MultiScaleBasisFunction(const casa::IPosition shape,
-                                        const casa::Vector<casa::Float>& scales,
-                                        const casa::Bool orthogonal = false);
+                MultiScaleBasisFunction(const casacore::IPosition shape,
+                                        const casacore::Vector<casacore::Float>& scales,
+                                        const casacore::Bool orthogonal = false);
 
                 /// @brief Specify shape and fill in array
                 /// @details The first two axes are set from shape, and the
                 /// array is then filled in with the calculated values.
                 /// @param[in] shape Shape of first two axes
-                virtual void initialise(const casa::IPosition shape);
+                virtual void initialise(const casacore::IPosition shape);
 
             private:
                 /// Vector of scales (in pixels)
-                casa::Vector<casa::Float> itsScales;
+                casacore::Vector<casacore::Float> itsScales;
 
                 /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
                 T spheroidal(T nu);

@@ -113,11 +113,11 @@ void ImageCleaningSolver::setPaddingFactor(float padding)
 /// here.
 /// @param[in] image input image (to be padded, with double precision at the moment)
 /// @return padded image converted to floats
-casa::Array<float> ImageCleaningSolver::padImage(const casa::Array<double> &image) const
+casacore::Array<float> ImageCleaningSolver::padImage(const casacore::Array<double> &image) const
 {
-  casa::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.);
-  casa::Array<float> subImage = scimath::PaddingUtils::extract(result,paddingFactor());
-  casa::convertArray<float, double>(subImage, image);
+  casacore::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.);
+  casacore::Array<float> subImage = scimath::PaddingUtils::extract(result,paddingFactor());
+  casacore::convertArray<float, double>(subImage, image);
   return result;
 }
 
@@ -126,9 +126,9 @@ casa::Array<float> ImageCleaningSolver::padImage(const casa::Array<double> &imag
 /// unpadImage would return the same result before and after this method). This operation is required
 /// after non-linear transformation of an image in the other domain (i.e. some types of preconditioning).
 /// @param[in] img input padded image to be clipped
-void ImageCleaningSolver::clipImage(casa::Array<float> &img) const
+void ImageCleaningSolver::clipImage(casacore::Array<float> &img) const
 {
-  const casa::IPosition origShape = scimath::PaddingUtils::unpadShape(img.shape(),paddingFactor());
+  const casacore::IPosition origShape = scimath::PaddingUtils::unpadShape(img.shape(),paddingFactor());
   if (origShape != img.shape()) {
       scimath::PaddingUtils::clip(img,origShape);
   }
@@ -140,14 +140,14 @@ void ImageCleaningSolver::clipImage(casa::Array<float> &img) const
 /// the output array is flattened into a 1D vector
 /// @param[in] diag diagonal array
 /// @return flattened padded vector
-casa::Vector<double> ImageCleaningSolver::padDiagonal(const casa::Array<double> &diag) const
+casacore::Vector<double> ImageCleaningSolver::padDiagonal(const casacore::Array<double> &diag) const
 {
   if (scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()) == diag.shape()) {
-      return casa::Vector<double>(diag.reform(casa::IPosition(1,diag.nelements())));
+      return casacore::Vector<double>(diag.reform(casacore::IPosition(1,diag.nelements())));
   }
-  casa::Array<double> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),0.);
+  casacore::Array<double> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),0.);
   scimath::PaddingUtils::extract(result,paddingFactor()) = diag;
-  return casa::Vector<double>(result.reform(casa::IPosition(1,result.nelements())));
+  return casacore::Vector<double>(result.reform(casacore::IPosition(1,result.nelements())));
 }
 
 
@@ -156,12 +156,12 @@ casa::Vector<double> ImageCleaningSolver::padDiagonal(const casa::Array<double> 
 /// here.
 /// @param[in] image input padded image (with single precision at the moment)
 /// @return image of original (unpadded) shape converted to double precision
-casa::Array<double> ImageCleaningSolver::unpadImage(const casa::Array<float> &image) const
+casacore::Array<double> ImageCleaningSolver::unpadImage(const casacore::Array<float> &image) const
 {
-  casa::Array<float> wrapper(image);
-  const casa::Array<float> subImage = scimath::PaddingUtils::extract(wrapper,paddingFactor());
-  casa::Array<double> result(subImage.shape());
-  casa::convertArray<double,float>(result,subImage);
+  casacore::Array<float> wrapper(image);
+  const casacore::Array<float> subImage = scimath::PaddingUtils::extract(wrapper,paddingFactor());
+  casacore::Array<double> result(subImage.shape());
+  casacore::convertArray<double,float>(result,subImage);
   return result;
 }
 

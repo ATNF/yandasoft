@@ -51,7 +51,7 @@ inline scimath::ComplexDiff ParameterizedMEComponent<FDP>::getParameter(const st
         " is not defined in NoXPolGain::getParameter. Most likely the measurement set contains more antennas/beams than are "
         "initialised for the solution or beam-independent model is not configured properly");
 
-   const casa::Complex gain = parameters()->complexValue(name);
+   const casacore::Complex gain = parameters()->complexValue(name);
    return scimath::ComplexDiff(name, gain);
 }
 

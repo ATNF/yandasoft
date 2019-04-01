@@ -56,7 +56,7 @@ namespace synthesis {
 /// IComponent is a base class for components working with ComponentEquation
 /// examples of components include, e.g. Gaussian or point sources.
 /// @note Overloaded virtual function calculate most likely will call
-/// templated method for casa::Double and casa::AutoDiff<casa::Double>.
+/// templated method for casacore::Double and casacore::AutoDiff<casacore::Double>.
 /// We can't have templated method & polymorphism together. 
 /// @ingroup measurementequation  
 struct IComponent {
@@ -77,9 +77,9 @@ struct IComponent {
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[in] pol required polarization 
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
                     std::vector<double> &result) const = 0;
   
   /// @brief calculate visibilities and derivatives for this component
@@ -91,10 +91,10 @@ struct IComponent {
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[in] pol required polarization 
   /// @param[out] result an output buffer used to store values
-  virtual void calculate(const casa::RigidVector<casa::Double, 3> &uvw,
-                    const casa::Vector<casa::Double> &freq,
-                    casa::Stokes::StokesTypes pol,
-                    std::vector<casa::AutoDiff<double> > &result) const = 0;                    
+  virtual void calculate(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    casacore::Stokes::StokesTypes pol,
+                    std::vector<casacore::AutoDiff<double> > &result) const = 0;                    
 
   /// @brief convert StokesTypes into an index 0..3
   /// @details It is decided that all components have to be defined in
@@ -108,7 +108,7 @@ struct IComponent {
   /// other values an exception is thrown.
   /// @param[in] pol required polarization
   /// @return an index (I: 0, Q: 1, U: 2 and V: 3)
-  static size_t stokesIndex(casa::Stokes::StokesTypes pol) throw(AskapError);
+  static size_t stokesIndex(casacore::Stokes::StokesTypes pol) throw(AskapError);
   
 }; 
 
