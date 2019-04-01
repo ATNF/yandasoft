@@ -37,7 +37,12 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
+/// @author Vitaliy Ogarko <vogarko@gmail.com>
 ///
+
+#ifdef HAVE_MPI
+#include <mpi.h>
+#endif
 
 // Include own header file first
 #include <parallel/CalibratorParallel.h>
@@ -94,6 +99,9 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>
 
+#include <Blob/BlobIBufString.h>
+#include <Blob/BlobOBufString.h>
+
 using namespace askap;
 using namespace askap::scimath;
 using namespace askap::synthesis;
@@ -112,7 +120,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
-      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false)
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsMatrixIsParallel(false)
 {
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
@@ -146,12 +155,47 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
   init(parset);
 
-  if (itsComms.isMaster()) {
+  if (parset.getString("solver", "") == "LSQR"
+      && parset.getString("solver.LSQR.parallelMatrix", "") == "true") {
+      ASKAPCHECK(itsComms.isParallel(), "Parallel matrix scheme is supported only in the parallel mode!");
+      itsMatrixIsParallel = true;
+  }
 
-      /// Create the solver
+  if ((itsComms.isMaster() && !itsMatrixIsParallel)
+      || (itsComms.isWorker() && itsMatrixIsParallel)) {
+      // Create the solver.
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
 
+      // Set solver parameters.
+      const std::string solverType = parset.getString("solver", "SVD");
+      itsSolver->setAlgorithm(solverType);
+
+      if (solverType == "LSQR") {
+          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset);
+          itsSolver->setParameters(params);
+      }
+  }
+
+  if (itsMatrixIsParallel) {
+      ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
+      ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
+#ifdef HAVE_MPI
+      // Create an MPI communicator with workers only, i.e., master rank excluded (needed for the LSQR solver).
+      MPI_Comm newComm;
+      int rank = itsComms.rank();
+      int color = (int)(rank > 0);
+      MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
+
+      if (itsComms.isWorker()) {
+          void *workersComm = (void *)&newComm;
+          boost::shared_ptr<LinearSolver> solver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+          solver->SetWorkersCommunicator(workersComm);
+      }
+#endif
+  }
+
+  if (itsComms.isMaster()) {
       if (parset.isDefined("refantenna") && parset.isDefined("refgain")) {
           ASKAPLOG_WARN_STR(logger,"refantenna and refgain are both defined. refantenna will be used.");
       }
@@ -345,6 +389,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
     if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
+    if (parset.isDefined("solver.LSQR.parallelMatrix")) params["parallelMatrix"] = parset.getString("solver.LSQR.parallelMatrix");
     return params;
 }
 
@@ -559,8 +604,14 @@ void CalibratorParallel::calcNE()
       ASKAPDEBUGASSERT(itsNe);
 
       if (itsComms.isParallel()) {
-          calcOne(measurementSets()[itsComms.rank()-1],false);
-          sendNE();
+          calcOne(measurementSets()[itsComms.rank()-1], false);
+          if (!itsMatrixIsParallel) {
+              sendNE();
+          } else {
+              ASKAPCHECK(itsSolver, "Solver not defined correctly");
+              itsSolver->init();
+              itsSolver->addNormalEquations(*itsNe);
+          }
       } else {
           ASKAPCHECK(itsSolver, "Solver not defined correctly");
           // just throw exception for now, although we could've maintained a map of dataset names/iterators
@@ -579,7 +630,7 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
-  if (itsComms.isMaster()) {
+  if (!itsMatrixIsParallel && itsComms.isMaster()) {
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
@@ -591,18 +642,61 @@ void CalibratorParallel::solveNE()
       Quality q;
       ASKAPDEBUGASSERT(itsSolver);
 
-      const std::string solverType = parset().getString("solver", "SVD");
-      itsSolver->setAlgorithm(solverType);
-
-      if (solverType == "LSQR") {
-          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset());
-          itsSolver->setParameters(params);
-      }
-
       itsSolver->solveNormalEquations(*itsModel,q);
 
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
       ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+  }
+
+  if (itsMatrixIsParallel) {
+      ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
+      ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
+
+      if (itsComms.isWorker()) {
+          ASKAPLOG_INFO_STR(logger, "Solving normal equations");
+          casa::Timer timer;
+          timer.mark();
+          Quality q;
+          ASKAPDEBUGASSERT(itsSolver);
+
+          // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
+          //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
+          //       so no direct access to the list of local parameters.
+          //       In principle, we could build that local parameters list separately, at the time we initialize the model in init().
+          // Creating the local model corresponding to the local normal equation.
+          scimath::Params localModel;
+          std::vector<std::string> namesEq(itsSolver->normalEquations().unknowns());
+          for (std::vector<std::string>::const_iterator it = namesEq.begin();
+               it != namesEq.end(); ++it) {
+              const std::string parname = *it;
+              localModel.add(parname, itsModel->value(parname));
+          }
+
+          itsSolver->solveNormalEquations(localModel, q);
+
+          ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
+          ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+
+          sendModelToMaster(localModel);
+      }
+      if (itsComms.isMaster()) {
+          // Receive the local models from workers, and update the full model.
+          for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
+              scimath::Params localModel;
+              receiveModelOnMaster(localModel, i + 1);
+
+              // Update the full model on master from local models on workers.
+              std::vector<std::string> localNames(localModel.freeNames());
+              for (std::vector<std::string>::const_iterator it = localNames.begin();
+                   it != localNames.end(); ++it) {
+                  const std::string parname = *it;
+                  itsModel->update(parname, localModel.value(parname));
+              }
+          }
+      }
+  }
+
+  if (itsComms.isMaster()) {
       if (itsRefGainXX != "") {
           if (itsRefGainXX == itsRefGainYY) {
               ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
@@ -615,6 +709,7 @@ void CalibratorParallel::solveNE()
           rotatePhases();
       }
   }
+
 }
 
 /// @brief helper method to rotate all phases
@@ -857,4 +952,33 @@ void CalibratorParallel::writeModel(const std::string &postfix)
            }
       }
   }
+}
+
+void CalibratorParallel::sendModelToMaster(const scimath::Params &model) const {
+    ASKAPDEBUGASSERT(itsComms.isWorker());
+    ASKAPDEBUGASSERT(itsComms.rank() > 0);
+
+    LOFAR::BlobString bs;
+    bs.resize(0);
+    LOFAR::BlobOBufString bob(bs);
+    LOFAR::BlobOStream out(bob);
+    out.putStart("model", 1);
+    out << model;
+    out.putEnd();
+    itsComms.sendBlob(bs, 0);
+}
+
+void CalibratorParallel::receiveModelOnMaster(scimath::Params &model, int rank) {
+    ASKAPDEBUGASSERT(itsComms.isMaster());
+    ASKAPDEBUGASSERT(itsComms.rank() == 0);
+
+    LOFAR::BlobString bs;
+    bs.resize(0);
+    itsComms.receiveBlob(bs, rank);
+    LOFAR::BlobIBufString bib(bs);
+    LOFAR::BlobIStream in(bib);
+    int version=in.getStart("model");
+    ASKAPASSERT(version==1);
+    in >> model;
+    in.getEnd();
 }
