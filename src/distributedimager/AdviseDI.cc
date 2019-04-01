@@ -126,6 +126,7 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
 {
     isPrepared = false;
     barycentre = false;
+    itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::TOPO);
     itsWorkUnitCount=0;
 }
 
@@ -175,8 +176,25 @@ void AdviseDI::prepare() {
     // need to calculate the allocations too.
 
     casa::uInt totChanIn = 0;
+    ASKAPLOG_INFO_STR(logger,"Testing for Channels");
+    vector<int> itsChannels = getChannels();
+    ASKAPLOG_INFO_STR(logger,"Testing for Frequencies");
+    vector<double> itsFrequencies = getFrequencies();
 
+    bool user_defined_channels = false;
+    bool user_defined_frequencies = false;
 
+    if (itsChannels[2] > 0) {
+        user_defined_channels = true;
+    }
+    if (itsFrequencies[2] != 0) {
+        user_defined_frequencies = true;
+    }
+    if (user_defined_channels && user_defined_frequencies) {
+        ASKAPLOG_WARN_STR(logger,
+            "User has specified both Channels AND Frequencies - Frequency range will take preference");
+        user_defined_channels = false;
+    }
 
     for (unsigned int n = 0; n < ms.size(); ++n) {
         chanFreq[n].resize(0);
@@ -201,43 +219,24 @@ void AdviseDI::prepare() {
 
         ASKAPCHECK(srow==0,"More than one spectral window not currently supported in adviseDI");
 
-        // get the channel selection
-
-        vector<int> itsChannels = getChannels();
-
+        // get the channel selection - first append all the input channels
+        
         size_t chanStart=0;
         size_t chanStop=0;
         size_t chanStep=0;
-
-
-        if (itsChannels[2] > 0) {
-            // this also picks up whether the Channels keyword wad defined
-            // we should be averaging
-            // not sure how yet so just step for the moment
-            chanStart = itsChannels[0];
-            chanStop = itsChannels[1];
-            chanStep = itsChannels[2];
-
-            if (chanStop > casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0)) {
-                chanStop = casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0);
-            }
-            thisChanIn = 0;
-        }
-        else {
-            chanStart = 0;
-            chanStop = casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0);
-            chanStep = 1;
-
-        }
-
-        ASKAPLOG_INFO_STR(logger, "Chan start: " << chanStart << " stop: " << chanStop << " step: " << chanStep);
+       
+                 
+        chanStart = 0;
+        chanStop = casa::ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0);
+        chanStep = 1;
+        thisChanIn = 0;
 
         for (uint i = chanStart; i < chanStop; i = i + chanStep) {
-          chanFreq[n].push_back(sc.chanFreq()(srow)(casa::IPosition(1, i)));
-          chanWidth[n].push_back(sc.chanWidth()(srow)(casa::IPosition(1, i)));
-          effectiveBW[n].push_back(sc.effectiveBW()(srow)(casa::IPosition(1, i)));
-          resolution[n].push_back(sc.resolution()(srow)(casa::IPosition(1, i)));
-          thisChanIn++;
+            chanFreq[n].push_back(sc.chanFreq()(srow)(casa::IPosition(1, i)));
+            chanWidth[n].push_back(sc.chanWidth()(srow)(casa::IPosition(1, i)));
+            effectiveBW[n].push_back(sc.effectiveBW()(srow)(casa::IPosition(1, i)));
+            resolution[n].push_back(sc.resolution()(srow)(casa::IPosition(1, i)));
+            thisChanIn++;
         }
 
         totChanIn = totChanIn + thisChanIn;
@@ -275,64 +274,70 @@ void AdviseDI::prepare() {
 
     // ASKAPLOG_INFO_STR(logger, "Assuming tangent point shared: "<<printDirection(itsTangent[0])<<" (J2000)");
 
-
-
-    // Lets build a barycentric channel list
-
-
-    itsBaryFrequencies.resize(0);
-    itsTopoFrequencies.resize(0);
-    barycentre = itsParset.getBool("barycentre",false);
-
-    // we now have each topocentric channel from each MS
+    // the frequencies
+    itsFFrameFrequencies.resize(0);
+    itsInputFrequencies.resize(0);
+    itsRequestedFrequencies.resize(0);
+    // the work allocations
+    itsAllocatedFrequencies.resize(nWorkersPerGroup);
+    itsAllocatedWork.resize(nWorkers);
+    
+    // setup frequency frame
+    const std::string freqFrame = itsParset.getString("freqframe","topo");
+    if (freqFrame == "topo") {
+        ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as topocentric");
+        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::TOPO);
+        itsFreqType = casa::MFrequency::TOPO;
+    } else if (freqFrame == "lsrk") {
+        ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as lsrk");
+        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::LSRK);
+        itsFreqType = casa::MFrequency::LSRK;
+    } else if (freqFrame == "bary") {
+        ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as barycentric");
+        itsFreqRefFrame = casa::MFrequency::Ref(casa::MFrequency::BARY);
+        itsFreqType = casa::MFrequency::BARY;
+    } else {
+        ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
+    }
+    
+   
+    // At this point we now have each channel from each MS
     // in a unique array.
+    // It's freq frame is itsRef - so in principle we support any input reference frame ....
     // first we need to sort and uniqify the list
     // then resize the list to get the channel range.
     // This is required becuase we are trying to form a unique
     // reference channel list from the input measurement sets
 
-    // This first loop just appends all the frequencies into 2 single arrays
-    // the list of TOPO and BARY frequencies.
+    // Then we have to use the user preferences to get the correct list of desired frequencies
 
 
-    itsAllocatedFrequencies.resize(nWorkersPerGroup);
-    itsAllocatedWork.resize(nWorkers);
+
 
     for (unsigned int n = 0; n < ms.size(); ++n) {
 
-        MeasFrame itsFrame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
-        MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame);
-        MFrequency::Ref refout(MFrequency::BARY,itsFrame);
-        MFrequency::Convert forw(refin,refout);
-        MFrequency::Convert backw(refout,refin);
+        
 
-        // builds a list of all the barycentric channels
+        // builds a list of all the channels
 
         for (unsigned int ch = 0; ch < chanFreq[n].size(); ++ch) {
 
-            ASKAPLOG_DEBUG_STR(logger, "CHECK --- File " << n << " Chan " << ch << " Freq " << chanFreq[n][ch]);
+            MeasFrame itsFrame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
+            MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
+             
 
-            itsBaryFrequencies.push_back(forw(chanFreq[n][ch]).getValue());
-            itsTopoFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
+            
+            itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
 
-            if (barycentre) {
-                // correct the internal arrays
-                const MVFrequency botThisChan = chanFreq[n][ch]-chanWidth[n][ch]/2.0;
-                const MVFrequency topThisChan = chanFreq[n][ch]+chanWidth[n][ch]/2.0;
-                casa::MFrequency botThisMF(botThisChan,refin);
-                casa::MFrequency topThisMF(topThisChan,refin);
-                casa::MFrequency botBary = forw(botThisMF).getValue();
-                casa::MFrequency topBary = forw(topThisMF).getValue();
-                casa::MFrequency centreBary = forw(chanFreq[n][ch]).getValue();
-                chanFreq[n][ch] = centreBary.getValue();
-                if (chanFreq[n].size() > 1)
-                    chanWidth[n][ch] = abs(topBary.getValue() - botBary.getValue());
-
-            }
+            /// The original scheme attempted to convert the input into the output frame
+            /// and only keep those output (FFRAME) channels that matched.
+            /// This was not deemed useful or helpful enough though. But I need to keep that
+            /// mode as a default.
+           
         }
     }
 
-    ///uniquifying the lists
+    /// uniquifying the lists
 
     bool (*custom_compare)(const casa::MFrequency& , const casa::MFrequency& ) = NULL;
 
@@ -345,40 +350,76 @@ void AdviseDI::prepare() {
       ASKAPLOG_INFO_STR(logger,"Using standard compare for (zero tolerance) for freuqnecy allocations");
     }
 
-    std::sort(itsBaryFrequencies.begin(),itsBaryFrequencies.end(), custom_lessthan);
-    std::vector<casa::MFrequency>::iterator bary_it;
-    bary_it = std::unique(itsBaryFrequencies.begin(),itsBaryFrequencies.end(),custom_compare);
-    itsBaryFrequencies.resize(std::distance(itsBaryFrequencies.begin(),bary_it));
 
-    std::sort(itsTopoFrequencies.begin(),itsTopoFrequencies.end(), custom_lessthan);
+    std::sort(itsInputFrequencies.begin(),itsInputFrequencies.end(), custom_lessthan);
     std::vector<casa::MFrequency>::iterator topo_it;
-    topo_it = std::unique(itsTopoFrequencies.begin(),itsTopoFrequencies.end(),custom_compare);
-    itsTopoFrequencies.resize(std::distance(itsTopoFrequencies.begin(),topo_it));
-    ASKAPLOG_DEBUG_STR(logger," Unique sizes Topo " << itsTopoFrequencies.size() << " Bary " << itsBaryFrequencies.size());
+    topo_it = std::unique(itsInputFrequencies.begin(),itsInputFrequencies.end(),custom_compare);
+    itsInputFrequencies.resize(std::distance(itsInputFrequencies.begin(),topo_it));
+    ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size() << " Output " << itsFFrameFrequencies.size());
 
-    for (unsigned int ch = 0; ch < itsTopoFrequencies.size(); ++ch) {
+    
+    // Now they are unique we need to get a list of desired output freqencies that meet
+    // the requirements specified in the parset
 
-        ASKAPLOG_DEBUG_STR(logger,"Topocentric Channel " << ch << ":" << itsTopoFrequencies[ch]);
-        ASKAPLOG_DEBUG_STR(logger,"Barycentric Channel " << ch << ":" << itsBaryFrequencies[ch]);
+    if (user_defined_channels) { 
+        // the user has specified nchan and a start channel 
+        // this is probably based upon the input frame as the user has
+        // <probably> not done the maths to work out the output channel mapping so.
+        // The channel width is unchanged - I may allow the channel width to be used 
+        // but that is probably another ticket.
+
+        size_t n = itsChannels[0];
+        size_t st = itsChannels[1];
+        
+        if (n > itsInputFrequencies.size()){
+            ASKAPLOG_WARN_STR(logger, "Requested nchan > available channels; truncating");
+        }
+
+        for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
+            if (ch >= st) {
+                if (itsRequestedFrequencies.size() > n)
+                    itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
+            }
+        }
+    }
+    else if (user_defined_frequencies) {
+        // This time the user has specified frequencies in the freqFrame frame
+        // So we now fill the desired frequency array with that in mind.
+        // Easy
+        size_t n=itsFrequencies[0];
+        double st = itsFrequencies[1];
+        double width = itsFrequencies[2];
+        for (unsigned int ch = 0; ch < n ; ch++) {
+            itsRequestedFrequencies.push_back(MFrequency(Quantity(st+ch*width,"Hz"),itsFreqRefFrame));
+        }
+
+    }
+    else {
+        for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
+           itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
+        } 
+    }
+    // Now we have a list of requested frequencies lets allocate them to nodes - some maybe empty.
+    ASKAPLOG_INFO_STR(logger,
+    " User requests " << itsRequestedFrequencies.size() << " cube " << " starting at " << itsRequestedFrequencies[0].getValue());
+    
+    for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
+
+        ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
         unsigned int allocation_index = floor(ch / nchanpercore);
-        /// We allocate the frequencies based upon the topocentric range.
-        /// We do this becuase it is easier for the user to understand.
-        /// Plus - all beams will have the same allocation. Which will produce cubes/images
-        /// that will easily merge.
-
-        /// Beware the syntactic confusion here - we are allocating a frequency that is from
-        /// the Topocentric list. But will match a channel based upon the barycentric frequency
-
-        ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsTopoFrequencies[ch].getValue() \
+        
+        ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() \
         << " to worker " << allocation_index+1);
 
-        itsAllocatedFrequencies[allocation_index].push_back(itsTopoFrequencies[ch].getValue());
+        itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
     }
 
 
     // Now for each allocated workunit we need to fill in the rest of the workunit
     // we now have a workUnit for each channel in the allocation - but not
     // for each Epoch.
+
+    // We have to match the desired frequencies to those present in the data set.
 
     int globalChannel = 0;
     vector<int> itsBeams = getBeams();
@@ -405,36 +446,61 @@ void AdviseDI::prepare() {
 
             bool allocated = false;
             for (unsigned int set=0;set < ms.size();++set){
-                int lc = 0;
 
-                lc = match(set,thisAllocation[frequency]);
-                if (lc >= 0) {
-                    // there is a channel of this frequency in the measurement set
+                
+                MeasFrame itsFrame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
+                MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
+                MFrequency::Ref refout(itsFreqType,itsFrame); // the frame desired
+                MFrequency::Convert forw(refin,refout); // from input to desired
+                MFrequency::Convert backw(refout,refin); // from desired to input
 
+                vector<int> lc;
+                // try and match the converted frequency in the input data
+                // now this returns all channels in a range.
 
-                    cp::ContinuumWorkUnit wu;
+                // Determine the range of the channels in the default case
+                // we need to know the chanWidth
+                // in the frequency case this is from itsFrequencies
+                MVFrequency oneEdge;
+                MVFrequency otherEdge;
+                if (user_defined_frequencies) {
+                    oneEdge = thisAllocation[frequency] - itsFrequencies[2]/2.;
+                    otherEdge = thisAllocation[frequency] + itsFrequencies[2]/2.;
+                }
+                else {
+                    oneEdge = thisAllocation[frequency] - chanWidth[set][0]/2.0;
+                    otherEdge = thisAllocation[frequency] + chanWidth[set][0]/2.0;
+                }
 
-                    wu.set_payloadType(cp::ContinuumWorkUnit::WORK);
-                    wu.set_channelFrequency(thisAllocation[frequency]);
-                    wu.set_beam(myBeam);
+                lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
-                    if (itsTopoFrequencies.size() > 1)
-                        wu.set_channelWidth(fabs(itsTopoFrequencies[1].getValue() - itsTopoFrequencies[0].getValue()));
-                    else
-                        wu.set_channelWidth(fabs(chanWidth[0][0]));
+                if (lc.size() > 0) {
+                    // there is at least one channel of this frequency in the measurement set
+                    for (size_t lc_part=0; lc_part < lc.size(); lc_part++) {
+                        cp::ContinuumWorkUnit wu;
 
-                    wu.set_localChannel(lc);
-                    wu.set_globalChannel(globalChannel);
-                    wu.set_dataset(ms[set]);
-                    itsAllocatedWork[work].push_back(wu);
-                    itsWorkUnitCount++;
-                    ASKAPLOG_DEBUG_STR(logger,"MATCH Allocating barycentric freq " << thisAllocation[frequency] \
-                    << " with local channel number " << lc << " ( " << chanFreq[set][lc] << " ) of width " << wu.get_channelWidth()  \
-                    << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
-                    << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
-                    << " the global channel is " << globalChannel);
+                        wu.set_payloadType(cp::ContinuumWorkUnit::WORK);
+                        wu.set_channelFrequency(thisAllocation[frequency]);
+                        wu.set_beam(myBeam);
 
-                    allocated = true;
+                        if (itsRequestedFrequencies.size() > 1)
+                            wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
+                        else
+                            wu.set_channelWidth(fabs(chanWidth[0][0]));
+
+                        wu.set_localChannel(lc[lc_part]);
+                        wu.set_globalChannel(globalChannel);
+                        wu.set_dataset(ms[set]);
+                        itsAllocatedWork[work].push_back(wu);
+                        itsWorkUnitCount++;
+                        ASKAPLOG_DEBUG_STR(logger,"MATCH Allocating barycentric freq " << thisAllocation[frequency] \
+                        << " with local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
+                        << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
+                        << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
+                        << " the global channel is " << globalChannel);
+
+                        allocated = true;
+                    }
                 }
 
             }
@@ -462,7 +528,7 @@ void AdviseDI::prepare() {
         /// The writers do not need to be dedicated cores - they can write in addition
         /// to their other duties.
 
-
+    // This loop is trying to find a writer with work
     unsigned int nWorkersPerWriter = floor(itsAllocatedWork.size() / nwriters);
     int mywriter = 0;
     for (int wrk = 0; wrk < itsAllocatedWork.size(); wrk++) {
@@ -482,7 +548,10 @@ void AdviseDI::prepare() {
             }
             else {
                 mywriter++;
-                ASKAPCHECK(mywriter < itsAllocatedWork.size(),"Ran out of eligible writers");
+                ASKAPLOG_WARN_STR(logger,"Ran out of eligible writers will write myself");
+                mywriter = wrk;
+                break;
+                
             }
         }
 
@@ -535,38 +604,20 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     }
     return rtn;
 }
-
-int AdviseDI::match(int ms_number, casa::MVFrequency testFreq) {
-    /// Which channel does the frequency correspond to.
-    /// IF the barycentr flag has been set then this will match
-    /// the barycentred channel to it.
-    vector<double>::iterator it_current = chanFreq[ms_number].begin();
-    vector<double>::iterator it_end = chanFreq[ms_number].end()-1;
-    double testVal = testFreq.getValue();
-
-    if (in_range(*it_current,*it_end,testVal)) {
-        int ch = 0;
-        it_current=chanFreq[ms_number].begin();
-        for (ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
-            ASKAPLOG_DEBUG_STR(logger, "looking for " << testVal << \
-            " in test frequency channel " << *it_current << \
-                " width " << chanWidth[ms_number][ch]);
-            double one_edge = (*it_current) - chanWidth[ms_number][ch]/2.;
-            double other_edge = (*it_current) + chanWidth[ms_number][ch]/2.;
-
-            if (in_range(one_edge,other_edge,testVal)) {
-
-                return ch;
+vector<int> AdviseDI::matchall(int ms_number, 
+casa::MVFrequency oneEdge, casa::MVFrequency otherEdge) {
+    /// return all the input channels in the range
+    vector<int> matches;
+    for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
+            ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
+            if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
+                matches.push_back(ch);  
             }
-            it_current++;
-
-        }
     }
-
-    return -1;
-
-
+        
+    return matches;
 }
+
 void AdviseDI::addMissingParameters() {
     this->addMissingParameters(this->itsParset);
 }
@@ -612,12 +663,12 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
         std::vector<casa::MFrequency>::iterator begin_it;
         std::vector<casa::MFrequency>::iterator end_it;
         if (barycentre) {
-            begin_it = itsBaryFrequencies.begin();
-            end_it = itsBaryFrequencies.end()-1;
+            begin_it = itsFFrameFrequencies.begin();
+            end_it = itsFFrameFrequencies.end()-1;
         }
         else {
-            begin_it = itsTopoFrequencies.begin();
-            end_it = itsTopoFrequencies.end()-1;
+            begin_it = itsInputFrequencies.begin();
+            end_it = itsInputFrequencies.end()-1;
 
         }
         this->minFrequency = (*begin_it).getValue();
@@ -791,9 +842,38 @@ std::vector<std::string> AdviseDI::getDatasets()
     return ms;
 }
 
+/// the adviseDI should be smart enough to tell the difference between a straight list and 
+/// actual frequencies .... or is that too different.
+std::vector<double> AdviseDI::getFrequencies() {
+    std::vector<double> f(3,0);
+    std::vector<string> fstr(3,"0");
+
+    if (!itsParset.isDefined("Frequencies")) {
+    ASKAPLOG_WARN_STR(logger,
+        "Frequencies keyword is not defined");
+        
+    }
+    else {
+        fstr = itsParset.getStringVector("Frequencies",true);
+        f[0] = atof(fstr[0].c_str());
+        f[1] = atof(fstr[1].c_str());
+        f[2] = atof(fstr[2].c_str());
+         // just a start and stop - assume no averaging
+        if (f[2] == 0) {
+           ASKAPLOG_WARN_STR(logger,
+           "Channel width not specified this setting will be ignored"); 
+        }
+        
+    }
+    return f;
+}
+
 std::vector<int> AdviseDI::getChannels() {
 
-    // channels is now a start and stop for the whole dataset so be careful
+    // channels should now behave more like the historical version
+    // <nchan> <start> ...
+    //
+
     std::vector<int> c(3,0);
     std::vector<string> cstr(3,"0");
 
@@ -804,15 +884,15 @@ std::vector<int> AdviseDI::getChannels() {
     }
     else {
         cstr = itsParset.getStringVector("Channels",true);
-        c[0] = atoi(cstr[0].c_str());
+        c[0] = atof(cstr[0].c_str());
         string wild = "%w";
         if (cstr[1].compare(wild) == 0) {
             c[1] = 0;
-            c[2] = -1;
+            c[2] = 1;
         }
         else {
             c[1] = atoi(cstr[1].c_str());
-            c[2] = atoi(cstr[2].c_str());
+            c[2] = 1; // should maybe allow averaging
         }
 
 

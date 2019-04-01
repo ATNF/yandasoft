@@ -58,6 +58,13 @@ spr.runSimulator()
 
 spr.addToParset("Cimager.gridder = WProject")
 spr.addToParset("Cimager.solverpercore = true")
+
+#spr.runNewImager()
+#analyseResult(spr)
+
+spr.addToParset("Cimager.freqframe = lsrk")
+spr.addToParset("Cimager.Channels = [1,0]")
+spr.addToParset("Cimager.Frequencies = [1,1.42e9,-1e6]")
+
 spr.runNewImager()
 analyseResult(spr)
-

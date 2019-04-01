@@ -17,7 +17,7 @@ Csimulator.antennas.definition                  =       A27CR3P6B.in
 Csimulator.feeds.definition                     =       ASKAP1feed.in
 
 Csimulator.spws.names                      =       [Wide0]
-Csimulator.spws.Wide0  =[ 1, 1.420GHz, -16MHz, "I"]
+Csimulator.spws.Wide0  =[ 1, 1.420GHz, -10kHz, "I"]
 #
 # Standard settings for the simulaton step
 #
