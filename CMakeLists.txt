@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 3.2.0)
-
+cmake_minimum_required (VERSION 3.14.1)
+include(CheckCXXCompilerFlag)
 project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
