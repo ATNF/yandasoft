@@ -73,6 +73,9 @@ ACCManager<T>::~ACCManager() {
     T* tomove = (T *) maskToUse;
     #pragma acc exit data delete(tomove[0:npixels]) 
 
+    tomove = (T *) weight;
+    #pragma acc exit data delete(tomove[0:npixels])
+
     
 }
 template <class T>
@@ -93,17 +96,28 @@ void ACCManager<T>::CopyToDevice() {
 
     T* tomove = (T *) maskToUse;
     #pragma acc enter data copyin(tomove[0:npixels]) 
+
+    tomove = (T *) weight;
+    #pragma acc enter data copyin(tomove[0:npixels])
+
 }
 
 template <class T>
 void ACCManager<T>::UpdateMask(int base) {
     T * basemask = (T *) masks[base];
-    #pragma acc parallel loop present(maskToUse,basemask)
+    #pragma acc parallel loop present(maskToUse,basemask,weight)
     for (int i=0;i<npixels;i++) {
-       maskToUse[i] *= basemask[i];
+       maskToUse[i] = weight[i]*basemask[i];
     }
 }
-
+template <class T>
+void ACCManager<T>::InitMask(int base) {
+    
+    #pragma acc parallel loop present(maskToUse,weight)
+    for (int i=0;i<npixels;i++) {
+       maskToUse[i] = weight[i];
+    }
+}
 #endif
 
 namespace askap {
@@ -371,6 +385,9 @@ namespace askap {
             itsACCManager.nBases = nBases;
             itsACCManager.nTerms = this->itsNumberTerms;
             itsACCManager.npixels = this->itsResidualBasis(0)(0).nelements();
+            itsACCManager.nrows = this->itsResidualBasis(0)(0).shape()(1);
+            itsACCManager.ncols = this->itsResidualBasis(0)(0).shape()(0);
+
             itsACCManager.residuals = new uInt64[itsACCManager.nBases*itsACCManager.nTerms];
             itsACCManager.deleteResiduals =  new casacore::Bool[itsACCManager.nBases*itsACCManager.nTerms];
              
@@ -405,12 +422,14 @@ namespace askap {
             this->itsMask.resize(nBases);
 
 #ifdef USE_OPENACC
-            size_t npixels = this->itsMask(0).nelements();
+            
             Bool deleteIt;
-            itsACCManager.tmpmask = this->itsWeight(0).nonDegenerate();
-            itsACCManager.maskToUse = (T *) itsACCManager.tmpmask.getStorage(deleteIt);
+            itsACCManager.tmpMask = this->itsWeight(0).nonDegenerate();
             itsACCManager.masks = new uInt64[nBases];
             itsACCManager.deleteMasks = new casacore::Bool[nBases];
+            itsACCManager.weight = itsACCManager.tmpMask.getStorage(deleteIt);
+
+
 #endif
             for (uInt base = 0; base < nBases; base++) {
                 this->itsMask(base).resize(this->dirty(0).shape().nonDegenerate());
@@ -422,7 +441,10 @@ namespace askap {
 #endif
 
             }
-        
+#ifdef USE_OPENACC            
+            size_t npixels = this->itsMask(0).nelements();
+            itsACCManager.maskToUse = new T[npixels];
+#endif
         }
 
         template<class T, class FT>
@@ -639,11 +661,10 @@ namespace askap {
                 T test = abs(im[i] * mask[i]);
                 if (test > maxValf) {
                    maxValf = test;
-		   //#pragma acc atomic write
-		   //maxPosI = i;
+		  
                 }
             }
-	    //printf("MaxPosI = %d\n", maxPosI);
+	   
 
             #pragma acc parallel loop present(mask,im)  
             for (int i = 0; i < nele; i++ ) {
@@ -652,14 +673,14 @@ namespace askap {
                 }
             }
 
-	    //printf("MaxPosI = %d\n", maxPosI);
+	        printf("MaxPosI = %d\n", maxPosI);
 
             maxVal = maxValf;
             maxPos = maxPosI;
 
            // Now we can change the shape to return (i,j) for the max value.
            // Do this later
-           //printf("DEBUG\tMS SUT Max value = %g, Location = %d\n", maxVal, maxPos);
+           printf("DEBUG\tMS SUT Max value = %g, Location = %d\n", maxVal, maxPos);
 
         }
 
@@ -733,7 +754,7 @@ namespace askap {
             int optimumIdx;
 #endif
 	    // MS SUT Set up some checksum variables
-	    float testsum[] = {0.0, 0.0};
+	        float testsum[] = {0.0, 0.0};
 
 
             absPeakVal = 0.0;
@@ -755,40 +776,40 @@ namespace askap {
             if (isWeighted) {
                 mask = this->itsWeight(0).nonDegenerate();
                 alt_mask = this->itsWeight(0).nonDegenerate();
-		//printf("DEBUG\tMS SUT: Solution Type = %s\n", this->itsSolutionType);
-		// printf("Preparing to square mask..");
+		        //printf("DEBUG\tMS SUT: Solution Type = %s\n", this->itsSolutionType);
+		        // printf("Preparing to square mask..");
                 if  (this->itsSolutionType == "MAXCHISQ") {
                     // printf("..Going with MAXCHISQ\n");
-		    // square weights for MAXCHISQ
-		    // int threadcount[4]; threadcount[0] = 0; threadcount[1] = 0; threadcount[2] = 0; threadcount[3] = 0;
-		    // printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
-		    // omp_set_num_threads(4);
-		    // printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
+		            // square weights for MAXCHISQ
+		            // int threadcount[4]; threadcount[0] = 0; threadcount[1] = 0; threadcount[2] = 0; threadcount[3] = 0;
+		            // printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
+		            // omp_set_num_threads(4);
+		            // printf("DEBUG\tMS SUT: Number of OMP threads = %d\n", omp_get_num_threads());
                     // #pragma omp parallel for schedule(static)
                     
 
-		    // Set up some timers
-		    startTime[0] = MPI_Wtime();
-		    const uInt ncol = mask.ncolumn();
+		            // Set up some timers
+		            startTime[0] = MPI_Wtime();
+		            const uInt ncol = mask.ncolumn();
                     const uInt nrow = mask.nrow();
-                     for (uInt j = 0; j < ncol; j++ ) {
-                         T* pMask = &mask(0,j);
-                         #pragma acc data copy(pMask[0:nrow])
-                         {
-                         #pragma acc parallel loop
-                         for (uInt i = 0; i < nrow; i++ ) {
+                    for (uInt j = 0; j < ncol; j++ ) {
+                        T* pMask = &mask(0,j);
+                        #pragma acc data copy(pMask[0:nrow])
+                        {
+                        #pragma acc parallel loop
+                        for (uInt i = 0; i < nrow; i++ ) {
                               // T val = abs(*pMask * (*pMask));     // MS SUT I think this is buggy code
-			      T val = abs(*(pMask+i) * (*(pMask+i))); // MS SUT My alteration 27/3@8am
+			                    T val = abs(*(pMask+i) * (*(pMask+i))); // MS SUT My alteration 27/3@8am
                               pMask[i] = val;
-                         }
-                         }
-                     }
-		    endTime[0] = MPI_Wtime();
+                        }
+                        }
+                    }
+		            endTime[0] = MPI_Wtime();
 
-		    // Original element-wise matrix multiply using CASA operator *
-		    startTime[1] = MPI_Wtime();
+		            // Original element-wise matrix multiply using CASA operator *
+		            startTime[1] = MPI_Wtime();
                     alt_mask*=alt_mask;
-		    endTime[1] = MPI_Wtime();
+		            endTime[1] = MPI_Wtime();
                 }
             }
 
@@ -811,6 +832,7 @@ namespace askap {
                             }
                         }
 #ifdef USE_OPENACC
+                        itsACCManager.InitMask(base); 
                         itsACCManager.UpdateMask(base);
 #else
                         mask*=this->itsMask(base);
@@ -819,7 +841,14 @@ namespace askap {
                     } else {
                         mask=this->itsMask(base);
                     }
+                } 
+                
+                else {
+#ifdef USE_OPENACC
+                itsACCManager.InitMask(base); 
+#endif                  
                 }
+
 
                 Bool haveMask=mask.nelements()>0;
 
@@ -833,20 +862,22 @@ namespace askap {
 #ifdef USE_OPENACC
                         bool deleteIm,deleteMa;
                         int nelements = res.nelements();
-                        const T * im = (T *) itsACCManager.residuals[base*itsACCManager.nTerms];
+                        const T * im = (T *) itsACCManager.residuals[base*itsACCManager.nTerms]; 
                         const T * ma = (T *) itsACCManager.maskToUse;
+                        printf("Check Array Locations im:%p ma:%p\n",im,ma);
                         absMaxPosMaskedACC(maxVal,Idx,im,ma,nelements);
-                        const int y = Idx / mask.nrow();
-                        const int x = Idx % mask.ncolumn();
+                        const int y = Idx / itsACCManager.nrows;
+                        const int x = Idx % itsACCManager.ncols;
                         maxPos(0) = x;
                         maxPos(1) = y;
-//			printf("Check Max Locations (OpenACC): val=%f at: %d, %d, %d\n", maxVal, maxPos(0), maxPos(1), Idx);
+			            
+                        printf("Check Max Locations (OpenACC): val=%f at: %d, %d, %d\n", maxVal, maxPos(0), maxPos(1), Idx);
 
                         //absMaxPosMasked(maxVal, maxPos, res, mask);
                         //printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 #else                       
                         absMaxPosMasked(maxVal, maxPos, res, mask);
-			printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
+			            printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 //                      casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
 
 #endif
@@ -951,9 +982,9 @@ namespace askap {
             // Record location of peak in mask
             if (this->itsMask.nelements()) this->itsMask(optimumBase)(absPeakPos)=T(1.0);
 #ifdef USE_OPENACC
-                T * tomove = (T *) itsACCManager.masks[optimumBase];
-//                printf("device ptr %p offset: %d\n",tomove,optimumIdx);
-                #pragma acc update device(tomove[optimumIdx:1])
+            T * tomove = (T *) itsACCManager.masks[optimumBase];
+//          printf("device ptr %p offset: %d\n",tomove,optimumIdx);
+            #pragma acc update device(tomove[optimumIdx:1])
 #endif 
             // Take square root to get value comparable to peak residual
             if (this->itsSolutionType == "MAXCHISQ") {

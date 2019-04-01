@@ -61,18 +61,23 @@ class ACCManager {
         ~ACCManager();
         
         void CopyToDevice();
+        void InitMask(int base);
         void UpdateMask(int base);
 
         size_t nBases;
         size_t nTerms;
         size_t npixels;
+        size_t nrows;
+        size_t ncols;
+
+        Matrix<T> tmpMask;
 
         uInt64 *residuals;
         uInt64 *masks;
         T** coefficients;
         
         T* maskToUse;
-        Matrix<T> tmpmask;
+        T* weight;
 
         Bool * deleteResiduals;
         Bool * deleteMasks;
