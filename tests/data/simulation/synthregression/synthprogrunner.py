@@ -117,8 +117,8 @@ class SynthesisProgramRunner:
       '''
          Run imager on a current parset
       '''
-      #self.runMPICommand(self.NewImager,2)
-      self.runSRUNCommand(self.NewImager,2)
+      self.runMPICommand(self.NewImager,2)
+      #self.runSRUNCommand(self.NewImager,2)
 
    def imageStats(self, name):
       '''
