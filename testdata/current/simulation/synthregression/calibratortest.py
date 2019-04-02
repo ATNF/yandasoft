@@ -254,4 +254,5 @@ def runTestsParallel():
 
 runTests("SVD")
 runTests("LSQR")
-runTestsParallel()
+# TODO: Uncomment when we make Jenkins to run this with MPI-build. 
+#runTestsParallel()
