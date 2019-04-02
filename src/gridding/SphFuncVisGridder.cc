@@ -30,10 +30,7 @@ ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
 #include <gridding/SphFuncVisGridder.h>
 #include <casacore/casa/Arrays/ArrayIter.h>
 #include <fft/FFTWrapper.h>
-#include <utils/ImageUtils.h>
 #include <profile/AskapProfiler.h>
-#include <boost/lexical_cast.hpp>
-
 
 namespace askap
 {
@@ -171,7 +168,7 @@ namespace askap
       
     }
 
-    void SphFuncVisGridder::correctConvolution(casa::Array<double>& grid, int i)
+    void SphFuncVisGridder::correctConvolution(casa::Array<double>& grid)
     { 
       ASKAPTRACE("SphFuncVisGridder::correctConvolution");
       ASKAPDEBUGASSERT(itsShape.nelements()>=2);      
@@ -248,22 +245,6 @@ namespace askap
       for (int iy=0; iy<itsShape(1); ++iy) {
         double val = real(bufy(iy));
         ccfy(iy) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
-      }
-
-      // output convolution correction factors
-      {
-          casa::Matrix<double> mat(itsShape);
-          for (int ix=0; ix<itsShape(0); ix++)
-          {
-            for (int iy=0; iy<itsShape(1); iy++)
-            {
-              mat(ix, iy) = ccfx(ix) * ccfy(iy);
-            }
-          }
-          casa::Array<float> buf(itsShape);
-          casa::convertArray<float, double>(buf, mat);
-          std::string name = boost::lexical_cast<std::string>(i) + ".convolution_corr_factors";
-          scimath::saveAsCasaImage(name, buf);
       }
 
       casa::ArrayIterator<double> it(grid, 2);

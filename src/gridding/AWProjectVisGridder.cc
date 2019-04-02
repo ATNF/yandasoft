@@ -612,7 +612,7 @@ void AWProjectVisGridder::finaliseWeights(casa::Array<double>& out)
 
 /// Correct for gridding convolution function
 /// @param image image to be corrected
-void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/, int /*i*/)
+void AWProjectVisGridder::correctConvolution(casa::Array<double>& /*image*/)
 {
     //SphFuncVisGridder::correctConvolution(image);
 

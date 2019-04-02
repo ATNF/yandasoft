@@ -81,7 +81,7 @@ namespace askap
       itsConvFunc[0](cCenter,cCenter)=1.0; // 1,1,0 = 1
     }
     
-    void TestLoadGridder::correctConvolution(casa::Array<double>& image, int /* i */)
+    void TestLoadGridder::correctConvolution(casa::Array<double>& image)
     {
     }
 

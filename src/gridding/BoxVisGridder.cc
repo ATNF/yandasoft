@@ -71,7 +71,7 @@ namespace askap
       itsConvFunc[0](cCenter,cCenter)=1.0; // 1,1 = 1
     }
     
-		void BoxVisGridder::correctConvolution(casa::Array<double>& /*image*/, int /*i*/)
+		void BoxVisGridder::correctConvolution(casa::Array<double>& /*image*/)
 		{
 		}
 

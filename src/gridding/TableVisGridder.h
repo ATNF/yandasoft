@@ -382,7 +382,7 @@ protected:
 
       /// @brief Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casa::Array<double>& image, int i=0) = 0;
+      virtual void correctConvolution(casa::Array<double>& image) = 0;
 
       /// @brief Conversion helper function
       /// @details Copies in to out expanding double into complex values and
