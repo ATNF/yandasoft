@@ -48,6 +48,7 @@
 // Local package includes
 #include "AltWProjectVisGridder.h"
 #include <boost/lexical_cast.hpp>
+#include <imageaccess/CasaImageAccess.h>
 
 
 ASKAP_LOGGER(logger, ".gridding.AltWProjectVisGridder");
@@ -62,12 +63,15 @@ AltWProjectVisGridder::AltWProjectVisGridder(const double wmax,
                                        const int maxSupport,
                                        const int limitSupport,
                                        const std::string& name,
-                                       const float alpha, const bool writeOut) :
+                                       const float alpha, const bool writeOut,
+                                       const bool readIn) :
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample,maxSupport,limitSupport,name,alpha),
-        itsWriteOut(writeOut)
+        itsWriteOut(writeOut), itsReadIn(readIn)
 
 {
-
+    if (itsWriteOut && itsReadIn) {
+        ASKAPTHROW(AskapError, "writeOut and readIn cannot be specified together");
+    }
 }
 
 AltWProjectVisGridder::~AltWProjectVisGridder()
@@ -100,11 +104,12 @@ IVisGridder::ShPtr AltWProjectVisGridder::createGridder(const LOFAR::ParameterSe
     const int limitSupport = parset.getInt32("limitsupport", 0);
     const string tablename = parset.getString("tablename", "");
     const float alpha=parset.getFloat("alpha", 1.);
-    const bool writeOut=parset.getBool("dumpgrid",false);
+    const bool writeOut=parset.getBool("dumpgrid", false);
+    const bool readIn = parset.getBool("importgrid", false);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using (Alternate) W projection with " << nwplanes << " w-planes");
     boost::shared_ptr<AltWProjectVisGridder> gridder(new AltWProjectVisGridder(wmax, nwplanes,
-            cutoff, oversample, maxSupport, limitSupport, tablename, alpha,writeOut));
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, writeOut, readIn));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
     return gridder;
@@ -126,53 +131,29 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
         casa::Array<casa::DComplex> scratch(itsGrid[i].shape());
         casa::convertArray<casa::DComplex,casa::Complex>(scratch, itsGrid[i]);
 
-        if (itsWriteOut == true) {
-          // for debugging
-          ASKAPLOG_INFO_STR(logger, "Writing out Grids ");
-          casa::Array<float> buf(scratch.shape());
-          casa::convertArray<float,double>(buf,imag(scratch));
-          string name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.imag";
-          scimath::saveAsCasaImage(name,buf);
-          casa::convertArray<float,double>(buf,real(scratch));
-          name = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft.real";
-          scimath::saveAsCasaImage(name,buf);
-          /*
-              // adjust values to extract part which gives a real symmetric FT and the remainder
-              casa::Matrix<float> bufM(buf.nonDegenerate());
-              for (int x=0; x<int(bufM.nrow()); ++x) {
-                   for (int y=0; y<int(bufM.ncolumn())/2; ++y) {
-                        const float val = 0.5*(bufM(x,y)+bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1));
-                        bufM(x,y) = val;
-                        bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1) = val;
-                   }
-              }
-              scimath::saveAsCasaImage("uvcoverage.sympart",buf);
-              casa::Matrix<casa::DComplex> scratchM(scratch.nonDegenerate());
-              for (int x=0; x<int(scratchM.nrow()); ++x) {
-                   for (int y=0; y<int(scratchM.ncolumn()); ++y) {
-                        scratchM(x,y) -= double(bufM(x,y));
-                    }
-              }
-              // as we ignore imaginary part after FT, make scratch hermitian to be fair
-              for (int x=0; x<int(scratchM.nrow()); ++x) {
-                   for (int y=0; y<int(scratchM.ncolumn())/2; ++y) {
-                        const casa::DComplex val = 0.5*(scratchM(x,y)+
-                              conj(scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1)));
-                        scratchM(x,y) = val;
-                        scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1) = conj(val);
-                   }
-              }
-              casa::convertArray<float,double>(buf,imag(scratch));
-              scimath::saveAsCasaImage("uvcoverage.asympart.imag",buf);
-              casa::convertArray<float,double>(buf,real(scratch));
-              scimath::saveAsCasaImage("uvcoverage.asympart.real",buf);
-              scimath::fft2d(scratch, false);
-              casa::convertArray<float,double>(buf,real(scratch));
-              scimath::saveAsCasaImage("psf.asympart.real",buf);
-
-              ASKAPCHECK(false, "Debug termination");
-          */
-
+        if (itsWriteOut || itsReadIn) {
+          std::string name_prefix = boost::lexical_cast<std::string>(passThrough) + "." + boost::lexical_cast<std::string>(i) + ".prefft";
+          if (itsWriteOut) {
+            // for debugging
+            ASKAPLOG_INFO_STR(logger, "Writing out Grids ");
+            casa::Array<float> buf(scratch.shape());
+            casa::convertArray<float,double>(buf, imag(scratch));
+            scimath::saveAsCasaImage(name_prefix + ".imag", buf);
+            casa::convertArray<float,double>(buf, real(scratch));
+            scimath::saveAsCasaImage(name_prefix + ".real", buf);
+          }
+          else if (itsReadIn) {
+            accessors::CasaImageAccess imaccess;
+            casa::Array<float> imag = imaccess.read(name_prefix + ".imag");
+            casa::Array<float> real = imaccess.read(name_prefix + ".real");
+            ASKAPLOG_INFO_STR(logger, "Real/imag images read with shapes " << real.shape() << "/" << imag.shape());
+            ASKAPLOG_INFO_STR(logger, "Grid shape is " << scratch.shape());
+            if (imag.shape() != scratch.shape()) {
+              ASKAPTHROW(AskapError, "Shapes of images read are different from grid shape, cannot continue");
+            }
+            setImag(scratch, imag);
+            setReal(scratch, real);
+          }
         }
 
         scimath::fft2d(scratch, false);

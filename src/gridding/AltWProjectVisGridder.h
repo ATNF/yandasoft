@@ -69,7 +69,8 @@ namespace askap
                         const double cutoff, const int overSample,
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
-                        const float alpha=1.,const bool writeOut=false);
+                        const float alpha=1., const bool writeOut=false,
+                        const bool readIn=false);
 
                 virtual ~AltWProjectVisGridder();
 
@@ -109,6 +110,8 @@ namespace askap
 
                 /// dump the Grids
                 bool itsWriteOut;
+                /// import the Grids
+                bool itsReadIn;
 
 
         };
