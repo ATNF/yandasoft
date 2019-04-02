@@ -164,36 +164,11 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
             toDouble(work, scratch);
             dBuffer+=work;
         }
-
     }
-
-    if (itsWriteOut) {
-        string name = boost::lexical_cast<std::string>(passThrough) + ".postfft";
-        casa::Array<float> buf(dBuffer.shape());
-        casa::convertArray<float,double>(buf, dBuffer);
-        scimath::saveAsCasaImage(name, buf);
-    }
-
     // Now we can do the convolution correction
     correctConvolution(dBuffer);
-
-    if (itsWriteOut) {
-        string name = boost::lexical_cast<std::string>(passThrough) + ".post_convolution_correction";
-        casa::Array<float> buf(dBuffer.shape());
-        casa::convertArray<float,double>(buf, dBuffer);
-        scimath::saveAsCasaImage(name, buf);
-    }
-
     dBuffer*=double(dBuffer.shape()(0))*double(dBuffer.shape()(1));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
-
-    if (itsWriteOut) {
-        string name = boost::lexical_cast<std::string>(passThrough) + ".post_padding";
-        casa::Array<float> buf(out.shape());
-        casa::convertArray<float,double>(buf, out);
-        scimath::saveAsCasaImage(name, buf);
-    }
-
     passThrough++;
 }
 
