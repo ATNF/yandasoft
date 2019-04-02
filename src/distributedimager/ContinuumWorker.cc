@@ -743,12 +743,8 @@ void ContinuumWorker::processChannels()
 
         int tempWorkUnitCount = initialChannelWorkUnit;
         // clearer if it were called nextWorkUnit - but this is essentially the workunit we are starting this loop on.
-        // in the updateDir mode we reprocess the first workunit - for a smaller FOV.
-        // in the <normal mode> we have already processed the first work unit and it is
-        // in the rootImager.
-        if (updateDir) {
-          tempWorkUnitCount = initialChannelWorkUnit - 1;
-        }
+        
+        
 
         // now we are going to actually image this work unit
         // This loops over work units that are the same baseFrequency
