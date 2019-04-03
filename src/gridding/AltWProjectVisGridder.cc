@@ -85,6 +85,14 @@ IVisGridder::ShPtr AltWProjectVisGridder::clone()
     return IVisGridder::ShPtr(new AltWProjectVisGridder(*this));
 }
 
+static casa::Array<float> import_image(const std::string &name)
+{
+    accessors::CasaImageAccess imaccess;
+    casa::Array<float> image = imaccess.read(name);
+    casa::IPosition imshape = image.shape();
+    return image.reform(casa::IPosition(4, imshape(0), imshape(1), 1, 1));
+}
+
 
 /// @brief static method to create gridder
 /// @details Each gridder should have a static factory method, which is
@@ -143,9 +151,8 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
             scimath::saveAsCasaImage(name_prefix + ".real", buf);
           }
           else if (itsReadIn) {
-            accessors::CasaImageAccess imaccess;
-            casa::Array<float> imag = imaccess.read(name_prefix + ".imag");
-            casa::Array<float> real = imaccess.read(name_prefix + ".real");
+            casa::Array<float> real = import_image(name_prefix + ".real");
+            casa::Array<float> imag = import_image(name_prefix + ".imag");
             ASKAPLOG_INFO_STR(logger, "Real/imag images read with shapes " << real.shape() << "/" << imag.shape());
             ASKAPLOG_INFO_STR(logger, "Grid shape is " << scratch.shape());
             if (imag.shape() != scratch.shape()) {
