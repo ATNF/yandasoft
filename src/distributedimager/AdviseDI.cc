@@ -386,9 +386,11 @@ void AdviseDI::prepare() {
         // This time the user has specified frequencies in the freqFrame frame
         // So we now fill the desired frequency array with that in mind.
         // Easy
+        ASKAPLOG_WARN_STR(logger, "User requested frequency range is being used");
         size_t n=itsFrequencies[0];
-        double st = itsFrequencies[1];
         double width = itsFrequencies[2];
+        double st = itsFrequencies[1] + width/2.0;
+        ASKAPLOG_WARN_STR(logger, "Starting at " << st << " width " << width);
         for (unsigned int ch = 0; ch < n ; ch++) {
             itsRequestedFrequencies.push_back(MFrequency(Quantity(st+ch*width,"Hz"),itsFreqRefFrame));
         }
@@ -472,6 +474,7 @@ void AdviseDI::prepare() {
                     otherEdge = thisAllocation[frequency] + chanWidth[set][0]/2.0;
                 }
 
+                // try and find the requested channels in the input dataset
                 lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
                 if (lc.size() > 0) {
@@ -493,8 +496,8 @@ void AdviseDI::prepare() {
                         wu.set_dataset(ms[set]);
                         itsAllocatedWork[work].push_back(wu);
                         itsWorkUnitCount++;
-                        ASKAPLOG_DEBUG_STR(logger,"MATCH Allocating barycentric freq " << thisAllocation[frequency] \
-                        << " with local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
+                        ASKAPLOG_DEBUG_STR(logger,"MATCH Found desired freq " << thisAllocation[frequency] \
+                        << " in local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
                         << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
                         << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
                         << " the global channel is " << globalChannel);
@@ -611,6 +614,7 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
     for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
             ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
             if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
+                ASKAPLOG_DEBUG_STR(logger, "Found");
                 matches.push_back(ch);  
             }
     }
@@ -855,6 +859,7 @@ std::vector<double> AdviseDI::getFrequencies() {
     }
     else {
         fstr = itsParset.getStringVector("Frequencies",true);
+        
         f[0] = atof(fstr[0].c_str());
         f[1] = atof(fstr[1].c_str());
         f[2] = atof(fstr[2].c_str());
