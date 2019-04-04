@@ -167,37 +167,33 @@ void ContinuumWorker::run(void)
       break;
     } else if (wu.get_payloadType() == ContinuumWorkUnit::NA) {
       ASKAPLOG_WARN_STR(logger, "Worker has received non applicable allocation");
-      sleep(1);
-      wrequest.sendRequest(itsMaster, itsComms);
-      continue;
+      ASKAPLOG_WARN_STR(logger, "In new scheme we still process it ...");
+     
     } else {
 
       ASKAPLOG_INFO_STR(logger, "Worker has received valid allocation");
-      const string ms = wu.get_dataset();
-      ASKAPLOG_INFO_STR(logger, "Received Work Unit for dataset " << ms
+    }
+    const string ms = wu.get_dataset();
+    ASKAPLOG_INFO_STR(logger, "Received Work Unit for dataset " << ms
       << ", local (topo) channel " << wu.get_localChannel()
       << ", global (topo) channel " << wu.get_globalChannel()
       << ", frequency " << wu.get_channelFrequency() / 1.e6 << " MHz"
       << ", width " << wu.get_channelWidth() / 1e3 << " kHz");
-      try {
+    try {
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (before): " << (itsParset.getStringVector("dataset", true)));
         processWorkUnit(wu);
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (after): " << (itsParset.getStringVector("dataset", true)));
-      } catch (AskapError& e) {
+    } catch (AskapError& e) {
         ASKAPLOG_WARN_STR(logger, "Failure processing workUnit");
         ASKAPLOG_WARN_STR(logger, "Exception detail: " << e.what());
-      }
-
-      if (wu.get_payloadType() == ContinuumWorkUnit::LAST) {
-        ASKAPLOG_INFO_STR(logger, "Worker has received last job");
-        break;
-      } else {
-        ASKAPLOG_INFO_STR(logger, "Worker is sending request for work");
-        wrequest.sendRequest(itsMaster, itsComms);
-      }
     }
 
-  } // while (1)
+    
+    wrequest.sendRequest(itsMaster, itsComms);
+
+  } // while (1) // break when "DONE"
+  ASKAPCHECK(workUnits.size() > 0, "No work at to do - something has broken in the setup");
+
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " received data from master - waiting at barrier");
   itsComms.barrier(itsComms.theWorkers());
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed barrier");
@@ -609,11 +605,28 @@ void ContinuumWorker::processChannels()
 
     try {
 
+      // spin for good workunit
+      while (workUnitCount <= workUnits.size()) {
+        if (workUnits[workUnitCount].get_payloadType() == ContinuumWorkUnit::DONE){
+          workUnitCount++;
+        }
+        else if (workUnits[workUnitCount].get_payloadType() == ContinuumWorkUnit::NA) {
+          if (itsComms.isWriter()) {
+            itsComms.removeChannelFromWriter(itsComms.rank());
+            ASKAPLOG_WARN_STR(logger,"Removing whole channel from write as work allocation is bad. This may not work for multiple epochs");
+          }
+          workUnitCount++;
+        }
+        else {
+          ASKAPLOG_INFO_STR(logger, "Good workUnit at number " << workUnitCount);
+          break;
+        }
+      }
       if (workUnitCount >= workUnits.size()) {
         ASKAPLOG_INFO_STR(logger, "Out of work with workUnit " << workUnitCount);
         break;
       }
-
+      
       ASKAPLOG_INFO_STR(logger, "Starting to process workunit " << workUnitCount+1 << " of " << workUnits.size());
 
       int initialChannelWorkUnit = workUnitCount;
@@ -1071,6 +1084,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Written channel " << cubeChannel);
 
         itsComms.removeChannelFromWriter(itsComms.rank());
+        
         itsComms.removeChannelFromWorker(itsComms.rank());
 
         /// write everyone elses
@@ -1404,7 +1418,7 @@ void ContinuumWorker::logBeamInfo()
       std::list<int> creators = itsComms.getCubeCreators();
       ASKAPASSERT(creators.size() == 1);
       int creatorRank = creators.front();
-      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information");
+      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information beam creator is rank " << creatorRank);
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {

@@ -50,6 +50,7 @@ namespace askap {
                     NA,
                     WORK,
                     LAST,
+                    LASTANDNA,
                     DONE
                 };
 

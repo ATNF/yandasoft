@@ -516,6 +516,16 @@ void AdviseDI::prepare() {
                 // have to increment the workcount for the cleanup.
                 cp::ContinuumWorkUnit wu;
                 wu.set_payloadType(cp::ContinuumWorkUnit::NA);
+                wu.set_channelFrequency(thisAllocation[frequency]);
+                wu.set_beam(myBeam);
+
+                if (itsRequestedFrequencies.size() > 1)
+                    wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
+                else
+                    wu.set_channelWidth(fabs(chanWidth[0][0]));
+
+                wu.set_localChannel(-1);
+                wu.set_globalChannel(-1);
                 itsAllocatedWork[work].push_back(wu);
                 itsWorkUnitCount++;
 
@@ -594,17 +604,7 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
         itsAllocatedWork[id].pop_back();
         itsWorkUnitCount--;
     }
-    if (itsAllocatedWork[id].empty() == true) {
-        // this is the last unitParset
-        ASKAPLOG_WARN_STR(logger, "Final job for " << id+1);
-        if (rtn.get_payloadType() != cp::ContinuumWorkUnit::NA){
-            rtn.set_payloadType(cp::ContinuumWorkUnit::LAST);
-        }
-        else {
-            ASKAPLOG_WARN_STR(logger, "Final job is bad for " << id+1);
-            rtn.set_payloadType(cp::ContinuumWorkUnit::DONE);
-        }
-    }
+   
     return rtn;
 }
 vector<int> AdviseDI::matchall(int ms_number, 
@@ -926,12 +926,12 @@ void AdviseDI::updateComms() {
             // need to test whether this is a distinct channel or a different epoch for
             // the same epoch
             if (current_channel != last_channel || alloc == 0) {
-                if (itsAllocatedWork[worker][alloc].get_payloadType() != cp::ContinuumWorkUnit::NA) {
-                    itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
+                
+                itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
 
-                    itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
-                    itsCubeComms.addChannelToWorker(worker+1);
-                }
+                itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
+                itsCubeComms.addChannelToWorker(worker+1);
+                
                 last_channel = current_channel;
             }
         }
