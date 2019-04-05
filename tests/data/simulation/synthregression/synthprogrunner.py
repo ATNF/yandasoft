@@ -77,7 +77,7 @@ class SynthesisProgramRunner:
 
          cmd - command
       '''
-      res = os.system("mpirun -np %d %s -c %s" % (np, cmd, self.tmp_parset))
+      res = os.system("mpirun --oversubscribe -np %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
          raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
 
@@ -119,11 +119,11 @@ class SynthesisProgramRunner:
       '''
       self.runCommand(self.imager)
 
-   def runNewImager(self):
+   def runNewImager(self,nproc=2):
       '''
          Run imager on a current parset
       '''
-      self.runMPICommand(self.NewImager,2)
+      self.runMPICommand(self.NewImager,nproc)
       #self.runSRUNCommand(self.NewImager,2)
 
    def imageStats(self, name):

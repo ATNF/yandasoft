@@ -144,20 +144,27 @@ void ContinuumMaster::run(void)
     // iterate over the measurement sets and lets look at the
     // channels
     int id; // incoming rank ID
-
-    while(diadvise.getWorkUnitCount()) {
+    int remainingWorkers = itsComms.nProcs() - 1;
+    while(diadvise.getWorkUnitCount()>0 || remainingWorkers>0) {
 
         ContinuumWorkRequest wrequest;
         ASKAPLOG_DEBUG_STR(logger,"Waiting for a request " << diadvise.getWorkUnitCount() \
         << " units remaining");
-        wrequest.receiveRequest(id, itsComms);
+        wrequest.receiveRequest(id, itsComms);   
         ASKAPLOG_DEBUG_STR(logger,"Received a request from " << id);
         /// Now we can just pop a work allocation off the stack for this rank
         ContinuumWorkUnit wu = diadvise.getAllocation(id-1);
         ASKAPLOG_DEBUG_STR(logger,"Sending Allocation to  " << id);
         wu.sendUnit(id,itsComms);
         ASKAPLOG_DEBUG_STR(logger,"Sent Allocation to " << id);
+        if (wu.get_payloadType() == ContinuumWorkUnit::DONE) {
+            ASKAPLOG_INFO_STR(logger,"Sent DONE to " << id);
+            remainingWorkers--;
+        }
+        
     }
+    // all the work units allocated - lets send the DONEs
+    
 
 
     if (localSolver) {
