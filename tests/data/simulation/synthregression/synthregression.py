@@ -12,3 +12,5 @@ print "leakagecalibtest: test of polarisation leakage calibration"
 import leakagecalibtest
 print "1934-638: test source position and flux on real ATCA data"
 import test1934
+print "msmfs test with the new imager"
+import testmsmfs

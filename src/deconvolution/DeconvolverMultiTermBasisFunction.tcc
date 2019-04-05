@@ -877,7 +877,7 @@ namespace askap {
                         //printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 #else                       
                         absMaxPosMasked(maxVal, maxPos, res, mask);
-			            printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
+			           // printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 //                      casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
 
 #endif
