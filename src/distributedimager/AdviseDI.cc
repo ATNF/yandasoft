@@ -186,9 +186,17 @@ void AdviseDI::prepare() {
 
     if (itsChannels[2] > 0) {
         user_defined_channels = true;
+        ASKAPLOG_INFO_STR(logger,"User specified channels");
+    }
+    else {
+        ASKAPLOG_INFO_STR(logger,"User has not specified channels");
     }
     if (itsFrequencies[2] != 0) {
         user_defined_frequencies = true;
+        ASKAPLOG_INFO_STR(logger,"User specified frequencies explicitly");
+    }
+    else {
+        ASKAPLOG_INFO_STR(logger,"User has not specified frequencies explicitly");
     }
     if (user_defined_channels && user_defined_frequencies) {
         ASKAPLOG_WARN_STR(logger,
@@ -377,7 +385,7 @@ void AdviseDI::prepare() {
 
         for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
             if (ch >= st) {
-                if (itsRequestedFrequencies.size() > n)
+                if (itsRequestedFrequencies.size() < n)
                     itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
             }
         }
@@ -397,6 +405,7 @@ void AdviseDI::prepare() {
 
     }
     else {
+        ASKAPLOG_WARN_STR(logger, "Full channel range is being used");
         for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
            itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
         } 
@@ -404,6 +413,7 @@ void AdviseDI::prepare() {
     // Now we have a list of requested frequencies lets allocate them to nodes - some maybe empty.
     ASKAPLOG_INFO_STR(logger,
     " User requests " << itsRequestedFrequencies.size() << " cube " << " starting at " << itsRequestedFrequencies[0].getValue());
+    ASKAPCHECK(itsRequestedFrequencies.size()/nWorkersPerGroup == nchanpercore,"Miss-match nchanpercore is incorrect");
     
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
@@ -602,9 +612,14 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     else {
         rtn = itsAllocatedWork[id].back();
         itsAllocatedWork[id].pop_back();
-        itsWorkUnitCount--;
+        
     }
-   
+    int count=0;
+    for (int alloca = 0 ; alloca < itsAllocatedWork.size() ; alloca++) {
+        count = count + itsAllocatedWork[alloca].size();
+        
+    }
+    itsWorkUnitCount = count;
     return rtn;
 }
 vector<int> AdviseDI::matchall(int ms_number, 
@@ -891,9 +906,12 @@ std::vector<int> AdviseDI::getChannels() {
         cstr = itsParset.getStringVector("Channels",true);
         c[0] = atof(cstr[0].c_str());
         string wild = "%w";
+        
         if (cstr[1].compare(wild) == 0) {
+            ASKAPLOG_WARN_STR(logger,
+        "Wild card in the Channel list");
             c[1] = 0;
-            c[2] = 1;
+            c[2] = -1; // this now images all the channels
         }
         else {
             c[1] = atoi(cstr[1].c_str());
@@ -902,7 +920,7 @@ std::vector<int> AdviseDI::getChannels() {
 
 
     }
-
+    
     // just a start and stop - assume no averaging
     if (c[2] == 0) {
         c[2] = 1;

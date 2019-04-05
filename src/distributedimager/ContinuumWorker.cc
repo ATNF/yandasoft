@@ -1107,8 +1107,10 @@ void ContinuumWorker::processChannels()
 
 
           ContinuumWorkRequest result;
+
           int id;
           /// this is a blocking receive
+          ASKAPLOG_INFO_STR(logger, "Waiting for a write request");
           result.receiveRequest(id, itsComms);
           ASKAPLOG_INFO_STR(logger, "Received a request to write from rank " << id);
           int cubeChannel = result.get_globalChannel() - this->baseCubeGlobalChannel;
