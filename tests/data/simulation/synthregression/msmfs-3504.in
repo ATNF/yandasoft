@@ -1,7 +1,7 @@
 Cimager.dataset                                 = [askapsdp-3504.ms]
 Cimager.nUVWMachines                            = 1
 Cimager.uvwMachineDirTolerance                  = 0.2arcsec
-Cimager.imagetype                               = fits
+Cimager.imagetype                               = casa
 Cimager.memorybuffers                           = true
 Cimager.barycentre                              = false
 Cimager.nchanpercore                            = 8
@@ -46,10 +46,10 @@ Cimager.solver.Clean.decoupled			= True
 Cimager.solver.Clean.algorithm                  = BasisfunctionMFS
 Cimager.solver.Clean.scales                     = [0]
 Cimager.solver.Clean.niter                      = 10000
-Cimager.solver.Clean.gain                       = 0.1
+Cimager.solver.Clean.gain                       = 0.3
 Cimager.solver.Clean.logevery                   = 1000
-Cimager.threshold.minorcycle                    = [45%,100mJy,10mJy]
-Cimager.threshold.majorcycle                    = 10mJy
+Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
+#Cimager.threshold.majorcycle                    = 10mJy
 
 Cimager.solver.Clean.verbose                    = false
 

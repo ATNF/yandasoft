@@ -56,7 +56,3 @@ spr.runNewImager(9)
 analyseResult(spr)
 
 
-spr = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
-spr.runNewImager(7)
-analyseResult(spr)
-
