@@ -241,11 +241,24 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
     // Spectral Coordinate
     {
         const Double refPix = 0.0;  // is the reference pixel
-        const bool barycentre = parset.getBool("barycentre",false);
+
         MFrequency::Types freqRef=MFrequency::TOPO;
-        if (barycentre){
-            freqRef = MFrequency::BARY;
+        // setup frequency frame
+        const std::string freqFrame = parset.getString("freqframe","topo");
+        if (freqFrame == "topo") {
+            ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as topocentric");
+            freqRef = casacore::MFrequency::TOPO;
+        } else if (freqFrame == "lsrk") {
+            ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as lsrk");
+            freqRef = casacore::MFrequency::LSRK;
+        } else if (freqFrame == "bary") {
+        ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as barycentric");
+            freqRef = casacore::MFrequency::BARY;
+        } else {
+            ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
         }
+    
+        
         SpectralCoordinate sc(freqRef, f0, inc, refPix);
 
         // add rest frequency, but only if requested, and only for

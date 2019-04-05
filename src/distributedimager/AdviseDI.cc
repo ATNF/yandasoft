@@ -186,9 +186,17 @@ void AdviseDI::prepare() {
 
     if (itsChannels[2] > 0) {
         user_defined_channels = true;
+        ASKAPLOG_INFO_STR(logger,"User specified channels");
+    }
+    else {
+        ASKAPLOG_INFO_STR(logger,"User has not specified channels");
     }
     if (itsFrequencies[2] != 0) {
         user_defined_frequencies = true;
+        ASKAPLOG_INFO_STR(logger,"User specified frequencies explicitly");
+    }
+    else {
+        ASKAPLOG_INFO_STR(logger,"User has not specified frequencies explicitly");
     }
     if (user_defined_channels && user_defined_frequencies) {
         ASKAPLOG_WARN_STR(logger,
@@ -377,7 +385,7 @@ void AdviseDI::prepare() {
 
         for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
             if (ch >= st) {
-                if (itsRequestedFrequencies.size() > n)
+                if (itsRequestedFrequencies.size() < n)
                     itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
             }
         }
@@ -386,15 +394,18 @@ void AdviseDI::prepare() {
         // This time the user has specified frequencies in the freqFrame frame
         // So we now fill the desired frequency array with that in mind.
         // Easy
+        ASKAPLOG_WARN_STR(logger, "User requested frequency range is being used");
         size_t n=itsFrequencies[0];
-        double st = itsFrequencies[1];
         double width = itsFrequencies[2];
+        double st = itsFrequencies[1] + width/2.0;
+        ASKAPLOG_WARN_STR(logger, "Starting at " << st << " width " << width);
         for (unsigned int ch = 0; ch < n ; ch++) {
             itsRequestedFrequencies.push_back(MFrequency(Quantity(st+ch*width,"Hz"),itsFreqRefFrame));
         }
 
     }
     else {
+        ASKAPLOG_WARN_STR(logger, "Full channel range is being used");
         for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
            itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
         } 
@@ -402,7 +413,8 @@ void AdviseDI::prepare() {
     // Now we have a list of requested frequencies lets allocate them to nodes - some maybe empty.
     ASKAPLOG_INFO_STR(logger,
     " User requests " << itsRequestedFrequencies.size() << " cube " << " starting at " << itsRequestedFrequencies[0].getValue());
-    
+    ASKAPCHECK(itsRequestedFrequencies.size()/nWorkersPerGroup == nchanpercore,"Miss-match nchanpercore is incorrect");
+
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
@@ -472,6 +484,7 @@ void AdviseDI::prepare() {
                     otherEdge = thisAllocation[frequency] + chanWidth[set][0]/2.0;
                 }
 
+                // try and find the requested channels in the input dataset
                 lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
                 if (lc.size() > 0) {
@@ -493,8 +506,8 @@ void AdviseDI::prepare() {
                         wu.set_dataset(ms[set]);
                         itsAllocatedWork[work].push_back(wu);
                         itsWorkUnitCount++;
-                        ASKAPLOG_DEBUG_STR(logger,"MATCH Allocating barycentric freq " << thisAllocation[frequency] \
-                        << " with local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
+                        ASKAPLOG_DEBUG_STR(logger,"MATCH Found desired freq " << thisAllocation[frequency] \
+                        << " in local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
                         << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
                         << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
                         << " the global channel is " << globalChannel);
@@ -513,6 +526,16 @@ void AdviseDI::prepare() {
                 // have to increment the workcount for the cleanup.
                 cp::ContinuumWorkUnit wu;
                 wu.set_payloadType(cp::ContinuumWorkUnit::NA);
+                wu.set_channelFrequency(thisAllocation[frequency]);
+                wu.set_beam(myBeam);
+
+                if (itsRequestedFrequencies.size() > 1)
+                    wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
+                else
+                    wu.set_channelWidth(fabs(chanWidth[0][0]));
+
+                wu.set_localChannel(-1);
+                wu.set_globalChannel(-1);
                 itsAllocatedWork[work].push_back(wu);
                 itsWorkUnitCount++;
 
@@ -589,19 +612,14 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     else {
         rtn = itsAllocatedWork[id].back();
         itsAllocatedWork[id].pop_back();
-        itsWorkUnitCount--;
+        
     }
-    if (itsAllocatedWork[id].empty() == true) {
-        // this is the last unitParset
-        ASKAPLOG_WARN_STR(logger, "Final job for " << id+1);
-        if (rtn.get_payloadType() != cp::ContinuumWorkUnit::NA){
-            rtn.set_payloadType(cp::ContinuumWorkUnit::LAST);
-        }
-        else {
-            ASKAPLOG_WARN_STR(logger, "Final job is bad for " << id+1);
-            rtn.set_payloadType(cp::ContinuumWorkUnit::DONE);
-        }
+    int count=0;
+    for (int alloca = 0 ; alloca < itsAllocatedWork.size() ; alloca++) {
+        count = count + itsAllocatedWork[alloca].size();
+        
     }
+    itsWorkUnitCount = count;
     return rtn;
 }
 vector<int> AdviseDI::matchall(int ms_number, 
@@ -611,6 +629,7 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
     for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
             ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
             if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
+                ASKAPLOG_DEBUG_STR(logger, "Found");
                 matches.push_back(ch);  
             }
     }
@@ -790,7 +809,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
 
        param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
        if ((parset.getString("visweights")=="MFS")) {
-           if (!itsParset.isDefined(param)) {
+           if (!parset.isDefined(param)) {
                char tmp[64];
                const double aveFreq = 0.5*(minFrequency+maxFrequency);
                sprintf(tmp,"%f",aveFreq);
@@ -855,6 +874,7 @@ std::vector<double> AdviseDI::getFrequencies() {
     }
     else {
         fstr = itsParset.getStringVector("Frequencies",true);
+        
         f[0] = atof(fstr[0].c_str());
         f[1] = atof(fstr[1].c_str());
         f[2] = atof(fstr[2].c_str());
@@ -886,9 +906,12 @@ std::vector<int> AdviseDI::getChannels() {
         cstr = itsParset.getStringVector("Channels",true);
         c[0] = atof(cstr[0].c_str());
         string wild = "%w";
+        
         if (cstr[1].compare(wild) == 0) {
+            ASKAPLOG_WARN_STR(logger,
+        "Wild card in the Channel list");
             c[1] = 0;
-            c[2] = 1;
+            c[2] = -1; // this now images all the channels
         }
         else {
             c[1] = atoi(cstr[1].c_str());
@@ -897,7 +920,7 @@ std::vector<int> AdviseDI::getChannels() {
 
 
     }
-
+    
     // just a start and stop - assume no averaging
     if (c[2] == 0) {
         c[2] = 1;
@@ -921,12 +944,12 @@ void AdviseDI::updateComms() {
             // need to test whether this is a distinct channel or a different epoch for
             // the same epoch
             if (current_channel != last_channel || alloc == 0) {
-                if (itsAllocatedWork[worker][alloc].get_payloadType() != cp::ContinuumWorkUnit::NA) {
-                    itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
+                
+                itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
 
-                    itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
-                    itsCubeComms.addChannelToWorker(worker+1);
-                }
+                itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
+                itsCubeComms.addChannelToWorker(worker+1);
+                
                 last_channel = current_channel;
             }
         }
