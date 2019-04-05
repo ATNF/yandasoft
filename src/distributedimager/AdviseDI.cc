@@ -414,7 +414,7 @@ void AdviseDI::prepare() {
     ASKAPLOG_INFO_STR(logger,
     " User requests " << itsRequestedFrequencies.size() << " cube " << " starting at " << itsRequestedFrequencies[0].getValue());
     ASKAPCHECK(itsRequestedFrequencies.size()/nWorkersPerGroup == nchanpercore,"Miss-match nchanpercore is incorrect");
-    
+
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
@@ -809,7 +809,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
 
        param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
        if ((parset.getString("visweights")=="MFS")) {
-           if (!itsParset.isDefined(param)) {
+           if (!parset.isDefined(param)) {
                char tmp[64];
                const double aveFreq = 0.5*(minFrequency+maxFrequency);
                sprintf(tmp,"%f",aveFreq);
