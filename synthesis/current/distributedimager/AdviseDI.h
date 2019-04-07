@@ -101,16 +101,18 @@ namespace askap {
             /// @brief get the channels
             std::vector<int> getChannels();
 
-            ///
-            casa::MVDirection getTangent(int ms=0) {return itsTangent[ms];};
+            /// @brief get the frequencies
+            std::vector<double> getFrequencies();
 
-            casa::MVEpoch getEpoch(int ms=0) {return itsEpoch[ms]; };
+            casacore::MVDirection getTangent(int ms=0) {return itsTangent[ms];};
 
-            casa::MPosition getPosition(int ms=0) {return itsPosition[ms]; };
+            casacore::MVEpoch getEpoch(int ms=0) {return itsEpoch[ms]; };
 
-            vector<casa::MFrequency> getBaryFrequencies() {return itsBaryFrequencies;};
+            casacore::MPosition getPosition(int ms=0) {return itsPosition[ms]; };
 
-            vector<casa::MFrequency> getTopoFrequencies() {return itsTopoFrequencies;};
+            vector<casacore::MFrequency> getBaryFrequencies() {return itsFFrameFrequencies;};
+
+            vector<casacore::MFrequency> getTopoFrequencies() {return itsInputFrequencies;};
 
             cp::ContinuumWorkUnit getAllocation(int id);
 
@@ -125,7 +127,8 @@ namespace askap {
             bool isPrepared;
 
             bool barycentre;
-
+            /// obtain frequency reference frame
+            inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
 
         private:
 
@@ -133,12 +136,20 @@ namespace askap {
 
             LOFAR::ParameterSet& itsParset;
 
-            casa::uInt itsRef;
+            casacore::uInt itsRef;
 
-            vector<casa::MFrequency> itsBaryFrequencies;
+            vector<casacore::MFrequency> itsFFrameFrequencies;
 
-            vector<casa::MFrequency> itsTopoFrequencies;
+            vector<casacore::MFrequency> itsInputFrequencies;
 
+            vector<casacore::MFrequency> itsRequestedFrequencies;
+
+            /// @brief reference frame for frequency
+            /// @details We may want to simulate/image in different reference frames.
+            /// This field contains the reference frame selected in the parset.
+            casacore::MFrequency::Ref itsFreqRefFrame;  
+            
+            casacore::MFrequency::Types itsFreqType;
 
             double minFrequency;
 
@@ -146,13 +157,13 @@ namespace askap {
 
 
 
-            std::vector<casa::MVDirection> itsTangent;
+            std::vector<casacore::MVDirection> itsTangent;
 
-            std::vector<casa::Vector<casa::MDirection> > itsDirVec;
+            std::vector<casacore::Vector<casacore::MDirection> > itsDirVec;
 
-            std::vector<casa::MVEpoch> itsEpoch;
+            std::vector<casacore::MVEpoch> itsEpoch;
 
-            std::vector<casa::MPosition> itsPosition;
+            std::vector<casacore::MPosition> itsPosition;
 
             std::vector< std::vector<double> > chanFreq;
             std::vector< std::vector<double> > chanWidth;
@@ -163,7 +174,7 @@ namespace askap {
             std::vector< std::vector<double> > itsAllocatedFrequencies;
             std::vector< std::vector<cp::ContinuumWorkUnit> > itsAllocatedWork;
 
-            int match(int ms_number,  casa::MVFrequency freq);
+            vector<int> matchall(int,  casacore::MVFrequency, casacore::MVFrequency);
 
             std::vector<int> getBeams();
 

@@ -55,9 +55,9 @@
 #include "casacore/casa/Quanta/MVTime.h"
 #include "casacore/tables/Tables/TableDesc.h"
 #include "casacore/tables/Tables/SetupNewTab.h"
-#include "casacore/tables/Tables/IncrementalStMan.h"
-#include "casacore/tables/Tables/StandardStMan.h"
-#include "casacore/tables/Tables/TiledShapeStMan.h"
+#include "casacore/tables/DataMan/IncrementalStMan.h"
+#include "casacore/tables/DataMan/StandardStMan.h"
+#include "casacore/tables/DataMan/TiledShapeStMan.h"
 #include "casacore/ms/MeasurementSets/MeasurementSet.h"
 #include "casacore/ms/MeasurementSets/MSColumns.h"
 
@@ -101,9 +101,9 @@ MSSplitter::MSSplitter(LOFAR::ParameterSet& Parset)
 
 }
 
-boost::shared_ptr<casa::MeasurementSet> MSSplitter::create(
-    const std::string& filename, const casa::Bool addSigmaSpec,
-    casa::uInt bucketSize, casa::uInt tileNcorr, casa::uInt tileNchan)
+boost::shared_ptr<casacore::MeasurementSet> MSSplitter::create(
+    const std::string& filename, const casacore::Bool addSigmaSpec,
+    casacore::uInt bucketSize, casacore::uInt tileNcorr, casacore::uInt tileNchan)
 {
     if (bucketSize < 8192) bucketSize = 8192;
 
@@ -176,7 +176,7 @@ boost::shared_ptr<casa::MeasurementSet> MSSplitter::create(
     }
 
     // Now we can create the MeasurementSet and add the (empty) subtables
-    boost::shared_ptr<casa::MeasurementSet> ms(new MeasurementSet(newMS, 0));
+    boost::shared_ptr<casacore::MeasurementSet> ms(new MeasurementSet(newMS, 0));
     ms->createDefaultSubtables(Table::New);
     ms->flush();
 
@@ -190,7 +190,7 @@ boost::shared_ptr<casa::MeasurementSet> MSSplitter::create(
     return ms;
 }
 
-void MSSplitter::copyAntenna(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyAntenna(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSAntennaColumns& sc = srcMsc.antenna();
@@ -210,7 +210,7 @@ void MSSplitter::copyAntenna(const casa::MeasurementSet& source, casa::Measureme
     dc.flagRow().putColumn(sc.flagRow());
 }
 
-void MSSplitter::copyDataDescription(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyDataDescription(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSDataDescColumns& sc = srcMsc.dataDescription();
@@ -226,7 +226,7 @@ void MSSplitter::copyDataDescription(const casa::MeasurementSet& source, casa::M
     dc.polarizationId().putColumn(sc.polarizationId());
 }
 
-void MSSplitter::copyFeed(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyFeed(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSFeedColumns& sc = srcMsc.feed();
@@ -251,7 +251,7 @@ void MSSplitter::copyFeed(const casa::MeasurementSet& source, casa::MeasurementS
     dc.interval().putColumn(sc.interval());
 }
 
-void MSSplitter::copyField(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyField(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSFieldColumns& sc = srcMsc.field();
@@ -272,7 +272,7 @@ void MSSplitter::copyField(const casa::MeasurementSet& source, casa::Measurement
     dc.referenceDir().putColumn(sc.referenceDir());
 }
 
-void MSSplitter::copyObservation(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyObservation(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSObservationColumns& sc = srcMsc.observation();
@@ -294,7 +294,7 @@ void MSSplitter::copyObservation(const casa::MeasurementSet& source, casa::Measu
     dc.scheduleType().putColumn(sc.scheduleType());
 }
 
-void MSSplitter::copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyPointing(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSPointingColumns& sc = srcMsc.pointing();
@@ -340,7 +340,7 @@ void MSSplitter::copyPointing(const casa::MeasurementSet& source, casa::Measurem
 
 }
 
-void MSSplitter::copyPolarization(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void MSSplitter::copyPolarization(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSPolarizationColumns& sc = srcMsc.polarization();
@@ -363,22 +363,22 @@ void MSSplitter::addNonStandardPointingColumn(const std::string &name,
 {
     ASKAPDEBUGASSERT(!destPointing.actualTableDesc().isColumn(name));
     destPointing.addColumn(srcPointing.actualTableDesc().columnDesc(name));
-    casa::ScalarColumn<casa::Float> destCol(destPointing, name);
-    destCol.putColumn(ROScalarColumn<casa::Float>(srcPointing, name));
+    casacore::ScalarColumn<casacore::Float> destCol(destPointing, name);
+    destCol.putColumn(ROScalarColumn<casacore::Float>(srcPointing, name));
 }
 
-casa::Int MSSplitter::findSpectralWindowId(const casa::MeasurementSet& ms)
+casacore::Int MSSplitter::findSpectralWindowId(const casacore::MeasurementSet& ms)
 {
     const ROMSColumns msc(ms);
-    const casa::uInt nrows = msc.nrow();
+    const casacore::uInt nrows = msc.nrow();
     ASKAPCHECK(nrows > 0, "No rows in main table");
-    const casa::ROMSDataDescColumns& ddc = msc.dataDescription();
+    const casacore::ROMSDataDescColumns& ddc = msc.dataDescription();
 
-    casa::Int r0 = -1; // Row zero SpWindow id
+    casacore::Int r0 = -1; // Row zero SpWindow id
 
-    for (casa::uInt row = 0; row < nrows; ++row) {
-        const casa::Int dataDescId = msc.dataDescId()(row);
-        const casa::Int spwId = ddc.spectralWindowId()(dataDescId);
+    for (casacore::uInt row = 0; row < nrows; ++row) {
+        const casacore::Int dataDescId = msc.dataDescId()(row);
+        const casacore::Int spwId = ddc.spectralWindowId()(dataDescId);
 
         if (row == 0) {
             r0 = spwId;
@@ -390,20 +390,20 @@ casa::Int MSSplitter::findSpectralWindowId(const casa::MeasurementSet& ms)
     return r0;
 }
 
-void MSSplitter::splitSpectralWindow(const casa::MeasurementSet& source,
-        casa::MeasurementSet& dest,
+void MSSplitter::splitSpectralWindow(const casacore::MeasurementSet& source,
+        casacore::MeasurementSet& dest,
         const uint32_t startChan,
         const uint32_t endChan,
         const uint32_t width,
-        const casa::Int spwId)
+        const casacore::Int spwId)
 {
     MSColumns destCols(dest);
     const ROMSColumns srcCols(source);
 
     MSSpWindowColumns& dc = destCols.spectralWindow();
     const ROMSSpWindowColumns& sc = srcCols.spectralWindow();
-    const casa::Int srow = spwId;
-    const casa::Int drow = dc.nrow();
+    const casacore::Int srow = spwId;
+    const casacore::Int drow = dc.nrow();
 
     dest.spectralWindow().addRow();
 
@@ -440,11 +440,11 @@ void MSSplitter::splitSpectralWindow(const casa::MeasurementSet& source,
         const uInt chanOffset = startChan - 1 + (destChan * width);
 
         for (uInt i = chanOffset; i < chanOffset + width; ++i) {
-            chanFreq[destChan] += sc.chanFreq()(srow)(casa::IPosition(1, i));
-            chanWidth[destChan] += sc.chanWidth()(srow)(casa::IPosition(1, i));
-            effectiveBW[destChan] += sc.effectiveBW()(srow)(casa::IPosition(1, i));
-            resolution[destChan] += sc.resolution()(srow)(casa::IPosition(1, i));
-            totalBandwidth += sc.chanWidth()(srow)(casa::IPosition(1, i));
+            chanFreq[destChan] += sc.chanFreq()(srow)(casacore::IPosition(1, i));
+            chanWidth[destChan] += sc.chanWidth()(srow)(casacore::IPosition(1, i));
+            effectiveBW[destChan] += sc.effectiveBW()(srow)(casacore::IPosition(1, i));
+            resolution[destChan] += sc.resolution()(srow)(casacore::IPosition(1, i));
+            totalBandwidth += sc.chanWidth()(srow)(casacore::IPosition(1, i));
         }
 
         // Finally average chanFreq
@@ -453,10 +453,10 @@ void MSSplitter::splitSpectralWindow(const casa::MeasurementSet& source,
 
     // 3: Add those splitting/averaging cells
     dc.numChan().put(drow, nChanOut);
-    dc.chanFreq().put(drow, casa::Vector<double>(chanFreq));
-    dc.chanWidth().put(drow, casa::Vector<double>(chanWidth));
-    dc.effectiveBW().put(drow, casa::Vector<double>(effectiveBW));
-    dc.resolution().put(drow, casa::Vector<double>(resolution));
+    dc.chanFreq().put(drow, casacore::Vector<double>(chanFreq));
+    dc.chanWidth().put(drow, casacore::Vector<double>(chanWidth));
+    dc.effectiveBW().put(drow, casacore::Vector<double>(effectiveBW));
+    dc.resolution().put(drow, casacore::Vector<double>(resolution));
     dc.totalBandwidth().put(drow, totalBandwidth);
 }
 
@@ -495,8 +495,8 @@ bool MSSplitter::rowIsFiltered(uint32_t scanid, uint32_t fieldid,
     return false;
 }
 
-void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
-                                casa::MeasurementSet& dest,
+void MSSplitter::splitMainTable(const casacore::MeasurementSet& source,
+                                casacore::MeasurementSet& dest,
                                 const uint32_t startChan,
                                 const uint32_t endChan,
                                 const uint32_t width)
@@ -509,7 +509,7 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
     MSColumns dc(dest);
 
     // Add rows upfront if no row based filters exist
-    const casa::uInt nRows = sc.nrow();
+    const casacore::uInt nRows = sc.nrow();
     if (!rowFiltersExist()) dest.addRow(nRows);
 
     // Work out how many channels are to be actual input and which output
@@ -520,8 +520,8 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
     ASKAPDEBUGASSERT(nPol > 0);
 
     // Test to see whether SIGMA_SPECTRUM has been added
-    casa::Bool haveInSigmaSpec = source.isColumn(MS::SIGMA_SPECTRUM);
-    casa::Bool haveOutSigmaSpec = dest.isColumn(MS::SIGMA_SPECTRUM);
+    casacore::Bool haveInSigmaSpec = source.isColumn(MS::SIGMA_SPECTRUM);
+    casacore::Bool haveOutSigmaSpec = dest.isColumn(MS::SIGMA_SPECTRUM);
     if (haveInSigmaSpec) {
         ASKAPLOG_DEBUG_STR(logger, "Reading and using the spectra of sigma values");
     }
@@ -532,13 +532,13 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
     // Decide how many rows to process simultaneously. This needs to fit within
     // a reasonable amount of memory, because all visibilities will be read
     // in for possible averaging. Assumes 128MB working space.
-    std::size_t inDataSize = sizeof(casa::Complex) + sizeof(casa::Bool);
+    std::size_t inDataSize = sizeof(casacore::Complex) + sizeof(casacore::Bool);
     std::size_t outDataSize = inDataSize;
     if (haveInSigmaSpec) {
-        inDataSize += sizeof(casa::Float);
+        inDataSize += sizeof(casacore::Float);
     }
     if (haveOutSigmaSpec) {
-        outDataSize += sizeof(casa::Float);
+        outDataSize += sizeof(casacore::Float);
     }
     uInt maxSimultaneousRows =  (128 * 1024 * 1024) / nPol / (nChanIn * inDataSize) / (nChanOut * outDataSize);
     if (maxSimultaneousRows<1) maxSimultaneousRows = 1;
@@ -548,7 +548,7 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
     if (rowFiltersExist()) maxSimultaneousRows = 1;
 
     // Set a 64MB maximum cache size for the large columns
-    const casa::uInt cacheSize = 64 * 1024 * 1024;
+    const casacore::uInt cacheSize = 64 * 1024 * 1024;
 
     sc.data().setMaximumCacheSize(cacheSize);
     dc.data().setMaximumCacheSize(cacheSize);
@@ -653,18 +653,18 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
             }
         } else {
             // Get (read) the input data/flag/sigma
-            const casa::Cube<casa::Complex> indata = sc.data().getColumnRange(srcrowslicer, srcarrslicer);
-            const casa::Cube<casa::Bool> inflag = sc.flag().getColumnRange(srcrowslicer, srcarrslicer);
+            const casacore::Cube<casacore::Complex> indata = sc.data().getColumnRange(srcrowslicer, srcarrslicer);
+            const casacore::Cube<casacore::Bool> inflag = sc.flag().getColumnRange(srcrowslicer, srcarrslicer);
             // This is only needed if generating sigmaSpectra, but that should be the
             // case with width>1, and this avoids testing in the tight loops below
-            casa::Cube<casa::Float> insigma;
+            casacore::Cube<casacore::Float> insigma;
             if (haveInSigmaSpec) {
                 insigma = sc.sigmaSpectrum().getColumnRange(srcrowslicer, srcarrslicer);
             } else {
                 // There's only 1 sigma per pol & row, so spread over channels
-                insigma = casa::Cube<casa::Float>(indata.shape());
-                casa::IPosition arrayShape(3, nPol,1,nRowsThisIteration);
-                casa::Array<casa::Float> sigmaArray =
+                insigma = casacore::Cube<casacore::Float>(indata.shape());
+                casacore::IPosition arrayShape(3, nPol,1,nRowsThisIteration);
+                casacore::Array<casacore::Float> sigmaArray =
                     sc.sigma().getColumnRange(srcrowslicer).reform(arrayShape);
                 for (uInt i = 0; i < nChanIn; ++i) {
                     const Slicer blockSlicer(IPosition(3, 0,i,0),
@@ -674,19 +674,19 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
             }
 
             // Create the output data/flag/sigma
-            casa::Cube<casa::Complex> outdata(nPol, nChanOut, nRowsThisIteration);
-            casa::Cube<casa::Bool> outflag(nPol, nChanOut, nRowsThisIteration);
+            casacore::Cube<casacore::Complex> outdata(nPol, nChanOut, nRowsThisIteration);
+            casacore::Cube<casacore::Bool> outflag(nPol, nChanOut, nRowsThisIteration);
             // This is only needed if generating sigmaSpectra, but that should be the
             // case with width>1, and this avoids testing in the tight loops below
-            casa::Cube<casa::Float> outsigma(nPol, nChanOut, nRowsThisIteration);
+            casacore::Cube<casacore::Float> outsigma(nPol, nChanOut, nRowsThisIteration);
 
             // Average data and combine flag information
             for (uInt pol = 0; pol < nPol; ++pol) {
                 for (uInt destChan = 0; destChan < nChanOut; ++destChan) {
                     for (uInt r = 0; r < nRowsThisIteration; ++r) {
-                        casa::Complex sum(0.0, 0.0);
-                        casa::Float varsum = 0.0;
-                        casa::uInt sumcount = 0;
+                        casacore::Complex sum(0.0, 0.0);
+                        casacore::Float varsum = 0.0;
+                        casacore::uInt sumcount = 0;
 
                         // Starting at the appropriate offset into the source data, average "width"
                         // channels together
@@ -701,7 +701,7 @@ void MSSplitter::splitMainTable(const casa::MeasurementSet& source,
                         // Now the input channels have been averaged, write the data to
                         // the output cubes
                         if (sumcount > 0) {
-                            outdata(pol, destChan, r) = casa::Complex(sum.real() / sumcount,
+                            outdata(pol, destChan, r) = casacore::Complex(sum.real() / sumcount,
                                                                       sum.imag() / sumcount);
                             outflag(pol, destChan, r) = false;
                             outsigma(pol, destChan, r) = sqrt(varsum) / sumcount;
@@ -750,10 +750,10 @@ int MSSplitter::split(const std::string& invis, const std::string& outvis,
     }
 
     // Open the input measurement set
-    const casa::MeasurementSet in(invis);
+    const casacore::MeasurementSet in(invis);
 
     // Verify split parameters that require input MS info
-    const casa::uInt totChanIn = ROScalarColumn<casa::Int>(in.spectralWindow(),"NUM_CHAN")(0);
+    const casacore::uInt totChanIn = ROScalarColumn<casacore::Int>(in.spectralWindow(),"NUM_CHAN")(0);
     if ((startChan<1) || (endChan > totChanIn)) {
         ASKAPLOG_ERROR_STR(logger,
             "Input channel range is inconsistent with input spectra: ["<<
@@ -762,22 +762,22 @@ int MSSplitter::split(const std::string& invis, const std::string& outvis,
     }
 
     // Create the output measurement set
-    if (casa::File(outvis).exists()) {
+    if (casacore::File(outvis).exists()) {
         ASKAPLOG_ERROR_STR(logger, "File or table " << outvis << " already exists!");
         return 1;
     }
 
     // Add a sigma spectrum to the output measurement set?
-    casa::Bool addSigmaSpec = false;
+    casacore::Bool addSigmaSpec = false;
     if ((width > 1) || in.isColumn(MS::SIGMA_SPECTRUM)) {
         addSigmaSpec = true;
     }
 
-    const casa::uInt bucketSize = parset.getUint32("stman.bucketsize", 64 * 1024);
-    const casa::uInt tileNcorr = parset.getUint32("stman.tilencorr", 4);
-    const casa::uInt tileNchan = parset.getUint32("stman.tilenchan", 1);
+    const casacore::uInt bucketSize = parset.getUint32("stman.bucketsize", 64 * 1024);
+    const casacore::uInt tileNcorr = parset.getUint32("stman.tilencorr", 4);
+    const casacore::uInt tileNchan = parset.getUint32("stman.tilenchan", 1);
 
-    boost::shared_ptr<casa::MeasurementSet>
+    boost::shared_ptr<casacore::MeasurementSet>
         out(create(outvis, addSigmaSpec, bucketSize, tileNcorr, tileNchan));
 
     // Copy ANTENNA
@@ -809,7 +809,7 @@ int MSSplitter::split(const std::string& invis, const std::string& outvis,
     copyPolarization(in, *out);
 
     // Get the spectral window id (must be common for all main table rows)
-    const casa::Int spwId = findSpectralWindowId(in);
+    const casacore::Int spwId = findSpectralWindowId(in);
 
     // Split SPECTRAL_WINDOW
     ASKAPLOG_DEBUG_STR(logger,  "Splitting SPECTRAL_WINDOW table");
@@ -827,12 +827,12 @@ void MSSplitter::configureTimeFilter(const std::string& key, const std::string& 
 {
 
     const string ts = itsParset.getString(key);
-    casa::Quantity tq;
-    if(!casa::MVTime::read(tq, ts)) {
+    casacore::Quantity tq;
+    if(!casacore::MVTime::read(tq, ts)) {
         ASKAPTHROW(AskapError, "Unable to convert " << ts << " to MVTime");
     }
 
-    const casa::MVTime t(tq);
+    const casacore::MVTime t(tq);
     var = t.second();
     ASKAPLOG_DEBUG_STR(logger, msg << ts << " (" << var << " sec)");
 
@@ -844,10 +844,10 @@ std::vector<uint32_t> MSSplitter::configureFieldNameFilter(
 {
     std::vector<uint32_t> fieldIds;
     if (!names.empty()) {
-        const casa::MeasurementSet in(invis);
+        const casacore::MeasurementSet in(invis);
         const ROMSColumns srcMsc(in);
         const ROMSFieldColumns& sc = srcMsc.field();
-        const casa::Vector<casa::String> fieldNames = sc.name().getColumn();
+        const casacore::Vector<casacore::String> fieldNames = sc.name().getColumn();
         // Step through each field and find IDs for the filter.
         // Could set fieldIds in the following loop, but this seems easier.
         for (uInt i = 0; i < sc.nrow(); ++i) {
@@ -859,7 +859,7 @@ std::vector<uint32_t> MSSplitter::configureFieldNameFilter(
         // print a warning for any missing fields
         for (uInt i = 0; i < names.size(); ++i) {
             if (find(fieldNames.begin(), fieldNames.end(),
-                       (casa::String)names[i]) == fieldNames.end()) {
+                       (casacore::String)names[i]) == fieldNames.end()) {
                 ASKAPLOG_WARN_STR(logger, "  cannot find field name " <<
                     names[i] << " in ms "<< invis);
             }

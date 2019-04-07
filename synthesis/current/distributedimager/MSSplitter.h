@@ -64,23 +64,23 @@ class MSSplitter {
 
     private:
 
-        static boost::shared_ptr<casa::MeasurementSet> create(
-            const std::string& filename, const casa::Bool addSigmaSpec,
-            casa::uInt bucketSize, casa::uInt tileNcorr, casa::uInt tileNchan);
+        static boost::shared_ptr<casacore::MeasurementSet> create(
+            const std::string& filename, const casacore::Bool addSigmaSpec,
+            casacore::uInt bucketSize, casacore::uInt tileNcorr, casacore::uInt tileNchan);
 
-        static void copyAntenna(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyAntenna(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyDataDescription(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyDataDescription(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyFeed(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyFeed(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyField(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyField(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyObservation(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyObservation(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyPointing(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
-        static void copyPolarization(const casa::MeasurementSet& source, casa::MeasurementSet& dest);
+        static void copyPolarization(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
         /// @brief add non-standard column to POINTING table
         /// @details We use 3 non-standard columns to capture
@@ -91,26 +91,26 @@ class MSSplitter {
         /// @param[in] srcPointing source MS POINTING table
         /// @param[in] destPointing destination MS POINTING table
         static void addNonStandardPointingColumn(const std::string &name,
-                                                 const casa::MSPointing &srcPointing,
-                                                 casa::MSPointing &destPointing);
+                                                 const casacore::MSPointing &srcPointing,
+                                                 casacore::MSPointing &destPointing);
 
         /// @throws AskapError  if all rows in the main table don't refer to the
         ///                     same spectral window
         /// @return the spectral window id refered to by all rows in the main table,
         ///         or -1 if the main table how no rows;
-        static casa::Int findSpectralWindowId(const casa::MeasurementSet& ms);
+        static casacore::Int findSpectralWindowId(const casacore::MeasurementSet& ms);
 
         /// Writes a new row to the spectral window table of the destination measurement
         /// set which the correct information describing the output spectral window.
-        static void splitSpectralWindow(const casa::MeasurementSet& source,
-                                 casa::MeasurementSet& dest,
+        static void splitSpectralWindow(const casacore::MeasurementSet& source,
+                                 casacore::MeasurementSet& dest,
                                  const uint32_t startChan,
                                  const uint32_t endChan,
                                  const uint32_t width,
-                                 const casa::Int spwId);
+                                 const casacore::Int spwId);
 
-        void splitMainTable(const casa::MeasurementSet& source,
-                            casa::MeasurementSet& dest,
+        void splitMainTable(const casacore::MeasurementSet& source,
+                            casacore::MeasurementSet& dest,
                             const uint32_t startChan,
                             const uint32_t endChan,
                             const uint32_t width);

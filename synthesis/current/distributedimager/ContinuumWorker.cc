@@ -167,37 +167,33 @@ void ContinuumWorker::run(void)
       break;
     } else if (wu.get_payloadType() == ContinuumWorkUnit::NA) {
       ASKAPLOG_WARN_STR(logger, "Worker has received non applicable allocation");
-      sleep(1);
-      wrequest.sendRequest(itsMaster, itsComms);
-      continue;
+      ASKAPLOG_WARN_STR(logger, "In new scheme we still process it ...");
+     
     } else {
 
       ASKAPLOG_INFO_STR(logger, "Worker has received valid allocation");
-      const string ms = wu.get_dataset();
-      ASKAPLOG_INFO_STR(logger, "Received Work Unit for dataset " << ms
+    }
+    const string ms = wu.get_dataset();
+    ASKAPLOG_INFO_STR(logger, "Received Work Unit for dataset " << ms
       << ", local (topo) channel " << wu.get_localChannel()
       << ", global (topo) channel " << wu.get_globalChannel()
       << ", frequency " << wu.get_channelFrequency() / 1.e6 << " MHz"
       << ", width " << wu.get_channelWidth() / 1e3 << " kHz");
-      try {
+    try {
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (before): " << (itsParset.getStringVector("dataset", true)));
         processWorkUnit(wu);
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (after): " << (itsParset.getStringVector("dataset", true)));
-      } catch (AskapError& e) {
+    } catch (AskapError& e) {
         ASKAPLOG_WARN_STR(logger, "Failure processing workUnit");
         ASKAPLOG_WARN_STR(logger, "Exception detail: " << e.what());
-      }
-
-      if (wu.get_payloadType() == ContinuumWorkUnit::LAST) {
-        ASKAPLOG_INFO_STR(logger, "Worker has received last job");
-        break;
-      } else {
-        ASKAPLOG_INFO_STR(logger, "Worker is sending request for work");
-        wrequest.sendRequest(itsMaster, itsComms);
-      }
     }
 
-  } // while (1)
+    
+    wrequest.sendRequest(itsMaster, itsComms);
+
+  } // while (1) // break when "DONE"
+  ASKAPCHECK(workUnits.size() > 0, "No work at to do - something has broken in the setup");
+
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " received data from master - waiting at barrier");
   itsComms.barrier(itsComms.theWorkers());
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed barrier");
@@ -592,7 +588,7 @@ void ContinuumWorker::processChannels()
   ASKAPLOG_DEBUG_STR(logger,
       "UVWMachine cache will store " << uvwMachineCacheSize << " machines");
       ASKAPLOG_DEBUG_STR(logger, "Tolerance on the directions is "
-      << uvwMachineCacheTolerance / casa::C::pi * 180. * 3600. << " arcsec");
+      << uvwMachineCacheTolerance / casacore::C::pi * 180. * 3600. << " arcsec");
 
 
   // the workUnits may include different epochs (for the same channel)
@@ -609,11 +605,28 @@ void ContinuumWorker::processChannels()
 
     try {
 
+      // spin for good workunit
+      while (workUnitCount <= workUnits.size()) {
+        if (workUnits[workUnitCount].get_payloadType() == ContinuumWorkUnit::DONE){
+          workUnitCount++;
+        }
+        else if (workUnits[workUnitCount].get_payloadType() == ContinuumWorkUnit::NA) {
+          if (itsComms.isWriter()) {
+            itsComms.removeChannelFromWriter(itsComms.rank());
+            ASKAPLOG_WARN_STR(logger,"Removing whole channel from write as work allocation is bad. This may not work for multiple epochs");
+          }
+          workUnitCount++;
+        }
+        else {
+          ASKAPLOG_INFO_STR(logger, "Good workUnit at number " << workUnitCount);
+          break;
+        }
+      }
       if (workUnitCount >= workUnits.size()) {
         ASKAPLOG_INFO_STR(logger, "Out of work with workUnit " << workUnitCount);
         break;
       }
-
+      
       ASKAPLOG_INFO_STR(logger, "Starting to process workunit " << workUnitCount+1 << " of " << workUnits.size());
 
       int initialChannelWorkUnit = workUnitCount;
@@ -743,12 +756,8 @@ void ContinuumWorker::processChannels()
 
         int tempWorkUnitCount = initialChannelWorkUnit;
         // clearer if it were called nextWorkUnit - but this is essentially the workunit we are starting this loop on.
-        // in the updateDir mode we reprocess the first workunit - for a smaller FOV.
-        // in the <normal mode> we have already processed the first work unit and it is
-        // in the rootImager.
-        if (updateDir) {
-          tempWorkUnitCount = initialChannelWorkUnit - 1;
-        }
+        
+        
 
         // now we are going to actually image this work unit
         // This loops over work units that are the same baseFrequency
@@ -1075,6 +1084,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Written channel " << cubeChannel);
 
         itsComms.removeChannelFromWriter(itsComms.rank());
+        
         itsComms.removeChannelFromWorker(itsComms.rank());
 
         /// write everyone elses
@@ -1097,8 +1107,10 @@ void ContinuumWorker::processChannels()
 
 
           ContinuumWorkRequest result;
+
           int id;
           /// this is a blocking receive
+          ASKAPLOG_INFO_STR(logger, "Waiting for a write request");
           result.receiveRequest(id, itsComms);
           ASKAPLOG_INFO_STR(logger, "Received a request to write from rank " << id);
           int cubeChannel = result.get_globalChannel() - this->baseCubeGlobalChannel;
@@ -1265,9 +1277,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   } else // Write image
   {
     ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    const casa::Array<double> imagePixels(params->value("model.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("model.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsImageCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1280,9 +1292,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     // Write PSF
 
     ASKAPLOG_INFO_STR(logger, "Writing PSF");
-    const casa::Array<double> imagePixels(params->value("psf.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("psf.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsPSFCube->writeSlice(floatImagePixels, chan);
 
   }
@@ -1293,9 +1305,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   {
     // Write residual
     ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    const casa::Array<double> imagePixels(params->value("residual.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("residual.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsResidualCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1306,9 +1318,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else
   {
     ASKAPLOG_INFO_STR(logger, "Writing Weights");
-    const casa::Array<double> imagePixels(params->value("weights.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("weights.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsWeightsCube->writeSlice(floatImagePixels, chan);
   }
 
@@ -1331,9 +1343,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       // Write preconditioned PSF image
       {
         ASKAPLOG_INFO_STR(logger, "Writing preconditioned PSF");
-        const casa::Array<double> imagePixels(params->value("psf.image.slice"));
-        casa::Array<float> floatImagePixels(imagePixels.shape());
-        casa::convertArray<float, double>(floatImagePixels, imagePixels);
+        const casacore::Array<double> imagePixels(params->value("psf.image.slice"));
+        casacore::Array<float> floatImagePixels(imagePixels.shape());
+        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
         itsPSFimageCube->writeSlice(floatImagePixels, chan);
       }
     }
@@ -1341,9 +1353,9 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     // Write Restored image
 
     ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
-    const casa::Array<double> imagePixels(params->value("image.slice"));
-    casa::Array<float> floatImagePixels(imagePixels.shape());
-    casa::convertArray<float, double>(floatImagePixels, imagePixels);
+    const casacore::Array<double> imagePixels(params->value("image.slice"));
+    casacore::Array<float> floatImagePixels(imagePixels.shape());
+    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsRestoredCube->writeSlice(floatImagePixels, chan);
 
   }
@@ -1376,10 +1388,10 @@ void ContinuumWorker::recordBeam(const askap::scimath::Axes &axes, const unsigne
                        axes.end("MAJMIN") * 180. / M_PI * 3600. << ", " <<
                        axes.start("PA") * 180. / M_PI);
 
-    casa::Vector<casa::Quantum<double> > beamVec(3, 0.);
-    beamVec[0] = casa::Quantum<double>(axes.start("MAJMIN"), "rad");
-    beamVec[1] = casa::Quantum<double>(axes.end("MAJMIN"), "rad");
-    beamVec[2] = casa::Quantum<double>(axes.start("PA"), "rad");
+    casacore::Vector<casacore::Quantum<double> > beamVec(3, 0.);
+    beamVec[0] = casacore::Quantum<double>(axes.start("MAJMIN"), "rad");
+    beamVec[1] = casacore::Quantum<double>(axes.end("MAJMIN"), "rad");
+    beamVec[2] = casacore::Quantum<double>(axes.start("PA"), "rad");
 
     itsBeamList[cubeChannel] = beamVec;
 
@@ -1408,7 +1420,7 @@ void ContinuumWorker::logBeamInfo()
       std::list<int> creators = itsComms.getCubeCreators();
       ASKAPASSERT(creators.size() == 1);
       int creatorRank = creators.front();
-      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information");
+      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information beam creator is rank " << creatorRank);
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {
@@ -1469,7 +1481,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     for (size_t i = 0; i < stokesVec.size(); ++i) {
       stokesStr += stokesVec[i];
     }
-    const casa::Vector<casa::Stokes::StokesTypes>
+    const casacore::Vector<casacore::Stokes::StokesTypes>
     stokes = scimath::PolConverter::fromString(stokesStr);
 
     const bool ewProj = parset.getBool("ewprojection", false);
@@ -1489,7 +1501,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
         //                            freq[0], freq[1], nchan, stokes);
     } else {
         // this is a multi-facet case
-        const int facetstep = parset.getInt32("facetstep", casa::min(shape[0], shape[1]));
+        const int facetstep = parset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
         ASKAPCHECK(facetstep > 0,"facetstep parameter is supposed to be positive, you have " << facetstep);
         ASKAPLOG_DEBUG_STR(logger, "Facet centers will be " << facetstep << " pixels apart, each facet size will be " << shape[0] << " x " << shape[1]);
         // SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,

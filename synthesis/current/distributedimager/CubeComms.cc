@@ -52,10 +52,8 @@
 
 ASKAP_LOGGER(logger, ".CubeComms");
 
-using namespace askap;
-using namespace askap::cp;
-
-
+namespace askap {
+namespace cp {
 
 CubeComms::CubeComms(int argc, const char** argv) : AskapParallel(argc, const_cast<const char **>(argv))
 {
@@ -350,3 +348,6 @@ std::list<int> CubeComms::getClients()
     }
     return clients_with_work;
 }
+
+} // end namespace cp
+} // end namespace askap

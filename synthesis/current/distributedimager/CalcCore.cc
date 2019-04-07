@@ -106,7 +106,7 @@ CalcCore::~CalcCore()
 void CalcCore::doCalc()
 {
 
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
 
     ASKAPLOG_DEBUG_STR(logger, "Calculating NE .... for channel " << itsChannel);
@@ -123,8 +123,8 @@ void CalcCore::doCalc()
         sel->chooseChannels(1, itsChannel);
 
         IDataConverterPtr conv = ds.createConverter();
-        conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO), "Hz");
-        conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+        conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
+        conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         conv->setEpochFrame();
 
         IDataSharedIter it = ds.createIterator(sel, conv);
@@ -232,10 +232,10 @@ void CalcCore::check()
     const ImagingNormalEquations &checkRef =
     dynamic_cast<const ImagingNormalEquations&>(*itsNe);
 
-    casa::Vector<double> diag(checkRef.normalMatrixDiagonal(names[0]));
-    casa::Vector<double> dv = checkRef.dataVector(names[0]);
-    casa::Vector<double> slice(checkRef.normalMatrixSlice(names[0]));
-    casa::Vector<double> pcf(checkRef.preconditionerSlice(names[0]));
+    casacore::Vector<double> diag(checkRef.normalMatrixDiagonal(names[0]));
+    casacore::Vector<double> dv = checkRef.dataVector(names[0]);
+    casacore::Vector<double> slice(checkRef.normalMatrixSlice(names[0]));
+    casacore::Vector<double> pcf(checkRef.preconditionerSlice(names[0]));
 
     ASKAPLOG_DEBUG_STR(logger, "Max data: " << max(dv) << " Max PSF: " << max(slice) << " Normalised: " << max(dv)/max(slice));
 
@@ -244,7 +244,7 @@ void CalcCore::solveNE()
 {
 
 
-    casa::Timer timer;
+    casacore::Timer timer;
     timer.mark();
 
     itsSolver->init();
@@ -283,9 +283,9 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
 
     ASKAPLOG_DEBUG_STR(logger, "Writing out results as images");
     ASKAPDEBUGASSERT(itsModel);
-    vector<string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->names();
     bool hasWeights = false;
-    for (vector<string>::const_iterator it=resultimages.begin(); it
+    for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
         !=resultimages.end(); it++) {
         if (it->find("weights") == 0) {
             hasWeights = true;
@@ -315,7 +315,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ir->solveNormalEquations(*itsModel,q);
         // merged image should be a fixed parameter without facet suffixes
         resultimages=itsModel->fixedNames();
-        for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+        for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
             const ImageParamsHelper iph(*ci);
             if (!iph.isFacet() && (ci->find("image") == 0)) {
                 ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
@@ -325,8 +325,8 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         }
     }
     ASKAPLOG_DEBUG_STR(logger, "Writing out additional parameters made by restore solver as images");
-    vector<string> resultimages2=itsModel->names();
-    for (vector<string>::const_iterator it=resultimages2.begin(); it
+    std::vector<std::string> resultimages2=itsModel->names();
+    for (std::vector<std::string>::const_iterator it=resultimages2.begin(); it
         !=resultimages2.end(); it++) {
         ASKAPLOG_DEBUG_STR(logger, "Checking "<<*it);
         if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
@@ -366,9 +366,9 @@ void CalcCore::restoreImage()
 
     Quality q;
     ir->solveNormalEquations(*itsModel, q);
-    vector<string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->names();
 
-    for (vector<string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
+    for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
 
         ASKAPLOG_INFO_STR(logger, "Restored image " << *ci);
 
