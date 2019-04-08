@@ -125,7 +125,6 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
     AdviseParallel(comms,parset),itsParset(parset)
 {
     isPrepared = false;
-    barycentre = false;
     itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
     itsWorkUnitCount=0;
 }
@@ -291,7 +290,14 @@ void AdviseDI::prepare() {
     itsAllocatedWork.resize(nWorkers);
     
     // setup frequency frame
-    const std::string freqFrame = itsParset.getString("freqframe","topo");
+    const Bool bc = itsParset.getBool("baycentre",false);
+
+    std::string freqFrame = itsParset.getString("freqframe","topo");
+    
+    if (bc == true) { // legacy
+        freqFrame = "bary";
+    }
+    
     if (freqFrame == "topo") {
         ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as topocentric");
         itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
@@ -681,15 +687,11 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
         ASKAPLOG_INFO_STR(logger,"Prepared therefore can add frequency label for the output image");
         std::vector<casacore::MFrequency>::iterator begin_it;
         std::vector<casacore::MFrequency>::iterator end_it;
-        if (barycentre) {
-            begin_it = itsFFrameFrequencies.begin();
-            end_it = itsFFrameFrequencies.end()-1;
-        }
-        else {
-            begin_it = itsInputFrequencies.begin();
-            end_it = itsInputFrequencies.end()-1;
+       
+        begin_it = itsRequestedFrequencies.begin();
+        end_it = itsRequestedFrequencies.end()-1;
 
-        }
+        
         this->minFrequency = (*begin_it).getValue();
         this->maxFrequency = (*end_it).getValue();
         ASKAPLOG_INFO_STR(logger,"Min:Max frequency -- " << this->minFrequency << ":" << this->maxFrequency);
