@@ -42,7 +42,7 @@ namespace askap
 
     static void dump_array(const casa::Vector<casa::DComplex> &buff, ssize_t length, const std::string &name)
     {
-      casa::IPosition mat_shape(length, 1);
+      casa::IPosition mat_shape(2, length, 1);
       casa::Matrix<float> mat_real(mat_shape);
       casa::Matrix<float> mat_imag(mat_shape);
       for (int ix=0; ix<length; ix++)
