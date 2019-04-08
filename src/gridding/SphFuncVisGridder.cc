@@ -39,6 +39,21 @@ namespace askap
 {
   namespace synthesis
   {
+
+    static void dump_array(const casa::Vector<casa::DComplex> &buff, ssize_t length, const std::string &name)
+    {
+      casa::IPosition mat_shape(length, 1);
+      casa::Matrix<float> mat_real(mat_shape);
+      casa::Matrix<float> mat_imag(mat_shape);
+      for (int ix=0; ix<length; ix++)
+      {
+        mat_real(ix, 0) = real(buff(ix));
+        mat_imag(ix, 0) = imag(buff(ix));
+      }
+      scimath::saveAsCasaImage(name + ".real", mat_real);
+      scimath::saveAsCasaImage(name + ".imag", mat_imag);
+    };
+
     /// @brief Standard two dimensional gridding
     /// @param[in] alpha alpha value for prolate spheroidal function
     /// @param[in] support support size in pixels (spheroidal function with m=2*support will be generated)
@@ -209,6 +224,12 @@ namespace askap
         // is not the numerical limit. Estimate it from its neighbours.
         interpolateEdgeValues(bufx);
         interpolateEdgeValues(bufy);
+      }
+
+      // output bufx/bufy as Nx1 2D images
+      {
+          dump_array(bufx, itsShape(0), boost::lexical_cast<std::string>(i) + ".bufx");
+          dump_array(bufy, itsShape(1), boost::lexical_cast<std::string>(i) + ".bufy");
       }
 
       // Fourier filter the spheroidal (crop in Fourier space in line with
