@@ -158,6 +158,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
   if (parset.getString("solver", "") == "LSQR"
       && parset.getString("solver.LSQR.parallelMatrix", "") == "true") {
       ASKAPCHECK(itsComms.isParallel(), "Parallel matrix scheme is supported only in the parallel mode!");
+      ASKAPCHECK(itsSolveBandpass, "Parallel matrix scheme is supported only for bandpass solutions!");
       itsMatrixIsParallel = true;
   }
 
@@ -172,8 +173,11 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsSolver->setAlgorithm(solverType);
 
       if (solverType == "LSQR") {
-          std::map<std::string, std::string> params = CalibratorParallel::getLSQRSolverParameters(parset);
-          itsSolver->setParameters(params);
+          std::map<std::string, std::string> solverParams = CalibratorParallel::getLSQRSolverParameters(parset);
+          if (itsSolveBandpass) {
+              solverParams["nChan"] = parset.getString("nChan");
+          }
+          itsSolver->setParameters(solverParams);
       }
   }
 
@@ -390,6 +394,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
     if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
     if (parset.isDefined("solver.LSQR.parallelMatrix")) params["parallelMatrix"] = parset.getString("solver.LSQR.parallelMatrix");
+    if (parset.isDefined("solver.LSQR.smoothingWeight")) params["smoothingWeight"] = parset.getString("solver.LSQR.smoothingWeight");
     return params;
 }
 
