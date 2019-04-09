@@ -269,22 +269,6 @@ namespace askap
         ccfy(iy) = casa::abs(val) > 1e-10 ? 1.0/val : 0.;
       }
 
-      // output convolution correction factors
-      {
-          casa::Matrix<double> mat(itsShape);
-          for (int ix=0; ix<itsShape(0); ix++)
-          {
-            for (int iy=0; iy<itsShape(1); iy++)
-            {
-              mat(ix, iy) = ccfx(ix) * ccfy(iy);
-            }
-          }
-          casa::Array<float> buf(itsShape);
-          casa::convertArray<float, double>(buf, mat);
-          std::string name = boost::lexical_cast<std::string>(i) + ".convolution_corr_factors";
-          scimath::saveAsCasaImage(name, buf);
-      }
-
       casa::ArrayIterator<double> it(grid, 2);
       while (!it.pastEnd())
       {
