@@ -101,8 +101,6 @@ namespace askap
 
         bool reuseModel = parset.getBool("Images.reuse", false);
 
-        itsUseMemoryBuffers = parset.getBool("memorybuffers", false);
-
         itsExportSensitivityImage = parset.getBool("sensitivityimage", true);
 
         itsExpSensitivityCutoff = parset.getDouble("sensitivityimage.cutoff", 0.01);
@@ -460,15 +458,8 @@ namespace askap
       {
         ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
 
-        // just to print the current mode to the log
-        if (itsUseMemoryBuffers) {
-            ASKAPLOG_INFO_STR(logger, "Scratch data will be held in memory" );
-        } else {
-            ASKAPLOG_INFO_STR(logger, "Scratch data will be written to the subtable of the original dataset" );
-        }
-
-        TableDataSource ds(ms, (itsUseMemoryBuffers ? TableDataSource::MEMORY_BUFFERS : TableDataSource::DEFAULT),
-                           dataColumn());
+        // MEMORY_BUFFERS mode opens the MS readonly
+        TableDataSource ds(ms, TableDataSource::MEMORY_BUFFERS, dataColumn());
         ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
         IDataSelectorPtr sel=ds.createSelector();
         sel->chooseCrossCorrelations();

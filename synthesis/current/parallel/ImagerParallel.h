@@ -52,7 +52,6 @@ namespace askap
     /// The control parameters are specified in a parset file. For example:
     /// @code
     ///  	Cimager.datacolumnset           = DATACOL     # default is DATA
-    ///     Cimager.memorybuffers           = true      # default is false, i.e. write scratch data to the MS
     ///  	Cimager.dataset                 = [data/spw_1/sim.ms]
     ///  	#Feed                           = 5
     ///
@@ -213,10 +212,6 @@ namespace askap
       /// Do we want a residual image
       bool itsResidual;
       
-      /// @brief Do we want to keep scratch buffers in memory instead of writing them in a subtable?
-      /// @details Turining this flag to true allows to work with a read-only dataset
-      bool itsUseMemoryBuffers;
-
       /// @brief solution source to get calibration data from
       /// @details This object is initialised by workers. It knows how to
       /// retrieve calibration solutions (from a parset file, casa table or a database).
