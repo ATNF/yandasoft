@@ -290,7 +290,7 @@ void AdviseDI::prepare() {
     itsAllocatedWork.resize(nWorkers);
     
     // setup frequency frame
-    const Bool bc = itsParset.getBool("baycentre",false);
+    const Bool bc = itsParset.getBool("barycentre",false);
 
     std::string freqFrame = itsParset.getString("freqframe","topo");
     
@@ -494,8 +494,14 @@ void AdviseDI::prepare() {
                 lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
                 if (lc.size() > 0) {
+                    size_t limit = lc.size();
+                    if (lc.size() > 1) {
+                        ASKAPLOG_WARN_STR(logger,"More that one channel has been found in this range. This is currently unsupported and will be ignored");
+                        limit = 1;
+                    }
+
                     // there is at least one channel of this frequency in the measurement set
-                    for (size_t lc_part=0; lc_part < lc.size(); lc_part++) {
+                    for (size_t lc_part=0; lc_part < limit; lc_part++) {
                         cp::ContinuumWorkUnit wu;
 
                         wu.set_payloadType(cp::ContinuumWorkUnit::WORK);
