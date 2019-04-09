@@ -126,7 +126,6 @@ namespace askap {
 
             bool isPrepared;
 
-            bool barycentre;
             /// obtain frequency reference frame
             inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
 
