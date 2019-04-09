@@ -42,16 +42,14 @@ namespace askap
 
     static void dump_array(const casa::Vector<casa::DComplex> &buff, ssize_t length, const std::string &name)
     {
-      casa::IPosition mat_shape(2, length, 1);
-      casa::Matrix<float> mat_real(mat_shape);
-      casa::Matrix<float> mat_imag(mat_shape);
+      casa::IPosition mat_shape(2, length, 2);
+      casa::Matrix<float> mat(mat_shape);
       for (int ix=0; ix<length; ix++)
       {
-        mat_real(ix, 0) = real(buff(ix));
-        mat_imag(ix, 0) = imag(buff(ix));
+        mat(ix, 0) = real(buff(ix));
+        mat(ix, 1) = imag(buff(ix));
       }
-      scimath::saveAsCasaImage(name + ".real", mat_real);
-      scimath::saveAsCasaImage(name + ".imag", mat_imag);
+      scimath::saveAsCasaImage(name, mat);
     };
 
     /// @brief Standard two dimensional gridding
