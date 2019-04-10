@@ -121,7 +121,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
       itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false),
-      itsMatrixIsParallel(false)
+      itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
 {
   const std::string what2solve = parset.getString("solve","gains");
   if (what2solve.find("gains") != std::string::npos) {
@@ -193,8 +193,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
       if (itsComms.isWorker()) {
           void *workersComm = (void *)&newComm;
-          boost::shared_ptr<LinearSolver> solver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-          solver->SetWorkersCommunicator(workersComm);
+          boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+          linearSolver->SetWorkersCommunicator(workersComm);
       }
 #endif
   }
@@ -382,8 +382,8 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
           const casa::uInt nBeam = parset.getInt32("nBeam",1);
           updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
       }
-
   }
+  itsMajorLoopIterationNumber = 0;
 }
 
 std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(const LOFAR::ParameterSet& parset) {
@@ -635,6 +635,16 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
+  itsMajorLoopIterationNumber++;
+
+  // Passing major loop iteration number to the solver.
+  if (itsSolver) {
+      boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+      if (linearSolver) {
+          linearSolver->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
+      }
+  }
+
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
       // Receive the normal equations
       if (itsComms.isParallel()) {

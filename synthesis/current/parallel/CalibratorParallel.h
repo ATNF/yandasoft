@@ -299,6 +299,9 @@ namespace askap
       /// @brief flag to solve normal equation in parallel (on the matrix level).
       bool itsMatrixIsParallel;
 
+      // Iteration number in the major loop (for LSQR solver with constraints).
+      size_t itsMajorLoopIterationNumber;
+
       /// @brief Sends the model from workers to master.
       /// @param[in] model The model to send.
       void sendModelToMaster(const scimath::Params &model) const;
