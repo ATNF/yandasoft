@@ -612,8 +612,8 @@ void ContinuumWorker::processChannels()
         }
         else if (workUnits[workUnitCount].get_payloadType() == ContinuumWorkUnit::NA) {
           if (itsComms.isWriter()) {
-            itsComms.removeChannelFromWriter(itsComms.rank());
-            ASKAPLOG_WARN_STR(logger,"Removing whole channel from write as work allocation is bad. This may not work for multiple epochs");
+            // itsComms.removeChannelFromWriter(itsComms.rank());
+            ASKAPLOG_WARN_STR(logger,"No longer removing whole channel from write as work allocation is bad. This may not work for multiple epochs");
           }
           workUnitCount++;
         }
