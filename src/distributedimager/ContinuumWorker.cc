@@ -168,7 +168,7 @@ void ContinuumWorker::run(void)
     } else if (wu.get_payloadType() == ContinuumWorkUnit::NA) {
       ASKAPLOG_WARN_STR(logger, "Worker has received non applicable allocation");
       ASKAPLOG_WARN_STR(logger, "In new scheme we still process it ...");
-     
+
     } else {
 
       ASKAPLOG_INFO_STR(logger, "Worker has received valid allocation");
@@ -188,7 +188,7 @@ void ContinuumWorker::run(void)
         ASKAPLOG_WARN_STR(logger, "Exception detail: " << e.what());
     }
 
-    
+
     wrequest.sendRequest(itsMaster, itsComms);
 
   } // while (1) // break when "DONE"
@@ -626,7 +626,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Out of work with workUnit " << workUnitCount);
         break;
       }
-      
+
       ASKAPLOG_INFO_STR(logger, "Starting to process workunit " << workUnitCount+1 << " of " << workUnits.size());
 
       int initialChannelWorkUnit = workUnitCount;
@@ -663,20 +663,8 @@ void ContinuumWorker::processChannels()
       const string ms = workUnits[workUnitCount].get_dataset();
       globalChannel = workUnits[workUnitCount].get_globalChannel();
 
-      // just to print the current mode to the log
-      bool usememorybuffers = itsParsets[workUnitCount].getBool("memorybuffers", true);
-
-      if (usememorybuffers) {
-        ASKAPLOG_INFO_STR(logger, "Scratch data will be held in memory" );
-      } else {
-        ASKAPLOG_INFO_STR(logger, "Scratch data will be written to the subtable of the original dataset" );
-      }
-
-      TableDataSource ds(ms, (usememorybuffers ? TableDataSource::MEMORY_BUFFERS : TableDataSource::DEFAULT),
-      colName);
-
-
-
+      // MEMORY_BUFFERS mode opens the MS readonly
+      TableDataSource ds(ms, TableDataSource::MEMORY_BUFFERS, colName);
 
       /// Need to set up the rootImager here
       if (updateDir == true) {
@@ -756,8 +744,8 @@ void ContinuumWorker::processChannels()
 
         int tempWorkUnitCount = initialChannelWorkUnit;
         // clearer if it were called nextWorkUnit - but this is essentially the workunit we are starting this loop on.
-        
-        
+
+
 
         // now we are going to actually image this work unit
         // This loops over work units that are the same baseFrequency
@@ -1084,7 +1072,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Written channel " << cubeChannel);
 
         itsComms.removeChannelFromWriter(itsComms.rank());
-        
+
         itsComms.removeChannelFromWorker(itsComms.rank());
 
         /// write everyone elses
@@ -1429,11 +1417,11 @@ void ContinuumWorker::logBeamInfo()
                            << beamlog.filename());
         beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
         beamlog.write();
-        
-        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube: reference channel:" << itsBeamReferenceChannel);
+
+        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
         casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
         itsRestoredCube->addBeam(refbeam);
-      
+
     }
   }
 
