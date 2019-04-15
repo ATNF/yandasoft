@@ -946,19 +946,23 @@ void AdviseDI::updateComms() {
     /// Go through the work allocations and set the writers
     for (int worker=0; worker < itsAllocatedWork.size() ; worker++) {
         itsCubeComms.addWorker(worker+1);
-        int last_channel = itsAllocatedWork[worker][0].get_globalChannel();
+        double last_freq = itsAllocatedWork[worker][0].get_channelFrequency();
         for (int alloc=0; alloc < itsAllocatedWork[worker].size() ; alloc++) {
-            int current_channel = itsAllocatedWork[worker][alloc].get_globalChannel();
+            double current_freq = itsAllocatedWork[worker][alloc].get_channelFrequency();
             // need to test whether this is a distinct channel or a different epoch for
-            // the same epoch
-            if (current_channel != last_channel || alloc == 0) {
+            // the same channel
+            if (itsAllocatedWork[worker][alloc].get_payloadType() == cp::ContinuumWorkUnit::NA) {
+                ASKAPLOG_WARN_STR(logger,
+                "NA Payload in updateComms");  
+            }
+            else if (current_freq != last_freq || alloc == 0) {
                 
                 itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
 
                 itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
                 itsCubeComms.addChannelToWorker(worker+1);
                 
-                last_channel = current_channel;
+                last_freq = current_freq;
             }
         }
     }

@@ -1430,7 +1430,7 @@ void ContinuumWorker::logBeamInfo()
         beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
         beamlog.write();
         
-        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
+        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube: reference channel:" << itsBeamReferenceChannel);
         casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
         itsRestoredCube->addBeam(refbeam);
       
