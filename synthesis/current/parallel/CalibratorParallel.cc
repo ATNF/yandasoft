@@ -759,8 +759,8 @@ void CalibratorParallel::rotatePhases()
       // build a vector of reference phase terms, one per channel
       refPhaseTerms.resize(casa::IPosition(2,maxChan+1,refPols));
       for (casa::uInt chan = 0; chan <= maxChan; ++chan) {
-           const std::string xRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainXX, chan);
-           const std::string yRefPar = accessors::CalParamNameHelper::addChannelInfo(itsRefGainYY, chan);
+           const std::string xRefPar = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::addChannelInfo(itsRefGainXX, chan);
+           const std::string yRefPar = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::addChannelInfo(itsRefGainYY, chan);
            ASKAPCHECK(itsModel->has(xRefPar), "phase rotation to `"<<xRefPar<<
               "` is impossible because this parameter is not present in the model, channel = "<<chan);
            ASKAPCHECK(itsModel->has(yRefPar), "phase rotation to `"<<yRefPar<<
