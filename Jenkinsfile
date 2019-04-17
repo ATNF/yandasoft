@@ -8,6 +8,12 @@ pipeline {
         sh 'cd yandasoft-install'
         sh 'echo "Done"'
         sh './build_all.sh -s ubuntu -p ${WORKSPACE}/install?'
+        sh '''if [ -d yandasoft-install ]; then
+
+rm -rf yandasoft-install
+
+fi
+'''
       }
     }
     stage('Test') {
