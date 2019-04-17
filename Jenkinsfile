@@ -3,12 +3,7 @@ pipeline {
   stages {
     stage('Build CASACORE') {
       steps {
-        sh '''#!/bin/bash
-if [ -d casacore ]; then
-echo "cleaning up"
-rm -rf casacore;
-fi
-'''
+        deleteDir()
         sh '''git clone https://github.com/casacore/casacore.git
 git checkout -b working_copy
 git reset --hard COMMIT-d3dad4d
