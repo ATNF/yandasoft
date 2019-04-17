@@ -6,7 +6,7 @@ pipeline {
         sh '''#!/bin/bash
 if [ -d casacore ]; then
 echo "cleaning up"
-rm -rf casacore
+rm -rf casacore;
 fi
 '''
         sh '''git clone https://github.com/casacore/casacore.git
