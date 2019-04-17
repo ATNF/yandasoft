@@ -11,7 +11,7 @@ fi
 '''
         sh '''git clone https://github.com/casacore/casacore.git
 git checkout -b working_copy
-git reset --hard d3dad4d
+git reset --hard COMMIT-d3dad4d
 
 '''
       }
