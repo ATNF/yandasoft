@@ -10,7 +10,7 @@ pipeline {
 '''
         dir(path: 'casacore') {
           sh '''git checkout -b working_copy
-git reset --hard COMMIT-d3dad4d'''
+git reset --hard d3dad4d'''
         }
 
       }
