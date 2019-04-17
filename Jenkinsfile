@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    node {
+      label 'linux-agent'
+    }
+
+  }
   stages {
     stage('Build CASACORE') {
       steps {
