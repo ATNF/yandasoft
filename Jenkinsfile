@@ -3,10 +3,10 @@ pipeline {
   stages {
     stage('Build CASACORE') {
       steps {
-        sh '''if [ -d casacore ]; 
-then;?
-echo "cleaning up";
-rm -rf casacore;
+        sh '''#!/bin/bash
+if [ -d casacore ]; then
+echo "cleaning up"
+rm -rf casacore
 fi
 '''
         sh '''git clone https://github.com/casacore/casacore.git
