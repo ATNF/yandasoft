@@ -8,6 +8,9 @@ pipeline {
 ? rm -rf casacore
 fi
 '''
+        sh '''git clone https://github.com/casacore/casacore.git
+git checkout -b d3dad4d origin/d3dad4d
+'''
       }
     }
     stage('Test') {
