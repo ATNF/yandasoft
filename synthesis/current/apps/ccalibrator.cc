@@ -86,6 +86,7 @@ class CcalibratorApp : public askap::Application
                         calib.solveNE();
                         stats.logSummary();
                     }
+                    calib.doPhaseReferencing();
 
                     ASKAPLOG_INFO_STR(logger,  "*** Finished calibration cycles ***");
                     calib.writeModel();

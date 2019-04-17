@@ -710,21 +710,23 @@ void CalibratorParallel::solveNE()
           }
       }
   }
+}
 
-  if (itsComms.isMaster()) {
-      if (itsRefGainXX != "") {
-          if (itsRefGainXX == itsRefGainYY) {
-              ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
-                  itsRefGainXX<<" equal to 0");
-          } else {
-              ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<
-                  itsRefGainXX<<" equal to 0 and YY phases to have that of "<<
-                  itsRefGainYY<<" equal to 0");
-          }
-          rotatePhases();
-      }
-  }
-
+void CalibratorParallel::doPhaseReferencing()
+{
+    if (itsComms.isMaster()) {
+        if (itsRefGainXX != "") {
+            if (itsRefGainXX == itsRefGainYY) {
+                ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
+                    itsRefGainXX<<" equal to 0");
+            } else {
+                ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<
+                    itsRefGainXX<<" equal to 0 and YY phases to have that of "<<
+                    itsRefGainYY<<" equal to 0");
+            }
+            rotatePhases();
+        }
+    }
 }
 
 /// @brief helper method to rotate all phases

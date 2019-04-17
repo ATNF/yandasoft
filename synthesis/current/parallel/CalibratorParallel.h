@@ -135,6 +135,10 @@ namespace askap
       /// @return Map with LSQR solver parameters.
       static std::map<std::string, std::string> getLSQRSolverParameters(const LOFAR::ParameterSet& parset);
 
+      /// @brief Performs phase rotation.
+      /// @note To be called after all cycles completed in the major loop.
+      void doPhaseReferencing();
+
   protected:
       /// @brief initialise the class to iterate over next portion of data
       /// @details This method signals to the iterator adapter to switch to the
