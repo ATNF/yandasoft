@@ -1,5 +1,10 @@
 pipeline {
-  agent any
+  agent {
+    node {
+      label 'ubuntu-bionic'
+    }
+
+  }
   stages {
     stage('Build CASACORE') {
       steps {
