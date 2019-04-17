@@ -31,4 +31,7 @@ git reset --hard d3dad4d'''
       }
     }
   }
+  environment {
+    WORKSPACE = '/var/lib/jenkins/workspace'
+  }
 }
