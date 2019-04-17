@@ -3,7 +3,7 @@ pipeline {
   stages {
     stage('Build CASACORE') {
       steps {
-        sh '''if [ -d casacore ]; then
+        sh '''if [ -d casacore ]; then?
 ? echo "cleaning up"
 ? rm -rf casacore
 fi
