@@ -5,10 +5,14 @@ pipeline {
       steps {
         deleteDir()
         sh '''git clone https://github.com/casacore/casacore.git
-git checkout -b working_copy
-git reset --hard COMMIT-d3dad4d
+
 
 '''
+        dir(path: 'casacore') {
+          sh '''git checkout -b working_copy
+git reset --hard COMMIT-d3dad4d'''
+        }
+
       }
     }
     stage('Test') {
