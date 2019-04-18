@@ -13,6 +13,11 @@ pipeline {
 sudo apt update;
 sudo apt install -y cmake;
 sudo apt install -y flex bison;
+sudo apt install -y gfortran;
+sudo apt install -y git;
+sudo apt install -y g++;
+sudo apt install libboost-dev;
+
 '''
         sh '''git clone https://github.com/casacore/casacore.git
 
