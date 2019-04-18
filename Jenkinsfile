@@ -15,7 +15,16 @@ pipeline {
 '''
         dir(path: 'casacore') {
           sh '''git checkout -b working_copy
-git reset --hard d3dad4d'''
+git reset --hard d3dad4d
+mkdir build
+'''
+        }
+
+        dir(path: '${WORKSPACE}/casacore/build') {
+          sh '''cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX}
+make all -j2
+make install -j2
+'''
         }
 
       }
@@ -33,5 +42,6 @@ git reset --hard d3dad4d'''
   }
   environment {
     WORKSPACE = '/var/lib/jenkins/workspace'
+    PREFIX = '${WORKSPACE}/install'
   }
 }
