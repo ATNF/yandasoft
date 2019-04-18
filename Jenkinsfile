@@ -6,7 +6,7 @@ pipeline {
 
   }
   stages {
-    stage('Build CASACORE') {
+    stage('Get dependencies') {
       steps {
         deleteDir()
         sh '''#provision
@@ -36,6 +36,11 @@ sudo apt install -y patch;
 sudo apt install -y python-pip; 
 sudo apt install -y subversion;
 sudo apt install -y wcslib-dev; 
+sudo apt-add-repository -s ppa:kernsuite/kern-5;
+sudo apt update;
+sudo apt install -y casacore
+sudo apt install -y casarest
+sudo apt install -y casadata
 
 '''
         sh '''git clone https://github.com/casacore/casacore.git
