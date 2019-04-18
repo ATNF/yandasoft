@@ -10,8 +10,8 @@ pipeline {
       steps {
         deleteDir()
         sh '''#provision
-sh \'sudo apt update\'
-sh \'sudo apt install -y cmake\'
+sudo apt update;
+sudo apt install -y cmake;
 '''
         sh '''git clone https://github.com/casacore/casacore.git
 
