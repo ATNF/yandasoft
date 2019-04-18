@@ -71,6 +71,6 @@ make install -j2
   }
   environment {
     WORKSPACE = '/var/lib/jenkins/workspace'
-    PREFIX = '${WORKSPACE}/install'
+    PREFIX = 'install'
   }
 }
