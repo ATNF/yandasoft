@@ -12,6 +12,7 @@ pipeline {
         sh '''#provision
 sudo apt update;
 sudo apt install -y cmake;
+sudo apt install -y flex bison;
 '''
         sh '''git clone https://github.com/casacore/casacore.git
 
