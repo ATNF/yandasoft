@@ -71,6 +71,6 @@ make install -j2
   }
   environment {
     WORKSPACE = '/var/lib/jenkins/workspace'
-    PREFIX = 'install'
+    PREFIX = '/var/lib/jenkins/workspace/yandasoft_development/install'
   }
 }
