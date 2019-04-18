@@ -40,7 +40,7 @@ sudo apt-add-repository -s ppa:kernsuite/kern-5;
 sudo apt-add-repository multiverse;
 sudo apt-add-repository restricted;
 sudo apt update;
-sudo apt install -y casacore-3.0.0-4kern2;
+sudo apt-get install -y casacore;
 sudo apt install -y casarest;
 sudo apt install -y casadata;
 
