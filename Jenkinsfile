@@ -9,24 +9,6 @@ pipeline {
     stage('Build CASACORE') {
       steps {
         deleteDir()
-        sh '''git clone https://github.com/casacore/casacore.git
-
-
-'''
-        dir(path: 'casacore') {
-          sh '''git checkout -b working_copy
-git reset --hard d3dad4d
-mkdir build
-'''
-        }
-
-        dir(path: '${WORKSPACE}/casacore/build') {
-          sh '''cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX}
-make all -j2
-make install -j2
-'''
-        }
-
         sh '''#provision
 apt update
 apt install -y \\
@@ -56,6 +38,24 @@ apt install -y \\
 		 ? ?subversion ? ? ? ? ? ? ? ? ? ?`# lofar-blob, lofar-common` \\
 		 ? ?wcslib-dev ? ? ? ? ? ? ? ? ? ?`# casacore`
 apt clean'''
+        sh '''git clone https://github.com/casacore/casacore.git
+
+
+'''
+        dir(path: 'casacore') {
+          sh '''git checkout -b working_copy
+git reset --hard d3dad4d
+mkdir build
+'''
+        }
+
+        dir(path: '${WORKSPACE}/casacore/build') {
+          sh '''cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX}
+make all -j2
+make install -j2
+'''
+        }
+
       }
     }
     stage('Test') {
