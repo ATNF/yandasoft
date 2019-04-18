@@ -16,7 +16,26 @@ sudo apt install -y flex bison;
 sudo apt install -y gfortran;
 sudo apt install -y git;
 sudo apt install -y g++;
-sudo apt install libboost-dev;
+sudo apt install -y libboost-dev;
+sudo apt install -y libboost-python-dev;
+sudo apt install -y libboost-filesystem-dev;
+sudo apt install -y libboost-program-options-dev;
+sudo apt install -y libboost-signals-dev;    
+sudo apt install -y libboost-system-dev; 
+sudo apt install -y libboost-thread-dev; 
+sudo apt install -y libcfitsio-dev;   
+sudo apt install -y libffi-dev;    
+sudo apt install -y libfftw3-dev; 
+sudo apt install -y libgsl-dev;  
+sudo apt install -y liblog4cxx-dev;
+sudo apt install -y libopenblas-dev; 
+sudo apt install -y libopenmpi-dev; 
+sudo apt install -y libpython-dev; 
+sudo apt install -y make;         
+sudo apt install -y patch;       
+sudo apt install -y python-pip; 
+sudo apt install -y subversion;
+sudo apt install -y wcslib-dev; 
 
 '''
         sh '''git clone https://github.com/casacore/casacore.git
