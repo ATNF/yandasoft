@@ -24,7 +24,7 @@ mkdir build
 '''
         }
 
-        dir(path: '${WORKSPACE}/casacore/build') {
+        dir(path: 'build') {
           sh '''cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX}
 make all -j2
 make install -j2
