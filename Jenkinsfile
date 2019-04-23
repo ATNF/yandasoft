@@ -1,6 +1,9 @@
 pipeline {
   agent {
-    dockerfile true
+    docker {
+      image 'sord/yanda:latest'
+    }
+
   }
   stages {
     stage('Get Dependencies') {
