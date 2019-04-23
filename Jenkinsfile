@@ -94,7 +94,8 @@ cmake ../ -DCMAKE_INSTALL_PREFIX=${PREFIX}
 make -j2
 make -j2 install
 '''
-        } 
+        }
+
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
           sh '''if [ -d lofar-blob ]; then
 echo "lofar-blob already exists"
@@ -102,6 +103,7 @@ else
 git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git
 fi'''
         }
+
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development/lofar-blob') {
           sh '''if [ -d build ]; then
 echo "Build directory already exists"
@@ -113,7 +115,8 @@ cmake ../ -DCMAKE_INSTALL_PREFIX=${PREFIX}
 make -j2
 make -j2 install
 '''
-        } 
+        }
+
       }
     }
   }
