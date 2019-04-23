@@ -9,12 +9,11 @@ pipeline {
     stage('Get Dependencies') {
       steps {
         deleteDir()
-        dir(path: '/var/lib/jenkins/workspace/yandasoft_development')
-        sh '''pwd
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          echo 'hello world I am in directory'
+          sh 'pwd'
+        }
 
-
-
-'''
       }
     }
     stage('Test') {
