@@ -6,11 +6,21 @@ pipeline {
 
   }
   stages {
-    stage('Get Dependencies') {
+    stage('Build casacore') {
       steps {
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
-          echo 'hello world I am in directory'
-          sh 'pwd'
+          sh 'git clone https://github.com/casacore/casacore.git'
+          sh 'git checkout -b working_copy'
+          sh 'git reset --hard d3dad4d'
+          sh 'mkdir build'
+        }
+
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development/casacore/build') {
+          sh '''cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX}
+make all -j2
+make all -j2 install
+
+'''
         }
 
       }
