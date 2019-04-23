@@ -1,8 +1,9 @@
 pipeline {
   agent {
-	Dockerfile True
+	dockerfile true
 
   }
+
   stages {
     stage('Get Dependencies') {
       steps {
