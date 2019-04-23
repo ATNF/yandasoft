@@ -51,6 +51,7 @@ cd casarest
 git checkout working_copy
 else
 git clone https://github.com/casacore/casarest.git
+cd casarest
 git checkout -b working_copy
 fi'''
         }
