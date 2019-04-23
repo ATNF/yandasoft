@@ -9,6 +9,12 @@ pipeline {
     stage('Build casacore') {
       steps {
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          sh '''if [ -d casacore ]; then
+
+rm -rf casacore
+
+fi
+'''
           sh 'git clone https://github.com/casacore/casacore.git'
         }
 
