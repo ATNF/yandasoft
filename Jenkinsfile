@@ -10,6 +10,9 @@ pipeline {
       steps {
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
           sh 'git clone https://github.com/casacore/casacore.git'
+        }
+
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development/casacore') {
           sh 'git checkout -b working_copy'
           sh 'git reset --hard d3dad4d'
           sh 'mkdir build'
