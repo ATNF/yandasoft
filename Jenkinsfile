@@ -1,6 +1,9 @@
 pipeline {
   agent {
 	Dockerfile True
+
+  }
+>>>>>>> ce816e85f5a61f987c0575c76c15623a81dbeb13
   }
   stages {
     stage('Get Dependencies') {
