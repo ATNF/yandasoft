@@ -43,7 +43,7 @@ make all -j2 install
     }
     stage('Build casarest') {
       steps {
-        echo 'Testing....'
+        echo 'casarest ...'
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
           sh '''if [ -d casarest ]; then
 echo "casarest directory already exists"
@@ -72,9 +72,30 @@ make -j2 install
 
       }
     }
-    stage('Deploy') {
+    stage('Build LOFAR dependencies') {
       steps {
-        echo 'Deploying....'
+        echo 'LOFAR....'
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          sh '''if [ -d lofar-common ]; then
+echo "lofar-common already exists
+else
+git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
+fi'''
+        }
+
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development/lofar-common') {
+          sh '''if [ -d build ]; then
+echo "Build directory already exists"
+else
+mkdir build
+fi
+cd build
+cmake ../ -DCMAKE_INSTALL_PREFIX=${PREFIX}
+make -j2
+make -j2 install
+'''
+        }
+
       }
     }
   }
