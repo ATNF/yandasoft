@@ -9,6 +9,7 @@ pipeline {
     stage('Get Dependencies') {
       steps {
         deleteDir()
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development')
         sh '''pwd
 
 
