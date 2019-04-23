@@ -1,7 +1,7 @@
 pipeline {
   agent {
-    node {
-      label 'ubuntu-bionic'
+    docker {
+      image 'sord/yanda:latest'
     }
 
   }
