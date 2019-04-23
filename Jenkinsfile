@@ -64,7 +64,7 @@ else
 mkdir build
 fi
 cd build
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+cmake .. -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCASACORE_ROOT_DIR=${PREFIX}
 make -j2
 make -j2 install
 '''
