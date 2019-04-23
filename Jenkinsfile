@@ -77,7 +77,7 @@ make -j2 install
         echo 'LOFAR....'
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
           sh '''if [ -d lofar-common ]; then
-echo "lofar-common already exists
+echo "lofar-common already exists"
 else
 git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
 fi'''
