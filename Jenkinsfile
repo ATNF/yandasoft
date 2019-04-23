@@ -10,18 +10,23 @@ pipeline {
       steps {
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
           sh '''if [ -d casacore ]; then
-
-rm -rf casacore
+? echo "casacore directory already exists"
+else
+??git clone https://github.com/casacore/casacore.git
 
 fi
 '''
-          sh 'git clone https://github.com/casacore/casacore.git'
         }
 
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development/casacore') {
           sh 'git checkout -b working_copy'
           sh 'git reset --hard d3dad4d'
-          sh 'mkdir build'
+          sh '''if [ -d build ]; then
+? echo "build directory already exists"
+else
+? mkdir build
+fi
+'''
         }
 
         dir(path: '/var/lib/jenkins/workspace/yandasoft_development/casacore/build') {
