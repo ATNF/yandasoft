@@ -41,9 +41,34 @@ make all -j2 install
 
       }
     }
-    stage('Test') {
+    stage('Build casarest') {
       steps {
         echo 'Testing....'
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          sh '''if [ -d casarest ]; then
+echo "casarest directory already exists"
+cd casarest
+git checkout working_copy
+else
+git clone https://github.com/casacore/casarest.git
+git checkout -b working_copy
+fi'''
+        }
+
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development/casarest') {
+          sh '''git reset --hard fa01137
+if [ -d build ]; then
+echo "casarest build directory already exists"
+else
+mkdir build
+fi
+cd build
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+make -j2
+make -j2 install
+'''
+        }
+
       }
     }
     stage('Deploy') {
