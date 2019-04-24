@@ -1,21 +1,21 @@
 FROM ubuntu:18.04
 RUN apt-get update
 RUN apt-get install -y cmake \         
-	&& apt-get install    -y    flex bison  \
-	&& apt-get install    -y    gfortran    \            
-	&& apt-get install    -y    git         \           
-	&& apt-get install    -y    g++                   \
-	&& apt-get install    -y    libboost-dev \        
-	&& apt-get install    -y     libboost-python-dev \
-	&& apt-get install    -y     libboost-filesystem-dev \
-	&& apt-get install    -y     libboost-program-options-dev \
-	&& apt-get install    -y     libboost-signals-dev   \   
-	&& apt-get install    -y     libboost-system-dev    \  
-	&& apt-get install    -y    libboost-thread-dev     \ 
-	&& apt-get install    -y    libcfitsio-dev     \     
-	&& apt-get install    -y    libffi-dev       \      
-	&& apt-get install    -y    libfftw3-dev    \      
-	&& apt-get install    -y    libgsl-dev     \        
+	&& apt-get install    -y  flex bison  \
+	&& apt-get install    -y  gfortran    \            
+	&& apt-get install    -y  git         \           
+	&& apt-get install    -y  g++                   \
+	&& apt-get install    -y  libboost-dev \        
+	&& apt-get install    -y  libboost-python-dev \
+	&& apt-get install    -y  libboost-filesystem-dev \
+	&& apt-get install    -y  libboost-program-options-dev \
+	&& apt-get install    -y  libboost-signals-dev   \   
+	&& apt-get install    -y  libboost-system-dev    \  
+	&& apt-get install    -y  libboost-thread-dev     \ 
+	&& apt-get install    -y  libcfitsio-dev     \     
+	&& apt-get install    -y  libffi-dev       \      
+	&& apt-get install    -y  libfftw3-dev    \      
+	&& apt-get install    -y  libgsl-dev     \        
 	&& apt-get install    -y  liblog4cxx-dev   \         
 	&& apt-get install    -y  libopenblas-dev   \        
 	&& apt-get install    -y  libopenmpi-dev     \       
@@ -26,7 +26,9 @@ RUN apt-get install -y cmake \
 	&& apt-get install    -y  subversion       \        
 	&& apt-get install    -y  wget             \        
         && apt-get install    -y  docker           \
-	&& apt-get install    -y  wcslib-dev                
+	&& apt-get install    -y  python-numpy     \
+        && apt-get install    -y  python-scipy     \
+        && apt-get install    -y  wcslib-dev                
 RUN cd /usr/local 
 RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz

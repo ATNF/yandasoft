@@ -116,7 +116,39 @@ make -j2
 make -j2 install
 '''
         }
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          sh '''if [ -d base-askap ]; then
+echo "base-askap already exists"
+else
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+fi'''
+        }
+      }
+    }
+    stage('Build base-askap') {
+    steps { 
+        
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development') {
+          sh '''if [ -d base-askap ]; then
+echo "base-askap already exists"
+else
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+fi'''
+        }
 
+        dir(path: '/var/lib/jenkins/workspace/yandasoft_development/base-askap') {
+          sh '''if [ -d build ]; then
+echo "Build directory already exists"
+else
+mkdir build
+fi
+cd build
+cmake ../ -DCMAKE_INSTALL_PREFIX=${PREFIX}
+make -j2
+make -j2 install
+'''
+
+       }
       }
     }
   }
