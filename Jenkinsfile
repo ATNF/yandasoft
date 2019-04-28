@@ -150,6 +150,6 @@ make -j2 install
   }
   environment {
     WORKSPACE = pwd()
-    PREFIX = "${WORKSPACE}" + '/install'
+    PREFIX = "${WORKSPACE}/install"
   }
 }
