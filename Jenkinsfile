@@ -104,8 +104,28 @@ make -j2 install
     stage('Building base-accessors') {
       steps {
         dir(path: '.') {
+          sh '''if [ -d base-accessors ]; then
+echo "base-accessors directory already exists"
+rm -rf base-accessors
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
+cd base-accessors
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make -j2
+make -j2 install
+'''
+        }
+
+      }
+    }
+
+    stage('Building yandasoft') {
+      steps {
+        dir(path: '.') {
           sh '''if [ -d build ]; then
-echo "base-accessors build directory already exists"
+echo "yandasoft build directory already exists"
 cd build
 if [ -f install_manifest.txt ]; then
 make uninstall
