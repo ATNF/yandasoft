@@ -153,3 +153,4 @@ make -j2 install
     PREFIX = "${WORKSPACE}/install"
   }
 }
+
