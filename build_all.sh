@@ -40,14 +40,14 @@ print_usage() {
 	echo "Usage: $0 [options]"
 	echo
 	echo "Options:"
-	echo " -s <system>   Target system, supported values are centos (default) and ubuntu"
+	echo " -s <system>   Target system, supported values are osx (default), centos, ubuntu"
 	echo " -c <compiler> Compiler suite to use, supported values are gcc (default) and clang"
 	echo " -m <cmake>    Cmake binary to use, must be >= 3.1, defaults to cmake"
 	echo " -j <jobs>     Number of parallel compilation jobs, defaults to 1"
 	echo " -p <prefix>   Prefix for installation, defaults to /usr/local"
 	echo " -w <workdir>  Working directory, defaults to ."
-	echo " -i 	     Do not install system dependencies. "
-	echo " -a 	     Do not install askap dependencies. "
+	echo " -i 	         Do not install system dependencies. "
+	echo " -a 	         Do not install askap dependencies. "
 	echo " -W            Remove the working directory at the end of the build"
 	echo " -C <version>  Casacore version to build, values are master (default), 2.4.0 and 2.1.0"
 	echo " -A <opts>     Extra casacore cmake options"
@@ -61,7 +61,7 @@ try() {
 	status=$?
 	if [ $status -ne 0 ]; then
 		echo "Command exited with status $status, aborting build now: $@" 1>&2
-		exit 1
+		exit 1;
 	fi
 }
 
@@ -79,7 +79,7 @@ check_supported_values() {
 	exit 1
 }
 
-system=centos
+system=osx
 compiler=gcc
 cmake=cmake
 jobs=1
@@ -88,9 +88,10 @@ workdir=.
 remove_workdir=no
 build_oskar=yes
 use_python3=no
-install_system_dependencies=yes
+install_system_dependencies=no
+install_casacore=no
 install_askap_dependencies=yes
-build_adios=yes
+build_adios=no
 casacore_version=master
 casacore_opts=
 casarest_opts=
@@ -136,6 +137,7 @@ do
 			;;
 		C)
 			casacore_version="$OPTARG"
+			install_casacore=yes
 			;;
 		A)
 			casacore_opts="$OPTARG"
@@ -159,7 +161,7 @@ do
 	esac
 done
 
-check_supported_values system $system centos ubuntu
+check_supported_values system $system centos ubuntu osx
 check_supported_values compiler $compiler gcc clang cray
 check_supported_values casacore_version $casacore_version master 2.4.0 2.0.3
 if [ $casacore_version != master ]; then
@@ -176,7 +178,7 @@ if [ $system == centos ]; then
 	cmake=cmake3
 fi
 
-install_dependencies() {
+install_s_dependencies() {
 	if [ $system == ubuntu ]; then
 		$SUDO apt update
 		$SUDO apt install -y \
@@ -208,7 +210,7 @@ install_dependencies() {
 		if [ $compiler == clang ]; then
 			$SUDO apt install -y clang
 		fi
-	else
+	elif [ $system == centos ]; then
 		$SUDO yum --assumeyes install \
 		    boost-devel    `# casacore` \
 		    cfitsio-devel  `# casacore` \
@@ -236,6 +238,8 @@ install_dependencies() {
 			$SUDO yum --assumeyes install python34 python34-devel python34-pip boost-python34-devel
 		fi
 		$SUDO yum clean all
+	elif [ $system == osx ]; then
+		echo "OSX system dependencies not supported"
 	fi
 }
 
@@ -283,7 +287,7 @@ build_and_install() {
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
-	try ${cmake} .. -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@"
+	try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" ..
 	try make all -j${jobs}
 	try make install -j${jobs}
 	cd ../..
@@ -312,7 +316,7 @@ fi
 cd "$workdir"
 
 if [ $install_system_dependencies == yes ]; then
-	install_system_dependencies
+	install_s_dependencies
 fi
 
 # CentOS, you cheecky...
@@ -338,9 +342,8 @@ fi
 if [ $casacore_version != master ]; then
 	casacore_version=COMMIT-v$casacore_version
 fi
-
-if [ $install_askap_dependencies == yes]
-	build_and_install https://github.com/rtobar/casacore $casacore_version -DBUILD_TESTING=OFF $casacore_opts
+if [ $install_casacore == yes ]; then
+	build_and_install https://github.com/casacore/casacore $casacore_version -DBUILD_TESTING=OFF $casacore_opts
 	if [ $casacore_version == summit_demo ]; then
 		# Lets reset this back to master to save handling lots os special cases below!
 		casacore_version=master
@@ -355,15 +358,19 @@ if [ $install_askap_dependencies == yes]
 	fi
 
 	build_and_install https://github.com/casacore/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
+fi
+
+if [ $install_askap_dependencies == yes ]; then
+	
 
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git namespace $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git namespace $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git namespace $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git namespace $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git namespace $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git namespace $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
 
 	
 fi
@@ -373,8 +380,31 @@ if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"
 fi
 
+if [ -d build ]; then
+	echo "yandasoft build directory already exists"
+	cd build
+	if [ -f install_manifest.txt ]; then
+		make uninstall
+		cd ..
+	fi
+	rm -rf build
+	mkdir build
+else
+	mkdir build
+fi
+cd build
+if [ $compiler == clang ]; then
+		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
+elif [ $compiler == cray ]; then
+		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+else
+		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
+fi
+try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
+try make all -j${jobs}
+try make install -j${jobs}
 
-build_and_install https://bitbucket.csiro.au/scm/askapsdp/yandasoft.git development $yandasoft_opts
+
 
 if [ $remove_workdir == yes ]; then
 	cd $original_dir
