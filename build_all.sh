@@ -91,6 +91,9 @@ use_python3=no
 install_system_dependencies=no
 install_casacore=no
 install_askap_dependencies=yes
+install_yandasoft=yes
+clean_dependencies=yes
+clean_yandasoft=yes
 build_adios=no
 casacore_version=master
 casacore_opts=
@@ -98,7 +101,7 @@ casarest_opts=
 yandasoft_opts=
 oskar_opts=
 
-while getopts "a:h?s:c:m:j:p:w:WPoiaC:A:r:y:O:" opt
+while getopts "a:h?s:c:m:j:p:w:WPoiaC:A:r:y:O:u" opt
 do
 	case "$opt" in
 		[h?])
@@ -145,6 +148,14 @@ do
 		r)
 			casarest_opts="$OPTARG"
 			;;
+		u)	
+			install_system_dependencies=no
+			install_askap_dependencies=no
+			install_yandasoft=no
+			clean_dependencies=yes
+			clean_yandasoft=yes
+			;;
+
 		y)
 			yandasoft_opts="$OPTARG"
 			;;
@@ -250,7 +261,8 @@ repo2dir() {
 
 # Nice-to-use macro
 build_and_install() {
-	ref=$2
+        startdir=`pwd`
+        ref=$2
 	is_branch=yes
 	is_merge=no
 	if [[ "$ref" =~ COMMIT-(.*) ]]; then
@@ -290,9 +302,22 @@ build_and_install() {
 	try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" ..
 	try make all -j${jobs}
 	try make install -j${jobs}
-	cd ../..
+	cd "$startdir"
 }
-
+# clean up
+clean_and_uninstall() {
+	startdir=`pwd`
+	if [  -d `repo2dir $1` ]; then
+		cd `repo2dir $1`
+		cd build
+		try make clean
+		try make uninstall
+	else
+		echo "Currently in " `pwd`
+		echo "Directory " `repo2dir $1` " not found"
+	fi
+	cd "$startdir"
+}
 source_venv() {
 	if [ ! -f $prefix/bin/activate ]; then
 		if [ $use_python3 == yes ]; then
@@ -329,8 +354,8 @@ fi
 export LD_LIBRARY_PATH=$prefix/lib64:$LD_LIBRARY_PATH
 
 # Let's work with a virtualenv
-source_venv
-try pip install numpy
+#source_venv
+#try pip install numpy
 
 
 #casacore and casarest
@@ -359,10 +384,24 @@ if [ $install_casacore == yes ]; then
 
 	build_and_install https://github.com/casacore/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
 fi
+if [ $clean_dependencies == yes ]; then
+	
+	clean_and_uninstall https://github.com/casacore/casacore 
+	clean_and_uninstall https://github.com/casacore/casarest 
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
+
+fi
 
 if [ $install_askap_dependencies == yes ]; then
 	
-
+	
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git master $yandasoft_opts
@@ -380,30 +419,42 @@ if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"
 fi
 
-if [ -d build ]; then
+if [ $clean_yandasoft == yes ]; then
+  if [ -d build ]; then
 	echo "yandasoft build directory already exists"
 	cd build
 	if [ -f install_manifest.txt ]; then
 		make uninstall
-		cd ..
 	fi
+	cd ..
+  fi
+fi
+
+if [ $install_yandasoft == yes ]; then
+   if [ -d build ]; then
+	echo "yandasoft build directory already exists"
+	cd build
+	if [ -f install_manifest.txt ]; then
+		make uninstall
+	fi
+	cd ..
 	rm -rf build
 	mkdir build
-else
+  else
 	mkdir build
-fi
-cd build
-if [ $compiler == clang ]; then
+  fi
+  cd build
+  if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
-elif [ $compiler == cray ]; then
+  elif [ $compiler == cray ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
-else
+  else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
+  fi
+  try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
+  try make all -j${jobs}
+  try make install -j${jobs}
 fi
-try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
-try make all -j${jobs}
-try make install -j${jobs}
-
 
 
 if [ $remove_workdir == yes ]; then
