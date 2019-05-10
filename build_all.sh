@@ -46,13 +46,12 @@ print_usage() {
 	echo " -j <jobs>     Number of parallel compilation jobs, defaults to 1"
 	echo " -p <prefix>   Prefix for installation, defaults to /usr/local"
 	echo " -w <workdir>  Working directory, defaults to ."
-	echo " -i 	         Do not install system dependencies. "
-	echo " -a 	         Do not install askap dependencies. "
+	echo " -S 	     Install system dependencies. "
 	echo " -W            Remove the working directory at the end of the build"
-	echo " -C <version>  Casacore version to build, values are master (default), 2.4.0 and 2.1.0"
-	echo " -A <opts>     Extra casacore cmake options"
-	echo " -r <opts>     Extra casarest cmake options"
-	echo " -y <opts>     Extra yandasoft common cmake options"
+	echo " -C <opts      Install Casacore + cmake options"
+	echo " -A <opts>     Install ASKAP dependencies + cmake options"
+	echo " -R <opts>     Install casarest + cmake options"
+	echo " -Y <opts>     Install YandaSoft + cmake options"
 	echo " -U 	     clean and uninstall yandasoft and dependencies (except casacore/casarest)"
 	echo " -P            Use Python 3 "
 }
@@ -92,13 +91,16 @@ use_python3=no
 
 install_system_dependencies=no
 install_casacore=no
-install_askap_dependencies=yes
-install_yandasoft=yes
-clean_askap_dependencies=yes
+install_casarest=no
+install_askap_dependencies=no
+install_yandasoft=no
+clean_askap_dependencies=no
+clean_yandasoft=no
 build_adios=no
 casacore_version=master
 casacore_opts=
 casarest_opts=
+askap_opts=
 yandasoft_opts=
 oskar_opts=
 
@@ -107,7 +109,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "a:h?s:c:m:j:p:w:WPoiaC:A:r:y:O:U" opt
+while getopts "A:ah?s:c:m:j:p:w:WPoiC:cR:rY:yO:US" opt
 do
 	case "$opt" in
 		[h?])
@@ -117,7 +119,7 @@ do
 		s)
 			system="$OPTARG"
 			;;
-		c)
+		x)
 			compiler="$OPTARG"
 			;;
 		m)
@@ -138,24 +140,37 @@ do
 		o)
 			build_oskar=no
 			;;
-		i)
-			install_system_dependencies=no
-			;;
-		a)
-			install_askap_dependencies=no
-			;;
-		C)
-			casacore_version="$OPTARG"
-			install_casacore=yes
+		S)
+			install_system_dependencies=yes
 			;;
 		A)
-			casacore_opts="$OPTARG"
+			install_askap_dependencies=yes
+			askap_opts="$OPTARG"
 			;;
-		r)
+		a)		
+			install_askap_dependencies=yes
+			;;
+		C)
+			casacore_opts="$OPTARG"
+			install_casacore=yes
+			;;
+		c)	
+			install_casacore=yes
+			;;
+		R)
 			casarest_opts="$OPTARG"
+			install_casarest=yes
+			;;
+		r)	
+			install_casarest=yes
+			;;
+		Y)
+			yandasoft_opts="$OPTARG"
+			install_yandasoft=yes
 			;;
 		y)
-			yandasoft_opts="$OPTARG"
+				
+			install_yandasoft=yes
 			;;
 		O)
 			oskar_opts="$OPTARG"
@@ -442,6 +457,7 @@ if [ $install_yandasoft == yes ]; then
 		make uninstall
 		cd ..
 	fi
+	cd ..
 	rm -rf build
 	mkdir build
   else
