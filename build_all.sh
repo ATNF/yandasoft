@@ -109,7 +109,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "A:ah?s:c:m:j:p:w:WPoiC:cR:rY:yO:US" opt
+while getopts "A:ah?s:c:m:j:p:w:WPoiC:cR:rY:yO:USx" opt
 do
 	case "$opt" in
 		[h?])
