@@ -22,7 +22,7 @@
 ///
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
 #include <askap/AskapError.h>
@@ -30,8 +30,8 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 #include <askap/gridding/AWProjectVisGridder.h>
-#include <fft/FFTWrapper.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <casacore/casa/Arrays/ArrayIter.h>
 #include <casacore/casa/BasicSL/Complex.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -47,7 +47,7 @@ ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 // Local package includes
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/gridding/SupportSearcher.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 
 namespace askap {

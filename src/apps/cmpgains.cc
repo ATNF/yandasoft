@@ -32,18 +32,18 @@
 #include <Common/ParameterSet.h>
 
 // own includes
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapUtil.h>
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <fitting/Params.h>
 #include <askap/Log4cxxLogSink.h>
 // just for logging
 #include <askapparallel/AskapParallel.h>
 
 // command line parser
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
 // std includes
 #include <set>

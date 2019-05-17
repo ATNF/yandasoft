@@ -23,7 +23,7 @@
 
 #include <askap/gridding/WStackVisGridder.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.wstackgridder");
 
@@ -35,7 +35,7 @@ ASKAP_LOGGER(logger, ".gridding.wstackgridder");
 
 #include <casacore/casa/BasicSL/Constants.h>
 #include <fft/FFTWrapper.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <profile/AskapProfiler.h>
 
 using namespace askap;

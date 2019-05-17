@@ -29,7 +29,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 

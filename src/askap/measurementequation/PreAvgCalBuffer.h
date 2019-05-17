@@ -40,7 +40,7 @@
 
 #include <dataaccess/DataAccessorAdapter.h>
 #include <dataaccess/IConstDataAccessor.h>
-#include <measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
 #include <fitting/PolXProducts.h>
 
 #include <boost/shared_ptr.hpp>

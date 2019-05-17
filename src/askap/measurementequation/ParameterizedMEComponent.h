@@ -37,7 +37,7 @@
 
 // own includes
 #include <fitting/Params.h>
-#include <measurementequation/MEComponent.h>
+#include <askap/measurementequation/MEComponent.h>
 #include <fitting/ComplexDiff.h>
 #include <askap/AskapError.h>
 
@@ -80,6 +80,6 @@ private:
 
 } // namespace askap
 
-#include <measurementequation/ParameterizedMEComponent.tcc>
+#include <askap/measurementequation/ParameterizedMEComponent.tcc>
 
 #endif // #define PARAMETERIZED_ME_COMPONENT_H

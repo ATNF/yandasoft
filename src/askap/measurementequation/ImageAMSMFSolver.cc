@@ -21,7 +21,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 
@@ -36,7 +36,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 

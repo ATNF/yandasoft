@@ -35,15 +35,15 @@
 #ifndef CALIBRATION_ME_TEST_H
 #define CALIBRATION_ME_TEST_H
 
-#include <measurementequation/ComponentEquation.h>
-#include <measurementequation/CalibrationME.h>
-#include <measurementequation/PreAvgCalMEBase.h>
-#include <measurementequation/NoXPolGain.h>
-#include <measurementequation/NoXPolFreqDependentGain.h>
-#include <measurementequation/IdentityComponent.h>
-#include <measurementequation/Product.h>
-#include <measurementequation/Sum.h>
-#include <measurementequation/ZeroComponent.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/measurementequation/CalibrationME.h>
+#include <askap/measurementequation/PreAvgCalMEBase.h>
+#include <askap/measurementequation/NoXPolGain.h>
+#include <askap/measurementequation/NoXPolFreqDependentGain.h>
+#include <askap/measurementequation/IdentityComponent.h>
+#include <askap/measurementequation/Product.h>
+#include <askap/measurementequation/Sum.h>
+#include <askap/measurementequation/ZeroComponent.h>
 #include <fitting/LinearSolver.h>
 #include <dataaccess/DataIteratorStub.h>
 #include <calibaccess/CalParamNameHelper.h>

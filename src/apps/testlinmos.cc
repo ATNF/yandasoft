@@ -29,7 +29,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <sstream>
@@ -47,7 +47,7 @@
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 #include <askap/Log4cxxLogSink.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <Common/ParameterSet.h>
 #include <fitting/Params.h>
 #include <askap/AskapUtil.h>

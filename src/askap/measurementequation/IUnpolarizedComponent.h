@@ -36,7 +36,7 @@
 #ifndef I_UNPOLARIZED_COMPONENT_H
 #define I_UNPOLARIZED_COMPONENT_H
 
-#include <measurementequation/IComponent.h>
+#include <askap/measurementequation/IComponent.h>
 
 namespace askap {
 

@@ -28,7 +28,7 @@
 #include <askap/distributedimager/MSGroupInfo.h>
 
 // Include package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <string>

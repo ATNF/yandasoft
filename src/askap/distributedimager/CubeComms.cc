@@ -34,8 +34,8 @@
 /// out own header first
 
 
-#include "distributedimager/CubeComms.h"
-#include "messages/IMessage.h"
+#include "askap/distributedimager/CubeComms.h"
+#include "askap/messages/IMessage.h"
 
 ///ASKAPsoft includes
 #include <askap/AskapLogging.h>

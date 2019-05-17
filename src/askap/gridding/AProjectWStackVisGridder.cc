@@ -32,7 +32,7 @@
 #include <casacore/casa/Quanta/MVAngle.h>
 #include <casacore/casa/Quanta/MVTime.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 
 ASKAP_LOGGER(logger, ".gridding.aprojectwstackgridder");
@@ -45,7 +45,7 @@ ASKAP_LOGGER(logger, ".gridding.aprojectwstackgridder");
 #include <fft/FFTWrapper.h>
 #include <askap/gridding/IBasicIllumination.h>
 
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 
 namespace askap {
 namespace synthesis {

@@ -27,8 +27,8 @@
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
-#include <deconvolution/EntropyI.h>
-#include <deconvolution/Emptiness.h>
+#include <askap/deconvolution/EntropyI.h>
+#include <askap/deconvolution/Emptiness.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 

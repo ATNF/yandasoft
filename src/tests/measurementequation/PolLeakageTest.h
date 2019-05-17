@@ -32,21 +32,21 @@
 #ifndef POL_LEAKAGE_TEST_H
 #define POL_LEAKAGE_TEST_H
 
-#include <measurementequation/ComponentEquation.h>
-#include <measurementequation/CalibrationME.h>
-#include <measurementequation/PreAvgCalMEBase.h>
-#include <measurementequation/LeakageTerm.h>
-#include <measurementequation/NoXPolGain.h>
-#include <measurementequation/Product.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/measurementequation/CalibrationME.h>
+#include <askap/measurementequation/PreAvgCalMEBase.h>
+#include <askap/measurementequation/LeakageTerm.h>
+#include <askap/measurementequation/NoXPolGain.h>
+#include <askap/measurementequation/Product.h>
 #include <fitting/ComplexDiffMatrix.h>
 #include <fitting/Params.h>
 
 #include <fitting/LinearSolver.h>
 #include <dataaccess/DataIteratorStub.h>
-#include <measurementequation/CalibrationApplicatorME.h>
+#include <askap/measurementequation/CalibrationApplicatorME.h>
 #include <calibaccess/CachedCalSolutionAccessor.h>
 #include <calibaccess/CalSolutionSourceStub.h>
-#include <measurementequation/CalibParamsMEAdapter.h>
+#include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <askap/AskapError.h>

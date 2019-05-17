@@ -30,8 +30,8 @@
 #ifndef NON_LINEAR_W_SAMPLING_TEST_H
 #define NON_LINEAR_W_SAMPLING_TEST_H
 
-#include <gridding/GaussianWSampling.h>
-#include <gridding/PowerWSampling.h>
+#include <askap/gridding/GaussianWSampling.h>
+#include <askap/gridding/PowerWSampling.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 namespace askap {

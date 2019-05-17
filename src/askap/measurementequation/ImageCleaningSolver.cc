@@ -29,15 +29,15 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 
 ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 
 #include <askap/measurementequation/ImageCleaningSolver.h>
 #include <askap/AskapError.h>
-#include <askap/utils/PaddingUtils.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/PaddingUtils.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 

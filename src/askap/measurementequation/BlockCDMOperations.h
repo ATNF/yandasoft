@@ -115,7 +115,7 @@ struct BlockCDMOperations<false,false,false> {
 
 } // namespace askap
 
-#include <measurementequation/BlockCDMOperations.tcc>
+#include <askap/measurementequation/BlockCDMOperations.tcc>
 
 #endif // #ifndef SYNTHESIS_BLOCK_CDM_OPERATIONS_H
 

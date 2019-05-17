@@ -31,12 +31,12 @@
 #ifndef SYNIMAGERESTORESOLVER_H_
 #define SYNIMAGERESTORESOLVER_H_
 
-#include <measurementequation/ImageSolver.h>
+#include <askap/measurementequation/ImageSolver.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Quanta.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <Common/ParameterSet.h>
-#include <measurementequation/RestoringBeamHelper.h>
+#include <askap/measurementequation/RestoringBeamHelper.h>
 
 
 namespace askap

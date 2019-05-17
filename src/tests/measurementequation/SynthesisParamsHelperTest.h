@@ -33,10 +33,10 @@
 #ifndef SYNTHESIS_PARAMS_HELPER_TEST_H
 #define SYNTHESIS_PARAMS_HELPER_TEST_H
 
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <utils/ImageUtils.h>
-#include <measurementequation/ImageParamsHelper.h>
+#include <askap/measurementequation/ImageParamsHelper.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 

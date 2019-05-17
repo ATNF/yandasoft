@@ -38,7 +38,7 @@
 #define GENERIC_MULTI_CHUNK_EQUATION_H
 
 // own include
-#include <measurementequation/MultiChunkEquation.h>
+#include <askap/measurementequation/MultiChunkEquation.h>
 #include <fitting/GenericEquation.h>
 #include <fitting/GenericNormalEquations.h>
 

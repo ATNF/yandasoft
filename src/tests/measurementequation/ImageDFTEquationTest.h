@@ -21,7 +21,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <measurementequation/ImageDFTEquation.h>
+#include <askap/measurementequation/ImageDFTEquation.h>
 #include <fitting/LinearSolver.h>
 #include <dataaccess/DataIteratorStub.h>
 #include <casacore/casa/aips.h>

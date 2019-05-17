@@ -41,9 +41,9 @@
 #ifndef SUM_H
 #define SUM_H
 
-#include <measurementequation/MEComponent.h>
+#include <askap/measurementequation/MEComponent.h>
 #include <dataaccess/IConstDataAccessor.h>
-#include <measurementequation/BlockCDMOperations.h>
+#include <askap/measurementequation/BlockCDMOperations.h>
 
 namespace askap {
 

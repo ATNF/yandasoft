@@ -59,12 +59,12 @@
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/OS/Path.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
 #include <askap/AskapError.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 using namespace std;
 using namespace askap;

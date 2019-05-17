@@ -34,8 +34,8 @@
 #include <askap/AskapError.h>
 
 // local includes
-#include "opcal/PointingSolver.h"
-#include "measurementequation/SynthesisParamsHelper.h"
+#include "askap/opcal/PointingSolver.h"
+#include "askap/measurementequation/SynthesisParamsHelper.h"
 
 // casa includes
 #include <casacore/measures/Measures/MEpoch.h>

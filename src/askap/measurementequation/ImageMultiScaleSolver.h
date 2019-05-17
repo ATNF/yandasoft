@@ -30,10 +30,10 @@
 #ifndef SYNIMAGEMULTISCALESOLVER_H_
 #define SYNIMAGEMULTISCALESOLVER_H_
 
-#include <measurementequation/ImageCleaningSolver.h>
+#include <askap/measurementequation/ImageCleaningSolver.h>
 
 #include <casacore/lattices/LatticeMath/LatticeCleaner.h>
-#include <utils/FixedSizeCache.h>
+#include <askap/scimath/utils/FixedSizeCache.h>
 
 #include <map>
 

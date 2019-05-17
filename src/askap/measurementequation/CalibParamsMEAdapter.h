@@ -41,9 +41,9 @@
 #define CALIB_PARAMS_ME_ADAPTER_H
 
 // own includes
-#include <measurementequation/IMeasurementEquation.h>
-#include <measurementequation/MultiChunkEquation.h>
-#include <measurementequation/CalibrationSolutionHandler.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/MultiChunkEquation.h>
+#include <askap/measurementequation/CalibrationSolutionHandler.h>
 #include <dataaccess/SharedIter.h>
 #include <calibaccess/ICalSolutionConstSource.h>
 #include <calibaccess/JonesIndex.h>

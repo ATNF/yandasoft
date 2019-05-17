@@ -55,11 +55,11 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 
 // Local includes
-#include "distributedimager/AdviseDI.h"
-#include "distributedimager/CalcCore.h"
-#include "distributedimager/CubeComms.h"
-#include "messages/ContinuumWorkUnit.h"
-#include "messages/ContinuumWorkRequest.h"
+#include "askap/distributedimager/AdviseDI.h"
+#include "askap/distributedimager/CalcCore.h"
+#include "askap/distributedimager/CubeComms.h"
+#include "askap/messages/ContinuumWorkUnit.h"
+#include "askap/messages/ContinuumWorkRequest.h"
 
 
 //casacore includes

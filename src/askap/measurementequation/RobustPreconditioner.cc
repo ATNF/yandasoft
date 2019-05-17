@@ -23,13 +23,13 @@
 
 #include <askap/measurementequation/RobustPreconditioner.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 
 #include <askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <profile/AskapProfiler.h>
 
 #include <casacore/casa/aips.h>

@@ -36,7 +36,7 @@
 
 // ASKAPsoft includes
 #include <casacore/casa/OS/Timer.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapUtil.h>

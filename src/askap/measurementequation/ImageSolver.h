@@ -30,12 +30,12 @@
 #ifndef SYNIMAGESOLVER_H_
 #define SYNIMAGESOLVER_H_
 
-#include <fitting/Solver.h>
-#include <fitting/ImagingNormalEquations.h>
-#include <fitting/DesignMatrix.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Solver.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/Params.h>
 
-#include <measurementequation/IImagePreconditioner.h>
+#include <askap/measurementequation/IImagePreconditioner.h>
 #include <boost/shared_ptr.hpp>
 
 #include <Common/ParameterSet.h>

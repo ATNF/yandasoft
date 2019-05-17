@@ -24,14 +24,14 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <imageaccess/ImageAccessFactory.h>
-#include <askap/utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 #include <fitting/Axes.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/gridding/SupportSearcher.h>
 #include <casacore/lattices/LatticeMath/Fit2D.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 

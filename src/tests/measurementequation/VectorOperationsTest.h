@@ -31,7 +31,7 @@
 
 
 // own includes
-#include <measurementequation/VectorOperations.h>
+#include <askap/measurementequation/VectorOperations.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/scimath/Mathematics/AutoDiff.h>

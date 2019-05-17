@@ -29,7 +29,7 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <stdexcept>
@@ -42,9 +42,9 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/AskapError.h>
 #include <askap/Application.h>
 #include <askap/StatReporter.h>
-#include <deconvolution/DeconvolverBase.h>
-#include <deconvolution/DeconvolverFactory.h>
-#include <deconvolution/DeconvolverHelpers.h>
+#include <askap/deconvolution/DeconvolverBase.h>
+#include <askap/deconvolution/DeconvolverFactory.h>
+#include <askap/deconvolution/DeconvolverHelpers.h>
 
 using namespace askap;
 using namespace askap::synthesis;

@@ -29,7 +29,7 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 #include <askap/AskapLogging.h>
 #include <casacore/casa/aips.h>

@@ -23,7 +23,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
 #include <casacore/casa/Arrays/IPosition.h>
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 #include <askap/AskapError.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>

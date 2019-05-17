@@ -30,7 +30,7 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 #include <casacore/casa/aips.h>
 #include <askap/SignalManagerSingleton.h>

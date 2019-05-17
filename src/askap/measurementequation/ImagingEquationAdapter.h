@@ -39,8 +39,8 @@
 #include <fitting/Equation.h>
 #include <fitting/Params.h>
 #include <fitting/INormalEquations.h>
-#include <measurementequation/IMeasurementEquation.h>
-#include <gridding/IVisGridder.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
+#include <askap/gridding/IVisGridder.h>
 #include <dataaccess/SharedIter.h>
 #include <dataaccess/IDataIterator.h>
 #include <dataaccess/IDataAccessor.h>

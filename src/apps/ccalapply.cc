@@ -27,7 +27,7 @@
 /// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // Include package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System include
 #include <string>
@@ -59,10 +59,10 @@
 #include "boost/shared_ptr.hpp"
 
 // Local packages includes
-#include "measurementequation/ICalibrationApplicator.h"
-#include "measurementequation/CalibrationApplicatorME.h"
-#include "measurementequation/CalibrationIterator.h"
-#include "parallel/ParallelWriteIterator.h"
+#include "askap/measurementequation/ICalibrationApplicator.h"
+#include "askap/measurementequation/CalibrationApplicatorME.h"
+#include "askap/measurementequation/CalibrationIterator.h"
+#include "askap/parallel/ParallelWriteIterator.h"
 
 // casacore includes
 #include "casacore/casa/OS/Timer.h"

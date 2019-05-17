@@ -40,12 +40,12 @@
 #include <askap/gridding/IVisGridder.h>
 
 // Local includes
-#include "distributedimager/AdviseDI.h"
-#include "distributedimager/MSSplitter.h"
-#include "distributedimager/CalcCore.h"
-#include "messages/ContinuumWorkUnit.h"
-#include "distributedimager/CubeBuilder.h"
-#include "distributedimager/CubeComms.h"
+#include "askap/distributedimager/AdviseDI.h"
+#include "askap/distributedimager/MSSplitter.h"
+#include "askap/distributedimager/CalcCore.h"
+#include "askap/messages/ContinuumWorkUnit.h"
+#include "askap/distributedimager/CubeBuilder.h"
+#include "askap/distributedimager/CubeComms.h"
 namespace askap {
 namespace cp {
 

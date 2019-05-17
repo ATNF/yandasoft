@@ -39,8 +39,8 @@
 #include <Common/ParameterSet.h>
 #include <boost/shared_ptr.hpp>
 
-#include <measurementequation/IImagePreconditioner.h>
-#include <measurementequation/GaussianTaperCache.h>
+#include <askap/measurementequation/IImagePreconditioner.h>
+#include <askap/measurementequation/GaussianTaperCache.h>
 
 namespace askap
 {

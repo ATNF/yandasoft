@@ -36,7 +36,7 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include <measurementequation/IImagePreconditioner.h>
+#include <askap/measurementequation/IImagePreconditioner.h>
 
 namespace askap
 {

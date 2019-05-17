@@ -53,8 +53,8 @@
 #include <dataaccess/IConstDataAccessor.h>
 #include <fitting/ComplexDiffMatrix.h>
 #include <fitting/ComplexDiff.h>
-#include <measurementequation/CalibrationMEBase.h>
-#include <measurementequation/PreAvgCalMEBase.h>
+#include <askap/measurementequation/CalibrationMEBase.h>
+#include <askap/measurementequation/PreAvgCalMEBase.h>
 
 
 namespace askap {

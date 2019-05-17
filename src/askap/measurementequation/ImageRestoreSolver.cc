@@ -29,9 +29,9 @@
 #include <string>
 
 // ASKAPsoft includes
-#include <askap/utils/PaddingUtils.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
-#include <askap_synthesis.h>
+#include <askap/scimath/utils/PaddingUtils.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
 #include <profile/AskapProfiler.h>

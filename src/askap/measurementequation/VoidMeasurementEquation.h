@@ -34,7 +34,7 @@
 #ifndef VOID_MEASUREMENT_EQUATION_H
 #define VOID_MEASUREMENT_EQUATION_H
 
-#include <measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
 
 namespace askap {
 

@@ -177,5 +177,5 @@ private:
 
 #endif // #ifndef CONTOUR_FINDER_H
 
-#include <measurementequation/ContourFinder.tcc>
+#include <askap/measurementequation/ContourFinder.tcc>
 

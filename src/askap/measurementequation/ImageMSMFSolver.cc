@@ -23,7 +23,7 @@
 
 #include <askap/measurementequation/ImageMSMFSolver.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.imagemsmfsolver");
 
@@ -38,7 +38,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagemsmfsolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 #include <casacore/lattices/LatticeMath/LatticeCleaner.h>
 #include <casacore/lattices/LatticeMath/MultiTermLatticeCleaner.h>

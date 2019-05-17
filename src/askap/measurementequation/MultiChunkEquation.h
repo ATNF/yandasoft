@@ -42,7 +42,7 @@
 #include <dataaccess/IDataAccessor.h>
 #include <fitting/INormalEquations.h>
 
-#include <measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
 #include <fitting/Equation.h>
 
 namespace askap {

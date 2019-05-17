@@ -22,7 +22,7 @@
 ///
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>

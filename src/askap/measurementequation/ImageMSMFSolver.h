@@ -30,7 +30,7 @@
 #ifndef SYNIMAGEMSMFSSOLVER_H_
 #define SYNIMAGEMSMFSSOLVER_H_
 
-#include <measurementequation/ImageCleaningSolver.h>
+#include <askap/measurementequation/ImageCleaningSolver.h>
 #include <askap/AskapUtil.h>
 
 

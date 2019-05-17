@@ -37,7 +37,7 @@
 #include <fitting/Params.h>
 #include <dataaccess/IConstDataAccessor.h>
 #include <askap/AskapError.h>
-#include <measurementequation/MEComponent.h>
+#include <askap/measurementequation/MEComponent.h>
 
 
 // std includes

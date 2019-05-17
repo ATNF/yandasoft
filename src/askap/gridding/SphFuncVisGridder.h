@@ -27,7 +27,7 @@
 #ifndef SPHVISGRIDDER_H_
 #define SPHVISGRIDDER_H_
 
-#include <gridding/TableVisGridder.h>
+#include <askap/gridding/TableVisGridder.h>
 #include <dataaccess/IConstDataAccessor.h>
 #include <utils/SpheroidalFunction.h>
 
@@ -129,6 +129,6 @@ namespace askap
 	}
 }
 
-#include <gridding/SphFuncVisGridder.tcc>
+#include <askap/gridding/SphFuncVisGridder.tcc>
 
 #endif

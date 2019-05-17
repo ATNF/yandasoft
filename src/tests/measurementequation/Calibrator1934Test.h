@@ -22,8 +22,8 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <measurementequation/ComponentEquation.h>
-#include <measurementequation/Calibrator1934.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/measurementequation/Calibrator1934.h>
 #include <dataaccess/DataIteratorStub.h>
 
 #include <cppunit/extensions/HelperMacros.h>

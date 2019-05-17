@@ -35,14 +35,14 @@
 #include <sstream>
 
 // Askapsoft includes
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
-#include <utils/CommandLineParser.h>
-#include <simulation/Simulator.h>
+#include <askap/utils/CommandLineParser.h>
+#include <askap/simulation/Simulator.h>
 #include <askapparallel/MPIComms.h>
 #include <casacore/casa/Quanta/MVDirection.h>
 #include <casacore/casa/Quanta/MVAngle.h>
@@ -56,7 +56,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <utils/EigenDecompose.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 
 using namespace askap;
 using namespace askap::synthesis;

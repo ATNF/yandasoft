@@ -31,7 +31,7 @@
 #ifndef DISK_ILLUMINATION_H
 #define DISK_ILLUMINATION_H
 
-#include <gridding/IBasicIllumination.h>
+#include <askap/gridding/IBasicIllumination.h>
 
 namespace askap {
 

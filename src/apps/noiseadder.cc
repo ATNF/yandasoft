@@ -26,7 +26,7 @@
 
 
 #include <dataaccess/TableDataSource.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
@@ -43,10 +43,10 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
-#include <measurementequation/GaussianNoiseME.h>
-#include <measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/GaussianNoiseME.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
 #include <dataaccess/MemBufferDataAccessor.h>
 #include <askapparallel/MPIComms.h>
 

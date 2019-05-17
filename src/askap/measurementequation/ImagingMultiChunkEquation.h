@@ -38,7 +38,7 @@
 #define IMAGING_MULTI_CHUNK_EQUATION_H
 
 // own include
-#include <measurementequation/MultiChunkEquation.h>
+#include <askap/measurementequation/MultiChunkEquation.h>
 #include <fitting/ImagingEquation.h>
 #include <fitting/ImagingNormalEquations.h>
 

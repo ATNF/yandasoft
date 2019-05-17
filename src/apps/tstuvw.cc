@@ -23,7 +23,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
 #include <dataaccess/TableDataSource.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
@@ -42,7 +42,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/tables/Tables/Table.h>
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 
 
 // std

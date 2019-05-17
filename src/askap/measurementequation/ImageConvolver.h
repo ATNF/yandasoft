@@ -113,6 +113,6 @@ class ImageConvolver {
 } // End synthesis namespace
 } // End askap namespace
 
-#include <measurementequation/ImageConvolver.tcc>
+#include <askap/measurementequation/ImageConvolver.tcc>
 
 #endif

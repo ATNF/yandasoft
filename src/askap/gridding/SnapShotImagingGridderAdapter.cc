@@ -39,14 +39,14 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 #include <askap/gridding/SnapShotImagingGridderAdapter.h>
 #include <askap/AskapError.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 
 #include <fft/FFTWrapper.h>
 

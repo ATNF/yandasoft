@@ -34,7 +34,7 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <measurementequation/RestoringBeamHelper.h>
+#include <askap/measurementequation/RestoringBeamHelper.h>
 
 namespace askap
 {

@@ -22,7 +22,7 @@
 ///
 
 #include <askap/gridding/TableVisGridder.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <dataaccess/IDataAccessor.h>
 #include <dataaccess/OnDemandBufferDataAccessor.h>
@@ -46,9 +46,9 @@ ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 
 #include <askap/gridding/GridKernel.h>
 
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 
 #include <askap/CasaSyncHelper.h>
 #include <profile/AskapProfiler.h>

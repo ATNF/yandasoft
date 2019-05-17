@@ -36,7 +36,7 @@
 #define I_PARAMETERIZED_COMPONENT_H
 
 // own includes
-#include <measurementequation/IComponent.h>
+#include <askap/measurementequation/IComponent.h>
 
 // std includes
 #include <string>

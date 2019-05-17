@@ -42,7 +42,7 @@
 #define GAUSSIAN_NOISE_ME_H
 
 // own includes
-#include <measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
 #include <utils/ComplexGaussianNoise.h>
 
 // casa includes

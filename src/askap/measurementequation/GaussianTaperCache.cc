@@ -30,7 +30,7 @@
 
 #include <askap/measurementequation/GaussianTaperCache.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.gaussiantapercache");
 
@@ -41,7 +41,7 @@ ASKAP_LOGGER(logger, ".measurementequation.gaussiantapercache");
 #include <casacore/scimath/Mathematics/SquareMatrix.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>
 
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 
 namespace askap {
 

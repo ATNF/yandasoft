@@ -22,10 +22,10 @@
 ///
 
 #include <askap/measurementequation/ImageSolver.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <profile/AskapProfiler.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 
 ASKAP_LOGGER(logger, ".measurementequation.imagesolver");
@@ -39,7 +39,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagesolver");
 
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/lattices/LatticeMath/LatticeFFT.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 using namespace askap;
 using namespace askap::scimath;

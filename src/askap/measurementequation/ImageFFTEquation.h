@@ -34,10 +34,10 @@
 #include <fitting/ImagingEquation.h>
 #include <utils/ChangeMonitor.h>
 
-#include <gridding/IVisGridder.h>
+#include <askap/gridding/IVisGridder.h>
 #include <dataaccess/SharedIter.h>
 #include <dataaccess/IDataIterator.h>
-#include <measurementequation/IVisCubeUpdate.h>
+#include <askap/measurementequation/IVisCubeUpdate.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>

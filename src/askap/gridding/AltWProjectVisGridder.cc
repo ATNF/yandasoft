@@ -24,7 +24,7 @@
 ///
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <cmath>
@@ -41,9 +41,9 @@
 //ASKAPSoft package includes
 #include <askap/gridding/WProjectVisGridder.h>
 #include <askap/gridding/SupportSearcher.h>
-#include <askap/utils/PaddingUtils.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 #include <fft/FFTWrapper.h>
 // Local package includes
 #include "AltWProjectVisGridder.h"

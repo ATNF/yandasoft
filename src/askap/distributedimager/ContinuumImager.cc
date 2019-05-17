@@ -28,7 +28,7 @@
 #include "ContinuumImager.h"
 
 // Include package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <string>
@@ -40,8 +40,8 @@
 
 // Local includes
 
-#include "distributedimager/ContinuumMaster.h"
-#include "distributedimager/ContinuumWorker.h"
+#include "askap/distributedimager/ContinuumMaster.h"
+#include "askap/distributedimager/ContinuumWorker.h"
 
 ASKAP_LOGGER(logger, ".ContinuumImager");
 

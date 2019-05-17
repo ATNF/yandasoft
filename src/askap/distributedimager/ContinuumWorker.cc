@@ -40,39 +40,39 @@
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
-#include <fitting/Equation.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/ImagingNormalEquations.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <dataaccess/IConstDataSource.h>
-#include <dataaccess/TableConstDataSource.h>
-#include <dataaccess/IConstDataIterator.h>
-#include <dataaccess/IDataConverter.h>
-#include <dataaccess/IDataSelector.h>
-#include <dataaccess/IDataIterator.h>
-#include <dataaccess/SharedIter.h>
-#include <askap/utils/PolConverter.h>
+#include <askap/dataaccess/IConstDataSource.h>
+#include <askap/dataaccess/TableConstDataSource.h>
+#include <askap/dataaccess/IConstDataIterator.h>
+#include <askap/dataaccess/IDataConverter.h>
+#include <askap/dataaccess/IDataSelector.h>
+#include <askap/dataaccess/IDataIterator.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/scimath/utils/PolConverter.h>
 #include <Common/ParameterSet.h>
 #include <Common/Exceptions.h>
 #include <casacore/casa/OS/Timer.h>
 #include <askap/parallel/ImagerParallel.h>
-#include <imageaccess/BeamLogger.h>
-#include <linmos/LinmosAccumulator.h>
+#include <askap/imageaccess/BeamLogger.h>
+#include <askap/imagemath/linmos/LinmosAccumulator.h>
 // CASA Includes
 
 // Local includes
-#include "distributedimager/AdviseDI.h"
-#include "distributedimager/CalcCore.h"
-#include "distributedimager/MSSplitter.h"
-#include "messages/ContinuumWorkUnit.h"
-#include "messages/ContinuumWorkRequest.h"
-#include "distributedimager/CubeBuilder.h"
-#include "distributedimager/CubeComms.h"
+#include "askap/distributedimager/AdviseDI.h"
+#include "askap/distributedimager/CalcCore.h"
+#include "askap/distributedimager/MSSplitter.h"
+#include "askap/messages/ContinuumWorkUnit.h"
+#include "askap/messages/ContinuumWorkRequest.h"
+#include "askap/distributedimager/CubeBuilder.h"
+#include "askap/distributedimager/CubeComms.h"
 
 using namespace std;
 using namespace askap::cp;

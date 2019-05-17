@@ -31,8 +31,8 @@
 #ifndef GAUSSIAN_TAPER_PRECONDITIONER_H
 #define GAUSSIAN_TAPER_PRECONDITIONER_H
 
-#include <measurementequation/IImagePreconditioner.h>
-#include <measurementequation/GaussianTaperCache.h>
+#include <askap/measurementequation/IImagePreconditioner.h>
+#include <askap/measurementequation/GaussianTaperCache.h>
 
 namespace askap {
 

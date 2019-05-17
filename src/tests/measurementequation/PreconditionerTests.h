@@ -29,9 +29,9 @@
 ///
 
 // own includes
-#include <measurementequation/GaussianTaperPreconditioner.h>
-#include <measurementequation/GaussianTaperCache.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/GaussianTaperPreconditioner.h>
+#include <askap/measurementequation/GaussianTaperCache.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Complex.h>

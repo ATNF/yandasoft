@@ -21,7 +21,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <boost/shared_ptr.hpp>
 
@@ -32,7 +32,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefistasolver");
 // need it just for null deleter
 #include <askap/AskapUtil.h>
 
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -43,7 +43,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefistasolver");
 
 #include <casacore/casa/BasicSL/Complex.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/measurementequation/ImageFistaSolver.h>
 #include <askap/deconvolution/DeconvolverFista.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>

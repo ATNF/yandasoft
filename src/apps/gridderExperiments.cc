@@ -32,9 +32,9 @@
 #include <iostream>
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
-#include <gridding/SphFuncVisGridder.h>
+#include <askap/gridding/SphFuncVisGridder.h>
 #include <dataaccess/DataAccessorStub.h>
 #include <fitting/Axes.h>
 

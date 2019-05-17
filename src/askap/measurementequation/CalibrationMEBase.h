@@ -40,9 +40,9 @@
 #include <fitting/GenericEquation.h>
 #include <fitting/Params.h>
 #include <fitting/GenericNormalEquations.h>
-#include <measurementequation/ICalibrationApplicator.h>
+#include <askap/measurementequation/ICalibrationApplicator.h>
 
-#include <measurementequation/GenericMultiChunkEquation.h>
+#include <askap/measurementequation/GenericMultiChunkEquation.h>
 #include <dataaccess/IDataAccessor.h>
 #include <fitting/ComplexDiffMatrix.h>
 #include <fitting/ComplexDiff.h>

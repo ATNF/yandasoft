@@ -38,7 +38,7 @@
 #ifndef POWER_W_SAMPLING_H
 #define POWER_W_SAMPLING_H
 
-#include <gridding/IWSampling.h>
+#include <askap/gridding/IWSampling.h>
 
 namespace askap {
 

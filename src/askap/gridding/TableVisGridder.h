@@ -34,9 +34,9 @@
 // own includes
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/VisGridderWithPadding.h>
-#include <dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/IDataAccessor.h>
 #include <askap/gridding/FrequencyMapper.h>
-#include <askap/utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 
 // std includes
 #include <string>

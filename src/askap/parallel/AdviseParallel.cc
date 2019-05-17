@@ -33,7 +33,7 @@
 #include <dataaccess/TableDataSource.h>
 #include <dataaccess/ParsetInterface.h>
 #include <dataaccess/SharedIter.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 #include <profile/AskapProfiler.h>

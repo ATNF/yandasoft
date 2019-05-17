@@ -31,7 +31,7 @@
 
 #include <askap/gridding/SupportSearcher.h>
 
-#include <askap/utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>

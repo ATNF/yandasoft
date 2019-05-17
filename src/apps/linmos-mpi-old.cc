@@ -1,8 +1,8 @@
 
 /// local includes
-#include <askap_synthesis.h>
-#include <utils/LinmosUtils.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/askap_synthesis.h>
+#include <askap/utils/LinmosUtils.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 /// ASKAP includes
 #include <askap/Application.h>
 #include <askap/AskapLogging.h>

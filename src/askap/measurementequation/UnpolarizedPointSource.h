@@ -34,7 +34,7 @@
 #define POINT_SOURCE_COMPONENT_H
 
 // own includes
-#include <measurementequation/UnpolarizedComponent.h>
+#include <askap/measurementequation/UnpolarizedComponent.h>
 
 // std includes
 #include <string>

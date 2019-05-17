@@ -44,7 +44,7 @@ ASKAP_LOGGER(decfistalogger, ".deconvolution.fista");
 #include <askap/deconvolution/DeconvolverFista.h>
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 
 namespace askap {
 

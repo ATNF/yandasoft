@@ -51,7 +51,7 @@
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <dataaccess/SharedIter.h>
 #include <calibaccess/ICalSolutionSource.h>
-#include <askap/utils/MultiDimPosIter.h>
+#include <askap/scimath/utils/MultiDimPosIter.h>
 
 
 // std includes

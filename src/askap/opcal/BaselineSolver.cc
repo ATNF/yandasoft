@@ -37,7 +37,7 @@
 #include <askap/opcal/BaselineSolver.h>
 #include <askap/IndexedCompare.h>
 #include <askap/opcal/ObservationDescription.h>
-#include <askap/utils/PhaseUnwrapper.h>
+#include <askap/scimath/utils/PhaseUnwrapper.h>
 
 // casa includes
 #include <casacore/measures/Measures/MPosition.h>

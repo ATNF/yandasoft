@@ -37,10 +37,10 @@
 #define CALIBRATION_APPLICATOR_ME_H
 
 // own includes
-#include <measurementequation/ICalibrationApplicator.h>
+#include <askap/measurementequation/ICalibrationApplicator.h>
 #include <calibaccess/ICalSolutionConstSource.h>
 #include <calibaccess/ICalSolutionConstAccessor.h>
-#include <measurementequation/CalibrationSolutionHandler.h>
+#include <askap/measurementequation/CalibrationSolutionHandler.h>
 #include <dataaccess/IDataAccessor.h>
 
 // boost includes

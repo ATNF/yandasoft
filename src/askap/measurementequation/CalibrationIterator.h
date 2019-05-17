@@ -43,7 +43,7 @@
 
 #include <dataaccess/IDataIterator.h>
 #include <dataaccess/SharedIter.h>
-#include <measurementequation/ICalibrationApplicator.h>
+#include <askap/measurementequation/ICalibrationApplicator.h>
 
 namespace askap {
 

@@ -30,10 +30,10 @@
 #ifndef SYNIMAGEFISTASOLVER_H_
 #define SYNIMAGEFISTASOLVER_H_
 
-#include <measurementequation/ImageCleaningSolver.h>
+#include <askap/measurementequation/ImageCleaningSolver.h>
 
 #include <casacore/lattices/Lattices/ArrayLattice.h>
-#include <deconvolution/DeconvolverFista.h>
+#include <askap/deconvolution/DeconvolverFista.h>
 
 namespace askap {
   namespace synthesis {

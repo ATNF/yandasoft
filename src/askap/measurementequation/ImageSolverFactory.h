@@ -29,11 +29,11 @@
 #ifndef ASKAP_SYNTHESIS_IMAGESOLVERFACTORY_H_
 #define ASKAP_SYNTHESIS_IMAGESOLVERFACTORY_H_
 
-#include <fitting/Solver.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Solver.h>
+#include <askap/scimath/fitting/Params.h>
 
 #include <Common/ParameterSet.h>
-#include <measurementequation/ImageSolver.h>
+#include <askap/measurementequation/ImageSolver.h>
 
 #include <boost/shared_ptr.hpp>
 

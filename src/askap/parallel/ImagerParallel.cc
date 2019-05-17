@@ -35,7 +35,7 @@
 
 #include <askap/parallel/ImagerParallel.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
@@ -56,7 +56,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <fitting/Params.h>
-#include <askap/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 #include <askap/measurementequation/ImageSolverFactory.h>
 #include <askap/measurementequation/ImageCleaningSolver.h>

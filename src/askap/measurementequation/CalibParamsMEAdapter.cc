@@ -38,7 +38,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // own includes
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <askap/AskapError.h>
 #include <fitting/Equation.h>

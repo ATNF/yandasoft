@@ -41,10 +41,10 @@
 
 // Local includes
 
-#include "distributedimager/CalcCore.h"
-#include "distributedimager/CubeBuilder.h"
-#include "distributedimager/CubeComms.h"
-#include "distributedimager/MSGroupInfo.h"
+#include "askap/distributedimager/CalcCore.h"
+#include "askap/distributedimager/CubeBuilder.h"
+#include "askap/distributedimager/CubeComms.h"
+#include "askap/distributedimager/MSGroupInfo.h"
 
 namespace askap {
 namespace cp {

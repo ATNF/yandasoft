@@ -38,9 +38,9 @@
 
 #include <dataaccess/CachedAccessorField.h>
 
-#include <measurementequation/IParameterizedComponent.h>
-#include <measurementequation/IUnpolarizedComponent.h>
-#include <measurementequation/GenericMultiChunkEquation.h>
+#include <askap/measurementequation/IParameterizedComponent.h>
+#include <askap/measurementequation/IUnpolarizedComponent.h>
+#include <askap/measurementequation/GenericMultiChunkEquation.h>
 #include <utils/PolConverter.h>
 
 // casa includes

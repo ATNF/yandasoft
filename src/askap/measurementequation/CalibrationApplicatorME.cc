@@ -39,12 +39,12 @@
 #include <casacore/scimath/Mathematics/RigidVector.h>
 #include <casacore/scimath/Mathematics/SquareMatrix.h>
 #include <askap/AskapError.h>
-#include <askap/utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 #include <dataaccess/IFlagAndNoiseDataAccessor.h>
 
 
 #include <askap/AskapUtil.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation");
 

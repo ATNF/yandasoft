@@ -36,7 +36,7 @@
 #include <fitting/Params.h>
 #include <dataaccess/IConstDataAccessor.h>
 #include <askap/AskapError.h>
-#include <measurementequation/ParameterizedMEComponent.h>
+#include <askap/measurementequation/ParameterizedMEComponent.h>
 #include <utils/PolConverter.h>
 
 // std includes
@@ -76,6 +76,6 @@ struct NoXPolFreqDependentGain : public ParameterizedMEComponent<true> {
 
 } // namespace askap
 
-#include <measurementequation/NoXPolFreqDependentGain.tcc>
+#include <askap/measurementequation/NoXPolFreqDependentGain.tcc>
 
 #endif // #ifndef NO_X_POL_FREQ_DEPENDENT_GAIN_H

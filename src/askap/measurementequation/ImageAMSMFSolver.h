@@ -34,11 +34,11 @@
 
 #include <boost/shared_ptr.hpp>
 
-#include <deconvolution/BasisFunction.h>
+#include <askap/deconvolution/BasisFunction.h>
 
-#include <deconvolution/DeconvolverMultiTermBasisFunction.h>
+#include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 
-#include <measurementequation/ImageCleaningSolver.h>
+#include <askap/measurementequation/ImageCleaningSolver.h>
 
 #include <map>
 

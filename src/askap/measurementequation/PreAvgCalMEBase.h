@@ -35,7 +35,7 @@
 #ifndef PRE_AVG_CAL_ME_BASE_H
 #define PRE_AVG_CAL_ME_BASE_H
 
-#include <measurementequation/PreAvgCalBuffer.h>
+#include <askap/measurementequation/PreAvgCalBuffer.h>
 #include <dataaccess/IDataAccessor.h>
 #include <dataaccess/SharedIter.h>
 #include <fitting/GenericEquation.h>

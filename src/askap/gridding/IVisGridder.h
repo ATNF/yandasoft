@@ -37,15 +37,15 @@
 #include <fitting/Axes.h>
 
 #include <boost/shared_ptr.hpp>
-#include <dataaccess/IDataAccessor.h>
-#include <dataaccess/IConstDataAccessor.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/SharedIter.h>
 
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
 
 
-#include <gridding/IVisWeights.h>
+#include <askap/gridding/IVisWeights.h>
 #include <string>
 
 namespace askap

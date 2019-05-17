@@ -28,7 +28,7 @@
 ///
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // ASKAPsoft includes
 #include <askap/Application.h>
@@ -39,7 +39,7 @@
 #include <Common/ParameterSet.h>
 
 // Local package includes
-#include <parallel/SimParallel.h>
+#include <askap/parallel/SimParallel.h>
 
 ASKAP_LOGGER(logger, ".csimulator");
 

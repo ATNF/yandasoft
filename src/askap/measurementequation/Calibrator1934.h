@@ -35,8 +35,8 @@
 #ifndef ASKAP_SYNTHESIS_CALIBRATOR_1934_H
 #define ASKAP_SYNTHESIS_CALIBRATOR_1934_H
 
-#include <measurementequation/IUnpolarizedComponent.h>
-#include <measurementequation/IParameterizedComponent.h>
+#include <askap/measurementequation/IUnpolarizedComponent.h>
+#include <askap/measurementequation/IParameterizedComponent.h>
 
 namespace askap {
 

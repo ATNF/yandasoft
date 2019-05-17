@@ -29,7 +29,7 @@
 #ifndef ASKAP_SYNTHESIS_WSTACKVISGRIDDER_H_
 #define ASKAP_SYNTHESIS_WSTACKVISGRIDDER_H_
 
-#include <gridding/WDependentGridderBase.h>
+#include <askap/gridding/WDependentGridderBase.h>
 #include <dataaccess/IConstDataAccessor.h>
 
 namespace askap

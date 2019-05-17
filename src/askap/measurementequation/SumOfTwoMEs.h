@@ -44,8 +44,8 @@
 #define SUM_OF_TWO_ME_S_H
 
 // own includes
-#include <measurementequation/IMeasurementEquation.h>
-#include <measurementequation/MultiChunkEquation.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
+#include <askap/measurementequation/MultiChunkEquation.h>
 // just to be able to benefit from polymorphism
 #include <fitting/Equation.h>
 #include <fitting/INormalEquations.h>

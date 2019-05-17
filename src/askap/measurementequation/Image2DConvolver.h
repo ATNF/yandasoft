@@ -166,6 +166,6 @@ class Image2DConvolver {
 }
 }
 
-#include <measurementequation/Image2DConvolver.tcc>
+#include <askap/measurementequation/Image2DConvolver.tcc>
 
 #endif

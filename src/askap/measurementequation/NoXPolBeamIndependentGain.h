@@ -37,7 +37,7 @@
 #include <fitting/Params.h>
 #include <dataaccess/IConstDataAccessor.h>
 #include <askap/AskapError.h>
-#include <measurementequation/ParameterizedMEComponent.h>
+#include <askap/measurementequation/ParameterizedMEComponent.h>
 #include <utils/PolConverter.h>
 
 // std includes
@@ -75,6 +75,6 @@ struct NoXPolBeamIndependentGain : public ParameterizedMEComponent<false> {
 
 } // namespace askap
 
-#include <measurementequation/NoXPolBeamIndependentGain.tcc>
+#include <askap/measurementequation/NoXPolBeamIndependentGain.tcc>
 
 #endif // #ifndef NO_X_POL_BEAM_INDEPENDENT_GAIN_H

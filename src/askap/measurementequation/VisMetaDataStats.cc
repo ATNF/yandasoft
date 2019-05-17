@@ -36,7 +36,7 @@
 #include <askap/AskapError.h>
 #include <Blob/BlobArray.h>
 
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.vismetadatastats");
 #include <iomanip>

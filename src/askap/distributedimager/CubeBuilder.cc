@@ -28,7 +28,7 @@
 #include <askap/distributedimager/CubeBuilder.h>
 
 // Include package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <iostream>
@@ -40,9 +40,9 @@
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <imageaccess/ImageAccessFactory.h>
+#include <askap/imageaccess/ImageAccessFactory.h>
 #include <Common/ParameterSet.h>
-#include <askap/utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>

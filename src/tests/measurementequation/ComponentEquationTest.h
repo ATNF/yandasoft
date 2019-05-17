@@ -21,7 +21,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <measurementequation/ComponentEquation.h>
+#include <askap/measurementequation/ComponentEquation.h>
 #include <fitting/LinearSolver.h>
 #include <dataaccess/DataIteratorStub.h>
 #include <casacore/casa/aips.h>

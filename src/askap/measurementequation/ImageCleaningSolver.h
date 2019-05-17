@@ -32,7 +32,7 @@
 #ifndef IMAGE_CLEANING_SOLVER_H
 #define IMAGE_CLEANING_SOLVER_H
 
-#include <measurementequation/ImageSolver.h>
+#include <askap/measurementequation/ImageSolver.h>
 
 namespace askap {
 
