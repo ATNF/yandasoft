@@ -34,8 +34,8 @@
 #ifndef ASKAP_SYNTHESIS_PARALLEL_ACCESSOR_H
 #define ASKAP_SYNTHESIS_PARALLEL_ACCESSOR_H
 
-#include <dataaccess/DataAccessorStub.h>
-#include <dataaccess/UVWRotationHandler.h>
+#include <askap/dataaccess/DataAccessorStub.h>
+#include <askap/dataaccess/UVWRotationHandler.h>
 
 namespace askap {
 

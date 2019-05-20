@@ -41,7 +41,7 @@
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobOBufVector.h>
 
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 // Using
 using namespace askap::cp;

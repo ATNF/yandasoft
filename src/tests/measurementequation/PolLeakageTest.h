@@ -38,11 +38,11 @@
 #include <askap/measurementequation/LeakageTerm.h>
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/Product.h>
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/Params.h>
 
-#include <fitting/LinearSolver.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <askap/measurementequation/CalibrationApplicatorME.h>
 #include <calibaccess/CachedCalSolutionAccessor.h>
 #include <calibaccess/CalSolutionSourceStub.h>

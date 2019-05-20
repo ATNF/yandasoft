@@ -43,8 +43,8 @@
 
 #include <askap/gridding/IVisGridder.h>
 #include <boost/shared_ptr.hpp>
-#include <dataaccess/BestWPlaneDataAccessor.h>
-#include <fitting/Axes.h>
+#include <askap/dataaccess/BestWPlaneDataAccessor.h>
+#include <askap/scimath/fitting/Axes.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 #include <casacore/scimath/Mathematics/Interpolate2D.h>
 #include <casacore/measures/Measures/MDirection.h>

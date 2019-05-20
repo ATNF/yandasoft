@@ -39,10 +39,10 @@
 #include <Common/ParameterSet.h>
 #include <askap/gridding/IVisGridder.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <dataaccess/SharedIter.h>
-#include <fitting/Solver.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/scimath/fitting/Solver.h>
 #include <calibaccess/ICalSolutionSource.h>
-#include <dataaccess/TimeChunkIteratorAdapter.h>
+#include <askap/dataaccess/TimeChunkIteratorAdapter.h>
 
 
 // std includes

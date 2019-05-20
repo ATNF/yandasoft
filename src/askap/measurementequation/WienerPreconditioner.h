@@ -34,7 +34,7 @@
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Vector.h>
 //#include <casacore/lattices/Lattices/ArrayLattice.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Axes.h>
 
 #include <Common/ParameterSet.h>
 #include <boost/shared_ptr.hpp>

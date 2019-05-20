@@ -32,7 +32,7 @@
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Vector.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Axes.h>
 
 #include <boost/shared_ptr.hpp>
 

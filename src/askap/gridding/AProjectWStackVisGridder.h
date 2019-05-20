@@ -32,7 +32,7 @@
 
 #include <askap/gridding/WStackVisGridder.h>
 #include <askap/gridding/IBasicIllumination.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/gridding/UVPattern.h>
 #include <askap/gridding/AProjectGridderBase.h>
 

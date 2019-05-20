@@ -44,7 +44,7 @@
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/CalibrationSolutionHandler.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <calibaccess/ICalSolutionConstSource.h>
 #include <calibaccess/JonesIndex.h>
 #include <utils/ChangeMonitor.h>

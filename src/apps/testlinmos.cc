@@ -49,7 +49,7 @@
 #include <askap/Log4cxxLogSink.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <Common/ParameterSet.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/AskapUtil.h>
 #include <imageaccess/IImageAccess.h>
 #include <boost/shared_ptr.hpp>

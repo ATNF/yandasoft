@@ -34,11 +34,11 @@
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
 #include <Common/ParameterSet.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/ImagingNormalEquations.h>
-#include <fitting/Params.h>
-#include <fitting/Solver.h>
-#include <fitting/Quality.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/Solver.h>
+#include <askap/scimath/fitting/Quality.h>
 #include <askap/measurementequation/ImageSolverFactory.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageRestoreSolver.h>
@@ -51,8 +51,8 @@
 #include <askap/measurementequation/CalibrationIterator.h>
 #include <calibaccess/CalibAccessFactory.h>
 #include <casacore/casa/OS/Timer.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/parallel/GroupVisAggregator.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>

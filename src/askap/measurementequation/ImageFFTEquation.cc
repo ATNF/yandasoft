@@ -28,16 +28,16 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 #include <askap/AskapError.h>
 //#include <fft/FFTWrapper.h>
 
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/MemBufferDataAccessor.h>
-#include <fitting/Params.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/gridding/BoxVisGridder.h>
 #include <askap/gridding/SphFuncVisGridder.h>
-#include <fitting/ImagingNormalEquations.h>
-#include <fitting/DesignMatrix.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/Axes.h>
 #include <profile/AskapProfiler.h>
 
 #include <casacore/scimath/Mathematics/RigidVector.h>

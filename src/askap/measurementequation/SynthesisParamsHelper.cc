@@ -25,7 +25,7 @@
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <imageaccess/ImageAccessFactory.h>
 #include <askap/scimath/utils/PolConverter.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Axes.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/gridding/SupportSearcher.h>

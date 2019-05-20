@@ -34,9 +34,9 @@
 #define I_MEASUREMENT_EQUATION_H
 
 // own includes
-#include <fitting/INormalEquations.h>
-#include <dataaccess/IDataAccessor.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 
 namespace askap {
  

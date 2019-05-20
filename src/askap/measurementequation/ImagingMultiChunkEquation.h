@@ -39,8 +39,8 @@
 
 // own include
 #include <askap/measurementequation/MultiChunkEquation.h>
-#include <fitting/ImagingEquation.h>
-#include <fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/ImagingEquation.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
 
 
 namespace askap {

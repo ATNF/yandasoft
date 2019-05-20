@@ -40,7 +40,7 @@
 #include <casacore/scimath/Mathematics/SquareMatrix.h>
 #include <askap/AskapError.h>
 #include <askap/scimath/utils/PolConverter.h>
-#include <dataaccess/IFlagAndNoiseDataAccessor.h>
+#include <askap/dataaccess/IFlagAndNoiseDataAccessor.h>
 
 
 #include <askap/AskapUtil.h>

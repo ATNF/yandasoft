@@ -29,10 +29,10 @@
 #ifndef ASKAP_SYNTHESIS_SYNPARALLEL_H_
 #define ASKAP_SYNTHESIS_SYNPARALLEL_H_
 
-#include <fitting/Equation.h>
-#include <fitting/Solver.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/Solver.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
 #include <Common/ParameterSet.h>
 #include <askap/gridding/IVisGridder.h>
 

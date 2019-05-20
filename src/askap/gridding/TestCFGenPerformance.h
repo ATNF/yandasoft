@@ -37,7 +37,7 @@
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/AWProjectVisGridder.h>
 #include <boost/shared_ptr.hpp>
-#include <dataaccess/DataAccessorStub.h>
+#include <askap/dataaccess/DataAccessorStub.h>
 #include <Common/ParameterSet.h>
 
 

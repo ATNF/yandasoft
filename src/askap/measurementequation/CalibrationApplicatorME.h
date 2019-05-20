@@ -41,7 +41,7 @@
 #include <calibaccess/ICalSolutionConstSource.h>
 #include <calibaccess/ICalSolutionConstAccessor.h>
 #include <askap/measurementequation/CalibrationSolutionHandler.h>
-#include <dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/IDataAccessor.h>
 
 // boost includes
 #include <boost/shared_ptr.hpp>

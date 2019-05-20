@@ -31,7 +31,7 @@
 #define ASKAP_SYNTHESIS_AWPROJECTVISGRIDDER_H_
 
 // ASKAPsoft includes
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <boost/shared_ptr.hpp>
 
 // Local package includes

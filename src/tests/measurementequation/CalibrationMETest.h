@@ -44,8 +44,8 @@
 #include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/Sum.h>
 #include <askap/measurementequation/ZeroComponent.h>
-#include <fitting/LinearSolver.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <calibaccess/CalParamNameHelper.h>
 
 #include <cppunit/extensions/HelperMacros.h>

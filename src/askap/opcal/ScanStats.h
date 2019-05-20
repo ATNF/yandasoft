@@ -38,7 +38,7 @@
 #ifndef SYNTHESIS_SCAN_STATS_H
 #define SYNTHESIS_SCAN_STATS_H
 
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askap/opcal/ObservationDescription.h>
 
 #include <string>

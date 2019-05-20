@@ -39,7 +39,7 @@ using namespace askap;
 using namespace askap::synthesis;
 using namespace askap::accessors;
 
-#include <dataaccess/FakeSingleStepIterator.h>
+#include <askap/dataaccess/FakeSingleStepIterator.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/AskapError.h>

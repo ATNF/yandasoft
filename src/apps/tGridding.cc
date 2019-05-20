@@ -40,7 +40,7 @@
 // ASKAPsoft includes
 #include "askap/AskapLogging.h"
 #include "askap/AskapError.h"
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include "askap/StatReporter.h"
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
@@ -50,9 +50,9 @@
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/AskapUtil.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
 
 
 ASKAP_LOGGER(logger, ".tGridding");

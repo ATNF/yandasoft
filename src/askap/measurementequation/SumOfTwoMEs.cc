@@ -42,7 +42,7 @@
 
 
 #include <askap/measurementequation/SumOfTwoMEs.h>
-#include <dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askap/measurementequation/NormalEquationsTypeError.h>
 #include <askap/AskapError.h>
 

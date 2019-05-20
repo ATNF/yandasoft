@@ -34,7 +34,7 @@
 
 #include <boost/shared_ptr.hpp>
 #include <askap/gridding/IBasicIllumination.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/gridding/UVPattern.h>
 #include <askap/gridding/IVisGridder.h>
 #include <Common/ParameterSet.h>

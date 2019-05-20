@@ -35,7 +35,7 @@
 #define VECTOR_OPERATIONS_H
 
 #include <casacore/scimath/Mathematics/AutoDiff.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 
 
 namespace askap {

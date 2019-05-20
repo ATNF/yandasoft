@@ -31,7 +31,7 @@
 #include <askap/messages/IMessage.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 namespace askap {
     namespace cp {

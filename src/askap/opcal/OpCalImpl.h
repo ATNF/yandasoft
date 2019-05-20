@@ -44,7 +44,7 @@
 #include <askap/opcal/GenericCalInfo.h>
 #include <askap/opcal/IGenericCalSolver.h>
 
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/parallel/MEParallelApp.h>

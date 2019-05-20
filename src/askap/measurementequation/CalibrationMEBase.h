@@ -37,16 +37,16 @@
 
 
 // own includes
-#include <fitting/GenericEquation.h>
-#include <fitting/Params.h>
-#include <fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/GenericEquation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
 #include <askap/measurementequation/ICalibrationApplicator.h>
 
 #include <askap/measurementequation/GenericMultiChunkEquation.h>
-#include <dataaccess/IDataAccessor.h>
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
-#include <fitting/Equation.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/Equation.h>
 
 // boost includes
 #include <boost/shared_ptr.hpp>

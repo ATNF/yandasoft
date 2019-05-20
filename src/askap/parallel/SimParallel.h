@@ -32,7 +32,7 @@
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askapparallel/AskapParallel.h>
 #include <askap/parallel/SynParallel.h>

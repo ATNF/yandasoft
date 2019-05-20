@@ -38,7 +38,7 @@
 
 #include <askap/parallel/ParallelWriteIterator.h>
 #include <askap/parallel/ParallelIteratorStatus.h>
-#include <dataaccess/IFlagDataAccessor.h>
+#include <askap/dataaccess/IFlagDataAccessor.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>

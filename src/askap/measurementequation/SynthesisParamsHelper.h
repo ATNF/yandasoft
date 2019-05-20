@@ -35,8 +35,8 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/Slicer.h>
 
-#include <fitting/Params.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/Axes.h>
 
 #include <Common/ParameterSet.h>
 #include <casacore/images/Images/TempImage.h>
@@ -45,7 +45,7 @@
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
 
-#include <imageaccess/IImageAccess.h>
+#include <askap/imageaccess/IImageAccess.h>
 #include <boost/shared_ptr.hpp>
 
 namespace askap

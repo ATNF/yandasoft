@@ -39,7 +39,7 @@
 #include <casacore/casa/Quanta.h>
 
 // own includes
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 // std vector
 #include <string>

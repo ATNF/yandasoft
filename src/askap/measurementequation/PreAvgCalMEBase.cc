@@ -33,13 +33,13 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/measurementequation/PreAvgCalMEBase.h>
-#include <dataaccess/IDataIterator.h>
+#include <askap/dataaccess/IDataIterator.h>
 #include <askap/AskapError.h>
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
-#include <fitting/DesignMatrix.h>
-#include <fitting/PolXProducts.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/PolXProducts.h>
+#include <askap/scimath/fitting/Params.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>

@@ -30,17 +30,17 @@
 #include <askap/parallel/AdviseParallel.h>
 #include <askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 #include <profile/AskapProfiler.h>
 
 
-#include <fitting/INormalEquations.h>
-#include <fitting/Solver.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Solver.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>

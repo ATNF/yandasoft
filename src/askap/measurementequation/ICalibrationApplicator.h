@@ -35,7 +35,7 @@
 #define I_CALIBRATION_APPLICATOR_H
 
 // own includes
-#include <dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/IDataAccessor.h>
 
 // boost includes
 #include <boost/shared_ptr.hpp>

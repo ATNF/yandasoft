@@ -33,7 +33,7 @@
 #include "askap/askap_synthesis.h"
 
 // ASKAPsoft includes
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/StatReporter.h>
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
@@ -42,7 +42,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/AskapUtil.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/ParsetInterface.h>
 #include <profile/AskapProfiler.h>
 
 #include "askap/AskapLogging.h"

@@ -30,9 +30,9 @@
 #include <askap/gridding/WProjectVisGridder.h>
 #include <askap/gridding/ATCAIllumination.h>
 #include <askap/gridding/DiskIllumination.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ComponentEquation.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/measures/Measures/MPosition.h>

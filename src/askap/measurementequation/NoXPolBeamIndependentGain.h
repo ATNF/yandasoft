@@ -32,10 +32,10 @@
 #define NO_X_POL_BEAM_INDEPENDENT_GAIN_H
 
 // own includes
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
-#include <fitting/Params.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/AskapError.h>
 #include <askap/measurementequation/ParameterizedMEComponent.h>
 #include <utils/PolConverter.h>

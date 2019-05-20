@@ -42,12 +42,12 @@
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
-#include <dataaccess/MemBufferDataAccessor.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/DesignMatrix.h>
-#include <fitting/Params.h>
-#include <fitting/ComplexDiff.h>
-#include <fitting/ComplexDiffMatrix.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
 
 
 // std includes

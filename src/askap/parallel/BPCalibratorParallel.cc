@@ -61,12 +61,12 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <Blob/BlobOStream.h>
 #include <profile/AskapProfiler.h>
 
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 
-#include <fitting/LinearSolver.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
 
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>

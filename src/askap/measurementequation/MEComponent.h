@@ -32,7 +32,7 @@
 #define ME_COMPONENT_H
 
 // own includes
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 namespace askap {
 

@@ -62,13 +62,13 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
 
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/TimeChunkIteratorAdapter.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TimeChunkIteratorAdapter.h>
 
-#include <fitting/LinearSolver.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
 
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>

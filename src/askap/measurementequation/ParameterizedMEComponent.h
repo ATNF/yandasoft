@@ -36,9 +36,9 @@
 #include <string>
 
 // own includes
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/MEComponent.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 #include <askap/AskapError.h>
 
 

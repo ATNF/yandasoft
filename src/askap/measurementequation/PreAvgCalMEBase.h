@@ -36,13 +36,13 @@
 #define PRE_AVG_CAL_ME_BASE_H
 
 #include <askap/measurementequation/PreAvgCalBuffer.h>
-#include <dataaccess/IDataAccessor.h>
-#include <dataaccess/SharedIter.h>
-#include <fitting/GenericEquation.h>
-#include <fitting/Params.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/scimath/fitting/GenericEquation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 
 #include <boost/shared_ptr.hpp>
 

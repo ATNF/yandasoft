@@ -53,7 +53,7 @@
 #include <askap/parallel/ImagerParallel.h>
 #include <askap/measurementequation/MEParsetInterface.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <profile/AskapProfiler.h>
 
 

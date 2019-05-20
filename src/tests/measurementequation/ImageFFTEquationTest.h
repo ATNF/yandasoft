@@ -28,8 +28,8 @@
 #include <askap/gridding/DiskIllumination.h>
 #include <askap/measurementequation/ImageSolver.h>
 #include <askap/measurementequation/ImageMultiScaleSolver.h>
-#include <dataaccess/DataIteratorStub.h>
-#include <fitting/ParamsCasaTable.h>
+#include <askap/dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/ParamsCasaTable.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>

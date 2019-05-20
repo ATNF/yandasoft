@@ -21,11 +21,11 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <fitting/Params.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askap/measurementequation/ComponentEquation.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
 
 #include <casacore/measures/Measures/Stokes.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>

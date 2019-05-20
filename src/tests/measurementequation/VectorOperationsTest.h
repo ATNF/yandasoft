@@ -38,7 +38,7 @@
 #include <casacore/casa/BasicSL/Complex.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <askap/AskapError.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 
 
 // std includes

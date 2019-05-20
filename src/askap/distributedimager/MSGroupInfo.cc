@@ -42,13 +42,13 @@
 #include <askap/AskapLogging.h>
 #include <casacore/casa/Quanta/Unit.h>
 #include <casacore/measures/Measures/MFrequency.h>
-#include <dataaccess/IConstDataSource.h>
-#include <dataaccess/TableConstDataSource.h>
-#include <dataaccess/IConstDataIterator.h>
-#include <dataaccess/IDataConverter.h>
-#include <dataaccess/IDataSelector.h>
-#include <dataaccess/IDataIterator.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/IConstDataSource.h>
+#include <askap/dataaccess/TableConstDataSource.h>
+#include <askap/dataaccess/IConstDataIterator.h>
+#include <askap/dataaccess/IDataConverter.h>
+#include <askap/dataaccess/IDataSelector.h>
+#include <askap/dataaccess/IDataIterator.h>
+#include <askap/dataaccess/SharedIter.h>
 
 ASKAP_LOGGER(logger, ".MSGroupInfo");
 

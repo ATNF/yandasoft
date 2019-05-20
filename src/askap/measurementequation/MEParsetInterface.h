@@ -40,8 +40,8 @@
 #include <casacore/casa/aips.h>
 
 // own includes
-#include <fitting/Params.h>
-#include <fitting/Solver.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/Solver.h>
 #include <Common/ParameterSet.h>
 
 namespace askap

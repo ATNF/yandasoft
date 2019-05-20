@@ -35,9 +35,9 @@
 // ASKAPsoft includes
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/Equation.h>
-#include <fitting/Solver.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/Solver.h>
 
 // Loacl package includes
 #include <askap/parallel/SynParallel.h>

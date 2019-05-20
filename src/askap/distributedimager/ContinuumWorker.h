@@ -34,9 +34,9 @@
 // ASKAPsoft includes
 #include "boost/shared_ptr.hpp"
 #include <Common/ParameterSet.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/Params.h>
-#include <dataaccess/TableDataSource.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/dataaccess/TableDataSource.h>
 #include <askap/gridding/IVisGridder.h>
 
 // Local includes

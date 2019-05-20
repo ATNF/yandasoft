@@ -35,10 +35,10 @@
 #ifndef SYNTHESIS_VIS_METADATA_STATS_H
 #define SYNTHESIS_VIS_METADATA_STATS_H
 
-#include <dataaccess/IConstDataAccessor.h>
-#include <dataaccess/BestWPlaneDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/BestWPlaneDataAccessor.h>
 #include <casacore/measures/Measures/MDirection.h>
-#include <fitting/ISerializable.h>
+#include <askap/scimath/fitting/ISerializable.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>
 

@@ -29,13 +29,13 @@
 
 #include <askap/parallel/ContSubtractParallel.h>
 #include <askap/parallel/SimParallel.h>
-#include <fitting/NormalEquationsStub.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/MemBufferDataAccessor.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/NormalEquationsStub.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
-#include <fitting/Equation.h>
+#include <askap/scimath/fitting/Equation.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>

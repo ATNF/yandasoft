@@ -36,7 +36,7 @@
 // ASKAPsoft includes
 #include <boost/scoped_ptr.hpp>
 #include <Common/ParameterSet.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 
 // Local includes

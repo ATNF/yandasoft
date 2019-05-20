@@ -24,8 +24,8 @@
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
-#include <dataaccess/IDataAccessor.h>
-#include <dataaccess/OnDemandBufferDataAccessor.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/OnDemandBufferDataAccessor.h>
 ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 
 #include <askap/AskapError.h>
@@ -41,8 +41,8 @@ ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/measures/Measures/UVWMachine.h>
 
-#include <fitting/Params.h>
-#include <fitting/ParamsCasaTable.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/ParamsCasaTable.h>
 
 #include <askap/gridding/GridKernel.h>
 

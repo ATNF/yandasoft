@@ -39,8 +39,8 @@
 
 // own include
 #include <askap/measurementequation/MultiChunkEquation.h>
-#include <fitting/GenericEquation.h>
-#include <fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/GenericEquation.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
 
 
 namespace askap {

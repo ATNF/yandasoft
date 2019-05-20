@@ -39,7 +39,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/measurementequation/CalibrationIterator.h>
-#include <dataaccess/OnDemandNoiseAndFlagDA.h>
+#include <askap/dataaccess/OnDemandNoiseAndFlagDA.h>
 #include <askap/AskapError.h>
 
 #include <askap/measurementequation/ICalibrationApplicator.h>

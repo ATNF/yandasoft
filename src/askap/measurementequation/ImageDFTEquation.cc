@@ -27,12 +27,12 @@ ASKAP_LOGGER(logger, ".measurementequation.imagedftequation");
 
 #include <askap/AskapError.h>
 
-#include <dataaccess/SharedIter.h>
-#include <fitting/Params.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ImageDFTEquation.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/DesignMatrix.h>
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/Axes.h>
 
 #include <casacore/scimath/Mathematics/RigidVector.h>
 #include <casacore/casa/BasicSL/Constants.h>

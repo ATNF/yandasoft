@@ -35,8 +35,8 @@
 #include <askap/utils/CommandLineParser.h>
 
 #include <askap/gridding/SphFuncVisGridder.h>
-#include <dataaccess/DataAccessorStub.h>
-#include <fitting/Axes.h>
+#include <askap/dataaccess/DataAccessorStub.h>
+#include <askap/scimath/fitting/Axes.h>
 
 ASKAP_LOGGER(logger, ".test");
 

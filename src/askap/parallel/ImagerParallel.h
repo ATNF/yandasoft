@@ -32,7 +32,7 @@
 
 // ASKAPsoft includes
 #include <askapparallel/AskapParallel.h>
-#include <fitting/Solver.h>
+#include <askap/scimath/fitting/Solver.h>
 #include <Common/ParameterSet.h>
 
 // Local package includes

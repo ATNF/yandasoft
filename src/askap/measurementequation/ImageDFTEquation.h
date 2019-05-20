@@ -29,11 +29,11 @@
 #ifndef SYNIMAGEDFTEQUATION_H_
 #define SYNIMAGEDFTEQUATION_H_
 
-#include <fitting/Params.h>
-#include <fitting/GenericEquation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/GenericEquation.h>
 
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/IDataIterator.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataIterator.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>

@@ -33,7 +33,7 @@
 #define PRODUCT_H
 
 #include <askap/measurementequation/MEComponent.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/measurementequation/BlockCDMOperations.h>
 
 namespace askap {

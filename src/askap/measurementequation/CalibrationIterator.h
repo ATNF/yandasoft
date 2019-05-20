@@ -41,8 +41,8 @@
 #ifndef CALIBRATION_ITERATOR_H
 #define CALIBRATION_ITERATOR_H
 
-#include <dataaccess/IDataIterator.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataIterator.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askap/measurementequation/ICalibrationApplicator.h>
 
 namespace askap {

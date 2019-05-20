@@ -45,9 +45,9 @@
 ASKAP_LOGGER(logger, ".parallel");
 
 // Local package includes
-#include <dataaccess/DataAccessError.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/DataAccessError.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageRestoreSolver.h>

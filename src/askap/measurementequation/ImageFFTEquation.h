@@ -30,13 +30,13 @@
 #ifndef SYNIMAGEFFTEQUATION_H_
 #define SYNIMAGEFFTEQUATION_H_
 
-#include <fitting/Params.h>
-#include <fitting/ImagingEquation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/ImagingEquation.h>
 #include <utils/ChangeMonitor.h>
 
 #include <askap/gridding/IVisGridder.h>
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/IDataIterator.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataIterator.h>
 #include <askap/measurementequation/IVisCubeUpdate.h>
 
 #include <casacore/casa/aips.h>

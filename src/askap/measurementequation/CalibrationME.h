@@ -46,13 +46,13 @@
 #include <casacore/casa/Arrays/MatrixMath.h>
 
 // own includes
-#include <fitting/GenericEquation.h>
-#include <fitting/Params.h>
-#include <fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/GenericEquation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
 
-#include <dataaccess/IConstDataAccessor.h>
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 #include <askap/measurementequation/CalibrationMEBase.h>
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 

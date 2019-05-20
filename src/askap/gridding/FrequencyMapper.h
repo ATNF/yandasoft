@@ -31,7 +31,7 @@
 #ifndef FREQUENCY_MAPPER_H
 #define FREQUENCY_MAPPER_H
 
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Axes.h>
 #include <casacore/casa/Arrays/Vector.h>
 
 #include <vector>

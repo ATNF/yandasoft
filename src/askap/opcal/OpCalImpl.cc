@@ -41,14 +41,14 @@ ASKAP_LOGGER(logger, ".OpCalImpl");
 // ASKAPsoft includes
 
 #include <askap/opcal/OpCalImpl.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 #include <calibaccess/CalParamNameHelper.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 
-#include <fitting/LinearSolver.h>
-#include <fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/CalibrationME.h>
 #include <askap/measurementequation/PreAvgCalMEBase.h>

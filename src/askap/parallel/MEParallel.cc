@@ -49,11 +49,11 @@
 #include <Blob/BlobIStream.h>
 #include <Blob/BlobOStream.h>
 #include <Common/ParameterSet.h>
-#include <fitting/Equation.h>
-#include <fitting/Solver.h>
-#include <fitting/INormalEquations.h>
-#include <fitting/ImagingNormalEquations.h>
-#include <fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/Solver.h>
+#include <askap/scimath/fitting/INormalEquations.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
 #include <profile/AskapProfiler.h>
 #include <casacore/casa/OS/Timer.h>
 

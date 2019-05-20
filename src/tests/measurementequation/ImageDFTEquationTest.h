@@ -22,8 +22,8 @@
 ///
 
 #include <askap/measurementequation/ImageDFTEquation.h>
-#include <fitting/LinearSolver.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/measures/Measures/MPosition.h>

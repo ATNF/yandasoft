@@ -30,7 +30,7 @@
 #define BOXVISGRIDDER_H_
 
 #include <askap/gridding/TableVisGridder.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 
 namespace askap
 {

@@ -38,10 +38,10 @@
 #ifndef SYNTHESIS_PREAVGCALBUFFER_H
 #define SYNTHESIS_PREAVGCALBUFFER_H
 
-#include <dataaccess/DataAccessorAdapter.h>
-#include <dataaccess/IConstDataAccessor.h>
+#include <askap/dataaccess/DataAccessorAdapter.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <fitting/PolXProducts.h>
+#include <askap/scimath/fitting/PolXProducts.h>
 
 #include <boost/shared_ptr.hpp>
 

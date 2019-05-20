@@ -22,17 +22,17 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
-#include <dataaccess/TableDataSource.h>
+#include <askap/dataaccess/TableDataSource.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
 #include <askap/AskapError.h>
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/ParsetInterface.h>
 
-#include <dataaccess/TableManager.h>
-#include <dataaccess/IDataConverterImpl.h>
+#include <askap/dataaccess/TableManager.h>
+#include <askap/dataaccess/IDataConverterImpl.h>
 #include <utils/EigenDecompose.h>
 #include <askap/AskapUtil.h>
 

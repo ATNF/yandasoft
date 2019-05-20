@@ -37,7 +37,7 @@
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/Log4cxxLogSink.h>
 // just for logging
 #include <askapparallel/AskapParallel.h>

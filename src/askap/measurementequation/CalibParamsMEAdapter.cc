@@ -41,7 +41,7 @@
 #include <askap/askap_synthesis.h>
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <askap/AskapError.h>
-#include <fitting/Equation.h>
+#include <askap/scimath/fitting/Equation.h>
 #include <calibaccess/JonesJTerm.h>
 #include <calibaccess/JonesDTerm.h>
 #include <askap/AskapLogging.h>

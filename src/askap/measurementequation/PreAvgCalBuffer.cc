@@ -37,7 +37,7 @@
 
 #include <askap/measurementequation/PreAvgCalBuffer.h>
 #include <askap/AskapError.h>
-#include <dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
 

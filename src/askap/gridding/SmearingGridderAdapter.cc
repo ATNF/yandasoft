@@ -37,7 +37,7 @@ ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 #include <askap/gridding/SmearingGridderAdapter.h>
 #include <askap/AskapError.h>
-#include <dataaccess/SmearingAccessorAdapter.h>
+#include <askap/dataaccess/SmearingAccessorAdapter.h>
 
 using namespace askap;
 using namespace askap::synthesis;

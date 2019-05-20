@@ -36,7 +36,7 @@
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <askap/measurementequation/VisMetaDataStats.h>
-#include <dataaccess/DataAccessorStub.h>
+#include <askap/dataaccess/DataAccessorStub.h>
 #include <casacore/casa/Quanta/Quantum.h>
 #include <casacore/casa/Quanta/MVDirection.h>
 

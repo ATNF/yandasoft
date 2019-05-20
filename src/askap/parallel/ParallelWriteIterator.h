@@ -38,9 +38,9 @@
 #ifndef ASKAP_SYNTHESIS_PARALLEL_WRITE_ITERATOR_H
 #define ASKAP_SYNTHESIS_PARALLEL_WRITE_ITERATOR_H
 
-#include <dataaccess/IDataIterator.h>
+#include <askap/dataaccess/IDataIterator.h>
 #include <askap/parallel/ParallelAccessor.h>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/SharedIter.h>
 #include <askapparallel/AskapParallel.h>
 
 namespace askap {

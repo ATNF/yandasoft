@@ -36,14 +36,14 @@
 #ifndef IMAGING_EQUATION_ADAPTER_H
 #define IMAGING_EQUATION_ADAPTER_H
 
-#include <fitting/Equation.h>
-#include <fitting/Params.h>
-#include <fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/gridding/IVisGridder.h>
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/IDataIterator.h>
-#include <dataaccess/IDataAccessor.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataIterator.h>
+#include <askap/dataaccess/IDataAccessor.h>
 
 namespace askap {
 

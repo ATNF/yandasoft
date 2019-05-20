@@ -32,7 +32,7 @@
 #ifndef SYNTHESIS_BLOCK_CDM_OPERATIONS_H
 #define SYNTHESIS_BLOCK_CDM_OPERATIONS_H
 
-#include<fitting/ComplexDiffMatrix.h>
+#include<askap/scimath/fitting/ComplexDiffMatrix.h>
 
 namespace askap {
 

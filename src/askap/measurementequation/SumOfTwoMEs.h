@@ -47,8 +47,8 @@
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 // just to be able to benefit from polymorphism
-#include <fitting/Equation.h>
-#include <fitting/INormalEquations.h>
+#include <askap/scimath/fitting/Equation.h>
+#include <askap/scimath/fitting/INormalEquations.h>
 
 
 // boost includes

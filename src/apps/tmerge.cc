@@ -34,7 +34,7 @@
 #include <askap/AskapLogging.h>
 #include <askap/StatReporter.h>
 
-#include <fitting/ImagingNormalEquations.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/utils/ImageUtils.h>
 #include <linmos/LinmosAccumulator.h>

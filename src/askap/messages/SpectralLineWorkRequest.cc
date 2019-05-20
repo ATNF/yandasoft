@@ -36,7 +36,7 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <Blob/BlobArray.h>
 #include <Blob/BlobSTL.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 
 // Using
 using namespace askap::cp;

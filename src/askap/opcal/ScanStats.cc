@@ -37,8 +37,8 @@
 
 // own includes
 #include <askap/opcal/ScanStats.h>
-#include <dataaccess/IConstDataIterator.h>
-#include <dataaccess/TableConstDataIterator.h>
+#include <askap/dataaccess/IConstDataIterator.h>
+#include <askap/dataaccess/TableConstDataIterator.h>
 
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>

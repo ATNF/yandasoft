@@ -37,13 +37,13 @@
 #define MULTI_CHUNK_EQUATION_H
 
 // own includes
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/IDataIterator.h>
-#include <dataaccess/IDataAccessor.h>
-#include <fitting/INormalEquations.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/IDataIterator.h>
+#include <askap/dataaccess/IDataAccessor.h>
+#include <askap/scimath/fitting/INormalEquations.h>
 
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <fitting/Equation.h>
+#include <askap/scimath/fitting/Equation.h>
 
 namespace askap {
 

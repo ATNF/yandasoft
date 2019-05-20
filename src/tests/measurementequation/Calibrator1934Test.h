@@ -24,7 +24,7 @@
 
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/Calibrator1934.h>
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 

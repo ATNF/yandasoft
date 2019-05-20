@@ -31,7 +31,7 @@
 #include <boost/shared_ptr.hpp>
 
 // ASKAPsoft includes
-#include <fitting/ISerializable.h>
+#include <askap/scimath/fitting/ISerializable.h>
 
 namespace askap {
     namespace cp {

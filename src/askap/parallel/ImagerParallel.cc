@@ -44,9 +44,9 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/AskapUtil.h>
 
 #include <askapparallel/AskapParallel.h>
-#include <dataaccess/DataAccessError.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/DataAccessError.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
 
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
@@ -55,7 +55,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/CalibrationIterator.h>
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 
 #include <askap/measurementequation/ImageSolverFactory.h>

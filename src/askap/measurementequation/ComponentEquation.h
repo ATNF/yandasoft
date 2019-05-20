@@ -32,11 +32,11 @@
 #define SYNCOMPONENTEQUATION_H_
 
 // own include
-#include <fitting/Params.h>
-#include <fitting/DesignMatrix.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/DesignMatrix.h>
 
 
-#include <dataaccess/CachedAccessorField.h>
+#include <askap/dataaccess/CachedAccessorField.h>
 
 #include <askap/measurementequation/IParameterizedComponent.h>
 #include <askap/measurementequation/IUnpolarizedComponent.h>

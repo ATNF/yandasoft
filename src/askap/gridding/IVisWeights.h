@@ -35,10 +35,10 @@
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/casa/Arrays/Cube.h>
 
-#include <fitting/Axes.h>
+#include <askap/scimath/fitting/Axes.h>
 
 #include <boost/shared_ptr.hpp>
-#include <dataaccess/SharedIter.h>
+#include <askap/dataaccess/SharedIter.h>
 
 #include <boost/shared_ptr.hpp>
 
