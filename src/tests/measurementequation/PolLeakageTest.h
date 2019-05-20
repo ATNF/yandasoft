@@ -44,8 +44,8 @@
 #include <askap/scimath/fitting/LinearSolver.h>
 #include <askap/dataaccess/DataIteratorStub.h>
 #include <askap/measurementequation/CalibrationApplicatorME.h>
-#include <calibaccess/CachedCalSolutionAccessor.h>
-#include <calibaccess/CalSolutionSourceStub.h>
+#include <askap/calibaccess/CachedCalSolutionAccessor.h>
+#include <askap/calibaccess/CalSolutionSourceStub.h>
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <cppunit/extensions/HelperMacros.h>
 

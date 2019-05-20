@@ -81,13 +81,13 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/gridding/VisGridderFactory.h>
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
-#include <calibaccess/CalParamNameHelper.h>
-#include <calibaccess/CalibAccessFactory.h>
+#include <askap/calibaccess/CalParamNameHelper.h>
+#include <askap/calibaccess/CalibAccessFactory.h>
 
 #include <askap/parallel/CalibratorParallel.h>
 
 #ifdef USE_CAL_SERVICE
-#include <calibaccess/ServiceCalSolutionSourceStub.h>
+#include <askap/calibaccess/ServiceCalSolutionSourceStub.h>
 #include <calserviceaccessor/ServiceCalSolutionSource.h>
 #endif
 

@@ -42,10 +42,10 @@
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <askap/AskapError.h>
 #include <askap/scimath/fitting/Equation.h>
-#include <calibaccess/JonesJTerm.h>
-#include <calibaccess/JonesDTerm.h>
+#include <askap/calibaccess/JonesJTerm.h>
+#include <askap/calibaccess/JonesDTerm.h>
 #include <askap/AskapLogging.h>
-#include <calibaccess/CalParamNameHelper.h>
+#include <askap/calibaccess/CalParamNameHelper.h>
 ASKAP_LOGGER(logger, ".measurementequation");
 
 

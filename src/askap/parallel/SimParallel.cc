@@ -60,7 +60,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/GaussianNoiseME.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/ImageSolverFactory.h>
-#include <calibaccess/CalibAccessFactory.h>
+#include <askap/calibaccess/CalibAccessFactory.h>
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/parallel/ParallelWriteIterator.h>

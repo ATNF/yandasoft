@@ -32,7 +32,7 @@
 
 #include <askap/scimath/fitting/Params.h>
 #include <askap/scimath/fitting/ImagingEquation.h>
-#include <utils/ChangeMonitor.h>
+#include <askap/scimath/utils/ChangeMonitor.h>
 
 #include <askap/gridding/IVisGridder.h>
 #include <askap/dataaccess/SharedIter.h>

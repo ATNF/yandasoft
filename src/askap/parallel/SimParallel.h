@@ -37,7 +37,7 @@
 #include <askapparallel/AskapParallel.h>
 #include <askap/parallel/SynParallel.h>
 #include <askap/simulation/Simulator.h>
-#include <calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
 
 namespace askap
 {

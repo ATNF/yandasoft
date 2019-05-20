@@ -60,7 +60,7 @@ ASKAP_LOGGER(logger, ".parallel");
 
 #include <askap/measurementequation/ImageSolverFactory.h>
 #include <askap/measurementequation/ImageCleaningSolver.h>
-#include <calibaccess/CalibAccessFactory.h>
+#include <askap/calibaccess/CalibAccessFactory.h>
 #include <askap/measurementequation/CalibrationApplicatorME.h>
 #include <profile/AskapProfiler.h>
 #include <askap/parallel/GroupVisAggregator.h>

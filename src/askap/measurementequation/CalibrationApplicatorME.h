@@ -38,8 +38,8 @@
 
 // own includes
 #include <askap/measurementequation/ICalibrationApplicator.h>
-#include <calibaccess/ICalSolutionConstSource.h>
-#include <calibaccess/ICalSolutionConstAccessor.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/ICalSolutionConstAccessor.h>
 #include <askap/measurementequation/CalibrationSolutionHandler.h>
 #include <askap/dataaccess/IDataAccessor.h>
 

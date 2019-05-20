@@ -33,9 +33,9 @@
 #define CALIBRATION_SOLUTION_HANDLER_H
 
 // own includes
-#include <calibaccess/ICalSolutionConstSource.h>
-#include <calibaccess/ICalSolutionConstAccessor.h>
-#include <utils/ChangeMonitor.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/ICalSolutionConstAccessor.h>
+#include <askap/scimath/utils/ChangeMonitor.h>
 
 // boost includes
 #include <boost/shared_ptr.hpp>

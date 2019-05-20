@@ -39,7 +39,7 @@
 #include <askap/parallel/AdviseParallel.h>
 #include <askap/parallel/MEParallelApp.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
 
 namespace askap
 {

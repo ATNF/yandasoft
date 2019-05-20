@@ -50,7 +50,7 @@
 #include <askap/gridding/IVisGridder.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/dataaccess/SharedIter.h>
-#include <calibaccess/ICalSolutionSource.h>
+#include <askap/calibaccess/ICalSolutionSource.h>
 #include <askap/scimath/utils/MultiDimPosIter.h>
 
 

@@ -41,7 +41,7 @@
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/scimath/fitting/Solver.h>
-#include <calibaccess/ICalSolutionSource.h>
+#include <askap/calibaccess/ICalSolutionSource.h>
 #include <askap/dataaccess/TimeChunkIteratorAdapter.h>
 
 

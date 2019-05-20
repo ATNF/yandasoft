@@ -45,9 +45,9 @@
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/CalibrationSolutionHandler.h>
 #include <askap/dataaccess/SharedIter.h>
-#include <calibaccess/ICalSolutionConstSource.h>
-#include <calibaccess/JonesIndex.h>
-#include <utils/ChangeMonitor.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/JonesIndex.h>
+#include <askap/scimath/utils/ChangeMonitor.h>
 
 // boost includes
 #include <boost/shared_ptr.hpp>

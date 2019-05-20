@@ -43,7 +43,7 @@ ASKAP_LOGGER(logger, ".OpCalImpl");
 #include <askap/opcal/OpCalImpl.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
-#include <calibaccess/CalParamNameHelper.h>
+#include <askap/calibaccess/CalParamNameHelper.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
 

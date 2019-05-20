@@ -49,7 +49,7 @@
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/measurementequation/CalibrationApplicatorME.h>
 #include <askap/measurementequation/CalibrationIterator.h>
-#include <calibaccess/CalibAccessFactory.h>
+#include <askap/calibaccess/CalibAccessFactory.h>
 #include <casacore/casa/OS/Timer.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
