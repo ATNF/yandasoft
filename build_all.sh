@@ -336,7 +336,7 @@ build_and_install() {
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
-	try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" ..
+	try ${cmake} ../ -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" 
 	try make all -j${jobs}
 	try make install -j${jobs}
 	cd "$sourcedir"
