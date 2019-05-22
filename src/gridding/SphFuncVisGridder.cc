@@ -23,6 +23,8 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
+#include <cstdlib>
+
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
 #include <askap/AskapError.h>
@@ -225,7 +227,7 @@ namespace askap
       }
 
       // output bufx/bufy as Nx1 2D images
-      {
+      if (std::getenv("DUMP_KRISTOF_BUF_XY")) {
           dump_array(bufx, itsShape(0), boost::lexical_cast<std::string>(i) + ".bufx");
           dump_array(bufy, itsShape(1), boost::lexical_cast<std::string>(i) + ".bufy");
       }
