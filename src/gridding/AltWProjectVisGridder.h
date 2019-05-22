@@ -70,7 +70,7 @@ namespace askap
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
                         const float alpha=1., const bool writeOut=false,
-                        const bool readIn=false);
+                        const bool readIn=false, const bool writeExtraOut=false);
 
                 virtual ~AltWProjectVisGridder();
 
@@ -112,6 +112,8 @@ namespace askap
                 bool itsWriteOut;
                 /// import the Grids
                 bool itsReadIn;
+                /// dump some extra information
+                bool itsWriteExtraOut;
 
 
         };

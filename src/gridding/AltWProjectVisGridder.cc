@@ -64,9 +64,9 @@ AltWProjectVisGridder::AltWProjectVisGridder(const double wmax,
                                        const int limitSupport,
                                        const std::string& name,
                                        const float alpha, const bool writeOut,
-                                       const bool readIn) :
+                                       const bool readIn, const bool writeExtraOut) :
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample,maxSupport,limitSupport,name,alpha),
-        itsWriteOut(writeOut), itsReadIn(readIn)
+        itsWriteOut(writeOut), itsReadIn(readIn), itsWriteExtraOut(writeExtraOut)
 
 {
     if (itsWriteOut && itsReadIn) {
@@ -114,10 +114,12 @@ IVisGridder::ShPtr AltWProjectVisGridder::createGridder(const LOFAR::ParameterSe
     const float alpha=parset.getFloat("alpha", 1.);
     const bool writeOut=parset.getBool("dumpgrid", false);
     const bool readIn = parset.getBool("importgrid", false);
+    const bool writeExtraOut=parset.getBool("dumpextra", false);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using (Alternate) W projection with " << nwplanes << " w-planes");
     boost::shared_ptr<AltWProjectVisGridder> gridder(new AltWProjectVisGridder(wmax, nwplanes,
-            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, writeOut, readIn));
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, writeOut, readIn,
+            writeExtraOut));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
     return gridder;
@@ -174,7 +176,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
 
     }
 
-    if (itsWriteOut) {
+    if (itsWriteExtraOut) {
         string name = boost::lexical_cast<std::string>(passThrough) + ".postfft";
         casa::Array<float> buf(dBuffer.shape());
         casa::convertArray<float,double>(buf, dBuffer);
@@ -184,7 +186,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
     // Now we can do the convolution correction
     correctConvolution(dBuffer, passThrough);
 
-    if (itsWriteOut) {
+    if (itsWriteExtraOut) {
         string name = boost::lexical_cast<std::string>(passThrough) + ".post_convolution_correction";
         casa::Array<float> buf(dBuffer.shape());
         casa::convertArray<float,double>(buf, dBuffer);
@@ -194,7 +196,7 @@ void AltWProjectVisGridder::finaliseGrid(casa::Array<double>& out) {
     dBuffer*=double(dBuffer.shape()(0))*double(dBuffer.shape()(1));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
 
-    if (itsWriteOut) {
+    if (itsWriteExtraOut) {
         string name = boost::lexical_cast<std::string>(passThrough) + ".post_padding";
         casa::Array<float> buf(out.shape());
         casa::convertArray<float,double>(buf, out);
