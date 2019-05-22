@@ -34,11 +34,11 @@
 #ifndef PRE_AVG_CAL_BUFFER_TEST_H
 #define PRE_AVG_CAL_BUFFER_TEST_H
 
-#include <dataaccess/DataIteratorStub.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <cppunit/extensions/HelperMacros.h>
-#include <measurementequation/PreAvgCalBuffer.h>
-#include <measurementequation/ComponentEquation.h>
-#include <fitting/PolXProducts.h>
+#include <askap/measurementequation/PreAvgCalBuffer.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/scimath/fitting/PolXProducts.h>
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>

@@ -35,7 +35,7 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <stdexcept>
@@ -50,10 +50,10 @@
 #include "askap/SignalCounter.h"
 #include "askap/StatReporter.h"
 #include "boost/scoped_ptr.hpp"
-#include <parallel/ImagerParallel.h>
-#include <measurementequation/MEParsetInterface.h>
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <fitting/Params.h>
+#include <askap/parallel/ImagerParallel.h>
+#include <askap/measurementequation/MEParsetInterface.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/scimath/fitting/Params.h>
 #include <profile/AskapProfiler.h>
 
 

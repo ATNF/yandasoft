@@ -21,15 +21,15 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <measurementequation/ImageFFTEquation.h>
-//#include <gridding/BoxVisGridder.h>
-#include <gridding/SphFuncVisGridder.h>
-#include <gridding/AWProjectVisGridder.h>
-#include <gridding/DiskIllumination.h>
-#include <measurementequation/ImageSolver.h>
-#include <measurementequation/ImageMultiScaleSolver.h>
-#include <dataaccess/DataIteratorStub.h>
-#include <fitting/ParamsCasaTable.h>
+#include <askap/measurementequation/ImageFFTEquation.h>
+//#include <askap/gridding/BoxVisGridder.h>
+#include <askap/gridding/SphFuncVisGridder.h>
+#include <askap/gridding/AWProjectVisGridder.h>
+#include <askap/gridding/DiskIllumination.h>
+#include <askap/measurementequation/ImageSolver.h>
+#include <askap/measurementequation/ImageMultiScaleSolver.h>
+#include <askap/dataaccess/DataIteratorStub.h>
+#include <askap/scimath/fitting/ParamsCasaTable.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>
@@ -43,7 +43,7 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-//#include <measurementequation/SynthesisParamsHelper.h>
+//#include <askap/measurementequation/SynthesisParamsHelper.h>
 //#include <casacore/casa/Arrays/ArrayMath.h>
 
 #include <stdexcept>

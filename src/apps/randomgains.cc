@@ -35,7 +35,7 @@
 #include <askap/AskapError.h>
 
 // command line parser
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
 // std includes
 #include <fstream>

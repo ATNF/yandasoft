@@ -27,8 +27,8 @@
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
-#include <deconvolution/DeconvolverState.h>
-#include <deconvolution/DeconvolverMonitor.h>
+#include <askap/deconvolution/DeconvolverState.h>
+#include <askap/deconvolution/DeconvolverMonitor.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 

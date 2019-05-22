@@ -27,9 +27,9 @@
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
-#include <deconvolution/DeconvolverBasisFunction.h>
-#include <deconvolution/MultiScaleBasisFunction.h>
-#include <deconvolution/PointBasisFunction.h>
+#include <askap/deconvolution/DeconvolverBasisFunction.h>
+#include <askap/deconvolution/MultiScaleBasisFunction.h>
+#include <askap/deconvolution/PointBasisFunction.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <casacore/casa/BasicSL/Complex.h>

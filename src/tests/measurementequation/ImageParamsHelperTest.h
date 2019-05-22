@@ -34,7 +34,7 @@
 #ifndef IMAGE_PARAMS_HELPER_TEST_H
 #define IMAGE_PARAMS_HELPER_TEST_H
 
-#include <measurementequation/ImageParamsHelper.h>
+#include <askap/measurementequation/ImageParamsHelper.h>
 
 namespace askap
 {

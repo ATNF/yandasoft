@@ -46,7 +46,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
 #include <askap/Application.h>
@@ -55,7 +55,7 @@
 #include <askap/StatReporter.h>
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
-#include <parallel/BPCalibratorParallel.h>
+#include <askap/parallel/BPCalibratorParallel.h>
 
 ASKAP_LOGGER(logger, ".cbpcalibrator");
 

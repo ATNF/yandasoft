@@ -35,24 +35,24 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // ASKAPsoft includes
 #include "askap/AskapLogging.h"
 #include "askap/AskapError.h"
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/Params.h>
 #include "askap/StatReporter.h"
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/Log4cxxLogSink.h>
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 #include <askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
-#include <gridding/VisGridderFactory.h>
-#include <measurementequation/SynthesisParamsHelper.h>
+#include <askap/gridding/VisGridderFactory.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/AskapUtil.h>
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
 
 
 ASKAP_LOGGER(logger, ".tGridding");

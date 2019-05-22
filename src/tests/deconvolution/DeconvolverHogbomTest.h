@@ -27,7 +27,7 @@
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
-#include <deconvolution/DeconvolverHogbom.h>
+#include <askap/deconvolution/DeconvolverHogbom.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <casacore/casa/BasicSL/Complex.h>

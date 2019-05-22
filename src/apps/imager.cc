@@ -26,7 +26,7 @@
 /// @author Stephen Ord <stephen.ord@csiro.au>
 
 // Include package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <string>
@@ -43,12 +43,12 @@
 #include <askap/AskapError.h>
 #include <askap/StatReporter.h>
 #include <Common/ParameterSet.h>
-#include <parallel/ImagerParallel.h>
+#include <askap/parallel/ImagerParallel.h>
 #include <profile/AskapProfiler.h>
 
 // Local Package includes
-#include "distributedimager/ContinuumImager.h"
-#include "distributedimager/CubeComms.h"
+#include "askap/distributedimager/ContinuumImager.h"
+#include "askap/distributedimager/CubeComms.h"
 
 using namespace askap;
 using namespace askap::cp;

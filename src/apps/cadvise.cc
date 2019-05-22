@@ -32,7 +32,7 @@
 /// @author Max Voronkov <Maxim.Voronkov@csiro.au>
 
 // Package level header file
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>
@@ -43,7 +43,7 @@
 #include <Common/ParameterSet.h>
 
 // Local package includes
-#include <parallel/AdviseParallel.h>
+#include <askap/parallel/AdviseParallel.h>
 
 ASKAP_LOGGER(logger, ".cadvise");
 

@@ -25,17 +25,17 @@
 ///
 
 
-#include <dataaccess/TableDataSource.h>
-#include <askap_synthesis.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
 #include <askap/AskapError.h>
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/ParsetInterface.h>
 
-#include <dataaccess/TableManager.h>
-#include <dataaccess/IDataConverterImpl.h>
+#include <askap/dataaccess/TableManager.h>
+#include <askap/dataaccess/IDataConverterImpl.h>
 
 // casa
 #include <casacore/measures/Measures/MFrequency.h>
@@ -43,11 +43,11 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
-#include <measurementequation/GaussianNoiseME.h>
-#include <measurementequation/IMeasurementEquation.h>
-#include <dataaccess/MemBufferDataAccessor.h>
+#include <askap/measurementequation/GaussianNoiseME.h>
+#include <askap/measurementequation/IMeasurementEquation.h>
+#include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askapparallel/MPIComms.h>
 
 // std

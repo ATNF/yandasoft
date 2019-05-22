@@ -21,18 +21,18 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-//#include <gridding/BoxVisGridder.h>
-#include <gridding/SphFuncVisGridder.h>
-#include <gridding/AWProjectVisGridder.h>
-#include <gridding/AProjectWStackVisGridder.h>
-#include <gridding/WStackVisGridder.h>
-#include <gridding/AWProjectVisGridder.h>
-#include <gridding/WProjectVisGridder.h>
-#include <gridding/ATCAIllumination.h>
-#include <gridding/DiskIllumination.h>
-#include <fitting/Params.h>
-#include <measurementequation/ComponentEquation.h>
-#include <dataaccess/DataIteratorStub.h>
+//#include <askap/gridding/BoxVisGridder.h>
+#include <askap/gridding/SphFuncVisGridder.h>
+#include <askap/gridding/AWProjectVisGridder.h>
+#include <askap/gridding/AProjectWStackVisGridder.h>
+#include <askap/gridding/WStackVisGridder.h>
+#include <askap/gridding/AWProjectVisGridder.h>
+#include <askap/gridding/WProjectVisGridder.h>
+#include <askap/gridding/ATCAIllumination.h>
+#include <askap/gridding/DiskIllumination.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/dataaccess/DataIteratorStub.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/measures/Measures/MPosition.h>
@@ -40,7 +40,7 @@
 #include <casacore/casa/Quanta/MVPosition.h>
 #include <casacore/casa/BasicSL/Constants.h>
 #include <askap/AskapError.h>
-#include <gridding/VisGridderFactory.h>
+#include <askap/gridding/VisGridderFactory.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 

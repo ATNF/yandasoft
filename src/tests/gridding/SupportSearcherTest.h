@@ -27,14 +27,14 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <gridding/SupportSearcher.h>
+#include <askap/gridding/SupportSearcher.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/casa/BasicSL/Complex.h>
 
-//#include <measurementequation/SynthesisParamsHelper.h>
+//#include <askap/measurementequation/SynthesisParamsHelper.h>
 
 namespace askap {
 
