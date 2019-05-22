@@ -43,13 +43,13 @@
 #include <askap/AskapError.h>
 #include <Common/ParameterSet.h>
 #include <askap/Log4cxxLogSink.h>
-#include <gridding/UVPattern.h>
-#include <utils/ImageUtils.h>
+#include <askap/gridding/UVPattern.h>
+#include <askap/scimath/utils/ImageUtils.h>
 // just for logging
 #include <askapparallel/AskapParallel.h>
 
 // command line parser
-#include <utils/CommandLineParser.h>
+#include <askap/utils/CommandLineParser.h>
 
 // std includes
 #include <stdexcept>
@@ -57,7 +57,7 @@
 ASKAP_LOGGER(logger, ".illumextractor");
 
 // this should be after logging
-#include <gridding/AProjectGridderBase.h>
+#include <askap/gridding/AProjectGridderBase.h>
 
 using namespace askap;
 using namespace askap::synthesis;

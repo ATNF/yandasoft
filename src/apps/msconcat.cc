@@ -27,7 +27,7 @@
 /// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <sstream>
@@ -43,7 +43,7 @@
 #include "askap/StatReporter.h"
 #include "askap/Log4cxxLogSink.h"
 #include "boost/shared_ptr.hpp"
-#include "utils/CommandLineParser.h"
+#include "askap/utils/CommandLineParser.h"
 #include "casacore/casa/OS/File.h"
 #include "casacore/casa/aips.h"
 #include "casacore/casa/Quanta.h"

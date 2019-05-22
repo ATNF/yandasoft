@@ -34,8 +34,8 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <dataaccess/DataAccessorStub.h>
-#include <measurementequation/GaussianNoiseME.h>
+#include <askap/dataaccess/DataAccessorStub.h>
+#include <askap/measurementequation/GaussianNoiseME.h>
 
 #include <casacore/casa/BasicSL/Complex.h>
 #include <casacore/casa/Arrays/Vector.h>

@@ -31,14 +31,14 @@
 
 
 // own includes
-#include <measurementequation/VectorOperations.h>
+#include <askap/measurementequation/VectorOperations.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/scimath/Mathematics/AutoDiff.h>
 #include <casacore/casa/BasicSL/Complex.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <askap/AskapError.h>
-#include <fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
 
 
 // std includes

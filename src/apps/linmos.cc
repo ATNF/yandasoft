@@ -30,7 +30,7 @@
 /// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <sstream>
@@ -48,9 +48,9 @@
 #include <casacore/images/Images/ImageRegrid.h>
 
 // Local packages includes
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <linmos/LinmosAccumulator.h>
-#include <utils/LinmosUtils.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/imagemath/linmos/LinmosAccumulator.h>
+#include <askap/utils/LinmosUtils.h>
 
 ASKAP_LOGGER(logger, ".linmos");
 

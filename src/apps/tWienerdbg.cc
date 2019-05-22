@@ -26,7 +26,7 @@
 
 #include <iostream>
 #include <stdexcept>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapError.h>
 #include <casacore/casa/Logging/LogIO.h>
@@ -37,13 +37,13 @@
 #include <casacore/casa/Arrays/IPosition.h>
 #include <boost/shared_ptr.hpp>
 
-#include <measurementequation/IImagePreconditioner.h>
-#include <measurementequation/RobustPreconditioner.h>
-#include <measurementequation/WienerPreconditioner.h>
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <measurementequation/GaussianNoiseME.h>
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <utils/ImageUtils.h>
+#include <askap/measurementequation/IImagePreconditioner.h>
+#include <askap/measurementequation/RobustPreconditioner.h>
+#include <askap/measurementequation/WienerPreconditioner.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/GaussianNoiseME.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/scimath/utils/ImageUtils.h>
 
 #include <askapparallel/AskapParallel.h>
 

@@ -23,7 +23,7 @@
 
 // ASKAPsoft includes
 #include <AskapTestRunner.h>
-#include <askap_synthesis.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 
 ASKAP_LOGGER(logger, ".deconvolution");

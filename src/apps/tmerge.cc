@@ -27,16 +27,16 @@
 /// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 //# Includes
 #include <askap/Application.h>
 #include <askap/AskapLogging.h>
 #include <askap/StatReporter.h>
 
-#include <fitting/ImagingNormalEquations.h>
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <utils/ImageUtils.h>
+#include <askap/scimath/fitting/ImagingNormalEquations.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/scimath/utils/ImageUtils.h>
 #include <linmos/LinmosAccumulator.h>
 
 ASKAP_LOGGER(logger, "tmerge");

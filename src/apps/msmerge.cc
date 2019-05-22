@@ -27,7 +27,7 @@
 /// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <sstream>

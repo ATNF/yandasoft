@@ -27,7 +27,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <gridding/FrequencyMapper.h>
+#include <askap/gridding/FrequencyMapper.h>
 #include <cppunit/extensions/HelperMacros.h>
 
 #include <casacore/casa/Arrays/Matrix.h>
