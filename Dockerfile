@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:bionic
 RUN apt-get update
 RUN apt-get install -y cmake \         
 	&& apt-get install    -y  flex bison  \
@@ -28,7 +28,8 @@ RUN apt-get install -y cmake \
         && apt-get install    -y  docker           \
 	&& apt-get install    -y  python-numpy     \
         && apt-get install    -y  python-scipy     \
-        && apt-get install    -y  wcslib-dev                
+        && apt-get install    -y  wcslib-dev     \
+	&& apt-get install    -y  libxerces-c-dev            
 RUN cd /usr/local 
 RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz

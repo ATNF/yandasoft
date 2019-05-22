@@ -39,7 +39,7 @@
 #include <casacore/coordinates/Coordinates/Coordinate.h>
 #include <casacore/coordinates/Coordinates/LinearCoordinate.h>
 #include <casacore/casa/Quanta/MVDirection.h>
-#include <imageaccess/CasaImageAccess.h>
+#include <askap/imageaccess/CasaImageAccess.h>
 #include <casacore/images/Images/PagedImage.h>
 
 // Using

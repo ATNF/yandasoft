@@ -51,7 +51,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/AskapUtil.h>
-#include <imageaccess/IImageAccess.h>
+#include <askap/imageaccess/IImageAccess.h>
 #include <boost/shared_ptr.hpp>
 
 ASKAP_LOGGER(logger, ".testlinmos");

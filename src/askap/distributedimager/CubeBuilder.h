@@ -35,7 +35,7 @@
 // ASKAPsoft includes
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
-#include <imageaccess/ImageAccessFactory.h>
+#include <askap/imageaccess/ImageAccessFactory.h>
 
 
 #include <casacore/images/Images/PagedImage.h>

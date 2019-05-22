@@ -50,7 +50,7 @@
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/dataaccess/TableInfoAccessor.h>
 #include <casacore/casa/Quanta.h>
-#include <imageaccess/BeamLogger.h>
+#include <askap/imageaccess/BeamLogger.h>
 #include <askap/parallel/ImagerParallel.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 

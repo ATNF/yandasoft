@@ -23,7 +23,7 @@
 
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <imageaccess/ImageAccessFactory.h>
+#include <askap/imageaccess/ImageAccessFactory.h>
 #include <askap/scimath/utils/PolConverter.h>
 #include <askap/scimath/fitting/Axes.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
