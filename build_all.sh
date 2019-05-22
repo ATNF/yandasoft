@@ -40,20 +40,20 @@ print_usage() {
 	echo "Usage: $0 [options]"
 	echo
 	echo "Options:"
-	echo " -s <system>   Target system, supported values are osx (default), centos, ubuntu"
-	echo " -c <compiler> Compiler suite to use, supported values are gcc (default) and clang"
-	echo " -m <cmake>    Cmake binary to use, must be >= 3.1, defaults to cmake"
-	echo " -j <jobs>     Number of parallel compilation jobs, defaults to 1"
-	echo " -p <prefix>   Prefix for installation, defaults to /usr/local"
-	echo " -w <workdir>  Working directory, defaults to ."
-	echo " -S 	     Install system dependencies. "
-	echo " -W            Remove the working directory at the end of the build"
-	echo " -C <opts      Install Casacore + cmake options"
-	echo " -A <opts>     Install ASKAP dependencies + cmake options"
-	echo " -R <opts>     Install casarest + cmake options"
-	echo " -Y <opts>     Install YandaSoft + cmake options"
-	echo " -U 	     clean and uninstall yandasoft and dependencies (except casacore/casarest)"
-	echo " -P            Use Python 3 "
+	echo " -s <system>     Target system, supported values are osx (default), centos, ubuntu"
+	echo " -x <compiler>   Compiler suite to use, supported values are gcc (default) and clang"
+	echo " -m <cmake>      Cmake binary to use, must be >= 3.1, defaults to cmake"
+	echo " -j <jobs>       Number of parallel compilation jobs, defaults to 1"
+	echo " -p <prefix>     Prefix for installation, defaults to /usr/local"
+	echo " -w <workdir>    Working directory, defaults to ."
+	echo " -S 	       Install system dependencies. "
+	echo " -W              Remove the working directory at the end of the build"
+	echo " -C <opts> | -c  Install Casacore + cmake options"
+	echo " -A <opts> | -a  Install ASKAP dependencies + cmake options"
+	echo " -R <opts> | -r  Install casarest + cmake options"
+	echo " -Y <opts> | -y    Install YandaSoft + cmake options"
+	echo " -U 	       clean and uninstall yandasoft and dependencies (except casacore/casarest)"
+	echo " -P              Use Python 3 "
 }
 
 try() {
@@ -109,7 +109,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "A:ah?s:c:m:j:p:w:WPoiC:cR:rY:yO:USx" opt
+while getopts "A:ah?s:cm:j:p:w:WPoiC:cR:rY:yO:USx:" opt
 do
 	case "$opt" in
 		[h?])
@@ -336,7 +336,7 @@ build_and_install() {
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
-	try ${cmake} ../ -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" 
+	try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" ..
 	try make all -j${jobs}
 	try make install -j${jobs}
 	cd "$sourcedir"
