@@ -77,7 +77,7 @@ class SynthesisProgramRunner:
 
          cmd - command
       '''
-      res = os.system("mpirun --oversubscribe -np %d %s -c %s" % (np, cmd, self.tmp_parset))
+      res = os.system("mpirun -np %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
          raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
 
