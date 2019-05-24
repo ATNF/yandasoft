@@ -99,6 +99,7 @@ clean_yandasoft=no
 build_adios=no
 casacore_version=master
 casacore_opts=
+casarest_version=components-only
 casarest_opts=
 askap_opts=
 yandasoft_opts=
@@ -396,14 +397,15 @@ if [ $install_casacore == yes ]; then
 	fi
 
 	if [ $casacore_version == master ]; then
-		casarest_version=master
+		casarest_version=components-only
 	elif [ $casacore_version == COMMIT-v2.4.0 ]; then
 		casarest_version=COMMIT-467ed6d
 	else
 		casarest_version=COMMIT-v1.4.1
 	fi
-
-	build_and_install https://github.com/casacore/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
+fi
+if [ $install_casarest == yes ]; then
+	build_and_install https://github.com/steve-ord/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
 fi
 if [ $clean_askap_dependencies == yes ]; then
 

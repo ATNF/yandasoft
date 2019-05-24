@@ -1,0 +1,7 @@
+module load numpy
+module load lapack
+module load cfitsio
+module load wcslib
+module load boost
+
+
