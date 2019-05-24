@@ -30,7 +30,9 @@ RUN apt-get install -y cmake \
         && apt-get install    -y  python-scipy     \
         && apt-get install    -y  wcslib-dev     \
 	&& apt-get install    -y  libxerces-c-dev            
-RUN cd /usr/local 
+RUN mkdir /usr/local/share/casacore
+RUN mkdir /usr/local/share/casacore/data
+WORKDIR /usr/local/share/casacore/data
 RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
 RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz
 RUN gunzip WSRT_Measures.tar.gz
@@ -38,6 +40,11 @@ RUN tar -xvf WSRT_Measures.tar
 RUN rm WSRT_Measures.tar
 RUN mkdir /var/lib/jenkins
 RUN mkdir /var/lib/jenkins/workspace
+WORKDIR /home
+RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
+WORKDIR /home/yandasoft
+RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data" -a -y
+
 
 
 
