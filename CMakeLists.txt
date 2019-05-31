@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.10.1)
+cmake_minimum_required (VERSION 3.5)
 include(CheckCXXCompilerFlag)
 project(yandasoft VERSION 0.0.1 LANGUAGES CXX)
 
