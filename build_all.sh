@@ -53,7 +53,8 @@ print_usage() {
 	echo " -R <opts> | -r  Install casarest + cmake options"
 	echo " -Y <opts> | -y    Install YandaSoft + cmake options"
 	echo " -U 	       clean and uninstall yandasoft and dependencies (except casacore/casarest)"
-	echo " -P              Use Python 3 "
+        echo " -O <opts>       Options to apply to all builds."
+        echo " -P              Use Python 3 "
 }
 
 try() {
@@ -84,7 +85,7 @@ compiler=gcc
 cmake=cmake
 jobs=1
 prefix=/usr/local
-workdir=.
+workdir="$PWD"
 remove_workdir=no
 build_oskar=yes
 use_python3=no
@@ -99,10 +100,11 @@ clean_yandasoft=no
 build_adios=no
 casacore_version=master
 casacore_opts=
+casarest_version=components-only
 casarest_opts=
 askap_opts=
 yandasoft_opts=
-oskar_opts=
+opts=
 
 if [ $# -eq 0 ]; then 
 	print_usage
@@ -173,7 +175,7 @@ do
 			install_yandasoft=yes
 			;;
 		O)
-			oskar_opts="$OPTARG"
+			opts="$OPTARG"
 			;;
 		P)
 			use_python3=yes
@@ -193,7 +195,7 @@ do
 			;;
 	esac
 done
-
+yandasoft_opts="${yandasoft_opts} ${opts} -DCASACORE_ROOT_DIR=${prefix}"
 check_supported_values system $system centos ubuntu osx
 check_supported_values compiler $compiler gcc clang cray
 check_supported_values casacore_version $casacore_version master 2.4.0 2.0.3
@@ -336,6 +338,9 @@ build_and_install() {
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
+
+        cmakeline=" ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" .."
+        echo "$cmakeline"
 	try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" ..
 	try make all -j${jobs}
 	try make install -j${jobs}
@@ -375,7 +380,7 @@ if [ $system == centos ]; then
 fi
 
 # Setup our environment
-export LD_LIBRARY_PATH=$prefix/lib64:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$prefix/:$LD_LIBRARY_PATH
 
 
 
@@ -402,7 +407,8 @@ if [ $install_casacore == yes ]; then
 	else
 		casarest_version=COMMIT-v1.4.1
 	fi
-
+fi
+if [ $install_casarest == yes ]; then
 	build_and_install https://github.com/steve-ord/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
 fi
 if [ $clean_askap_dependencies == yes ]; then
