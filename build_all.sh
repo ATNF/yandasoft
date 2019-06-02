@@ -461,7 +461,6 @@ if [ $install_yandasoft == yes ]; then
 	cd build
 	if [ -f install_manifest.txt ]; then
 		make uninstall
-		cd ..
 	fi
 	cd ..
 	rm -rf build
