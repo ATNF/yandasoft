@@ -327,6 +327,7 @@ build_and_install() {
 		fi
 	else
 		cd `repo2dir $1`
+		git pull
 	fi
 	shift; shift
 	test -d build || try mkdir build
@@ -432,6 +433,7 @@ if [ $install_askap_dependencies == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
 
 	
 fi
