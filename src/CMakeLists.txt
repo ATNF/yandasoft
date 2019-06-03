@@ -1,7 +1,7 @@
 #
 # Manage the synthesis build
 #
-project(yanda_synthesis)
+project(yandasoft)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Askap REQUIRED)
@@ -68,7 +68,8 @@ add_subdirectory(askap/utils)
 
 
 add_library(yanda_synthesis SHARED
-	$<TARGET_OBJECTS:deconvolution>
+	askap/dummy.cpp
+    $<TARGET_OBJECTS:deconvolution>
 	$<TARGET_OBJECTS:distributedimager>
 	$<TARGET_OBJECTS:gridding>
 	$<TARGET_OBJECTS:measurementequation>
