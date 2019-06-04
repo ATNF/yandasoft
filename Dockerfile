@@ -43,7 +43,7 @@ RUN mkdir /var/lib/jenkins/workspace
 WORKDIR /home
 RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
 WORKDIR /home/yandasoft
-RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data" -a -y
+RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data" -r -a -y
 
 
 
