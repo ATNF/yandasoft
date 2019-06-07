@@ -596,7 +596,8 @@ void ContinuumWorker::processChannels()
   // so you can increment the workUnit until the frequency changes - then you know you
   // have all the workunits for that channel
 
-
+  boost::shared_ptr<CalcCore> rootImagerPtr;
+  bool gridder_initialized = false;
 
   for (int workUnitCount = 0; workUnitCount < workUnits.size();) {
 
@@ -670,8 +671,19 @@ void ContinuumWorker::processChannels()
       if (updateDir == true) {
         itsAdvisor->updateDirectionFromWorkUnit(itsParsets[workUnitCount],workUnits[workUnitCount]);
       }
-
-      CalcCore rootImager(itsParsets[workUnitCount], itsComms, ds, localChannel);
+      if (updateDir || !gridder_initialized) {
+          
+        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,localChannel));
+        rootImagerPtr = tempIm;
+        gridder_initialized = true;
+      }
+      else if (gridder_initialized){
+        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,rootImagerPtr->gridder(),localChannel));
+        rootImagerPtr = tempIm;
+      }
+        
+      CalcCore& rootImager = *rootImagerPtr; // just for the semantics
+      //// CalcCore rootImager(itsParsets[workUnitCount], itsComms, ds, localChannel);
       /// set up the image for this channel
       /// this will actually build a full image for the first - it is not actually used tho.
       ///
