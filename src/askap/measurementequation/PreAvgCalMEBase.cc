@@ -178,7 +178,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
   scimath::GenericNormalEquations::NMInitializedParametersLifetimeWatcher watcher(ne);
   ne.initializeNormalMatrixParameters(parameters().names(), watcher);
 
-  for (casa::uInt row = 0; row < itsBuffer.nRow(); ++row) {
+  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
 
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row); 
        for (casacore::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
