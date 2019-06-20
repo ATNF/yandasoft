@@ -174,8 +174,11 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
   const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
   const bool fdp = isFrequencyDependent();
   ASKAPDEBUGASSERT(itsBuffer.nChannel()>0);
-  
-  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) { 
+
+  scimath::GenericNormalEquations::NMInitializedParametersLifetimeWatcher watcher(ne);
+  ne.initializeNormalMatrixParameters(parameters().names(), watcher);
+
+  for (casa::uInt row = 0; row < itsBuffer.nRow(); ++row) {
 
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row); 
        for (casacore::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
