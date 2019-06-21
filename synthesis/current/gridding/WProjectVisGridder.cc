@@ -107,7 +107,7 @@ WProjectVisGridder::WProjectVisGridder(const WProjectVisGridder &other) :
         itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
         itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
         itsCutoffAbs(other.itsCutoffAbs),itsDoubleCF(other.itsDoubleCF),
-        itsShareCF(other.shareCF) {}
+        itsShareCF(other.itsShareCF) {}
 
 
 /// Clone a copy of this Gridder
