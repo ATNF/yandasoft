@@ -177,6 +177,11 @@ void BaselineSolver::process(const ScanStats &scans, const casa::Matrix<GenericC
   itsCorrections.set(0.);
   itsErrors.resize(caldata.ncolumn(), 3);
   itsErrors.set(0.);
+
+  // hack
+  //solveForRateDependentPhase(scans,caldata);
+  //return;
+  //
   
   if (itsSolveXY) {
       solveForXY(scans,caldata);
@@ -277,7 +282,15 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
            ASKAPLOG_WARN_STR(logger, "No valid data points for antenna "<<ant);
            // just to avoid accidental reuse of an old file
            os<<"No valid data"<<std::endl;
+           continue;
        }
+       /*
+       // the following hack is useful if we have some junk points at the end
+       if (nGoodPoints > 156) {
+           nGoodPoints = 156;
+       }
+       //
+       */
        if (nGoodPoints < scans.size()) {
            ASKAPLOG_INFO_STR(logger, "Only "<<nGoodPoints<<" valid data points out of "<<scans.size()<<
                              " possible for antenna "<<ant);
@@ -299,12 +312,18 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
   
        // could've cached the hour angles, but for now leave as is
        scimath::PhaseUnwrapper<double> unwrapper;
-       for (casa::uInt cnt = 0, pointCnt = 0; cnt < scans.size(); ++cnt) {
+       double wavelength = -1.; 
+       for (casa::uInt cnt = 0, pointCnt = 0; cnt < scans.size() && pointCnt < nGoodPoints; ++cnt) {
             const GenericCalInfo& cInfo = caldata(scanIndices[cnt],ant);
             if (!cInfo.gainDefined()) {
                 continue;
             }
             const ObservationDescription& scan = scans[scanIndices[cnt]];
+            if (wavelength < 0) {
+                wavelength = casa::C::c / scan.frequency();
+            } else {
+                ASKAPCHECK(fabs(wavelength*scan.frequency() - casa::C::c)<1., "Frequency changes between different scans, it is not expected");
+            }
             const double time = 0.5*(scan.startTime() + scan.endTime());
             const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
             casa::MeasFrame frame(mroPos, epoch);    
@@ -345,12 +364,13 @@ void BaselineSolver::solveForXY(const ScanStats &scans, const casa::Matrix<Gener
             os<<cnt<<" "<<hangles[pointCnt] / casa::C::pi * 180<<" "<<phases[pointCnt] / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<azel.getLong() / casa::C::pi * 180.<<std::endl;
             ++pointCnt;
        }
+       ASKAPCHECK(wavelength > 0, "It looks like no valid data points are processed, this is not expected here");
        casa::Vector<double> param = fitter.fit(hangles,phases,sigma);
        ASKAPCHECK(param.nelements() == 3, "Expect 3 parameters out of the fitter, you have size="<<param.nelements());
        casa::Vector<double> err = fitter.errors();
        ASKAPCHECK(err.nelements() == 3, "Expect 3 uncertainties out of the fitter, you have size="<<err.nelements());
        // for our test setup of 864.5 MHz central freq
-       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
+       //const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do: get it from scan's frequency)
        double ampl = param[0] / 2. / casa::C::pi * wavelength;
        // fit can converge with either sign of the first coefficient, but we like to always have a positive amplitude
        if (ampl < 0) {
@@ -419,12 +439,18 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        const std::string spcfilename = "phase.z.ant"+utility::toString(ant)+".dat";
        std::ofstream os(spcfilename.c_str());
        casa::uInt counter = 0;
+       double wavelength = -1.; 
        for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
             const GenericCalInfo& cInfo = caldata(scanIndices[cnt],ant);
             if (!cInfo.gainDefined()) {
                 continue;
             }
             const ObservationDescription& scan = scans[scanIndices[cnt]];
+            if (wavelength < 0) {
+                wavelength = casa::C::c / scan.frequency();
+            } else {
+                ASKAPCHECK(fabs(wavelength*scan.frequency() - casa::C::c)<1., "Frequency changes between different scans, it is not expected");
+            }
             const double time = 0.5*(scan.startTime() + scan.endTime());
             const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
             casa::MeasFrame frame(mroPos, epoch);    
@@ -438,13 +464,15 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
             if ((ant == 8) && (sd > -0.5)) {
                 phase += 2.*casa::C::pi;
             }
-            
+            */
 
+            /*
             // the following code is useful to exclude sources based on sin(dec)
-            if (sd > 0.2) {
+            if (sd > 0.) {
                 continue;
             }
             */
+            
             const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
                                    casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
 
@@ -463,6 +491,7 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
            ASKAPLOG_WARN_STR(logger, "No valid data for antenna "<<ant);
            continue;
        }
+       ASKAPCHECK(wavelength > 0, "It looks like no valid data points are processed, this is not expected here");
        ASKAPCHECK(counter > 0, "Too few points to do the fit for ant="<<ant);
        sx /= double(counter);
        sy /= double(counter);
@@ -474,7 +503,7 @@ void BaselineSolver::solveForZ(const ScanStats &scans, const casa::Matrix<Generi
        const double coeff = (sxy - sx * sy) / denominator;
  
        // for our test setup of 864.5 MHz central freq
-       const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do get it from scan's frequency)
+       //const double wavelength = casa::C::c / 864.5e6; // effective wavelength in metres (to do get it from scan's frequency)
        // the formula for phase has -sin(dec)*dZ therefore, we have to swap the sign here
        const double dZ = -coeff / 2. / casa::C::pi * wavelength;
        ASKAPDEBUGASSERT(ant < itsCorrections.nrow());
@@ -543,8 +572,9 @@ void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::M
             // hardcoded effective LO freq
             //const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
             //              siderealRate * casa::C::_2pi / casa::C::c * 672e6;
+            // hard coded 864.5 MHz before
             const double rate = (cd * sH0 * (antxyz[ant][0] - antxyz[1][0]) + cd * cH0 * (antxyz[ant][1] - antxyz[1][1])) *
-                          siderealRate * casa::C::_2pi / casa::C::c * 864.5e6;
+                          siderealRate * casa::C::_2pi / casa::C::c * scan.frequency();
             const double amp = abs(caldata(scanIndices[cnt],ant).gain());
             
             os<<cnt<<" "<<rate<<" "<<amp<<std::endl;
@@ -571,6 +601,142 @@ void BaselineSolver::solveForDecorrelation(const ScanStats &scans, const casa::M
   }  
 }  
 
+/// @brief solve for rate-dependent phase offsets
+/// @details Experimental task to fit linear dependence between self-cal phase and rate per antenna
+/// This can be handy in chasing up timing errors. 
+/// This method is not supposed as part of the production code for now and may not be
+/// accessible from parset.
+/// @param[in] scans description of scans, note separate beams are present as separate scans.
+///            Scans here are defined by some splitting criterion used in OpCalImpl, and do
+///            not necessarily match the scans known to online system
+/// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
+///            (column index is antenna ID used in the measurement set).
+void BaselineSolver::solveForRateDependentPhase(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata)  
+{
+  ASKAPASSERT(scans.size()>1);
+  const casa::MPosition mroPos = mroPosition();
+  std::vector<size_t> scanIndices(scans.size());
+  for (size_t scan=0; scan<scanIndices.size(); ++scan) {
+       scanIndices[scan]=scan;
+  }
+  std::sort(scanIndices.begin(),scanIndices.end(), utility::indexedCompare<size_t>(scans.begin(), LesserHAorDec(mroPos,true)));
+
+  ASKAPDEBUGASSERT(scanIndices.size() == scans.size());
+  // read layout
+  ASKAPCHECK(itsOrigFCMLayout != "", "Layout has to be defined in parset/FCM for this fitter to work");
+  ASKAPLOG_INFO_STR(logger, "Reading FCM configuration from "<<itsOrigFCMLayout);
+  LOFAR::ParameterSet fcmParset(itsOrigFCMLayout);
+  std::vector<std::string> idMap = fcmParset.getStringVector("baselinemap.antennaidx");
+  std::map<casa::uInt,std::string> antmap;
+  // building antenna map
+  for (casa::uInt ant = 0; ant < idMap.size(); ++ant) {
+       const std::string idStr = idMap[ant];
+       ASKAPCHECK(idStr.size() >= 3, "Antenna names in the baselinemap.antennaidx are supposed to be at least 3 symbols long, you have "<<idStr);
+       ASKAPCHECK(idStr.find("ak") == 0, "All names in the baselinemap.antennaidx are supposed to start with ak, you have "<<idStr);
+       const std::string antkey = "ant" + utility::toString<casa::uInt>(utility::fromString<casa::uInt>(idStr.substr(2)));
+       antmap[ant] = antkey;
+  }
+  std::vector<std::string> antennas = fcmParset.getStringVector("antennas");
+  ASKAPCHECK(antmap.size() <= antennas.size(), "Number of antennas defined in FCM is smaller than the number of antennas solved for");
+  ASKAPCHECK(antmap.size() == caldata.ncolumn(), "Mismatch between FCM and data - number of antennas recorded seems to be different");
+ 
+  const std::map<casa::uInt,std::string>::const_iterator refAntIt = antmap.find(itsRefAnt);
+  ASKAPCHECK(refAntIt != antmap.end(), "Reference antenna is not found");
+  const std::string refAntKey = "antenna."+refAntIt->second+".location.itrf";
+  const casa::Vector<double> refXYZ = fcmParset.isDefined(refAntKey) ? 
+                   fcmParset.getDoubleVector(refAntKey) : fcmParset.getDoubleVector("common."+refAntKey);
+  ASKAPCHECK(refXYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
+  const double siderealRate = casa::C::_2pi / 86400. / (1. - 1./365.25);
+  
+  for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
+       const std::string parsetKey = "antenna."+antmap[ant]+".location.itrf";
+       const casa::Vector<double> XYZ = fcmParset.isDefined(parsetKey) ? 
+                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey);
+       ASKAPCHECK(XYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
+       ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" is "<<idMap[ant]);
+       if (ant == itsRefAnt) {
+           continue;
+       }
+
+       // figure out the number of valid points
+       size_t nGoodPoints = 0;
+       for (casa::uInt cnt = 0; cnt < scans.size(); ++cnt) {
+            if (caldata(scanIndices[cnt],ant).gainDefined()) {
+                ++nGoodPoints;
+            }
+       }
+       const std::string spcfilename = "phase.xy.ant"+utility::toString(ant)+".dat";
+       std::ofstream os(spcfilename.c_str());
+       if (nGoodPoints == 0) {
+           ASKAPLOG_WARN_STR(logger, "No valid data points for antenna "<<ant);
+           // just to avoid accidental reuse of an old file
+           os<<"No valid data"<<std::endl;
+       }
+
+       if (nGoodPoints < scans.size()) {
+           ASKAPLOG_INFO_STR(logger, "Only "<<nGoodPoints<<" valid data points out of "<<scans.size()<<
+                             " possible for antenna "<<ant);
+       }
+
+       // do LSF into amp vs. rate
+       double sx = 0., sy = 0., sx2 = 0., sy2 = 0., sxy = 0.;
+
+       scimath::PhaseUnwrapper<double> unwrapper;
+       casa::uInt pointCnt = 0;
+       for (casa::uInt cnt = 0; cnt < scans.size() && pointCnt < nGoodPoints; ++cnt) {
+            const GenericCalInfo& cInfo = caldata(scanIndices[cnt],ant);
+            if (!cInfo.gainDefined()) {
+                continue;
+            }
+            const ObservationDescription& scan = scans[scanIndices[cnt]];
+            const double time = 0.5*(scan.startTime() + scan.endTime());
+            const casa::MEpoch epoch(casa::Quantity(time/86400.,"d"), casa::MEpoch::Ref(casa::MEpoch::UTC));
+            casa::MeasFrame frame(mroPos, epoch);    
+            
+            const casa::MVDirection hadec = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::HADEC,frame))().getValue();
+            
+            ASKAPASSERT(pointCnt < nGoodPoints);
+            const double hangle = hadec.getLong() - mroPos.getValue().getLong(); // Hour angle at latitude 0
+            const double sH0 = sin(hangle);
+            const double cH0 = cos(hangle);                                         
+
+            const double cd = cos(hadec.getLat()); 
+            ASKAPCHECK(cd > 0, "Cannot work with sources at either pole");
+            const double rate = (cd * sH0 * (XYZ[0]-refXYZ[0]) + cd * cH0 * (XYZ[1]-refXYZ[1])) *
+                          siderealRate * casa::C::_2pi / casa::C::c * scan.frequency();
+            const casa::MVDirection azel = casa::MDirection::Convert(casa::MDirection(scan.direction(),casa::MDirection::J2000), 
+                                   casa::MDirection::Ref(casa::MDirection::AZEL,frame))().getValue();
+            const double phase = unwrapper(arg(cInfo.gain()));
+            os<<cnt<<" "<<hangle / casa::C::pi * 180<<" "<<phase / casa::C::pi * 180.<<" "<<rate / casa::C::pi * 180.<<" "<<scan.scanID()<<" "<<scan.fieldID()<<" "<<azel.getLat() / casa::C::pi * 180.<<" "<<azel.getLong() / casa::C::pi * 180.<<" "<<scan.frequency()/1e6<<std::endl;
+            ++pointCnt;
+            // build normal equations
+            sx += rate;
+            sx2 += rate*rate;
+            sy += phase;
+            sy2 += phase*phase;
+            sxy += rate*phase;            
+       }    
+       if (pointCnt == 0) {
+           os<<"No valid data for this antenna!"<<std::endl;
+           ASKAPLOG_WARN_STR(logger, "No valid data for antenna "<<ant);
+           continue;
+       }
+       ASKAPCHECK(pointCnt > 0, "Too few points to do the fit for ant="<<ant);
+       sx /= double(pointCnt);
+       sy /= double(pointCnt);
+       sx2 /= double(pointCnt);
+       sy2 /= double(pointCnt);
+       sxy /= double(pointCnt);
+       const double denominator = sx2 - sx * sx;
+       ASKAPCHECK(denominator > 0, "Degenerate case has been encountered");
+       const double coeff = (sxy - sx * sy) / denominator;
+       const double r=(sxy-sx*sy)/sqrt(denominator * (sy2-sy*sy));
+       const double coeffErr = sqrt((sy2-sy*sy)/denominator)*sqrt((double)(1.0-r*r)/(double(pointCnt > 2 ? pointCnt : 3)-2));       
+       
+       ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" ("<<idMap[ant]<<") coeff: "<<coeff<<" +/- "<<coeffErr<<" s; r="<<r);
+  }
+}
 
 
 } // namespace synthesis
