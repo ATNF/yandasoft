@@ -70,7 +70,8 @@ namespace askap
                         const double cutoff, const int overSample,
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
-                        const float alpha=1., const bool useDouble=true);
+                        const float alpha=1., const bool useDouble=true,
+                        const bool shareCF=false);
 
                 virtual ~WProjectVisGridder();
 
@@ -255,6 +256,16 @@ namespace askap
 
                 /// @brief Are we using a double precision CF Buffer?
                 bool itsDoubleCF;
+
+                /// @brief Are we using the shared CF cache?
+                bool itsShareCF;
+
+                /// @brief cached CF
+                static std::vector<casa::Matrix<casa::Complex> > theirCFCache;
+
+                /// @brief cached CF offsets
+                static std::vector<std::pair<int,int> > theirConvFuncOffsets;
+
         };
     }
 }

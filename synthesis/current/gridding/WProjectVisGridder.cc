@@ -48,6 +48,27 @@ ASKAP_LOGGER(logger, ".gridding.wprojectvisgridder");
 namespace askap {
 namespace synthesis {
 
+std::vector<casa::Matrix<casa::Complex> > WProjectVisGridder::theirCFCache;
+std::vector<std::pair<int,int> > WProjectVisGridder::theirConvFuncOffsets;
+
+/// @brief a helper method for a ref copy of casa arrays held in
+/// stl vector
+/// @param[in] in input array
+/// @param[out] out output array (will be resized)
+template<typename T>
+void deepRefCopyOfSTDVector(const std::vector<T> &in,
+                            std::vector<T> &out)
+{
+   out.resize(in.size());
+
+   const typename std::vector<T>::const_iterator inEnd = in.end();
+   typename std::vector<T>::iterator outIt = out.begin();
+   for (typename std::vector<T>::const_iterator inIt = in.begin();
+       inIt != inEnd; ++inIt,++outIt) {
+       outIt->reference(*inIt);
+   }
+}
+
 WProjectVisGridder::WProjectVisGridder(const double wmax,
                                        const int nwplanes,
                                        const double cutoff,
@@ -56,11 +77,12 @@ WProjectVisGridder::WProjectVisGridder(const double wmax,
                                        const int limitSupport,
                                        const std::string& name,
                                        const float alpha,
-                                       const bool useDouble) :
+                                       const bool useDouble,
+                                       const bool shareCF) :
         WDependentGridderBase(wmax, nwplanes, alpha),
         itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
         itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false),
-        itsDoubleCF(useDouble)
+        itsDoubleCF(useDouble), itsShareCF(shareCF)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport > 0, "Maximum support must be greater than 0")
@@ -84,7 +106,8 @@ WProjectVisGridder::WProjectVisGridder(const WProjectVisGridder &other) :
         itsCutoff(other.itsCutoff), itsLimitSupport(other.itsLimitSupport),
         itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
         itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
-        itsCutoffAbs(other.itsCutoffAbs),itsDoubleCF(other.itsDoubleCF) {}
+        itsCutoffAbs(other.itsCutoffAbs),itsDoubleCF(other.itsDoubleCF),
+        itsShareCF(other.shareCF) {}
 
 
 /// Clone a copy of this Gridder
@@ -216,6 +239,19 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
       }
 
       return;
+    }
+
+    if (itsShareCF && theirCFCache.size()>0) {
+        // we already have what we need
+        itsSupport = 1;
+        ASKAPLOG_INFO_STR(logger, "Using cached convolution functions");
+        deepRefCopyOfSTDVector(theirCFCache,itsConvFunc);
+        if (isOffsetSupportAllowed()) {
+            for (int i=0; i<theirConvFuncOffsets.size(); i++) {
+                setConvFuncOffset(i,theirConvFuncOffsets[i].first,theirConvFuncOffsets[i].second);
+            }
+        }
+        return;
     }
 
     /// These are the actual cell sizes used
@@ -442,6 +478,17 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     // we can free up the memory because for WProject gridder this method is called only once!
     if (itsDoubleCF) itsCFBuffer.reset();
     else itsCFBufferF.reset();
+
+    // Save the CF to the cache
+    if (itsShareCF) {
+        deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
+        if (isOffsetSupportAllowed()) {
+            theirConvFuncOffsets.resize(nWPlanes());
+            for (size_t nw=0; nw<nWPlanes(); nw++) {
+                theirConvFuncOffsets[nw]=getConvFuncOffset(nw);
+            }
+        }
+    }
 }
 
 /// @brief search for support parameters
@@ -564,15 +611,17 @@ IVisGridder::ShPtr WProjectVisGridder::createGridder(const LOFAR::ParameterSet& 
     const int limitSupport = parset.getInt32("limitsupport", 0);
     const string tablename = parset.getString("tablename", "");
     const float alpha=parset.getFloat("alpha", 1.);
-    const bool useDouble = parset.getBool("usedouble","false");
+    const bool useDouble = parset.getBool("usedouble",false);
+    const bool shareCF = parset.getBool("sharecf",false);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
     ASKAPLOG_INFO_STR(logger, "Using " << (useDouble ? "double":"single")<<
                       " precision to calculate convolution functions");
     boost::shared_ptr<WProjectVisGridder> gridder(new WProjectVisGridder(wmax, nwplanes,
-            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble));
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble, shareCF));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
+
     return gridder;
 }
 
