@@ -247,7 +247,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         ASKAPLOG_INFO_STR(logger, "Using cached convolution functions");
         deepRefCopyOfSTDVector(theirCFCache,itsConvFunc);
         if (isOffsetSupportAllowed()) {
-            for (int i=0; i<theirConvFuncOffsets.size(); i++) {
+            for (size_t i=0; i<theirConvFuncOffsets.size(); i++) {
                 setConvFuncOffset(i,theirConvFuncOffsets[i].first,theirConvFuncOffsets[i].second);
             }
         }
@@ -484,7 +484,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
         if (isOffsetSupportAllowed()) {
             theirConvFuncOffsets.resize(nWPlanes());
-            for (size_t nw=0; nw<nWPlanes(); nw++) {
+            for (int nw=0; nw<nWPlanes(); nw++) {
                 theirConvFuncOffsets[nw]=getConvFuncOffset(nw);
             }
         }
@@ -587,8 +587,8 @@ int WProjectVisGridder::limitSupportIfNecessary(int support) const
 int WProjectVisGridder::cIndex(int row, int pol, int chan)
 {
     const int plane = itsCMap(row, pol, chan);
-    ASKAPDEBUGASSERT(plane >= 0);
-    notifyOfWPlaneUse(plane);
+    //ASKAPDEBUGASSERT(plane >= 0);
+    if (plane >=0) notifyOfWPlaneUse(plane);
     return plane;
 }
 

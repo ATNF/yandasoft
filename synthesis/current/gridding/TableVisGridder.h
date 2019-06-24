@@ -464,6 +464,8 @@ protected:
       double itsSamplesDegridded;
       /// Number of flagged visibility vectors (all pols.)
       double itsVectorsFlagged;
+      /// Number of visibility vectors flagged on |w|>wmax (all pols.)
+      double itsVectorsWFlagged;
       /// Number of grid cells gridded
       double itsNumberGridded;
       /// Number of grid cells degridded
