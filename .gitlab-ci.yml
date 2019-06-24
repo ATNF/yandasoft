@@ -14,6 +14,23 @@ build:
       - cmake -DCMAKE_INSTALL_PREFIX=/usr/local/ ../
       - make -j2
       - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
+      - cd base-logfilters
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
+      - cd base-imagemath
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+      - make -j2
+      - make -j2 install
+  
 
   artifacts:
     paths:
