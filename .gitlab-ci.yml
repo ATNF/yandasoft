@@ -5,13 +5,16 @@
 image: sord/yanda:v1.0
 
 build:
-  stage: build
-  # instead of calling g++ directly you can also use some build toolkit like make
-  # install the necessary build tools when needed
-  # before_script:
-  #   - apt update && apt -y install make autoconf
+  stage: base-askap
   script:
-    - g++ helloworld.cpp -o mybinary
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+      - cd base-askap
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local/ ../
+      - make -j2
+      - make -j2 install
+
   artifacts:
     paths:
       - mybinary
