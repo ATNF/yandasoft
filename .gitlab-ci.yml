@@ -5,7 +5,7 @@
 image: sord/yanda:v1.0
 
 build:
-  stage: base-askap
+  stage: build
   script:
       - git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
       - cd base-askap
