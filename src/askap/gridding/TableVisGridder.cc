@@ -89,7 +89,7 @@ utility::CasaSyncHelper syncHelper;
 TableVisGridder::TableVisGridder() : itsSumWeights(),
     itsSupport(-1), itsOverSample(-1),
     itsModelIsEmpty(false), itsSamplesGridded(0), itsSamplesDegridded(0),
-    itsVectorsFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
+    itsVectorsFlagged(0), itsVectorsWFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
     itsTimeCoordinates(0.0), itsTimeConvFunctions(0.0), itsTimeGridded(0.0),
     itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
     itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false),
@@ -104,7 +104,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     const float padding, const std::string& name) : VisGridderWithPadding(padding),
     itsSumWeights(), itsSupport(support), itsOverSample(overSample),
     itsModelIsEmpty(false), itsName(name), itsSamplesGridded(0), itsSamplesDegridded(0),
-    itsVectorsFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
+    itsVectorsFlagged(0), itsVectorsWFlagged(0), itsNumberGridded(0), itsNumberDegridded(0),
     itsTimeCoordinates(0.0), itsTimeConvFunctions(0.0), itsTimeGridded(0.0),
     itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
     itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false),
@@ -130,7 +130,9 @@ TableVisGridder::TableVisGridder(const TableVisGridder &other) :
      itsSupport(other.itsSupport), itsOverSample(other.itsOverSample),
      itsModelIsEmpty(other.itsModelIsEmpty),
      itsName(other.itsName), itsSamplesGridded(other.itsSamplesGridded),
-     itsSamplesDegridded(other.itsSamplesDegridded), itsVectorsFlagged(other.itsVectorsFlagged),
+     itsSamplesDegridded(other.itsSamplesDegridded),
+     itsVectorsFlagged(other.itsVectorsFlagged),
+     itsVectorsWFlagged(other.itsVectorsWFlagged),
      itsNumberGridded(other.itsNumberGridded),
      itsNumberDegridded(other.itsNumberDegridded), itsTimeCoordinates(other.itsTimeCoordinates),
      itsTimeConvFunctions(other.itsTimeConvFunctions),
@@ -182,6 +184,8 @@ TableVisGridder::~TableVisGridder() {
                               << itsSamplesGridded);
             ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (psf)     = "
                               << itsVectorsFlagged);
+            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax (psf) = "
+                              << itsVectorsWFlagged);
             ASKAPLOG_DEBUG_STR(logger, "   Total time for PSF gridding   = "
                 << itsTimeGridded << " (s)");
             ASKAPLOG_DEBUG_STR(logger, "   PSF gridding time         = " << 1e6
@@ -206,8 +210,10 @@ TableVisGridder::~TableVisGridder() {
             ASKAPLOG_DEBUG_STR(logger, "TableVisGridder PreConditioner Function gridding statistics");
             ASKAPLOG_DEBUG_STR(logger, "   PCF samples gridded       = "
                               << itsSamplesGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (psf)     = "
+            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (pcf)     = "
                               << itsVectorsFlagged);
+            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax (pcf) = "
+                              << itsVectorsWFlagged);
             ASKAPLOG_DEBUG_STR(logger, "   Total time for PCF gridding   = "
                 << itsTimeGridded << " (s)");
             ASKAPLOG_DEBUG_STR(logger, "   PCF gridding time         = " << 1e6
@@ -221,9 +227,9 @@ TableVisGridder::~TableVisGridder() {
             ASKAPLOG_DEBUG_STR(logger, "   PCF CFs and indices      = "
                   << 1e6 * itsTimeConvFunctions/itsSamplesGridded << " (us) per sample");
             ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
-            ASKAPLOG_DEBUG_STR(logger, "   Points gridded (psf)        = "
+            ASKAPLOG_DEBUG_STR(logger, "   Points gridded (pcf)        = "
                   << itsNumberGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Time per point (psf)        = " << 1e9
+            ASKAPLOG_DEBUG_STR(logger, "   Time per point (pcf)        = " << 1e9
                   *itsTimeGridded/itsNumberGridded << " (ns)");
             ASKAPLOG_DEBUG_STR(logger, "   Performance for PCF         = "
                 << 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
@@ -234,6 +240,8 @@ TableVisGridder::~TableVisGridder() {
                          << itsSamplesGridded);
             ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged       = "
                           << itsVectorsFlagged);
+             ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax = "
+                           << itsVectorsWFlagged);
             ASKAPLOG_DEBUG_STR(logger, "   Total time gridding   = "
                          << itsTimeGridded << " (s)");
             ASKAPLOG_DEBUG_STR(logger, "   Gridding time         = " << 1e6
@@ -639,7 +647,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
               ASKAPLOG_DEBUG_STR(logger, "Channel "<<chan<<" is not mapped to the image cube");
            }
            */
-
+           // check if w values are in range
+           bool wGood = true;
            // Ensure that we only use unflagged data, incomplete polarisation vectors are
            // ignored
            // @todo Be more careful about matching polarizations
@@ -672,6 +681,12 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    // that, we need to adjust for the oversampling since each oversampled
                    // plane is kept as a separate matrix.
                    const int beforeOversamplePlaneIndex = cIndex(i,pol,chan);
+                   if (beforeOversamplePlaneIndex<0) {
+                       // can't use this data - w out of range
+                       wGood = false;
+                       itsVectorsWFlagged +=1;
+                       break;
+                   }
                    const int cInd=fracu+itsOverSample*(fracv+itsOverSample*beforeOversamplePlaneIndex);
                    ASKAPCHECK(cInd>-1,"Index into convolution functions is less than zero");
                    ASKAPCHECK(cInd<int(itsConvFunc.size()),
@@ -811,15 +826,24 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    } // end of on-grid if statement
                } // end of pol loop
                // need to write back the result for degridding
-               if (forward) {
-                   itsPolConv.convert(itsPolVector,itsImagePolFrameVis);
-                   for (uint pol=0; pol<nPol; pol++) visCube(i,chan,pol) += itsPolVector(pol);
+               if (wGood) {
+                   if (forward) {
+                       itsPolConv.convert(itsPolVector,itsImagePolFrameVis);
+                       for (uint pol=0; pol<nPol; pol++) visCube(i,chan,pol) += itsPolVector(pol);
+                       // visibilities with w out of range are left unchanged during prediction
+                       // as long as subsequent imaging uses the same wmax this should work ok
+                       // we may want to flag these data to be sure
+                   }
+               } else {
+                   if (!forward) {
+                       itsVectorsWFlagged +=1;
+                   }
                }
            } else { // if (allPolGood)
                if (!forward) {
                    itsVectorsFlagged+=1;
                }
-           }
+          }
        } //end of chan loop
    } //end of i loop
    if (forward) {
@@ -1352,7 +1376,6 @@ bool TableVisGridder::isModelEmpty() const
 {
   return itsModelIsEmpty;
 }
-
 
 }
 

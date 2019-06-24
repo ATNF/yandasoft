@@ -46,19 +46,19 @@ ASKAP_LOGGER(logger, ".gridding.wdependentgridderbase");
 using namespace askap;
 using namespace askap::synthesis;
 
-/// @brief constructor initialising for default linear sampling   
+/// @brief constructor initialising for default linear sampling
 /// @details
 /// @param[in] wmax Maximum baseline (wavelengths)
-/// @param[in] nwplanes Number of w planes   
+/// @param[in] nwplanes Number of w planes
 WDependentGridderBase::WDependentGridderBase(const double wmax,
                                              const int nwplanes,
                                              const float alpha) :
-     SphFuncVisGridder(alpha), itsWScale(wmax), itsNWPlanes(nwplanes) 
+     SphFuncVisGridder(alpha), itsWScale(wmax), itsNWPlanes(nwplanes), itsWmaxClip(false)
 {
   ASKAPCHECK(wmax>0.0, "Baseline length must be greater than zero, you have wmax="<<wmax);
   ASKAPCHECK(nwplanes>0, "Number of w planes must be greater than zero, you have nwplanes="<<nwplanes);
   ASKAPCHECK(nwplanes%2==1, "Number of w planes must be odd, you have nwplanes="<<nwplanes);
- 
+
   if (nwplanes>1) {
       itsWScale /= double((nwplanes-1)/2);
   } else {
@@ -98,7 +98,7 @@ void WDependentGridderBase::notifyOfWPlaneUse(const int plane) const
       ASKAPDEBUGASSERT(int(itsWPlaneStats.size()) == itsNWPlanes);
       ASKAPDEBUGASSERT(plane < itsNWPlanes);
       ++itsWPlaneStats[plane];
-  }         
+  }
 }
 
 /// @brief obtain plane number
@@ -106,6 +106,7 @@ void WDependentGridderBase::notifyOfWPlaneUse(const int plane) const
 /// @param[in] w w-term (in wavelengths) to map
 /// @return plane number
 /// @note an exception is thrown if the requested w-term lies outside (-wmax,wmax) range
+/// @note unless parameter wmaxclip = true, in which case -1 is returned
 int WDependentGridderBase::getWPlane(const double w) const
 {
   int result = -1;
@@ -117,19 +118,29 @@ int WDependentGridderBase::getWPlane(const double w) const
   } else {
       result = itsNWPlanes>1 ? (itsNWPlanes-1)/2 + nint(w/itsWScale) : 0;
   }
-#ifdef ASKAP_DEBUG  
-  if (result < 0) {
+#ifdef ASKAP_DEBUG
+  if (!itsWmaxClip && result < 0) {
       ASKAPLOG_DEBUG_STR(logger, w << " " << itsWScale << " "<< result );
   }
 #endif // #ifdef ASKAP_DEBUG
-  
-  ASKAPCHECK(result < itsNWPlanes,
-           "W scaling error: recommend allowing larger range of w, you have w="<< w <<" wavelengths");
-  ASKAPCHECK(result > -1,
-           "W scaling error: recommend allowing larger range of w, you have w="<< w <<" wavelengths");
-  return result;
+
+  if (result < itsNWPlanes && result > -1) return result;
+  static bool warned = false;
+  if (!itsWmaxClip) {
+      ASKAPCHECK(result < itsNWPlanes,
+            "W scaling error: recommend allowing larger range of w, you have w="<< w <<" wavelengths");
+      ASKAPCHECK(result > -1,
+            "W scaling error: recommend allowing larger range of w, you have w="<< w <<" wavelengths");
+  } else {
+    if (!warned) {
+        ASKAPLOG_WARN_STR(logger, "Data contains |w| values larger than "<< getWMax() <<
+            ", these data will not be processed");
+        warned = true;
+    }
+  }
+  return -1;
 }
-   
+
 /// @brief obtain w-term for a given plane
 /// @details This is a reverse operation to wPlaneNumber.
 /// @param[in] plane plane number
@@ -148,11 +159,11 @@ double WDependentGridderBase::getWTerm(const int plane) const
 }
 
 /// @brief enable power law sampling in the w-space
-/// @details After this method is called, w-planes will be spaced non-linearly 
+/// @details After this method is called, w-planes will be spaced non-linearly
 /// (power law with the given exponent)
 /// @param[in] exponent exponent of the power law
 void WDependentGridderBase::powerLawWSampling(const double exponent)
-{ 
+{
   itsWSampling.reset(new PowerWSampling(exponent));
 }
 
@@ -182,23 +193,23 @@ void WDependentGridderBase::configureWSampling(const LOFAR::ParameterSet& parset
            const double nwplanes50 = parset.getDouble("wsampling.nwplanes50");
            ASKAPLOG_INFO_STR(logger, "Gaussian sampling of the w-space, number of w-planes covering 50% of sampled w-range is "<<
                                       nwplanes50);
-           ASKAPCHECK( (nwplanes50>0.) && (nwplanes50 < double(itsNWPlanes)/sqrt(2.)), 
+           ASKAPCHECK( (nwplanes50>0.) && (nwplanes50 < double(itsNWPlanes)/sqrt(2.)),
                "Number of w-planes covering 50% of w-range has to be a positive number not exceeding total number of w-planes "<<
                itsNWPlanes<<" divided by sqrt(2) or "<<double(itsNWPlanes)/sqrt(2.));
-           gaussianWSampling(nwplanes50/itsNWPlanes);                           
+           gaussianWSampling(nwplanes50/itsNWPlanes);
       } else {
         ASKAPTHROW(AskapError, "W-sampling "<<sampling<<" is not implemented");
       }
   } else {
      ASKAPLOG_INFO_STR(logger, "Linear sampling of the w-space");
   }
-  
+
   // optionally show w-plane hit statistics
   if (parset.getBool("wstats", false)) {
       ASKAPLOG_INFO_STR(logger, "W-plane usage distribution will be written into log at the end of processing");
       itsWPlaneStats.resize(nWPlanes(),0);
   }
-  
+
   // optionally export w-terms corresponding to each w-plane into dat file (largely for debugging)
   const std::string dbgExportFileName = parset.getString("wsampling.export","");
   if (dbgExportFileName != "") {
@@ -219,5 +230,8 @@ void WDependentGridderBase::configureWSampling(const LOFAR::ParameterSet& parset
            }
       }
   }
-}
 
+  // Decide what we do if w is out of range
+  itsWmaxClip =  parset.getBool("wmaxclip", false);
+
+}

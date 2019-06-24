@@ -48,30 +48,31 @@ namespace synthesis {
 /// This is a base class for all gridders taking w-term into account. It manages sampling
 /// in w-space (which may be non-linear, if so chosen by the user)
 /// @ingroup gridding
-class WDependentGridderBase : public SphFuncVisGridder 
+class WDependentGridderBase : public SphFuncVisGridder
 {
 public:
-   /// @brief constructor initialising for default linear sampling   
+   /// @brief constructor initialising for default linear sampling
    /// @details
    /// @param[in] wmax Maximum baseline (wavelengths)
-   /// @param[in] nwplanes Number of w planes   
-   WDependentGridderBase(const double wmax, const int nwplanes, const float alpha=1.); 
-   
+   /// @param[in] nwplanes Number of w planes
+   WDependentGridderBase(const double wmax, const int nwplanes, const float alpha=1.);
+
    /// @brief destructor, writes w-plane hit distribution if necessary
    virtual ~WDependentGridderBase();
-   
+
    /// @brief obtain the number of w-planes
-   /// @details 
+   /// @details
    /// @return the number of w-planes
    inline int nWPlanes() const { return itsNWPlanes;}
-   
+
    /// @brief obtain plane number
    /// @details
    /// @param[in] w w-term (in wavelengths) to map
    /// @return plane number
    /// @note an exception is thrown if the requested w-term lies outside (-wmax,wmax) range
+   /// @note unless parameter wmaxclip = true, in which case -1 is returned
    int getWPlane(const double w) const;
-   
+
    /// @brief obtain w-term for a given plane
    /// @details This is a reverse operation to wPlaneNumber.
    /// @param[in] plane plane number
@@ -85,13 +86,13 @@ public:
    void configureWSampling(const LOFAR::ParameterSet& parset);
 
 protected:
-   
+
    /// @brief enable power law sampling in the w-space
-   /// @details After this method is called, w-planes will be spaced non-linearly 
+   /// @details After this method is called, w-planes will be spaced non-linearly
    /// (power law with the given exponent)
    /// @param[in] exponent exponent of the power law
    void powerLawWSampling(const double exponent);
-   
+
    /// @brief enable gaussian sampling in the w-space
    /// @details After this method is called, w-planes will be spaced non-linearly
    /// (gaussian distribution defined by the given parameter)
@@ -104,11 +105,11 @@ protected:
    /// We don't store the original wmax passed in the constructor. Instead, it is recalculated from
    /// scale and number of planes. This also allows to cap it if number of planes is 1 (and so the
    /// result doesn't really depend on the w-plane number as the corresponding w-term is always 0).
-   /// This method is only used for non-linear sampling, otherwise scale and number of planes are 
+   /// This method is only used for non-linear sampling, otherwise scale and number of planes are
    /// sufficient.
    /// @return maximum w-term in wavelengths
    inline double getWMax() const { return itsWScale * ((itsNWPlanes-1)/2); }
-      
+
    /// @brief increment w-plane hit statistics
    /// @details This method is called from derived classes. It increments the cache of statistics
    /// every time the appropriate plane is used.
@@ -119,17 +120,19 @@ private:
    /// Scaling
    double itsWScale;
    /// Number of w planes
-   int itsNWPlanes;   
+   int itsNWPlanes;
+   /// What to do if w>wmax
+   bool itsWmaxClip;
    /// @brief shared pointer to w-sampling helper
    /// @details We use helper classes to implement an arbitrary non-linear sampling in the w-space.
    /// Such a class just maps [-1,1] to [-1,1] taking into account the desired curvature. Implementing
    /// non-linear sampling this way allows us to specify the tranform using meaningful parameters such as
-   /// the maximum w-term or number of planes covering 50% of the w-term range. An empty shared pointer 
-   /// means that the linear sampling is used. The state of this helper class depends only on the 
+   /// the maximum w-term or number of planes covering 50% of the w-term range. An empty shared pointer
+   /// means that the linear sampling is used. The state of this helper class depends only on the
    /// actual mapping and is not changed after construction. Therefore, several gridders may reuse the same
-   /// mapper class instance and no cloning operation is needed. 
+   /// mapper class instance and no cloning operation is needed.
    boost::shared_ptr<IWSampling> itsWSampling;
-   
+
    /// @brief w-plane access statistics
    /// @details If this vector has a non-zero size, every call to getWPlane increments the appropriate
    /// element (i.e. the size is supposed to be equal to the number of w-planes). The statistics are
@@ -143,5 +146,3 @@ private:
 
 
 #endif // #ifndef W_DEPENDENT_GRIDDER_BASE_H
-
-
