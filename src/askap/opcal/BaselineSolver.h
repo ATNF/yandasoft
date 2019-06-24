@@ -95,7 +95,20 @@ protected:
   ///            not necessarily match the scans known to online system
   /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
   ///            (column index is antenna ID used in the measurement set).
-  void solveForDecorrelation(const ScanStats &scans, const casacore::Matrix<GenericCalInfo> &caldata);  
+  void solveForDecorrelation(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);  
+
+  /// @brief solve for rate-dependent phase offsets
+  /// @details Experimental task to fit linear dependence between self-cal phase and rate per antenna
+  /// This can be handy in chasing up timing errors. 
+  /// This method is not supposed as part of the production code for now and may not be
+  /// accessible from parset.
+  /// @param[in] scans description of scans, note separate beams are present as separate scans.
+  ///            Scans here are defined by some splitting criterion used in OpCalImpl, and do
+  ///            not necessarily match the scans known to online system
+  /// @param[in] caldata calibration data. A matrix with one row per scan. Columns represent antennas
+  ///            (column index is antenna ID used in the measurement set).
+  void solveForRateDependentPhase(const ScanStats &scans, const casa::Matrix<GenericCalInfo> &caldata);  
+
   
 protected:
   /// @brief obtain MRO reference position
