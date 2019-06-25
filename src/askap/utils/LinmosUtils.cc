@@ -44,6 +44,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/IO.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>
 #include <casacore/images/Images/ImageRegrid.h>
 
@@ -53,7 +54,7 @@
 
 ASKAP_LOGGER(logger, ".linmos");
 
-using namespace casa;
+using namespace casacore;
 using namespace askap::synthesis;
 
 namespace askap {
