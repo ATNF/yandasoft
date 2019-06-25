@@ -27,14 +27,42 @@ build:
       - cd base-imagemath
       - mkdir build
       - cd build
-      - cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
+      - cd base-scimath
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
+      - cd base-askapparallel
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
+      - cd base-accessors
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - mkdir build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
       - make -j2
       - make -j2 install
   
-
   artifacts:
     paths:
-      - mybinary
+      - "/usr/local/lib/libyanda_synthesis.so"
   # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
   # cache:
   #   paths:
@@ -44,4 +72,5 @@ build:
 test:
   stage: test
   script:
-    - ./runmytests.sh
+    - cd ../tests/data/simulation/synthregression
+    - python synthregression.py  
