@@ -1,0 +1,77 @@
+# This file is a template, and might need editing before it works on your project.
+# use the official gcc image, based on debian
+# can use verions as well, like gcc:5.2
+# see https://hub.docker.com/_/gcc/
+image: sord/yanda:v1.0
+
+build:
+  stage: build
+  script:
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+      - cd base-askap
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local/ ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
+      - cd base-logfilters
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
+      - cd base-imagemath
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
+      - cd base-scimath
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
+      - cd base-askapparallel
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
+      - cd base-accessors
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - mkdir build
+      - cd build  
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+  
+  artifacts:
+    paths:
+      - "/usr/local/lib/libyanda_synthesis.so"
+  # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+  # cache:
+  #   paths:
+  #     - "*.o"
+
+# run tests using the binary built before
+test:
+  stage: test
+  script:
+    - cd ../tests/data/simulation/synthregression
+    - python synthregression.py  

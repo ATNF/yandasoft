@@ -38,7 +38,8 @@
 #include "askap/messages/IMessage.h"
 
 ///ASKAPsoft includes
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/AskapError.h>
 #include "Blob/BlobIStream.h"
 #include "Blob/BlobIBufVector.h"
