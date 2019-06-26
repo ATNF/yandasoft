@@ -45,8 +45,6 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
 
-
-
 using namespace askap;
 using namespace askap::synthesis;
 
@@ -173,30 +171,26 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
 {
   const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
   const bool fdp = isFrequencyDependent();
-  ASKAPDEBUGASSERT(itsBuffer.nChannel()>0);
-
-  scimath::GenericNormalEquations::NMInitializedParametersLifetimeWatcher watcher(ne);
-  ne.initializeNormalMatrixParameters(parameters().names(), watcher);
+  ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
   for (casa::uInt row = 0; row < itsBuffer.nRow(); ++row) {
 
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row); 
        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
-            
             // take a slice, this takes care of indices along the first two axes (row and channel)
-            const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row,chan);
+            const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
                // cdm is a block matrix
-               const scimath::ComplexDiffMatrix thisChanCDM = cdm.extractBlock(chan * itsBuffer.nPol(),itsBuffer.nPol());
-               ne.add(thisChanCDM,pxpSlice);
+               const scimath::ComplexDiffMatrix thisChanCDM = cdm.extractBlock(chan * itsBuffer.nPol(), itsBuffer.nPol());
+               ne.add(thisChanCDM, pxpSlice);
             } else {
                // cdm is a normal matrix
-               ne.add(cdm,pxpSlice);
+               ne.add(cdm, pxpSlice);
             }
        }
   }
-  updateMetadata(ne,"min_time",itsMinTime);
-  updateMetadata(ne,"max_time",itsMaxTime);  
+  updateMetadata(ne, "min_time", itsMinTime);
+  updateMetadata(ne, "max_time", itsMaxTime);
 }
   
 /// @brief initialise accumulation
