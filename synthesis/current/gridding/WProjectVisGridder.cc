@@ -55,18 +55,21 @@ std::vector<std::pair<int,int> > WProjectVisGridder::theirConvFuncOffsets;
 /// stl vector
 /// @param[in] in input array
 /// @param[out] out output array (will be resized)
+/// @return size of the cache in bytes
 template<typename T>
-void deepRefCopyOfSTDVector(const std::vector<T> &in,
+size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
                             std::vector<T> &out)
 {
    out.resize(in.size());
-
+   size_t total = 0;
    const typename std::vector<T>::const_iterator inEnd = in.end();
    typename std::vector<T>::iterator outIt = out.begin();
    for (typename std::vector<T>::const_iterator inIt = in.begin();
        inIt != inEnd; ++inIt,++outIt) {
        outIt->reference(*inIt);
+       total += outIt->nelements()*sizeof(T);
    }
+   return total;
 }
 
 WProjectVisGridder::WProjectVisGridder(const double wmax,
@@ -244,8 +247,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     if (itsShareCF && theirCFCache.size()>0) {
         // we already have what we need
         itsSupport = 1;
-        ASKAPLOG_INFO_STR(logger, "Using cached convolution functions");
-        deepRefCopyOfSTDVector(theirCFCache,itsConvFunc);
+        size_t size = deepRefCopyOfSTDVector(theirCFCache,itsConvFunc)/1024/1024;
+        ASKAPLOG_INFO_STR(logger, "Using cached convolution functions ("<<size<<" MB)");
         if (isOffsetSupportAllowed()) {
             for (size_t i=0; i<theirConvFuncOffsets.size(); i++) {
                 setConvFuncOffset(i,theirConvFuncOffsets[i].first,theirConvFuncOffsets[i].second);

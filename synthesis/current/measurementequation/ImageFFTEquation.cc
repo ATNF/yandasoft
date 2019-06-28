@@ -370,7 +370,7 @@ namespace askap
         // and PSF gridders, dopsf=true, dopcf=false
         itsPSFGridders[imageName]->customiseForContext(*it);
         itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);
-        // and PSF gridders, dopsf=false, dopcf=false
+        // and PCF gridders, dopsf=false, dopcf=true
         if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
             itsPreconGridders[imageName]->customiseForContext(*it);
             itsPreconGridders[imageName]->initialiseGrid(axes, imageShape, false, true);
