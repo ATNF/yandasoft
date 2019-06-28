@@ -557,10 +557,18 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGASSERT(casa::uInt(nChan) <= frequencyList.nelements());
    ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
    const casa::Cube<casa::Bool>& flagCube = acc.flag();
-   casa::Cube<casa::Complex>& visCube = acc.rwVisibility();
-   const casa::Cube<casa::Complex>& roVisCube = acc.visibility();
-   const casa::Cube<casa::Complex>& roVisNoise = acc.noise();
-
+   // we want these for either gridding or degridding and
+   // want to avoid calling them in the loop due to virtual function overheads
+   // don't like the pointers, but can't use references without initialising
+   casa::Cube<casa::Complex>* visCube;
+   const casa::Cube<casa::Complex> *roVisCube;
+   const casa::Cube<casa::Complex> *roVisNoise;
+   if (forward) {
+       visCube = &acc.rwVisibility();
+   } else {
+       roVisCube = &acc.visibility();
+       roVisNoise = &acc.noise();
+   }
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
            // need to reject samples, if too far from the image centre
@@ -586,7 +594,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
        }
 
        for (uint chan=0; chan<nChan; ++chan) {
-
            const double reciprocalToWavelength = frequencyList[chan]/casa::C::c;
            if (chan == 0) {
               // check for ridiculous frequency to pick up a possible error with input file,
@@ -658,6 +665,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            // Ensure that we only use unflagged data, incomplete polarisation vectors are
            // ignored
            // @todo Be more careful about matching polarizations
+
            if (allPolGood && itsFreqMapper.isMapped(chan)) {
                // obtain which channel of the image this accessor channel is mapped to
                const int imageChan = itsFreqMapper(chan);
@@ -665,12 +673,12 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
                if (!forward) {
                    if (!isPSFGridder() && !isPCFGridder()) {
-                       for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = roVisCube(i,chan,pol);
+                       for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = (*roVisCube)(i,chan,pol);
                        itsPolConv.convert(itsImagePolFrameVis,itsPolVector);
                    }
                    // we just don't need this quantity for the forward gridder, although there would be no
                    // harm to always compute it
-                   for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = roVisNoise(i,chan,pol);
+                   for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = (*roVisNoise)(i,chan,pol);
                    itsPolConv.noise(itsImagePolFrameNoise,itsPolVector);
                }
                // Now loop over all image polarizations
@@ -835,7 +843,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                if (wGood) {
                    if (forward) {
                        itsPolConv.convert(itsPolVector,itsImagePolFrameVis);
-                       for (uint pol=0; pol<nPol; pol++) visCube(i,chan,pol) += itsPolVector(pol);
+                       for (uint pol=0; pol<nPol; pol++) (*visCube)(i,chan,pol) += itsPolVector(pol);
                        // visibilities with w out of range are left unchanged during prediction
                        // as long as subsequent imaging uses the same wmax this should work ok
                        // we may want to flag these data to be sure
@@ -852,6 +860,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
           }
        } //end of chan loop
    } //end of i loop
+
    if (forward) {
        itsTimeDegridded+=timer.real();
    } else {
