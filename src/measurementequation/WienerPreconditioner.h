@@ -144,6 +144,9 @@ namespace askap
       /// @brief gaussian taper in the image domain (in pixels)
       /// @details fwhm is stored inside cache class.
       boost::shared_ptr<GaussianTaperCache> itsTaperCache;
+
+      /// @brief if true then no cache is taken into account
+      bool itsAlwaysComputeEverything;
    };
 
   }

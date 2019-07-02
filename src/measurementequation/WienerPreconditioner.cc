@@ -146,6 +146,12 @@ namespace askap
           "PSF and preconditioner function do not conform - shapes: " <<
           shape << " & " << itsPcf.shape());
 
+      if (itsAlwaysComputeEverything) {
+          itsUseCachedPcf = false;
+          useCachedFilter = false;
+          newFilter = true;
+      }
+
       if (itsUseRobustness) {
           ASKAPLOG_INFO_STR(logger,
               "Wiener filter noise power defined via robustness = " << itsParameter);
@@ -514,6 +520,8 @@ namespace askap
           result->enableTapering(fwhm);
       }
       //
+
+      result->itsAlwaysComputeEverything = parset.getBool("always_compute_everything", false);
 
       if (itsPcf.shape() == 0) {
           // there is no cache, so don't change anything.
