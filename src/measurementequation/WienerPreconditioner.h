@@ -103,6 +103,10 @@ namespace askap
       /// @param[in] fwhm full width at half maximum of the taper given in image cells
       void enableTapering(double fwhm);
 
+      /// @brief set export/import functionality
+      void configure_import_export(bool import_pcf, bool import_wienerfilter,
+          bool export_pcf, bool export_wienerfilter);
+
     private:
       /// @brief assignment operator, to ensure it is not called
       /// @param[in] other object to copy from
@@ -144,6 +148,12 @@ namespace askap
       /// @brief gaussian taper in the image domain (in pixels)
       /// @details fwhm is stored inside cache class.
       boost::shared_ptr<GaussianTaperCache> itsTaperCache;
+
+      /// @brief import/export configuration
+      bool itsImportPcf;
+      bool itsImportWienerfilter;
+      bool itsExportPcf;
+      bool itsExportWienerfilter;
 
       /// @brief if true then no cache is taken into account
       bool itsAlwaysComputeEverything;

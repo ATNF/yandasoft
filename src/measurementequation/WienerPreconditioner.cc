@@ -43,9 +43,11 @@ ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 //#include <casacore/lattices/LatticeMath/LatticeFFT.h>
 #include <fft/FFTWrapper.h>
 #include <casacore/lattices/LEL/LatticeExpr.h>
+#include <boost/lexical_cast.hpp>
 
-// for debugging - to export intermediate images
+// for debugging - to export/import intermediate images
 #include <utils/ImageUtils.h>
+#include <imageaccess/CasaImageAccess.h>
 
 using namespace casa;
 
@@ -57,6 +59,12 @@ namespace askap
 {
   namespace synthesis
   {
+
+    static casa::Array<float> import_image(const std::string &name)
+    {
+        accessors::CasaImageAccess imaccess;
+        return imaccess.read(name);
+    }
 
     bool WienerPreconditioner::itsUseCachedPcf = false;
     double WienerPreconditioner::itsAveWgtSum = 0.0;
@@ -104,6 +112,10 @@ namespace askap
                                                  casa::Array<float>& dirty,
                                                  casa::Array<float>& pcfIn) const
     {
+
+      static int global_execution_counter = 0;
+      global_execution_counter++;
+
       // Note this routine uses generic arrays, but they are really always 2d Matrices, all with the same shape
       ASKAPTRACE("WienerPreconditioner::doPreconditioning");
       if (!itsUseRobustness && (itsParameter < 1e-6)) {
@@ -323,6 +335,16 @@ namespace askap
           // update the scratch array
           convertArray<casa::Complex,casa::Float>(scratch, itsPcf);
 
+          if (itsExportPcf || itsImportPcf) {
+            std::string fname = boost::lexical_cast<std::string>(global_execution_counter) + ".pcf";
+            if (itsExportPcf) {
+              scimath::saveAsCasaImage(fname, itsPcf);
+            }
+            else {
+              itsPcf = import_image(fname);
+            }
+          }
+
           itsUseCachedPcf = true;
 
         } // if (newFilter)
@@ -396,9 +418,26 @@ namespace askap
 
       }
 
-      // for debugging - to export Wiener filter
-      //scimath::saveAsCasaImage("wienerfilter.uv",real(itsWienerfilter.asArray()));
-      //throw 1;
+      // for debugging - to export/import Wiener filter
+      if (itsExportWienerfilter || itsImportWienerfilter) {
+        std::string fname_prefix = boost::lexical_cast<std::string>(global_execution_counter) + ".wienerfilter.";
+        if (itsExportWienerfilter) {
+            ASKAPLOG_INFO_STR(logger, "Exporting wiener filter to " << fname_prefix << ".{real,imag}");
+            scimath::saveAsCasaImage(fname_prefix + ".real", real(itsWienerfilter));
+            scimath::saveAsCasaImage(fname_prefix + ".imag", imag(itsWienerfilter));
+        }
+        else {
+            ASKAPLOG_INFO_STR(logger, "Importing wiener filter from " << fname_prefix << ".{real,imag}");
+            casa::Array<float> real = import_image(fname_prefix + ".real");
+            casa::Array<float> imag = import_image(fname_prefix + ".imag");
+            ASKAPLOG_INFO_STR(logger, "Real/imag images read with shapes " << real.shape() << "/" << imag.shape());
+            if (imag.shape() != itsWienerfilter.shape()) {
+              ASKAPTHROW(AskapError, "Shapes of images read are different from grid shape, cannot continue");
+            }
+            setImag(itsWienerfilter, imag);
+            setReal(itsWienerfilter, real);
+        }
+      }
 
       // Apply the Wiener filter to the xfr and transform to the filtered PSF
       convertArray(scratch, psf2D);
@@ -521,6 +560,13 @@ namespace askap
       }
       //
 
+      // import/export configuration
+      const bool import_pcf = parset.getBool("import_pcf", false);
+      const bool import_wienerfilter = parset.getBool("import_wienerfilter", false);
+      const bool export_pcf = parset.getBool("export_pcf", false);
+      const bool export_wienerfilter = parset.getBool("export_wienerfilter", false);
+      result->configure_import_export(import_pcf, import_wienerfilter,
+          export_pcf, export_wienerfilter);
       result->itsAlwaysComputeEverything = parset.getBool("always_compute_everything", false);
 
       if (itsPcf.shape() == 0) {
@@ -552,6 +598,16 @@ namespace askap
       ASKAPLOG_INFO_STR(logger, "Wiener filter will be tapered by a circular Gaussian with FWHM="<<fwhm<<
                         " pixels in the image plane");
       itsTaperCache.reset(new GaussianTaperCache(fwhm));
+    }
+
+    void WienerPreconditioner::configure_import_export(
+        bool import_pcf, bool import_wienerfilter, bool export_pcf,
+        bool export_wienerfilter)
+    {
+        itsImportPcf = import_pcf;
+        itsImportWienerfilter = import_wienerfilter;
+        itsExportPcf = export_pcf;
+        itsExportWienerfilter = export_wienerfilter;
     }
 
   }
