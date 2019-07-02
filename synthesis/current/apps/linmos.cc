@@ -98,7 +98,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // get input files for this mosaic
         inImgNames = accumulator.inImgNameVecs()[outImgName];
         ASKAPLOG_INFO_STR(logger, " - input images: "<<inImgNames);
-        if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+        if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
             inWgtNames = accumulator.inWgtNameVecs()[outImgName];
             ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
         }
@@ -144,7 +144,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             string inWgtName, inSenName;
 
             ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
-            if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+            if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
                 inWgtName = inWgtNames[img];
                 ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
             }
@@ -159,7 +159,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             Array<float> inPix = iacc.read(inImgName);
             Array<float> inWgtPix;
             Array<float> inSenPix;
-            if (accumulator.weightType() == FROM_WEIGHT_IMAGES) {
+            if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
                 inWgtPix = iacc.read(inWgtName);
                 ASKAPASSERT(inPix.shape() == inWgtPix.shape());
             }
@@ -176,9 +176,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
             // if regridding is required, set up buffer some images
             if ( regridRequired ) {
-
                 ASKAPLOG_INFO_STR(logger, " - regridding -- input pixel grid is different from the output");
-
                 // currently all output planes have full-size, so only initialise once
                 // would be faster if this was reduced to the size of the current input image
                 if ( accumulator.outputBufferSetupRequired() ) {
@@ -188,18 +186,18 @@ static void merge(const LOFAR::ParameterSet &parset) {
                     // set up regridder
                     accumulator.initialiseRegridder();
                 }
-
                 // set up temp images required for regridding
                 // need to do this here if some do and some do not have sensitivity images
-                accumulator.initialiseOutputBuffers();
-
-                // set up temp images required for regridding
                 // are those of the previous iteration correctly freed?
+                accumulator.initialiseOutputBuffers();
                 accumulator.initialiseInputBuffers();
-
-            } else {
-                ASKAPLOG_INFO_STR(logger, " - not regridding -- input pixel grid is the same as the output");
             }
+            else {
+                ASKAPLOG_INFO_STR(logger, " - not regridding -- input pixel grid is the same as the output");
+                // not regridding so point output image buffers at the input buffers
+                accumulator.initialiseInputBuffers();
+                accumulator.redirectOutputBuffers();
+                }
 
             // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
             for (; planeIter.hasMore(); planeIter.next()) {
@@ -209,21 +207,16 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
                 ASKAPLOG_INFO_STR(logger, " - slice " << curpos);
 
-                if ( regridRequired ) {
+                // load input buffer for the current plane
+                accumulator.loadAndWeightInputBuffers(curpos, inPix, inWgtPix, inSenPix);
 
-                    // load input buffer for the current plane
-                    accumulator.loadInputBuffers(planeIter, inPix, inWgtPix, inSenPix);
+                if ( regridRequired ) {
                     // call regrid for any buffered images
                     accumulator.regrid();
-                    // update the accululation arrays for this plane
-                    accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, curpos);
-
-                } else {
-
-                    // Update the accululation arrays for this plane.
-                    accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, inPix, inWgtPix, inSenPix, curpos);
-
                 }
+
+                // update the accululation arrays for this plane
+                accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, curpos);
 
             }
 

@@ -369,7 +369,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           // if regridding is required, set up buffer some images
           if ( regridRequired ) {
-
             ASKAPLOG_INFO_STR(logger, " - regridding -- input pixel grid is different from the output");
             // currently all output planes have full-size, so only initialise once
             // would be faster if this was reduced to the size of the current input image
@@ -382,17 +381,15 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             }
             // set up temp images required for regridding
             // need to do this here if some do and some do not have sensitivity images
-
-            accumulator.initialiseOutputBuffers();
-
-            // set up temp images required for regridding
             // are those of the previous iteration correctly freed?
+            accumulator.initialiseOutputBuffers();
             accumulator.initialiseInputBuffers();
-
           }
-
           else {
             ASKAPLOG_INFO_STR(logger, " - not regridding -- input pixel grid is the same as the output");
+            // not regridding so point output image buffers at the input buffers
+            accumulator.initialiseInputBuffers();
+            accumulator.redirectOutputBuffers();
           }
 
           // set the indices of any higher-order dimensions for this slice
@@ -400,28 +397,21 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           // i think we have to edit the plane Iter ...
           ASKAPLOG_INFO_STR(logger, " - input slice " << curpos);
 
-          if ( regridRequired ) {
+          // load input buffer for the current plane
+          // Since the plane iterator is set up outside the linmos loop and
+          // is shared by all of the input image cubes, when the planes of
+          // the input images have different shapes a new temporary plane
+          // accessor is needed with a unique shape. To do this, send the
+          // current iterator position, rather than the iterator itself.
+          accumulator.loadAndWeightInputBuffers(curpos, inPix, inWgtPix, inSenPix);
 
-            // load input buffer for the current plane
-            // Since the plane iterator is set up outside the linmos loop and
-            // is shared by all of the input image cubes, when the planes of
-            // the input images have different shapes a new temporary plane
-            // accessor is needed with a unique shape. To do this, send the
-            // current iterator position, rather than the iterator itself.
-            accumulator.loadInputBuffers(curpos, inPix, inWgtPix, inSenPix);
-            //accumulator.loadInputBuffers(planeIter, inPix, inWgtPix, inSenPix);
+          if ( regridRequired ) {
             // call regrid for any buffered images
             accumulator.regrid();
-            // update the accululation arrays for this plane
-            accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, curpos);
-
-          } else {
-
-            // Update the accumulation arrays for this plane.
-            accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, inPix, inWgtPix, inSenPix, curpos);
-
           }
 
+          // update the accululation arrays for this plane
+          accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, curpos);
 
         } // over the input images for this
       } // iterated over the polarisation - the accumulator is FULL for this CHANNEL
