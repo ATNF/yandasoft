@@ -435,6 +435,7 @@ if [ $install_askap_dependencies == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
 
 	
 fi
