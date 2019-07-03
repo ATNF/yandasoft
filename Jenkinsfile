@@ -120,6 +120,26 @@ make -j2 install
 
       }
     }
+    stage('Building base-components') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-components ]; then
+echo "base-components directory already exists"
+rm -rf base-components
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-components.git
+cd base-components
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make -j2
+make -j2 install
+'''
+        }
+
+      }
+    }
+
     stage('Building askap-pipelinetasks') {
       steps {
         dir(path: '.') {
