@@ -120,6 +120,44 @@ make -j2 install
 
       }
     }
+    stage('Building askap-pipelinetasks') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d askap-pipelinetasks ]; then
+echo "askap-pipelinetasks directory already exists"
+rm -rf askap-pipelinetasks
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
+cd askap-pipelinetasks
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make -j2
+make -j2 install
+'''
+        }
+
+      }
+    }
+    stage('Building askap-analysis') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d askap-analysis ]; then
+echo "askap-analysis directory already exists"
+rm -rf askap-analysis
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
+cd askap-analysis
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make -j2
+make -j2 install
+'''
+        }
+
+      }
+    }
 
     stage('Building yandasoft') {
       steps {
