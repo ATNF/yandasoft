@@ -55,6 +55,22 @@ build:
       - make -j2
       - make -j2 install
       - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
+      - cd base-accessors
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
+      - git clone https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
+      - cd base-accessors
+      - mkdir build
+      - cd build
+      - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
+      - make -j2
+      - make -j2 install
+      - cd ../../
       - mkdir build
       - cd build  
       - cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../
