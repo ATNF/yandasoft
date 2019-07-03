@@ -6,6 +6,14 @@ pipeline {
 
   }
   stages {
+    stage ('Prepare environment') {
+      steps {
+        dir(path: '.') {
+          sh '''apt-get install boost_regex'''
+        }
+      }
+    }
+
     stage('Building base-askap') {
       steps {
         dir(path: '.') {
