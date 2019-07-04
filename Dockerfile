@@ -13,6 +13,7 @@ RUN apt-get install -y cmake \
 	&& apt-get install    -y  libboost-system-dev    \  
 	&& apt-get install    -y  libboost-thread-dev     \ 
 	&& apt-get install    -y  libboost-regex-dev     \ 
+	&& apt-get install    -y  libcppunit-dev     \     
 	&& apt-get install    -y  libcfitsio-dev     \     
 	&& apt-get install    -y  libffi-dev       \      
 	&& apt-get install    -y  libfftw3-dev    \      
