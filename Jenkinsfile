@@ -9,7 +9,7 @@ pipeline {
     stage ('Prepare environment') {
       steps {
         dir(path: '.') {
-          sh '''sudo apt-get install -y libboost-regex-dev'''
+          sh '''apt-get install -y libboost-regex-dev'''
         }
       }
     }
