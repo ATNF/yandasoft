@@ -18,8 +18,8 @@ cd lofar-common
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -37,8 +37,8 @@ cd lofar-blob
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -56,8 +56,8 @@ cd base-askap
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -76,8 +76,8 @@ cd base-logfilters
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -95,8 +95,8 @@ cd base-imagemath
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -114,8 +114,8 @@ cd base-scimath
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -133,8 +133,8 @@ cd base-askapparallel
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -152,8 +152,8 @@ cd base-accessors
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -171,8 +171,8 @@ cd base-components
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -191,8 +191,8 @@ cd askap-pipelinetasks
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make 
+make install
 '''
         }
 
@@ -210,8 +210,9 @@ cd askap-analysis
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
-make -j2
-make -j2 install
+make duchamp
+make busyfit
+make install
 '''
         }
 
