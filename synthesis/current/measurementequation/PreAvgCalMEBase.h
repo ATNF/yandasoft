@@ -134,6 +134,17 @@ public:
   /// @return true, if the effect is frequency-dependent
   virtual bool isFrequencyDependent() const = 0;
 
+  /// @brief check that some data were accumulated for the given antenna, beam and channel
+  ////@details check flags in the buffer that at least one element is unflagged for the 
+  /// given antenna, beam and channel. This allows us to fix parameters for which we don't have
+  /// data.
+  /// @param[in] ant antenna index to query
+  /// @param[in] beam beam index to query
+  /// @param[in] pol polarisation index to check
+  /// @param[in] chan channel number to query or 0 for channel-independent case
+  /// @return true if there are some data accumulated for the given antenna, beam and channel
+  bool hasDataAccumulated(casa::uInt ant, casa::uInt beam, casa::uInt pol, casa::uInt chan = 0);
+
 protected:  
   /// @brief a helper method to form a ComplexDiffMatrix for a given row
   /// @details This is the only method which depends on the template type.

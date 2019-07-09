@@ -221,5 +221,37 @@ PreAvgCalMEBase::~PreAvgCalMEBase()
   }
 }
 
+/// @brief check that some data were accumulated for the given antenna, beam and channel
+////@details check flags in the buffer that at least one element is unflagged for the 
+/// given antenna, beam and channel. This allows us to fix parameters for which we don't have
+/// data.
+/// @param[in] ant antenna index to query
+/// @param[in] beam beam index to query
+/// @param[in] pol polarisation index to check
+/// @param[in] chan channel number to query or 0 for channel-independent case
+/// @return true if there are some data accumulated for the given antenna, beam and channel
+bool PreAvgCalMEBase::hasDataAccumulated(casa::uInt ant, casa::uInt beam, casa::uInt pol, casa::uInt chan)
+{
+   ASKAPCHECK(chan < itsBuffer.nChannel(), "Requested channel id = "<<chan<<" is outside the buffer size");
+   ASKAPCHECK(pol < itsBuffer.nPol(), "Requested polarisation id = "<<pol<<" is outside the buffer size");
+   const casa::Cube<casa::Bool> &flag = itsBuffer.flag();
+   const casa::Vector<casa::uInt> &antenna1 = itsBuffer.antenna1();
+   const casa::Vector<casa::uInt> &antenna2 = itsBuffer.antenna2();
+   const casa::Vector<casa::uInt> &beam1= itsBuffer.feed1();
+   ASKAPDEBUGASSERT(chan < flag.ncolumn());
+   ASKAPDEBUGASSERT(pol < flag.nplane());
+   ASKAPDEBUGASSERT(antenna1.nelements() == antenna2.nelements());
+   ASKAPDEBUGASSERT(antenna1.nelements() == beam1.nelements());
+   ASKAPDEBUGASSERT(flag.nrow() == beam1.nelements());
+   for (casa::uInt row = 0; row < flag.nrow(); ++row)  {
+        if (beam1[row] == beam  && (antenna1[row] == ant || antenna2[row] == ant)) {
+            if (!flag(row, chan, pol)) {
+                return true;
+            }
+        }
+   }
+   return false;
+}
+
 
   
