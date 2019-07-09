@@ -51,7 +51,8 @@ print_usage() {
 	echo " -C <opts> | -c  Install Casacore + cmake options"
 	echo " -A <opts> | -a  Install ASKAP dependencies + cmake options"
 	echo " -R <opts> | -r  Install casarest + cmake options"
-	echo " -Y <opts> | -y    Install YandaSoft + cmake options"
+	echo " -Y <opts> | -y  Install YandaSoft + cmake options"
+	echo " -E <opts> | -e  Install Extra (analysis + pipelinetasks) + cmake options
 	echo " -U 	       clean and uninstall yandasoft and dependencies (except casacore/casarest)"
         echo " -O <opts>       Options to apply to all builds."
         echo " -P              Use Python 3 "
@@ -95,6 +96,7 @@ install_casacore=no
 install_casarest=no
 install_askap_dependencies=no
 install_yandasoft=no
+install_extra=no
 clean_askap_dependencies=no
 clean_yandasoft=no
 build_adios=no
@@ -104,6 +106,7 @@ casarest_version=components-only
 casarest_opts=
 askap_opts=
 yandasoft_opts=
+extra_opts=
 opts=
 
 if [ $# -eq 0 ]; then 
@@ -111,7 +114,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "A:ah?s:cm:j:p:w:WPoiC:cR:rY:yO:USx:" opt
+while getopts "A:ah?s:cm:j:p:w:WPoiC:cR:rY:yO:USx:eE:" opt
 do
 	case "$opt" in
 		[h?])
@@ -159,6 +162,11 @@ do
 		c)	
 			install_casacore=yes
 			;;
+		e)	install_extra=yes
+			;;
+		E)	extra_opts="$OPTARG"
+			install_extra=yes
+			;;
 		R)
 			casarest_opts="$OPTARG"
 			install_casarest=yes
@@ -195,7 +203,7 @@ do
 			;;
 	esac
 done
-yandasoft_opts="${yandasoft_opts} ${opts} -DCASACORE_ROOT_DIR=${prefix}"
+yandasoft_opts="${yandasoft_opts} ${opts} ${askap_opts} ${extra_opts}  $-DCASACORE_ROOT_DIR=${prefix}"
 check_supported_values system $system centos ubuntu osx
 check_supported_values compiler $compiler gcc clang cray
 check_supported_values casacore_version $casacore_version master 2.4.0 2.0.3
@@ -434,9 +442,10 @@ if [ $install_askap_dependencies == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
-	#build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
-	#build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
-
+	if [ $install_extra == yes ]; then
+		build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
+		build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
+	fi
 	
 fi
 
