@@ -23,6 +23,10 @@ This release of the software is the first and consequently *beta* release. It co
 * `imager`: New imager - permits more parallisation options.
 * `linmos`: Linear mosaicking of images
 
+### Pipeline and Analysis tasks
+* `msplit`: Manipulate measurement sets
+* `cmodel`: Generate model images from component lists
+* `selavy`: Source detection tools
 
 ## About Yandasoft
 
@@ -46,4 +50,7 @@ Yadasoft and its required ASKAP dependencies are available from the CSIRO bitbuc
 * https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git 
 * https://bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
 
+There are some extra tasks available from:
+* https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
+* https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
 

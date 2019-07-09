@@ -49,6 +49,7 @@ RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data"
 RUN ./build_all.sh -r 
 RUN ./build_all.sh -a 
 RUN ./build_all.sh -y
+RUN ./build_all.sh -e
 
 
 
