@@ -3,6 +3,7 @@ module unload askaputils
 module unload askappipeline
 module switch PrgEnv-gnu
 module unload gcc
+module use /group/askap/sord/software/cle60up05/modulefiles
 module load gcc/7.2.0
 module load numpy
 module load lapack
