@@ -420,6 +420,7 @@ fi
 if [ $install_casarest == yes ]; then
 	build_and_install https://github.com/steve-ord/casarest $casarest_version -DBUILD_TESTING=OFF $casarest_opts
 fi
+
 if [ $clean_askap_dependencies == yes ]; then
 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
@@ -431,6 +432,7 @@ if [ $clean_askap_dependencies == yes ]; then
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git 
 fi
+
 if [ $install_askap_dependencies == yes ]; then
 	
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
@@ -442,12 +444,13 @@ if [ $install_askap_dependencies == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
-	if [ $install_extra == yes ]; then
-		build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
-		build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
-	fi
-	
 fi
+if [ $install_extra == yes ]; then
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
+fi
+	
+
 
 if [ $clean_yandasoft == yes ]; then
    startdir="$PWD"
