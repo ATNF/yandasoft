@@ -52,7 +52,7 @@ print_usage() {
 	echo " -A <opts> | -a  Install ASKAP dependencies + cmake options"
 	echo " -R <opts> | -r  Install casarest + cmake options"
 	echo " -Y <opts> | -y  Install YandaSoft + cmake options"
-	echo " -E <opts> | -e  Install Extra (analysis + pipelinetasks) + cmake options
+	echo " -E <opts> | -e  Install Extra (analysis + pipelinetasks) + cmake options"
 	echo " -U 	       clean and uninstall yandasoft and dependencies (except casacore/casarest)"
         echo " -O <opts>       Options to apply to all builds."
         echo " -P              Use Python 3 "
