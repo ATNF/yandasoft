@@ -77,12 +77,14 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
        indices(pol) = scimath::PolConverter::getIndex(stokes[pol]);
   }
   
+  /*
  // Use the optimized version if we can: 4 pols in canonical order
   // MV: this seems like a hack/not the C++ way of doing it. Code duplication/technical dept
   if (nPol==4 && indices(0)==0 && indices(1)==1 && indices(2)==2 && indices(3)==3) {
       correct4(chunk);
       return;
   }
+  */
   
   casa::Cube<casa::Complex> &rwVis = chunk.rwVisibility();
   ASKAPDEBUGASSERT(rwVis.nelements());
