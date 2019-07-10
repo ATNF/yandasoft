@@ -1,8 +1,14 @@
 #!/bin/bash
 
+if [ !-d ${WORKSPACE} ]; then
+  echo "No WORKSPACE set probably not being run by Jenkins"
+  exit -1
+fi
+
 export YANDASOFT=${WORKSPACE}../yandasoft
 
 if [ !-d ${YANDASOFT} ]; then
+  echo "No YANDASOFT directory the pipeline probably failed
   exit -1
 fi
 
