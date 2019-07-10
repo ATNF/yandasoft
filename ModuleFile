@@ -17,5 +17,5 @@ module load fftw
 module load gsl
 module load xerces-c
 module load mpich
-
+module load cppunit
 
