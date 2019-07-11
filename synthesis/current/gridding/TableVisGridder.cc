@@ -1191,13 +1191,14 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
     int nChan=itsShape(3);
     ASKAPDEBUGASSERT(out.shape().nelements() == 4);
     casa::IPosition ipStart(4, 0, 0, 0, 0);
-    casa::IPosition onePlane(4, out.shape()(0), out.shape()(1), 1, 1);
-    casa::Slicer slicer(ipStart, onePlane);
+    casa::IPosition ipEnd(4, out.shape()(0)-1, out.shape()(1)-1, 0, 0);
 
     ASKAPCHECK(itsSumWeights.nelements()>0, "Sum of weights not yet initialised");
     int nZ=itsSumWeights.shape()(0);
 
     for (int chan=0; chan<nChan; chan++) {
+        ipStart(3) = chan;
+        ipEnd(3) = chan;
         for (int pol=0; pol<nPol; pol++) {
             double sumwt=0.0;
             for (int iz=0; iz<nZ; iz++) {
@@ -1205,9 +1206,9 @@ void TableVisGridder::finaliseWeights(casa::Array<double>& out) {
               //              ASKAPLOG_DEBUG_STR(logger, "Sum of conv func " << sumConvFunc);
                 sumwt+=itsSumWeights(iz, pol, chan);
             }
-            ipStart(2) = pol; ipStart(3) = chan;
-            slicer.setStart(ipStart);
-            out(slicer).set(sumwt);
+            ipStart(2) = pol;
+            ipEnd(2) = pol;
+            out(ipStart,ipEnd).set(sumwt);
         }
     }
 }
