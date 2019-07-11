@@ -76,16 +76,14 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
   for (casa::uInt pol = 0; pol<nPol; ++pol) {
        indices(pol) = scimath::PolConverter::getIndex(stokes[pol]);
   }
-  
-  /*
+
  // Use the optimized version if we can: 4 pols in canonical order
   // MV: this seems like a hack/not the C++ way of doing it. Code duplication/technical dept
   if (nPol==4 && indices(0)==0 && indices(1)==1 && indices(2)==2 && indices(3)==3) {
       correct4(chunk);
       return;
   }
-  */
-  
+
   casa::Cube<casa::Complex> &rwVis = chunk.rwVisibility();
   ASKAPDEBUGASSERT(rwVis.nelements());
   updateAccessor(chunk.time());
@@ -132,13 +130,13 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
                 continue;
             }
             const bool validSolution =  calSolution().jonesValid(antenna1[row],
-                     itsBeamIndependent ? 0 : beam1[row], chan) && 
+                     itsBeamIndependent ? 0 : beam1[row], chan) &&
                      calSolution().jonesValid(antenna2[row], itsBeamIndependent ? 0 : beam2[row], chan);
 
             //ASKAPLOG_DEBUG_STR(logger, "row = "<<row<<" chan = "<<chan<<" ant1 = "<<antenna1[row]<<" ant2 = "<<antenna2[row]<<
             //            " beam = "<<beam1[row]<<" allFlagged: "<<allFlagged<<" needFlag: "<<needFlag<<" validSolution: "<<validSolution);
             casa::Complex det = 0.;
- 
+
             if (validSolution) {
                 casa::SquareMatrix<casa::Complex, 2> jones1 = calSolution().jones(antenna1[row],
                                   itsBeamIndependent ? 0 : beam1[row], chan);
@@ -250,48 +248,46 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::RigidVector<casa::Complex,4> vis;
 
   for (casa::uInt row = 0; row < nRow; ++row) {
-    casa::Matrix<casa::Bool> thisRowFlag = flag.yzPlane(row);
+    bool validSolution = false;
     for (casa::uInt chan = 0; chan < nChan; ++chan) {
         casa::Float det = 0.;
         bool allFlagged = true;
         // we don't really support partial polarisation flagging, but to avoid nasty surprises it is better to flag such samples completely.
         bool needFlag = false;
-        ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
+        //ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
         for (casa::uInt pol = 0; pol < nPol; ++pol) {
-             if (thisRowFlag(chan,pol)) {
+             if (flag(row,chan,pol)) {
                  needFlag = true;
              } else {
                  allFlagged = false;
              }
         }
         // don't bother with the rest of processing if the sample is flagged anyway in its entirety
-        if (allFlagged) {
+        // except that we need to do the chan=0 pass to fill the mueller matrix in the non bandpass case
+        if (allFlagged && (itsChannelIndependent || chan!=0)) {
             continue;
         }
-        const bool validSolution = calSolution().jonesValid(antenna1[row],
-                 itsBeamIndependent ? 0 : beam1[row], chan) && 
-                 calSolution().jonesValid(antenna2[row], itsBeamIndependent ? 0 : beam2[row], chan);
 
-        // MV: it is not nice to depend on channel 0 as it could be flagged. The algorithm needs to be more general
-        // for now I just initialise det with 0 above and hope it would catch the case if there are any issues along these lines
-        if (validSolution) {
-            if (!itsChannelIndependent || chan==0) {
+        if (!itsChannelIndependent || chan==0) {
+            const int b1 = itsBeamIndependent ? 0 : beam1[row];
+            const int b2 = itsBeamIndependent ? 0 : beam2[row];
+            validSolution = calSolution().jonesValid(antenna1[row], b1, chan) &&
+                     calSolution().jonesValid(antenna2[row], b2, chan);
+            if (validSolution) {
                 if (itsLeakageFree) {
                     // if the solution is diagonal, put it in a diagonal SquareMatrix
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesA = calSolution().jones(antenna1[row],
-                        itsBeamIndependent ? 0 : beam1[row], chan);
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesB = calSolution().jones(antenna2[row],
-                        itsBeamIndependent ? 0 : beam2[row], chan);
+                    const casa::SquareMatrix<casa::Complex, 2>& jonesA =
+                        calSolution().jones(antenna1[row], b1, chan);
+                    const casa::SquareMatrix<casa::Complex, 2>& jonesB =
+                        calSolution().jones(antenna2[row], b2, chan);
                     jones1(0,0) = jonesA(0,0);
                     jones1(1,1) = jonesA(1,1);
                     jones2(0,0) = jonesB(0,0);
                     jones2(1,1) = jonesB(1,1);
 
                 } else {
-                    jones1 = calSolution().jones(antenna1[row],
-                             itsBeamIndependent ? 0 : beam1[row], chan);
-                    jones2 = calSolution().jones(antenna2[row],
-                             itsBeamIndependent ? 0 : beam2[row], chan);
+                    jones1 = calSolution().jones(antenna1[row], b1, chan);
+                    jones2 = calSolution().jones(antenna2[row], b2, chan);
                 }
 
                 const casa::SquareMatrix<casa::Complex, 2>& j1 = jones1;
@@ -304,13 +300,15 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                     directProduct(mueller, j1.inverse(),conj(j2).inverse());
                 }
             }
+        }
+        if (validSolution && !allFlagged) {
             for (casa::uInt pol = 0; pol < nPol; ++pol) {
                 vis(pol) = rwVis(row,chan,pol);
             }
         }
 
         if (itsFlagAllowed) {
-            if (det<detThreshold || !validSolution || needFlag) {
+            if (det <= detThreshold || !validSolution || needFlag) {
                 ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
                 for (casa::uInt pol = 0; pol < nPol; ++pol) {
                     rwFlag(row,chan,pol)=true;
@@ -328,7 +326,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
 
         // do the actual calibration
         vis*=mueller;
-        
+
         // write back to chunk
         for (casa::uInt pol = 0; pol < nPol; ++pol) {
             rwVis(row,chan,pol) = vis(pol);
