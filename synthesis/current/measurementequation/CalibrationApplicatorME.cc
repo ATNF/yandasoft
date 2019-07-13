@@ -246,11 +246,11 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::uInt nChan = chunk.nChannel();
   casa::uInt nRow = chunk.nRow();
   casa::RigidVector<casa::Complex,4> vis;
-
+    
   for (casa::uInt row = 0; row < nRow; ++row) {
     bool validSolution = false;
+    casa::Float det = 0.;
     for (casa::uInt chan = 0; chan < nChan; ++chan) {
-        casa::Float det = 0.;
         bool allFlagged = true;
         // we don't really support partial polarisation flagging, but to avoid nasty surprises it is better to flag such samples completely.
         bool needFlag = false;
