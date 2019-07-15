@@ -264,7 +264,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
         }
         // don't bother with the rest of processing if the sample is flagged anyway in its entirety
         // except that we need to do the chan=0 pass to fill the mueller matrix in the non bandpass case
-        if (allFlagged && (itsChannelIndependent || chan!=0)) {
+        if (allFlagged && (!itsChannelIndependent || chan!=0)) {
             continue;
         }
 
