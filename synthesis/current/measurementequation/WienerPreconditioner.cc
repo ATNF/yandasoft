@@ -138,7 +138,7 @@ namespace askap
           useCachedFilter = false;
           newFilter = false;
       } else {
-          ASKAPLOG_INFO_STR(logger, "Applying Wiener filter " <<psf.shape() << dirty.shape() <<pcfIn.shape());
+          ASKAPLOG_INFO_STR(logger, "Generating and applying Wiener filter of size " << pcfIn.shape());
           //itsPcf.reference(pcfIn);
           itsPcf = pcfIn.nonDegenerate();
       }

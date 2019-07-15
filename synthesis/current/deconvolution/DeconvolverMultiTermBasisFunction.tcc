@@ -466,15 +466,23 @@ namespace askap {
 
             for (uInt base = 0; base < nBases; base++) {
                 this->itsInverseCouplingMatrix(base).resize(this->itsNumberTerms, this->itsNumberTerms);
-                ASKAPLOG_DEBUG_STR(decmtbflogger, "Coupling matrix(" << base << ")="
-                                       << this->itsCouplingMatrix(base));
+                ASKAPLOG_INFO_STR(decmtbflogger, "Coupling matrix(" << base << ")="
+                                       << this->itsCouplingMatrix(base).row(0));
+                for (uInt term = 1; term < this->itsNumberTerms; term++) {
+                    ASKAPLOG_INFO_STR(decmtbflogger, "                   "
+                                       << this->itsCouplingMatrix(base).row(term));
+                }
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Calculating matrix inverse by Cholesky decomposition");
                 invertSymPosDef(this->itsInverseCouplingMatrix(base),
                                 this->itsDetCouplingMatrix(base), this->itsCouplingMatrix(base));
-                ASKAPLOG_DEBUG_STR(decmtbflogger, "Coupling matrix determinant(" << base << ") = "
+                ASKAPLOG_INFO_STR(decmtbflogger, "Coupling matrix determinant(" << base << ") = "
                                        << this->itsDetCouplingMatrix(base));
-                ASKAPLOG_DEBUG_STR(decmtbflogger, "Inverse coupling matrix(" << base
-                                       << ")=" << this->itsInverseCouplingMatrix(base));
+                ASKAPLOG_INFO_STR(decmtbflogger, "Inverse coupling matrix(" << base
+                                       << ")=" << this->itsInverseCouplingMatrix(base).row(0));
+                for (uInt term = 1; term < this->itsNumberTerms; term++) {
+                    ASKAPLOG_INFO_STR(decmtbflogger, "                           "
+                                       << this->itsInverseCouplingMatrix(base).row(term));
+                }
             }
             this->itsBasisFunctionChanged = False;
         }

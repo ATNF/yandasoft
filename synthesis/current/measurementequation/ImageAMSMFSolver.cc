@@ -33,6 +33,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/scimath/Mathematics/MatrixMathLA.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <measurementequation/SynthesisParamsHelper.h>
 #include <measurementequation/ImageParamsHelper.h>
@@ -178,6 +179,8 @@ namespace askap
 	  ASKAPLOG_INFO_STR(logger, "There are " << itsNumberTaylor << " Taylor terms");
 	}
 
+        casa::Matrix<casa::Double> couplingMatrix(itsNumberTaylor,itsNumberTaylor);
+
 	if(this->itsNumberTaylor>1) {
 	  iph.makeTaylorTerm(0);
 	}
@@ -212,6 +215,8 @@ namespace askap
 	// we have to build a set of parameters which are going to be fixed inside the loop
 	// (or alternatively fix them multiple times, which is also a reasonable solution)
 	std::set<std::string> parametersToBeFixed;
+
+	bool firstcycle;
 
 	// Iterate through Polarisations
 	for (scimath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
@@ -252,7 +257,7 @@ namespace askap
 
 	  // a unique string for every Taylor decomposition (unique for every facet for faceting)
 	  const std::string imageTag = tmIt->first + planeIter.tag();
-	  const bool firstcycle = !SynthesisParamsHelper::hasValue(itsCleaners,imageTag);
+	  firstcycle = !SynthesisParamsHelper::hasValue(itsCleaners,imageTag);
 
 	  Vector<Array<Float> > cleanVec(itsNumberTaylor);
 	  Vector<Array<Float> > dirtyVec(itsNumberTaylor);
@@ -336,6 +341,7 @@ namespace askap
 	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order <<
               ") centre value " << psfLongVec(order).nonDegenerate()(centre));
               // Precondition this order PSF using PSF(0)
+
 	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfZeroArray)) {
              ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order <<
                  ") centre value " << psfLongVec(order).nonDegenerate()(centre));
@@ -361,6 +367,14 @@ namespace askap
                  psfLongVec(order), itsPSFZeroCentre, dirtyLongVec(order),
                  boost::shared_ptr<casa::Array<float> >(&maskArray, utility::NullDeleter()));
 	      }
+              for (uInt t1=0; t1 < itsNumberTaylor; ++t1) {
+                  for (uInt t2=0; t2 < itsNumberTaylor; ++t2) {
+                      if (t1+t2 == order) {
+                          couplingMatrix(t1,t2) = psfLongVec(order).nonDegenerate()(centre);
+                      }
+                  }
+              }
+
 	      ASKAPLOG_DEBUG_STR(logger, "After  normalisation PSF(" << order <<
               ") centre value " << psfLongVec(order).nonDegenerate()(centre));
 	      if (order<itsNumberTaylor) {
@@ -516,6 +530,15 @@ namespace askap
 	    ip.fix(*ci);
 	  }
 	}
+
+        if (firstcycle) {
+            ASKAPLOG_DEBUG_STR(logger, "Inverting and cacheing coupling matrix");
+            casa::Matrix<casa::Double> inverseMatrix(itsNumberTaylor,itsNumberTaylor);
+            casa::Double det;
+            invertSymPosDef(inverseMatrix, det, couplingMatrix);
+            setInverseCouplingMatrix(inverseMatrix);
+        }
+
       } // loop: tmIt
 
       ASKAPCHECK(nParameters>0, "No free parameters in ImageAMSMFSolver");

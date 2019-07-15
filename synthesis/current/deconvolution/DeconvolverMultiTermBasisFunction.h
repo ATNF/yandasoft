@@ -152,6 +152,9 @@ namespace askap {
                 /// @param[in] dirty Dirty image (vector of arrays)
                 virtual void updateDirty(casa::Vector<casa::Array<T> >& dirty);
 
+	void setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix);
+	casa::Matrix<casa::Double> getInverseCouplingMatrix();
+
             private:
 
                 // Perform one iteration
@@ -208,6 +211,11 @@ namespace askap {
                 casa::Bool itsDecoupled;
 
                 casa::Bool itsDeep;
+
+      /// @brief Store the MFS inverse coupling matrix
+      /// @details needed by the restore solver, but it doesn't have all 2N-1 PSFs needed for generation. So store.
+      static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
+
         };
 
     } // namespace synthesis
