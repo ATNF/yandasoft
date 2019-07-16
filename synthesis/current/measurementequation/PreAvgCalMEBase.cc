@@ -253,5 +253,12 @@ bool PreAvgCalMEBase::hasDataAccumulated(casa::uInt ant, casa::uInt beam, casa::
    return false;
 }
 
+/// @brief polarisation type for each product
+/// @return a reference to vector containing polarisation types for
+/// each product the pre-averaging buffer is setup to handle
+const casa::Vector<casa::Stokes::StokesTypes>& PreAvgCalMEBase::stokes() const
+{
+   return itsBuffer.stokes();
+}
 
   

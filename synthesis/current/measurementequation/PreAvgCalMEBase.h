@@ -145,6 +145,12 @@ public:
   /// @return true if there are some data accumulated for the given antenna, beam and channel
   bool hasDataAccumulated(casa::uInt ant, casa::uInt beam, casa::uInt pol, casa::uInt chan = 0);
 
+  /// @brief polarisation type for each product
+  /// @return a reference to vector containing polarisation types for
+  /// each product the pre-averaging buffer is setup to handle
+  const casa::Vector<casa::Stokes::StokesTypes>& stokes() const;
+
+
 protected:  
   /// @brief a helper method to form a ComplexDiffMatrix for a given row
   /// @details This is the only method which depends on the template type.

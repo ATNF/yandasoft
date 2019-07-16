@@ -527,11 +527,10 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    ASKAPDEBUGASSERT(preAvgME);
 
    ASKAPDEBUGASSERT(dsi.hasMore());
-   // technically, the following is a bit hacky because it relies on the fact that stokes axis doesn't change 
-   // while interface actually allows it to change from one iteration to another
-   const casa::Vector<casa::Stokes::StokesTypes> stokes = dsi->stokes();
    preAvgME->accumulate(dsi,perfectME);
    itsEquation = preAvgME;
+   // after a call to accumulate the buffer will be setup appropriately, so we can query the stokes vector
+   const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();
 
    // go through parameters and fix them if there is no data
    const std::vector<std::string> params(itsModel->freeNames());
