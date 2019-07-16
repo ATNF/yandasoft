@@ -165,7 +165,8 @@ namespace askap
 
 	        // convolve with restoring beam before adding residuals, but wait until after
 	        // preconditioning to calculate restoring beam size.
-	        //itsModelNeedsConvolving = true;
+	        // needs to be set before addResiduals to support facets
+	        itsModelNeedsConvolving = true;
 	       
 	        // add residuals
 	        addResiduals(ip, tmIt->first, nOrders);
@@ -198,7 +199,6 @@ namespace askap
 	}
 
 	// restore faceted images
-	// TODO: this may have been broken by the change to a taylorMap loop above. Need to test
     for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
 	     if (ci->second != 1) {
 	         // this is a multi-facet image
@@ -255,7 +255,6 @@ namespace askap
     {
         ASKAPTRACE("ImageRestoreSolver::addResiduals");
 
-	    // TODO: test that this works for facets...
 	    // name with the taylor-related suffixes removed (and facet suffixes preserved, if present)
 	    ImageParamsHelper iph(basename);
 
@@ -292,7 +291,6 @@ namespace askap
         } else {
           name = facetname;
         }
-        // Setting these here should be fine if addResiduals is called separately for each facet
         const casa::IPosition shape = ip.value(name).shape();
         const scimath::Axes axes = ip.axes(name);
 
@@ -302,9 +300,6 @@ namespace askap
 	    // Axes are dof, dof for each parameter
 	    //casa::IPosition vecShape(1, out.shape().product());
         bool saveNewPSFRequired = true;
-	    // convolve with restoring beam before adding residuals, but wait until after
-	    // preconditioning to calculate restoring beam size.
-	    itsModelNeedsConvolving = true;
 
 	    for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
 
@@ -431,6 +426,7 @@ namespace askap
                 }
 
                 // don't decouple PSF images
+                // should change this to use reference semantics
 			    psfVector(order) = psfArray;
 
             }
