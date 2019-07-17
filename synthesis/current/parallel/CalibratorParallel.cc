@@ -523,6 +523,10 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
        ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
    }
 
+   // MV: Note, the code without preaveraging was not updated to fix ASKAPSDP-3641 as this is not our current use case. If things change and
+   // this way of doing the calibration becomes necessaey, some work will be required to ensure we fix those model parameters which do not have
+   // data available. to get corresponding solutons flagged as bad
+
   } else {
 
    // code with pre-averaging
@@ -563,6 +567,34 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    // this is just an optimisation, should work without this line
    preAvgME->beamIndependent(itsBeamIndependentGains);
    preAvgME->accumulate(dsi,perfectME);
+   // fix model parameters for which we don't have data
+   const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();
+   const std::vector<std::string> params(itsModel->freeNames());
+   for (std::vector<std::string>::const_iterator ci=params.begin(); ci != params.end(); ++ci) {
+        std::string baseParName = *ci;
+        casa::uInt curChan = 0;
+        if (accessors::CalParamNameHelper::bpParam(baseParName)) {
+            const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
+            curChan = chanInfo.first;
+            baseParName = chanInfo.second;
+        }
+        const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(baseParName);
+        casa::uInt pol = 0;
+        for (; pol < stokes.nelements(); ++pol) {
+             if (stokes[pol] == parsed.second) {
+                 break;
+             }
+        }
+        if (pol < stokes.nelements()) {
+            // for other than bandpass calibration case it is ok to pass 0 as the channel number - this is how we solve for gains/leakages
+            if (preAvgME->hasDataAccumulated(parsed.first.antenna(), parsed.first.beam(), pol, curChan)) {
+                continue;
+            }
+        }
+        // no data for the parameter - fix it (full name in case of bandpass, both should be identical in the case of gains/leakages)
+        itsModel->fix(*ci);
+   }
+   //
    itsEquation = preAvgME;
 
    // set helper parameter controlling which part of bandpass is solved for (ignored in all other cases)
