@@ -214,7 +214,7 @@ LIBRARY PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUT
 
 add_subdirectory(apps)
 
-find_package(CPPUNIT)
+find_package(CPPUnit)
 if (CPPUNIT_FOUND)
 	include(CTest)
 	enable_testing()
