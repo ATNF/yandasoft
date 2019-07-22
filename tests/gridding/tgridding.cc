@@ -22,16 +22,16 @@
 ///
 
 // ASKAPsoft includes
-#include <AskapTestRunner.h>
+#include <askap/askap/AskapTestRunner.h>
 
 // just to avoid template compilation which will not work without logging
 #define A_PROJECT_GRIDDER_BASE_TCC
 
 // Test includes
-#include <TableVisGridderTest.h>
-#include <SupportSearcherTest.h>
-#include <FrequencyMapperTest.h>
-#include <NonLinearWSamplingTest.h>
+#include "TableVisGridderTest.h"
+#include "SupportSearcherTest.h"
+#include "FrequencyMapperTest.h"
+#include "NonLinearWSamplingTest.h"
 
 int main(int argc, char *argv[])
 {

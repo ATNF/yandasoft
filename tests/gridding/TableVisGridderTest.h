@@ -39,7 +39,7 @@
 #include <casacore/casa/Quanta/Quantum.h>
 #include <casacore/casa/Quanta/MVPosition.h>
 #include <casacore/casa/BasicSL/Constants.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/gridding/VisGridderFactory.h>
 
 #include <cppunit/extensions/HelperMacros.h>
@@ -60,8 +60,8 @@ namespace askap
       CPPUNIT_TEST_SUITE(TableVisGridderTest);
       //      CPPUNIT_TEST(testForwardBox);
       //      CPPUNIT_TEST(testReverseBox);
-      CPPUNIT_TEST_EXCEPTION(testCreateAbstract,AskapError);      
-      CPPUNIT_TEST_EXCEPTION(testUnknownGridder,AskapError);      
+      CPPUNIT_TEST(testCreateAbstract);      
+      CPPUNIT_TEST(testUnknownGridder);      
       CPPUNIT_TEST(testForwardSph);
       CPPUNIT_TEST(testReverseSph);
       CPPUNIT_TEST(testForwardAWProject);
@@ -159,7 +159,7 @@ namespace askap
          // calling createGridder static method should raise an
          // exception
          LOFAR::ParameterSet parset;
-         TableVisGridder::createGridder(parset);
+         CPPUNIT_ASSERT_THROW(TableVisGridder::createGridder(parset),AskapError);
       }
       
       void testUnknownGridder()
@@ -169,7 +169,7 @@ namespace askap
          // it is not there an exception will be thrown 
          LOFAR::ParameterSet parset;
          parset.add("gridder","AGridderWithSuchNameShouldDefinitelyBeUnknownToTheSystsem");
-         VisGridderFactory::make(parset);
+         CPPUNIT_ASSERT_THROW(VisGridderFactory::make(parset),AskapError);
       }
       
       void testReverseSph()
