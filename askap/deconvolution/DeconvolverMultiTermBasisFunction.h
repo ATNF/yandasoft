@@ -156,6 +156,9 @@ namespace askap {
                 /// @brief Set the deep cleaning switch for component finding
                 void setDeepCleanMode(casacore::Bool deep);
 
+                // Perform many iterations using OpenMP
+                void ManyIterations();
+
                 /// @brief Get the deep cleaning switch for component finding
                 const casacore::Bool deepCleanMode();
 
