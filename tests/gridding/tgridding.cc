@@ -28,10 +28,10 @@
 #define A_PROJECT_GRIDDER_BASE_TCC
 
 // Test includes
-#include <TableVisGridderTest.h>
-#include <SupportSearcherTest.h>
-#include <FrequencyMapperTest.h>
-#include <NonLinearWSamplingTest.h>
+#include "TableVisGridderTest.h"
+#include "SupportSearcherTest.h"
+#include "FrequencyMapperTest.h"
+#include "NonLinearWSamplingTest.h"
 
 int main(int argc, char *argv[])
 {

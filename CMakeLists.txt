@@ -219,5 +219,6 @@ if (CPPUNIT_FOUND)
 	include(CTest)
 	enable_testing()
 	add_subdirectory(tests/deconvolution)
+	add_subdirectory(tests/gridding)
 endif ()
 

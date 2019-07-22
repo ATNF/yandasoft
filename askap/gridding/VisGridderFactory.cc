@@ -79,17 +79,25 @@ namespace synthesis {
       }
       // Try to load the dynamic library and execute its register function.
       // Do not dlclose the library.
-      ASKAPLOG_INFO_STR(logger, "Gridder "<<name<<
+      //
+      try {
+          ASKAPLOG_INFO_STR(logger, "Gridder "<<name<<
                  " is not in the registry, attempting to load it dynamically");
-      casacore::DynLib dl(libname, string("libaskap_"), "register_"+libname, false);
-      if (dl.getHandle()) {
-        // Successfully loaded. Get the creator function.
-        ASKAPLOG_INFO_STR(logger, "Dynamically loaded gridder " << name);
-        // the first thing the gridder in the shared library is supposed to do is to
-        // register itself. Therefore, its name will appear in the registry.
-        it = theirRegistry.find (name);
+          casacore::DynLib dl(libname, string("libaskap_"), "register_"+libname, false);
+	  if (dl.getHandle()) {
+              // Successfully loaded. Get the creator function.
+              ASKAPLOG_INFO_STR(logger, "Dynamically loaded gridder " << name);
+              // the first thing the gridder in the shared library is supposed to do is to
+              // register itself. Therefore, its name will appear in the registry.
+              it = theirRegistry.find (name);
+          }
+
       }
-    }
+      catch (std::exception) {
+           ASKAPTHROW(AskapError, "Unknown gridder " << name);
+      }
+
+          }
     if (it == theirRegistry.end()) {
       ASKAPTHROW(AskapError, "Unknown gridder " << name);
     }
