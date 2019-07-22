@@ -37,7 +37,7 @@ ASKAP_LOGGER(logger, ".deconvolution");
 #include "DeconvolverControlTest.h"
 #include "DeconvolverMonitorTest.h"
 #include "DeconvolverStateTest.h"
-
+#include <mpi.h>
 int main(int argc, char *argv[])
 {
 #ifdef __PGI
@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
 #endif
     
     ASKAPLOG_INIT("askap.log_cfg") ;
+    MPI_Init(&argc,&argv);
+
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
     runner.addTest( askap::synthesis::DeconvolverBaseTest::suite());
