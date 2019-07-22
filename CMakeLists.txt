@@ -27,6 +27,7 @@ if (CXX11)
     endif()
 endif()
 
+option (ENABLE_OPENMP "Build with OPENMP Support" YES)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 
@@ -56,6 +57,9 @@ option (BUILD_SHARED_LIBS "" YES)
     endif (ENABLE_RPATH)
 endif(ENABLE_SHARED)
 
+if (ENABLE_OPENMP)
+find_package(OpenMP REQUIRED) # Find the package
+endif ()
 
 
 # Manage the synthesis build
@@ -201,8 +205,13 @@ if (MPI_FOUND)
 	target_link_libraries(yanda_synthesis
 		${MPI_LIBRARIES}
 	)
+
 endif (MPI_FOUND)
 
+if (ENABLE_OPENMP)
+    target_link_libraries(yanda_synthesis
+        ${OpenMP_CXX_LIBRARIES})
+endif ()
 
 install (
 TARGETS yanda_synthesis
