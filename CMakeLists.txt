@@ -216,6 +216,10 @@ add_subdirectory(apps)
 
 find_package(CPPUnit)
 if (CPPUNIT_FOUND)
+    include_directories(${CPPUNIT_INCLUDE_DIR})
+    target_link_libraries(yanda_synthesis
+       ${CPPUNIT_LIBRARY}
+    )
 	include(CTest)
 	enable_testing()
 	add_subdirectory(tests/deconvolution)
