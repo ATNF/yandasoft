@@ -18,7 +18,6 @@ imager
 imgNaN2zero
 imgscale
 imgstat
-linmos-mpi-old
 linmos-mpi
 linmos
 msconcat

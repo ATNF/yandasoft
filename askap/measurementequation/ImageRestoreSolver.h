@@ -116,6 +116,7 @@ namespace askap
         /// @param[in] facetname name of the current facet, if using facets
         void addResiduals(askap::scimath::Params& ip,
                           const std::string &imagename,
+                          const casa::uInt nOrders,
                           const std::string facetname = "");
 
         /// @brief obtain an estimate of the restoring beam

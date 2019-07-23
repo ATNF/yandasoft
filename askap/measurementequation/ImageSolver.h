@@ -94,8 +94,11 @@ namespace askap
                            casacore::Array<float>& dirty,
                            casacore::Array<float>& pcf) const;
   
-    void setIsRestoreSolver();
-    bool getIsRestoreSolver();
+	void setIsRestoreSolver();
+	bool getIsRestoreSolver();
+
+	void setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix);
+	casa::Matrix<casa::Double> getInverseCouplingMatrix();
  
 	/// @brief perform normalization of the dirty image and psf
 	/// @details This method divides the PSF and dirty image by the diagonal of the Hessian.
@@ -280,6 +283,10 @@ private:
       /// @brief 
       /// @details 
       bool itsIsRestoreSolver;
+
+      /// @brief Store the MFS inverse coupling matrix
+      /// @details needed by the restore solver, but it doesn't have all 2N-1 PSFs needed for generation. So store.
+      static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
 
     };
 
