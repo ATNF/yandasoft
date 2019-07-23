@@ -187,6 +187,9 @@ namespace askap {
                 /// @param[in] dirty Dirty image (vector of arrays)
                 virtual void updateDirty(casacore::Vector<casacore::Array<T> >& dirty);
 
+	void setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix);
+	casa::Matrix<casa::Double> getInverseCouplingMatrix();
+
             private:
 
                 // Perform one iteration
@@ -241,17 +244,22 @@ namespace askap {
                 boost::shared_ptr<BasisFunction<T> > itsBasisFunction;
 
                 /// The flux subtracted on each term and scale [nterms][nbases]
-                casacore::Vector< casacore::Vector<T> > itsTermBaseFlux;
+                casa::Vector< casa::Vector<T> > itsTermBaseFlux;
 
-                casacore::Bool itsDirtyChanged;
+                casa::Bool itsDirtyChanged;
 
-                casacore::Bool itsBasisFunctionChanged;
+                casa::Bool itsBasisFunctionChanged;
 
-                casacore::String itsSolutionType;
+                casa::String itsSolutionType;
 
-                casacore::Bool itsDecoupled;
+                casa::Bool itsDecoupled;
 
-                casacore::Bool itsDeep;
+                casa::Bool itsDeep;
+
+      /// @brief Store the MFS inverse coupling matrix
+      /// @details needed by the restore solver, but it doesn't have all 2N-1 PSFs needed for generation. So store.
+      static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
+
         };
 
     } // namespace synthesis

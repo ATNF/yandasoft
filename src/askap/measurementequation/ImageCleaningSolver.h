@@ -94,6 +94,9 @@ public:
     /// @param[in] parset parset's subset (should have solver.Clean or solver.Dirty removed)
     virtual void configure(const LOFAR::ParameterSet &parset);
 
+    void setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix);
+    casa::Matrix<casa::Double> getInverseCouplingMatrix();
+
 
 protected:
    /// @brief helper method to pad an image
@@ -151,6 +154,8 @@ private:
    /// some padding is necessary to avoid wrap around. This parameter controlls the amount of padding.
    /// 1.0 means no padding, the value should be greater than or equal to 1.0.
    float itsPaddingFactor;
+
+   //static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
 };
 
 } // namespace synthesis

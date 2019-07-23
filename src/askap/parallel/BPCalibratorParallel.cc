@@ -529,6 +529,28 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    ASKAPDEBUGASSERT(dsi.hasMore());
    preAvgME->accumulate(dsi,perfectME);
    itsEquation = preAvgME;
+   // after a call to accumulate the buffer will be setup appropriately, so we can query the stokes vector
+   const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();
+
+   // go through parameters and fix them if there is no data
+   const std::vector<std::string> params(itsModel->freeNames());
+   for (std::vector<std::string>::const_iterator ci = params.begin(); ci != params.end(); ++ci) {
+        const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(*ci);
+        casa::uInt pol = 0; 
+        for (; pol < stokes.nelements(); ++pol) {
+             if (stokes[pol] == parsed.second) {
+                 break;
+             }
+        }
+        if (pol < stokes.nelements()) {
+            if (preAvgME->hasDataAccumulated(parsed.first.antenna(), parsed.first.beam(), pol)) {
+                continue;
+            }
+        }
+        // no data for the given parameter - fix it
+        itsModel->fix(*ci);
+   }
+   //
 
    // this is just because we bypass setting the model for the first major cycle
    // in the case without pre-averaging

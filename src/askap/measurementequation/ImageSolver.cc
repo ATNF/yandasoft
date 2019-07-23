@@ -63,6 +63,8 @@ namespace askap
   namespace synthesis
   {
 
+    casa::Matrix<casa::Double> ImageSolver::itsInverseCouplingMatrixCache;
+
     ImageSolver::ImageSolver() :
       itsZeroWeightCutoffArea(false), itsZeroWeightCutoffMask(true),
       itsSaveIntermediate(true), itsIsRestoreSolver(false)
@@ -551,6 +553,14 @@ namespace askap
 
     bool ImageSolver::getIsRestoreSolver() {
         return itsIsRestoreSolver;
+    }
+
+    void ImageSolver::setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix) {
+        itsInverseCouplingMatrixCache = InverseMatrix;
+    }
+
+    casa::Matrix<casa::Double> ImageSolver::getInverseCouplingMatrix() {
+        return itsInverseCouplingMatrixCache;
     }
 
 

@@ -175,6 +175,14 @@ void ImageCleaningSolver::configure(const LOFAR::ParameterSet &parset)
   ASKAPLOG_INFO_STR(logger,"Solver padding of "<<paddingFactor()<<" will be used");
 }
 
+void ImageCleaningSolver::setInverseCouplingMatrix(casa::Matrix<casa::Double> &InverseMatrix) {
+    ImageSolver::setInverseCouplingMatrix(InverseMatrix);
+}
+
+casa::Matrix<casa::Double> ImageCleaningSolver::getInverseCouplingMatrix() {
+    return ImageSolver::getInverseCouplingMatrix();
+}
+
 } // namespace synthesis
 
 } // namespace askap
