@@ -412,8 +412,6 @@ namespace askap
         }
         accBuffer.rwVisibility() -= itsIdi->visibility();
         accBuffer.rwVisibility() *= float(-1.);
-/// The OPENMP pragma are not present in YandaSoft 
-/// I may have removed them at an early sync
         /// Now we can calculate the residual visibility and image
         size_t tempCounter = 0;
         for (size_t i = 0; i<completions.size(); ++i) {
