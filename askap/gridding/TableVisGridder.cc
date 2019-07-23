@@ -491,7 +491,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // inside the section protected by the lock and make a copy of the returned vector
    const casacore::Vector<casacore::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
 
-   #ifdef _OPENMP
+   #ifdef _OPENMP_WORKING_WORKING_WORKING
    boost::unique_lock<boost::mutex> lock(itsMutex);
    const casa::Vector<double> delay = acc.uvwRotationDelay(tangentPoint, imageCentre).copy();
    lock.unlock();
@@ -517,8 +517,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // of the matrices for every accessor. More intelligent caching is possible with a bit
    // more effort (i.e. one has to detect whether polarisation frames change from the
    // previous call). Need to think about parallactic angle dependence.
-   // OPENMP case needs work...
-   #ifdef _OPENMP
+   // OPENMP_WORKING_WORKING_WORKING case needs work...
+   #ifdef _OPENMP_WORKING_WORKING_WORKING
    itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
                              scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
    //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
