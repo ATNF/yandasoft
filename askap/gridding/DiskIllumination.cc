@@ -120,7 +120,7 @@ void DiskIllumination::getPattern(double freq, UVPattern &pattern, double l,
     }
 
     double sum=0.; // normalisation factor
-    #ifdef _OPENMP
+    #ifdef _OPENMP_WORKING_WORKING
     #pragma omp parallel default(shared)
     {
         #pragma omp for reduction(+:sum)
@@ -142,7 +142,7 @@ void DiskIllumination::getPattern(double freq, UVPattern &pattern, double l,
                   }
              }
 	}
-    #ifdef _OPENMP
+    #ifdef _OPENMP_WORKING_WORKING
     }
     #endif
 
