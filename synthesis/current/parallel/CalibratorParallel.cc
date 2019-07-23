@@ -577,6 +577,17 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
             const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
             curChan = chanInfo.first;
             baseParName = chanInfo.second;
+            // in the distributed bandpass case this worker can only deal with a subset of channels. 
+            // I (MV) not sure it is a correct way to just ignore channels outside of the current rank's work unit,
+            // but just do it for now as it reverts to the old behaviour for such channels and we don't use ccalibrator for bandpass anyway
+            // for ASKAP. I must say that the code became quite messy with all these various use cases
+            if (curChan < itsStartChan) {
+                continue;
+            }
+            curChan -= itsStartChan;
+            if (curChan >= itsMaxNChanForPreAvg) {
+                continue;
+            }
         }
         const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(baseParName);
         casa::uInt pol = 0;
