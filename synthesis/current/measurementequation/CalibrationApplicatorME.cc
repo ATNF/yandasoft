@@ -86,7 +86,7 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
 
   casa::Cube<casa::Complex> &rwVis = chunk.rwVisibility();
   ASKAPDEBUGASSERT(rwVis.nelements());
-  updateAccessor(chunk.time());
+  bool solutionAccessorNeedsTime = true;
   const casa::Vector<casa::uInt>& antenna1 = chunk.antenna1();
   const casa::Vector<casa::uInt>& antenna2 = chunk.antenna2();
   const casa::Vector<casa::uInt>& beam1 = chunk.feed1();
@@ -128,6 +128,11 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
             // don't bother with the rest of processing if the sample is flagged anyway in its entirety
             if (allFlagged) {
                 continue;
+            }
+            // the whole accessor has a single timestamp. Putting the call here allows to avoid calling it for flagged data
+            if (solutionAccessorNeedsTime) {
+                solutionAccessorNeedsTime = false;
+                updateAccessor(chunk.time());
             }
             const bool validSolution =  calSolution().jonesValid(antenna1[row],
                      itsBeamIndependent ? 0 : beam1[row], chan) &&
@@ -217,7 +222,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::Cube<casa::Complex>& rwVis = chunk.rwVisibility();
   casa::Cube<casa::Bool> rwFlag;
   ASKAPDEBUGASSERT(rwVis.nelements());
-  updateAccessor(chunk.time());
+  bool solutionAccessorNeedsTime = true;
   const casa::Vector<casa::uInt>& antenna1 = chunk.antenna1();
   const casa::Vector<casa::uInt>& antenna2 = chunk.antenna2();
   const casa::Vector<casa::uInt>& beam1 = chunk.feed1();
@@ -271,6 +276,10 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
         if (!itsChannelIndependent || chan==0) {
             const int b1 = itsBeamIndependent ? 0 : beam1[row];
             const int b2 = itsBeamIndependent ? 0 : beam2[row];
+            if (solutionAccessorNeedsTime) {
+                solutionAccessorNeedsTime = false;
+                updateAccessor(chunk.time());
+            }
             validSolution = calSolution().jonesValid(antenna1[row], b1, chan) &&
                      calSolution().jonesValid(antenna2[row], b2, chan);
             if (validSolution) {
