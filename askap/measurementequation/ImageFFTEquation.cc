@@ -412,7 +412,6 @@ namespace askap
         }
         accBuffer.rwVisibility() -= itsIdi->visibility();
         accBuffer.rwVisibility() *= float(-1.);
-
         /// Now we can calculate the residual visibility and image
         size_t tempCounter = 0;
         for (size_t i = 0; i<completions.size(); ++i) {
