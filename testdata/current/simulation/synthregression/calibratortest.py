@@ -1,6 +1,8 @@
 # regression tests of calibrator
 # some fixed parameters are given in calibratortest_template.in
 
+import argparse
+
 from synthprogrunner import *
 
 from askapdev.rbuild import setup
@@ -240,19 +242,27 @@ def runTestsParallel():
     # Store the results.
     os.system("mv result.dat %s" % result_parallel)
 
-    # Comparing the results.
+    tol = 1.e-6
     gains_serial = loadParset(result_serial)
     gains_parallel = loadParset(result_parallel)
+
+    # Comparing the results between the serial and parallel runs.
     for k, v in gains_serial.items():
         if k not in gains_parallel:
             raise RintimeError, "Gain parameter %s found in the serial result is missing in the parallel result!" % k
         val_serial = gains_serial[k]
         val_parallel = gains_parallel[k]
-        # Probably will need to relax the condition by introducing a small epsilon, to take into account numerical errors.
-        if abs(val_serial - val_parallel) > 0.0:
+
+        if abs(val_serial - val_parallel) > tol:
             raise RuntimeError, "Gain parameter %s has a parallel value of %s which is different from serial value %s" % (k, val_parallel, val_serial)
 
-runTests("SVD")
-runTests("LSQR")
-# TODO: Uncomment when we make Jenkins to run this with MPI-build. 
-#runTestsParallel()
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--parallel', help="Include parallel tests", action='store_true')
+    opt = parser.parse_args()
+
+    runTests("SVD")
+    runTests("LSQR")
+    if opt.parallel:
+        runTestsParallel()
