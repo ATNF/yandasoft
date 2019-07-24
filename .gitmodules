@@ -1,0 +1,3 @@
+[submodule "docs"]
+	path = docs
+	url = https://bitbucket.csiro.au/scm/askapsdp/askap-docs.git
