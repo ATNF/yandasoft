@@ -76,14 +76,14 @@ namespace askap
         void testCopy()
         {
           casa::Matrix<casa::Double> in(2,2,1.);
-          vector<double> vec(2,3.);
+          std::vector<double> vec(2,3.);
           vec[0]=-3.;
           copyVector(vec,in.row(0));
           CPPUNIT_ASSERT(fabs(in(0,0)+3.)<1e-10 && fabs(in(0,1)-3.)<1e-10);
           casa::Vector<casa::Complex> complexVec(1,casa::Complex(-1.,-2.));
           copyVector(complexVec,in.row(1));
           CPPUNIT_ASSERT(fabs(in(1,0)+1.)<1e-10 && fabs(in(1,1)+2.)<1e-10);
-          vector<casa::AutoDiff<double> > autoDiffVec(2, 
+          std::vector<casa::AutoDiff<double> > autoDiffVec(2, 
                                           casa::AutoDiff<double>(0.,1));
           autoDiffVec[0]=sin(casa::AutoDiff<double>(0.,1,0));
           autoDiffVec[1]=1.+cos(casa::AutoDiff<double>(casa::C::_2pi/4.,1,0));
@@ -91,7 +91,7 @@ namespace askap
           CPPUNIT_ASSERT(fabs(vec[0])<1e-10 && fabs(vec[1]-1)<1e-10);
           copyDerivativeVector(0,autoDiffVec,vec);
           CPPUNIT_ASSERT(fabs(vec[0]-1)<1e-10 && fabs(vec[1]+1)<1e-10);
-          vector<scimath::ComplexDiff> complexDiffVec(1,
+          std::vector<scimath::ComplexDiff> complexDiffVec(1,
                         scimath::ComplexDiff("par1",casa::Complex(0.,-1.)));
           complexDiffVec[0] *= scimath::ComplexDiff("par2", casa::Complex(2.,0.));
           copyVector(complexDiffVec,vec);
@@ -109,7 +109,7 @@ namespace askap
         void testSubtract()
         {
           casa::Matrix<casa::Double> in(2,2,1.);
-          vector<double> vec(2,3.);
+          std::vector<double> vec(2,3.);
           vec[0]=-3.;
           subtractVector(vec,in.row(1));
           CPPUNIT_ASSERT(fabs(in(0,0)-1.)<1e-10 && fabs(in(0,1)-1.)<1e-10);
@@ -117,7 +117,7 @@ namespace askap
           casa::Vector<casa::Complex> complexVec(1,casa::Complex(-1.,-2.));
           subtractVector(complexVec,in.row(1));
           CPPUNIT_ASSERT(fabs(in(1,0)-5.)<1e-10 && fabs(in(1,1))<1e-10);
-          vector<casa::AutoDiff<double> > autoDiffVec(2, 
+          std::vector<casa::AutoDiff<double> > autoDiffVec(2, 
                                           casa::AutoDiff<double>(0.,1));
           autoDiffVec[0]=sin(casa::AutoDiff<double>(0.,1,0));
           autoDiffVec[1]=1.+cos(casa::AutoDiff<double>(casa::C::_2pi/4.,1,0));
@@ -130,7 +130,7 @@ namespace askap
         void testAdd()
         {
           casa::Matrix<casa::Double> in(2,2,1.);
-          vector<double> vec(2,3.);
+          std::vector<double> vec(2,3.);
           vec[0]=-3.;
           addVector(vec,in.row(1));
           CPPUNIT_ASSERT(fabs(in(0,0)-1.)<1e-10 && fabs(in(0,1)-1.)<1e-10);
@@ -138,7 +138,7 @@ namespace askap
           casa::Vector<casa::Complex> complexVec(1,casa::Complex(-1.,-2.));
           addVector(complexVec,in.row(1));
           CPPUNIT_ASSERT(fabs(in(1,0)+3.)<1e-10 && fabs(in(1,1)-2.)<1e-10);
-          vector<casa::AutoDiff<double> > autoDiffVec(2, 
+          std::vector<casa::AutoDiff<double> > autoDiffVec(2, 
                                           casa::AutoDiff<double>(0.,1));
           autoDiffVec[0]=sin(casa::AutoDiff<double>(0.,1,0));
           autoDiffVec[1]=1.+cos(casa::AutoDiff<double>(casa::C::_2pi/4.,1,0));
@@ -151,7 +151,7 @@ namespace askap
         void testAddScaled()
         {
           casa::Matrix<casa::Double> in(2,2,1.);
-          vector<double> vec(2,3.);
+          std::vector<double> vec(2,3.);
           vec[0]=-3.;
           addScaledVector(vec,in.row(1),0.5);
           CPPUNIT_ASSERT_DOUBLES_EQUAL(1., in(0,0), 1e-10);
@@ -162,7 +162,7 @@ namespace askap
           addScaledVector(complexVec,in.row(1),0.5);
           CPPUNIT_ASSERT_DOUBLES_EQUAL(-1, in(1,0), 1e-10);
           CPPUNIT_ASSERT_DOUBLES_EQUAL(1.5, in(1,1), 1e-10);          
-          vector<casa::AutoDiff<double> > autoDiffVec(2, 
+          std::vector<casa::AutoDiff<double> > autoDiffVec(2, 
                                           casa::AutoDiff<double>(0.,1));
           autoDiffVec[0]=sin(casa::AutoDiff<double>(0.,1,0));
           autoDiffVec[1]=1.+cos(casa::AutoDiff<double>(casa::C::_2pi/4.,1,0));
@@ -181,7 +181,7 @@ namespace askap
         // temporary method for autodiff experiments
         void test1()
         {
-          vector<casa::AutoDiff<casa::Complex> > autoDiffVec(2, 
+          std::vector<casa::AutoDiff<casa::Complex> > autoDiffVec(2, 
                                           casa::AutoDiff<casa::Complex>(casa::Complex(0.,0.),1));
           autoDiffVec[0]=sin(casa::AutoDiff<casa::Complex>(0.,1,0))+casa::Complex(0,1.)*cos(casa::AutoDiff<casa::Complex>(0.,1,0));
           //autoDiffVec[1]=casa::Complex(1.)+cos(casa::AutoDiff<casa::Complex>(casa::C::_2pi/4.,1,0));

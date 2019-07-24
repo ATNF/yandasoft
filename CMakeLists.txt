@@ -5,7 +5,8 @@ project(yandasoft VERSION 0.0.1 LANGUAGES CXX C)
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake)
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/askap-cmake
+    TIMEOUT 10)
 else ()	
     execute_process(COMMAND git clone https://bitbucket.csiro.au/scm/askapsdp/askap-cmake.git
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
@@ -58,7 +59,7 @@ option (BUILD_SHARED_LIBS "" YES)
 endif(ENABLE_SHARED)
 
 if (ENABLE_OPENMP)
-find_package(OpenMP REQUIRED) # Find the package
+find_package(OPENMP REQUIRED) # Find the package
 endif ()
 
 if (OPENMP_FOUND)
@@ -237,5 +238,7 @@ if (CPPUNIT_FOUND)
 	enable_testing()
 	add_subdirectory(tests/deconvolution)
 	add_subdirectory(tests/gridding)
+	add_subdirectory(tests/measurementequation)
+	add_subdirectory(tests/opcal)
 endif ()
 

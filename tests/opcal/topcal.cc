@@ -28,8 +28,8 @@
 #define A_PROJECT_GRIDDER_BASE_TCC
 
 // Test includes
-#include <ObservationDescriptionTest.h>
-#include <GenericCalInfoTest.h>
+#include "ObservationDescriptionTest.h"
+#include "GenericCalInfoTest.h"
 
 int main( int argc, char **argv)
 {
