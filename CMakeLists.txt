@@ -28,7 +28,7 @@ if (CXX11)
     endif()
 endif()
 
-option (ENABLE_OPENMP "Build with OPENMP Support" YES)
+option (ENABLE_OPENMP "Build with OPENMP Support" NO)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 
@@ -45,8 +45,6 @@ if(NOT TARGET uninstall)
     add_custom_target(uninstall
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
-
-
 
 if (ENABLE_SHARED)
 option (BUILD_SHARED_LIBS "" YES)

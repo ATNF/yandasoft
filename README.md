@@ -2,6 +2,14 @@
 
 Yandasoft is a suite of applications and software developed by CSIRO for the calibration and imaging of Interferometric Radio Telescope data. 
 
+## Documentation
+
+A git submodule for the full calibration and imaging documentation is included
+in the docs sibdirectory. On an initial clone of this repository you have to
+run, `git submodule init` and `git submodule update` to obtain the latest
+versions. Also you must have the sphinx document tool installed and run `make html` to generate the documentation. 
+
+
 ## In this version
 
 This release of the software is the first and consequently *beta* release. It contains the (at least) the following applications:
