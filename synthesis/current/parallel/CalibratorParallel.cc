@@ -120,7 +120,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
-      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u),
       itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
 {
   const std::string what2solve = parset.getString("solve","gains");
@@ -229,7 +229,6 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       if (calAccType == "service") {
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
         ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
-        itsSolutionIDValid = true;
 
         // get the string vector of solutions we are going to solve for ....
         const vector<string> willSolve = parset.getStringVector("solve", false);
@@ -976,24 +975,22 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
-      if (!itsSolutionIDValid) {
-          // obtain solution ID only once, the results can come in random order and the
-          // accessor is responsible for aggregating all of them together. This is done based on this ID.
-          //@todo Can probably get rid of this
-          itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
-          itsSolutionIDValid = true;
-      }
-      // if the solution time has changed - then you get a new SolutionID
-      // this should spot subsequent gain cal solution intervals
       
-      boost::shared_ptr<ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(itsSolutionID);
-      ASKAPASSERT(solAcc);
+      // solution accessor, shared pointer is uninitialised if solution ID hasn't been obtained
+      boost::shared_ptr<ICalSolutionAccessor> solAcc;
 
       ASKAPDEBUGASSERT(itsModel);
       std::vector<std::string> parlist = itsModel->freeNames();
       for (std::vector<std::string>::const_iterator it = parlist.begin();
            it != parlist.end(); ++it) {
            casa::Complex val = itsModel->complexValue(*it);
+           // we iterate over free parameters only, so if control gets here it means there are some good points
+           if (!solAcc) {
+               // first good parameter for the solution interval, need to obtain new solution ID
+               const bool solutionID = itsSolutionSource->newSolutionID(solutionTime());
+               solAcc = itsSolutionSource->rwSolution(solutionID);
+               ASKAPASSERT(solAcc);
+           }
            if (itsSolveBandpass) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<

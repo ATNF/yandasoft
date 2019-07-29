@@ -293,13 +293,6 @@ namespace askap
       /// independent and more than one channel is selected for preaveraging.
       casa::uInt itsMaxNChanForPreAvg;
 
-      /// @brief solution ID to work with
-      /// @details This field should only be used if itsSolutionIDValid is true
-      long itsSolutionID;
-
-      /// @brief solution ID validity flag
-      bool itsSolutionIDValid;
-
       /// @brief flag to solve normal equation in parallel (on the matrix level).
       bool itsMatrixIsParallel;
 
