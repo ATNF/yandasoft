@@ -971,7 +971,7 @@ bool CalibratorParallel::nextChunk() const
 void CalibratorParallel::writeModel(const std::string &postfix)
 {
   if (itsComms.isMaster()) {
-      ASKAPLOG_INFO_STR(logger, "Writing results of the calibration");
+      ASKAPLOG_INFO_STR(logger, "Writing results of the calibration for time "<<std::setprecision(15)<<solutionTime());
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
@@ -987,7 +987,7 @@ void CalibratorParallel::writeModel(const std::string &postfix)
            // we iterate over free parameters only, so if control gets here it means there are some good points
            if (!solAcc) {
                // first good parameter for the solution interval, need to obtain new solution ID
-               const bool solutionID = itsSolutionSource->newSolutionID(solutionTime());
+               const long solutionID = itsSolutionSource->newSolutionID(solutionTime());
                solAcc = itsSolutionSource->rwSolution(solutionID);
                ASKAPASSERT(solAcc);
            }
