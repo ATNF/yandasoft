@@ -169,7 +169,7 @@ def runTests(solverType):
     spr.runImager()
     analyseResult(spr)
 
-def runTestsParallel():
+def runTestsParallel(ncycles):
     """
     Runs parallel tests for bandpass calibration using ccalibrator app, with parallel matrix using LSQR solver.
     The test is performed by running serial and parallel versions and comparing the results.
@@ -211,10 +211,11 @@ def runTestsParallel():
 
     spr.addToParset("Ccalibrator.gridder                      = SphFunc")
 
-    spr.addToParset("Ccalibrator.ncycles                      = 5")
+    spr.addToParset("Ccalibrator.ncycles                      = %s" % ncycles)
 
     spr.addToParset("Ccalibrator.solve                        = bandpass")
     spr.addToParset("Ccalibrator.solver                       = LSQR")
+    spr.addToParset("Ccalibrator.solver.LSQR.verbose          = true")
 
     # Filenames for writing the calibration results (parsets).
     result_serial = "result_serial.dat"
@@ -265,4 +266,5 @@ if __name__ == '__main__':
     runTests("SVD")
     runTests("LSQR")
     if opt.parallel:
-        runTestsParallel()
+        runTestsParallel(1)
+        runTestsParallel(5)
