@@ -218,7 +218,7 @@ def runTestsParallel():
 
     # Filenames for writing the calibration results (parsets).
     result_serial = "result_serial.dat"
-    result_parallel = "result_serial.dat"
+    result_parallel = "result_parallel.dat"
 
     # Serial run.
     print "Bandpass test: Serial run of ccalibrator."
