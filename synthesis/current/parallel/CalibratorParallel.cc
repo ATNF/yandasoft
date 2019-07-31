@@ -192,9 +192,8 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
 
       if (itsComms.isWorker()) {
-          void *workersComm = (void *)&newComm;
           boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-          linearSolver->SetWorkersCommunicator(workersComm);
+          linearSolver->SetWorkersCommunicator(newComm);
       }
 #endif
   }
