@@ -560,9 +560,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // we want these for either gridding or degridding and
    // want to avoid calling them in the loop due to virtual function overheads
    // don't like the pointers, but can't use references without initialising
-   casa::Cube<casa::Complex>* visCube;
-   const casa::Cube<casa::Complex> *roVisCube;
-   const casa::Cube<casa::Complex> *roVisNoise;
+   casa::Cube<casa::Complex>* visCube = 0;
+   const casa::Cube<casa::Complex> *roVisCube = 0;
+   const casa::Cube<casa::Complex> *roVisNoise = 0;
    if (forward) {
        visCube = &acc.rwVisibility();
    } else {
@@ -673,11 +673,13 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
 
                if (!forward) {
                    if (!isPSFGridder() && !isPCFGridder()) {
+                       ASKAPDEBUGASSERT(roVisCube!=0);
                        for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = (*roVisCube)(i,chan,pol);
                        itsPolConv.convert(itsImagePolFrameVis,itsPolVector);
                    }
                    // we just don't need this quantity for the forward gridder, although there would be no
                    // harm to always compute it
+                   ASKAPDEBUGASSERT(roVisNoise!=0);
                    for (uint pol=0; pol<nPol; pol++) itsPolVector(pol) = (*roVisNoise)(i,chan,pol);
                    itsPolConv.noise(itsImagePolFrameNoise,itsPolVector);
                }
@@ -842,6 +844,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                // need to write back the result for degridding
                if (wGood) {
                    if (forward) {
+                       ASKAPDEBUGASSERT(visCube!=0)
                        itsPolConv.convert(itsPolVector,itsImagePolFrameVis);
                        for (uint pol=0; pol<nPol; pol++) (*visCube)(i,chan,pol) += itsPolVector(pol);
                        // visibilities with w out of range are left unchanged during prediction

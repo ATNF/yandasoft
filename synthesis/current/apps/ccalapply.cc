@@ -121,7 +121,7 @@ class CcalApplyApp : public askap::Application
 
                         if (itsNoiseAndFlagDANeeded) {
                             // quick and dirty for now (mv: note, it will definitely ignore updates to noise and may ignore
-                            // updates to flags as well, if the appropriate accessor doesn't supporot write operation!)
+                            // updates to flags as well, if the appropriate accessor doesn't support write operation!)
                             accessors::OnDemandNoiseAndFlagDA acc(*it);
                             acc.rwVisibility() = it->visibility();
 

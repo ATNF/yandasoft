@@ -246,6 +246,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::SquareMatrix<casa::Complex, 2> jones2(itsLeakageFree ?
        casa::SquareMatrix<casa::Complex, 2>::Diagonal : casa::SquareMatrix<casa::Complex, 2>::General);
   casa::SquareMatrix<casa::Complex, 4> mueller;
+  bool needMueller = true;
   const float detThreshold = 1e-25;
 
   casa::uInt nChan = chunk.nChannel();
@@ -273,37 +274,40 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
             continue;
         }
 
-        if (!itsChannelIndependent || chan==0) {
+        if (!itsChannelIndependent || needMueller) {
+            // we only need to fill the mueller matrix once in the non bandpass case
+            needMueller = false;
             const int b1 = itsBeamIndependent ? 0 : beam1[row];
             const int b2 = itsBeamIndependent ? 0 : beam2[row];
             if (solutionAccessorNeedsTime) {
                 solutionAccessorNeedsTime = false;
                 updateAccessor(chunk.time());
             }
-            validSolution = calSolution().jonesValid(antenna1[row], b1, chan) &&
-                     calSolution().jonesValid(antenna2[row], b2, chan);
+            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1 =
+                calSolution().jonesAndValidity(antenna1[row], b1, chan);
+            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2 =
+                calSolution().jonesAndValidity(antenna2[row], b2, chan);
+            validSolution = jv1.second && jv2.second;
             if (validSolution) {
                 if (itsLeakageFree) {
                     // if the solution is diagonal, put it in a diagonal SquareMatrix
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesA =
-                        calSolution().jones(antenna1[row], b1, chan);
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesB =
-                        calSolution().jones(antenna2[row], b2, chan);
+                    const casa::SquareMatrix<casa::Complex, 2>& jonesA = jv1.first;
+                    const casa::SquareMatrix<casa::Complex, 2>& jonesB = jv2.first;
                     jones1(0,0) = jonesA(0,0);
                     jones1(1,1) = jonesA(1,1);
                     jones2(0,0) = jonesB(0,0);
                     jones2(1,1) = jonesB(1,1);
 
                 } else {
-                    jones1 = calSolution().jones(antenna1[row], b1, chan);
-                    jones2 = calSolution().jones(antenna2[row], b2, chan);
+                    jones1 = jv1.first;
+                    jones2 = jv2.first;
                 }
 
                 const casa::SquareMatrix<casa::Complex, 2>& j1 = jones1;
                 const casa::SquareMatrix<casa::Complex, 2>& j2 = jones2;
                 const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
                 const casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
-                det = casa::abs(det1*det1*det2*det2);
+                det = casa::real(det1*conj(det1))*casa::real(det2*conj(det2));
                 // Inverse of 4x4 mueller is directProduct of 2x2 jones inverses
                 if (det > detThreshold) {
                     directProduct(mueller, j1.inverse(),conj(j2).inverse());
