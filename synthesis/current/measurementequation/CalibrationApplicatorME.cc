@@ -252,7 +252,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::uInt nChan = chunk.nChannel();
   casa::uInt nRow = chunk.nRow();
   casa::RigidVector<casa::Complex,4> vis;
-    
+
   for (casa::uInt row = 0; row < nRow; ++row) {
     bool validSolution = false;
     casa::Float det = 0.;
@@ -269,8 +269,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
              }
         }
         // don't bother with the rest of processing if the sample is flagged anyway in its entirety
-        // except that we need to do the chan=0 pass to fill the mueller matrix in the non bandpass case
-        if (allFlagged && (!itsChannelIndependent || chan!=0)) {
+        if (allFlagged) {
             continue;
         }
 
@@ -351,14 +350,17 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
             ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
             // propagating noise estimate through the matrix multiplication
             casa::RigidVector<casa::Complex,4> noise = thisChanNoise;
+            // Somehow the indexing below calls the non const version and throws
+            // an exception for a diagonal matrix. Avoid this with explicitly const version
+            const casa::SquareMatrix<casa::Complex,4>& cmueller = mueller;
 
             for (casa::uInt pol = 0; pol < nPol; ++pol) {
                 float tempRe = 0., tempIm = 0.;
                 for (casa::uInt k = 0; k < nPol; ++k) {
-                    tempRe += casa::square(casa::real(mueller(pol,k)) * casa::real(noise(k))) +
-                              casa::square(casa::imag(mueller(pol,k)) * casa::imag(noise(k)));
-                    tempIm += casa::square(casa::real(mueller(pol,k)) * casa::imag(noise(k))) +
-                              casa::square(casa::imag(mueller(pol,k)) * casa::real(noise(k)));
+                    tempRe += casa::square(casa::real(cmueller(pol,k)) * casa::real(noise(k))) +
+                              casa::square(casa::imag(cmueller(pol,k)) * casa::imag(noise(k)));
+                    tempIm += casa::square(casa::real(cmueller(pol,k)) * casa::imag(noise(k))) +
+                              casa::square(casa::imag(cmueller(pol,k)) * casa::real(noise(k)));
                 }
                 thisChanNoise(pol) = casa::Complex(sqrt(tempRe),sqrt(tempIm));
             }
@@ -413,13 +415,13 @@ void CalibrationApplicatorME::beamIndependent(bool flag)
 }
 /// @brief determines whether channel dependent calibration is used or not
 /// @details It is handy to be able to apply the same solution for all channels. With
-/// this flag set, channel=0 solution will be used for all channels.
-/// @param[in] flag if true, channel=0 calibration is applied to all channels
+/// this flag set, the same solution will be used for all channels.
+/// @param[in] flag if true, the same calibration is applied to all channels
 void CalibrationApplicatorME::channelIndependent(bool flag)
 {
   itsChannelIndependent = flag;
   if (itsChannelIndependent) {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply channel=0 calibration solutions to all channels");
+      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply the same gain calibration solutions to all channels");
   } else {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply bandpass calibration solutions");
   }
