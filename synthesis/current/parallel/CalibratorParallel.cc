@@ -682,6 +682,8 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
+  ASKAPLOG_INFO_STR(logger, "Started CalibratorParallel::solveNE()");
+
   itsMajorLoopIterationNumber++;
 
   // Passing major loop iteration number to the solver.
