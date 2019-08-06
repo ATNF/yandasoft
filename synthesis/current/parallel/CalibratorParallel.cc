@@ -695,21 +695,23 @@ void CalibratorParallel::solveNE()
   }
 
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
+      ASKAPDEBUGASSERT(itsSolver);
+      ASKAPDEBUGASSERT(itsModel);
+
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
       }
 
-      ASKAPLOG_INFO_STR(logger, "Solving normal equations");
+      ASKAPLOG_INFO_STR(logger, "Solving normal equations (serial matrix)");
       casa::Timer timer;
       timer.mark();
       Quality q;
-      ASKAPDEBUGASSERT(itsSolver);
 
-      itsSolver->solveNormalEquations(*itsModel,q);
+      itsSolver->solveNormalEquations(*itsModel, q);
 
-      ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
-      ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+      ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
+      ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
   }
 
   if (itsMatrixIsParallel) {
@@ -717,12 +719,10 @@ void CalibratorParallel::solveNE()
       ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
 
       if (itsComms.isWorker()) {
-          ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-          casa::Timer timer;
-          timer.mark();
-          Quality q;
           ASKAPDEBUGASSERT(itsSolver);
+          ASKAPDEBUGASSERT(itsModel);
 
+          ASKAPLOG_INFO_STR(logger, "Building the local model");
           // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
           //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
           //       so no direct access to the list of local parameters.
@@ -736,14 +736,21 @@ void CalibratorParallel::solveNE()
               localModel.add(parname, itsModel->value(parname));
           }
 
+          ASKAPLOG_INFO_STR(logger, "Solving normal equations (parallel matrix)");
+          casa::Timer timer;
+          timer.mark();
+          Quality q;
+
           itsSolver->solveNormalEquations(localModel, q);
 
-          ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
-          ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+          ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
+          ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
 
           sendModelToMaster(localModel);
       }
       if (itsComms.isMaster()) {
+          ASKAPDEBUGASSERT(itsModel);
+
           // Receive the local models from workers, and update the full model.
           for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
               scimath::Params localModel;
