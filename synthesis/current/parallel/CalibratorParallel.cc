@@ -686,39 +686,63 @@ void CalibratorParallel::solveNE()
 
   itsMajorLoopIterationNumber++;
 
+  std::cout << "In CalibratorParallel::solveNE: 0" << std::endl;
+
   // Passing major loop iteration number to the solver.
   if (itsSolver) {
+      std::cout << "In CalibratorParallel::solveNE: 1" << std::endl;
+
       boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+
+      std::cout << "In CalibratorParallel::solveNE: 2" << std::endl;
       if (linearSolver) {
+          std::cout << "In CalibratorParallel::solveNE: 3" << std::endl;
+
           linearSolver->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
+
+          std::cout << "In CalibratorParallel::solveNE: 4" << std::endl;
       }
   }
 
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
+      std::cout << "In CalibratorParallel::solveNE: 5" << std::endl;
+
       ASKAPDEBUGASSERT(itsSolver);
       ASKAPDEBUGASSERT(itsModel);
 
       // Receive the normal equations
       if (itsComms.isParallel()) {
+          std::cout << "In CalibratorParallel::solveNE: 6" << std::endl;
           receiveNE();
       }
+      std::cout << "In CalibratorParallel::solveNE: 7" << std::endl;
 
       ASKAPLOG_INFO_STR(logger, "Solving normal equations (serial matrix)");
       casa::Timer timer;
       timer.mark();
       Quality q;
 
+      std::cout << "In CalibratorParallel::solveNE: 8" << std::endl;
+
       itsSolver->solveNormalEquations(*itsModel, q);
+
+      std::cout << "In CalibratorParallel::solveNE: 9" << std::endl;
 
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
       ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
   }
 
+  std::cout << "In CalibratorParallel::solveNE: 10" << std::endl;
+
   if (itsMatrixIsParallel) {
+      std::cout << "In CalibratorParallel::solveNE: 11" << std::endl;
+
       ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
       ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
 
       if (itsComms.isWorker()) {
+          std::cout << "In CalibratorParallel::solveNE: 12" << std::endl;
+
           ASKAPDEBUGASSERT(itsSolver);
           ASKAPDEBUGASSERT(itsModel);
 
@@ -736,19 +760,28 @@ void CalibratorParallel::solveNE()
               localModel.add(parname, itsModel->value(parname));
           }
 
+          std::cout << "In CalibratorParallel::solveNE: 13" << std::endl;
+
           ASKAPLOG_INFO_STR(logger, "Solving normal equations (parallel matrix)");
           casa::Timer timer;
           timer.mark();
           Quality q;
 
+          std::cout << "In CalibratorParallel::solveNE: 14" << std::endl;
+
           itsSolver->solveNormalEquations(localModel, q);
+
+          std::cout << "In CalibratorParallel::solveNE: 15" << std::endl;
 
           ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
           ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
 
           sendModelToMaster(localModel);
+
+          std::cout << "In CalibratorParallel::solveNE: 16" << std::endl;
       }
       if (itsComms.isMaster()) {
+          std::cout << "In CalibratorParallel::solveNE: 17" << std::endl;
           ASKAPDEBUGASSERT(itsModel);
 
           // Receive the local models from workers, and update the full model.
@@ -764,8 +797,11 @@ void CalibratorParallel::solveNE()
                   itsModel->update(parname, localModel.value(parname));
               }
           }
+          std::cout << "In CalibratorParallel::solveNE: 18" << std::endl;
       }
+      std::cout << "In CalibratorParallel::solveNE: 19" << std::endl;
   }
+  std::cout << "In CalibratorParallel::solveNE: 20" << std::endl;
 }
 
 void CalibratorParallel::doPhaseReferencing()
