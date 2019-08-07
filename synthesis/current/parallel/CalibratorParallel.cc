@@ -694,12 +694,23 @@ void CalibratorParallel::solveNE()
 
       LinearSolver* linearSolver2 = dynamic_cast<LinearSolver*>(itsSolver.get());
 
+      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
+
       std::cout << "In CalibratorParallel::solveNE: 2 a" << std::endl;
+
+      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
 
       ASKAPCHECK(linearSolver2, "Dynamic cast to Linear solver has been unsuccessful!");
 
+      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
+
       if (linearSolver2) {
+          std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
+
           std::cout << "In CalibratorParallel::solveNE: 3 a" << std::endl;
+
+          std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
+          std::cout << "itsMajorLoopIterationNumber =" << itsMajorLoopIterationNumber << std::endl;
 
           linearSolver2->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
 
