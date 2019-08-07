@@ -688,50 +688,20 @@ void CalibratorParallel::solveNE()
 
   std::cout << "In CalibratorParallel::solveNE: 0" << std::endl;
 
-  // Passing major loop iteration number to the solver.
   if (itsSolver) {
       std::cout << "In CalibratorParallel::solveNE: 1" << std::endl;
 
-      LinearSolver* linearSolver2 = dynamic_cast<LinearSolver*>(itsSolver.get());
-
-      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
-
-      std::cout << "In CalibratorParallel::solveNE: 2 a" << std::endl;
-
-      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
-
-      ASKAPCHECK(linearSolver2, "Dynamic cast to Linear solver has been unsuccessful!");
-
-      std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
-
-      if (linearSolver2) {
-          std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
-
-          std::cout << "In CalibratorParallel::solveNE: 3 a" << std::endl;
-
-          std::cout << "linearSolver2 =" << linearSolver2 << std::endl;
-          std::cout << "itsMajorLoopIterationNumber =" << itsMajorLoopIterationNumber << std::endl;
-
-          linearSolver2->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
-
-          std::cout << "In CalibratorParallel::solveNE: 4 a" << std::endl;
-
-        } else {
-            std::cout << "In CalibratorParallel::solveNE: 5 a" << std::endl;
-      }
-
-/*
       boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
 
       std::cout << "In CalibratorParallel::solveNE: 2" << std::endl;
       if (linearSolver) {
           std::cout << "In CalibratorParallel::solveNE: 3" << std::endl;
 
+          // Passing major loop iteration number to the linear solver.
           linearSolver->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
 
           std::cout << "In CalibratorParallel::solveNE: 4" << std::endl;
       }
-*/
   }
 
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
