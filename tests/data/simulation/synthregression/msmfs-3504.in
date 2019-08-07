@@ -25,7 +25,7 @@ Cimager.sensitivityimage                        = true
 #Cimager.gridder                                 = SphFunc
 
 Cimager.gridder                                 = WProject
-#Cimager.gridder.WProject.wmax                   = 20000
+Cimager.gridder.WProject.wmax                   = 20000
 Cimager.gridder.snapshotimaging                 = false
 Cimager.gridder.snapshotimaging.longtrack       = false
 #Cimager.gridder.snapshotimaging.wtolerance       = 100
@@ -36,7 +36,7 @@ Cimager.gridder.WProject.cutoff                 = 0.001
 Cimager.gridder.WProject.variablesupport        = true
 Cimager.gridder.WProject.offsetsupport          = true
 
-Cimager.ncycles                                 = 3
+Cimager.ncycles                                 = 6
 Cimager.Images.writeAtMajorCycle                = true
 
 # Use a multiscale Clean solver
@@ -53,9 +53,9 @@ Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
 
 Cimager.solver.Clean.verbose                    = false
 
-Cimager.preconditioner.preservecf               = true
-Cimager.preconditioner.Names                    = [Wiener]
-Cimager.preconditioner.Wiener.robustness        = 2.0
+#Cimager.preconditioner.preservecf               = true
+#Cimager.preconditioner.Names                    = [Wiener]
+#Cimager.preconditioner.Wiener.robustness        = 2.0
 
 Cimager.restore                                 = true
 Cimager.restore.beam                            = fit
