@@ -27,7 +27,7 @@ if (CXX11)
     endif()
 endif()
 
-option (ENABLE_OPENMP "Build with OPENMP Support" YES)
+option (ENABLE_OPENMP "Build with OPENMP Support" NO)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 
