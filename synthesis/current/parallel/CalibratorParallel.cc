@@ -162,8 +162,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsMatrixIsParallel = true;
   }
 
-  if ((itsComms.isMaster() && !itsMatrixIsParallel)
-      || (itsComms.isWorker() && itsMatrixIsParallel)) {
+  if (useLinearSolver()) {
       // Create the solver.
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
@@ -192,8 +191,13 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
 
       if (itsComms.isWorker()) {
+          ASKAPDEBUGASSERT(useLinearSolver());
+          ASKAPDEBUGASSERT(itsSolver);
           boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-          linearSolver->SetWorkersCommunicator(newComm);
+          ASKAPCHECK(linearSolver, "Failed to obtain a Linear solver!");
+          if (linearSolver) {
+              linearSolver->setWorkersCommunicator(newComm);
+          }
       }
 #endif
   }
@@ -479,6 +483,11 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
                      << " seconds ");
 }
 
+bool CalibratorParallel::useLinearSolver() const {
+    return ((itsComms.isMaster() && !itsMatrixIsParallel)
+            || (itsComms.isWorker() && itsMatrixIsParallel));
+}
+
 /// @brief create measurement equation
 /// @details This method initialises itsEquation with shared pointer to a proper type.
 /// It uses internal flags to create a correct type (i.e. polarisation calibration or
@@ -686,67 +695,47 @@ void CalibratorParallel::solveNE()
 
   itsMajorLoopIterationNumber++;
 
-  std::cout << "In CalibratorParallel::solveNE: 0" << std::endl;
+  if (useLinearSolver()) {
+      if (itsSolver) {
+          boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+          ASKAPCHECK(linearSolver, "Failed to obtain a Linear solver!");
 
-  if (itsSolver) {
-      std::cout << "In CalibratorParallel::solveNE: 1" << std::endl;
-
-      boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-
-      std::cout << "In CalibratorParallel::solveNE: 2" << std::endl;
-      if (linearSolver) {
-          std::cout << "In CalibratorParallel::solveNE: 3" << std::endl;
-
-          // Passing major loop iteration number to the linear solver.
-          linearSolver->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
-
-          std::cout << "In CalibratorParallel::solveNE: 4" << std::endl;
+          if (linearSolver) {
+              // Passing major loop iteration number to the linear solver.
+              linearSolver->setMajorLoopIterationNumber(itsMajorLoopIterationNumber);
+          }
       }
   }
 
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
-      std::cout << "In CalibratorParallel::solveNE: 5" << std::endl;
-
       ASKAPDEBUGASSERT(itsSolver);
       ASKAPDEBUGASSERT(itsModel);
 
       // Receive the normal equations
       if (itsComms.isParallel()) {
-          std::cout << "In CalibratorParallel::solveNE: 6" << std::endl;
           receiveNE();
       }
-      std::cout << "In CalibratorParallel::solveNE: 7" << std::endl;
 
       ASKAPLOG_INFO_STR(logger, "Solving normal equations (serial matrix)");
       casa::Timer timer;
       timer.mark();
       Quality q;
 
-      std::cout << "In CalibratorParallel::solveNE: 8" << std::endl;
-
       itsSolver->solveNormalEquations(*itsModel, q);
-
-      std::cout << "In CalibratorParallel::solveNE: 9" << std::endl;
 
       ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
       ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
   }
 
-  std::cout << "In CalibratorParallel::solveNE: 10" << std::endl;
-
   if (itsMatrixIsParallel) {
-      std::cout << "In CalibratorParallel::solveNE: 11" << std::endl;
-
       ASKAPDEBUGASSERT(itsComms.nGroups() == 1);
       ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
 
       if (itsComms.isWorker()) {
-          std::cout << "In CalibratorParallel::solveNE: 12" << std::endl;
-
           ASKAPDEBUGASSERT(itsSolver);
           ASKAPDEBUGASSERT(itsModel);
 
-          ASKAPLOG_INFO_STR(logger, "Building the local model");
+          ASKAPLOG_INFO_STR(logger, "Building a local model on worker");
           // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
           //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
           //       so no direct access to the list of local parameters.
@@ -760,29 +749,22 @@ void CalibratorParallel::solveNE()
               localModel.add(parname, itsModel->value(parname));
           }
 
-          std::cout << "In CalibratorParallel::solveNE: 13" << std::endl;
-
           ASKAPLOG_INFO_STR(logger, "Solving normal equations (parallel matrix)");
           casa::Timer timer;
           timer.mark();
           Quality q;
 
-          std::cout << "In CalibratorParallel::solveNE: 14" << std::endl;
-
           itsSolver->solveNormalEquations(localModel, q);
-
-          std::cout << "In CalibratorParallel::solveNE: 15" << std::endl;
 
           ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
           ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
 
           sendModelToMaster(localModel);
-
-          std::cout << "In CalibratorParallel::solveNE: 16" << std::endl;
       }
       if (itsComms.isMaster()) {
-          std::cout << "In CalibratorParallel::solveNE: 17" << std::endl;
           ASKAPDEBUGASSERT(itsModel);
+
+          ASKAPLOG_INFO_STR(logger, "Receiving model parts on master");
 
           // Receive the local models from workers, and update the full model.
           for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
@@ -797,11 +779,8 @@ void CalibratorParallel::solveNE()
                   itsModel->update(parname, localModel.value(parname));
               }
           }
-          std::cout << "In CalibratorParallel::solveNE: 18" << std::endl;
       }
-      std::cout << "In CalibratorParallel::solveNE: 19" << std::endl;
   }
-  std::cout << "In CalibratorParallel::solveNE: 20" << std::endl;
 }
 
 void CalibratorParallel::doPhaseReferencing()

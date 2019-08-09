@@ -210,6 +210,9 @@ namespace askap
       /// @param[in] discard Discard old equation?
       void calcOne(const std::string& dataset, bool discard=true);
 
+      // @brief Checks whether the Linear solver is needed to be used.
+      bool useLinearSolver() const;
+
       /// uncorrupted model
       askap::scimath::Params::ShPtr itsPerfectModel;
 
