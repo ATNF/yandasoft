@@ -58,6 +58,7 @@ spr.runSimulator()
 
 spr.addToParset("Cimager.gridder = WProject")
 spr.addToParset("Cimager.solverpercore = true")
+spr.addToParset("Cimager.Solver.Clean.solutiontype = MAXCHISQ")
 
 #spr.runNewImager()
 #analyseResult(spr)
