@@ -801,7 +801,8 @@ namespace askap {
                                     #pragma omp section
                                     if (base > 0) mask = this->itsWeight(0).nonDegenerate();
                                 }
-
+                                uInt ncol = mask.ncolumn();
+                                uInt nrow = mask.nrow();
                                 if (base>0) {
                                     if  (this->itsSolutionType == "MAXCHISQ") {
                                         // square weights for MAXCHISQ
@@ -849,7 +850,8 @@ namespace askap {
                             #pragma omp single nowait
                             TimerStart[2] = MPI_Wtime();
 
-                            res.reference(this->itsResidualBasis(base)(0));
+                            //res.reference(this->itsResidualBasis(base)(0));
+                            res = this->itsResidualBasis(base)(0);
 
                             if (haveMask) {
                                 absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,mask);
