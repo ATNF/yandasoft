@@ -28,20 +28,20 @@
 #define A_PROJECT_GRIDDER_BASE_TCC
 
 // Test includes
-#include <ComponentEquationTest.h>
-#include <Calibrator1934Test.h>
-#include <VectorOperationsTest.h>
-#include <ImageDFTEquationTest.h>
-#include <ImageFFTEquationTest.h>
-#include <CalibrationMETest.h>
-#include <PreconditionerTests.h>
-#include <SynthesisParamsHelperTest.h>
-#include <ImageParamsHelperTest.h>
-#include <GaussianNoiseMETest.h>
-#include <PolLeakageTest.h>
-#include <PreAvgCalBufferTest.h>
-#include <RestoringBeamHelperTest.h>
-#include <VisMetaDataStatsTest.h>
+#include "ComponentEquationTest.h"
+#include "Calibrator1934Test.h"
+#include "VectorOperationsTest.h"
+#include "ImageDFTEquationTest.h"
+#include "ImageFFTEquationTest.h"
+#include "CalibrationMETest.h"
+#include "PreconditionerTests.h"
+#include "SynthesisParamsHelperTest.h"
+#include "ImageParamsHelperTest.h"
+#include "GaussianNoiseMETest.h"
+#include "PolLeakageTest.h"
+#include "PreAvgCalBufferTest.h"
+#include "RestoringBeamHelperTest.h"
+#include "VisMetaDataStatsTest.h"
 
 int main( int argc, char **argv)
 {
