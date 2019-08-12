@@ -34,8 +34,8 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <opcal/ObservationDescription.h>
-#include <askap/AskapError.h>
+#include "askap/opcal/ObservationDescription.h"
+#include <askap/askap/AskapError.h>
 
 namespace askap
 {
