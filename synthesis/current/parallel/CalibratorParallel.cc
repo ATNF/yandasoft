@@ -735,7 +735,7 @@ void CalibratorParallel::solveNE()
           ASKAPDEBUGASSERT(itsSolver);
           ASKAPDEBUGASSERT(itsModel);
 
-          ASKAPLOG_INFO_STR(logger, "Building a local model on worker");
+          ASKAPLOG_INFO_STR(logger, "Building a local model on worker " << itsComms.rank());
           // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
           //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
           //       so no direct access to the list of local parameters.
