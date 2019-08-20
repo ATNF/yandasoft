@@ -59,7 +59,7 @@ namespace synthesis {
 /// @param[in] src calibration solution source to work with
 CalibrationApplicatorME::CalibrationApplicatorME(const boost::shared_ptr<accessors::ICalSolutionConstSource> &src) :
      CalibrationSolutionHandler(src), itsScaleNoise(false), itsFlagAllowed(false), itsBeamIndependent(false),
-     itsChannelIndependent(false), itsLeakageFree(false)
+     itsChannelIndependent(false)
 {}
 
 /// @brief correct model visibilities for one accessor (chunk).
@@ -240,11 +240,6 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   // it will be the same as rwFlag above by reference
   const casa::Cube<casa::Bool> &flag = chunk.flag();
 
-  //Check if we are applying leakage
-  casa::SquareMatrix<casa::Complex, 2> jones1(itsLeakageFree ?
-       casa::SquareMatrix<casa::Complex, 2>::Diagonal : casa::SquareMatrix<casa::Complex, 2>::General);
-  casa::SquareMatrix<casa::Complex, 2> jones2(itsLeakageFree ?
-       casa::SquareMatrix<casa::Complex, 2>::Diagonal : casa::SquareMatrix<casa::Complex, 2>::General);
   casa::SquareMatrix<casa::Complex, 4> mueller;
   bool needMueller = true;
   const float detThreshold = 1e-25;
@@ -288,22 +283,8 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                 calSolution().jonesAndValidity(antenna2[row], b2, chan);
             validSolution = jv1.second && jv2.second;
             if (validSolution) {
-                if (itsLeakageFree) {
-                    // if the solution is diagonal, put it in a diagonal SquareMatrix
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesA = jv1.first;
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesB = jv2.first;
-                    jones1(0,0) = jonesA(0,0);
-                    jones1(1,1) = jonesA(1,1);
-                    jones2(0,0) = jonesB(0,0);
-                    jones2(1,1) = jonesB(1,1);
-
-                } else {
-                    jones1 = jv1.first;
-                    jones2 = jv2.first;
-                }
-
-                const casa::SquareMatrix<casa::Complex, 2>& j1 = jones1;
-                const casa::SquareMatrix<casa::Complex, 2>& j2 = jones2;
+                const casa::SquareMatrix<casa::Complex, 2>& j1 = jv1.first;
+                const casa::SquareMatrix<casa::Complex, 2>& j2 = jv2.first;
                 const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
                 const casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
                 det = casa::real(det1*conj(det1))*casa::real(det2*conj(det2));
@@ -313,7 +294,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                 }
             }
         }
-        if (validSolution && !allFlagged) {
+        if (validSolution) {
             for (casa::uInt pol = 0; pol < nPol; ++pol) {
                 vis(pol) = rwVis(row,chan,pol);
             }
@@ -426,20 +407,6 @@ void CalibrationApplicatorME::channelIndependent(bool flag)
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply bandpass calibration solutions");
   }
 }
-/// @brief determines whether leakage calibration is used or not
-/// @details It is handy to know if leakages are present. With
-/// this flag set, the parallel hand solutions will be used.
-/// @param[in] flag if true, leakage free calibration is applied
-void CalibrationApplicatorME::leakageFree(bool flag)
-{
-  itsLeakageFree = flag;
-  if (itsLeakageFree) {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply leakage free calibration solutions");
-  } else {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply leakage calibration solutions");
-  }
-}
-
 
 } // namespace synthesis
 

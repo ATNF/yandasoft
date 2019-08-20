@@ -229,7 +229,6 @@ class CcalApplyApp : public askap::Application
             calME->allowFlag(allowFlag);
             calME->beamIndependent(parset.getBool("calibrate.ignorebeam", false));
             calME->channelIndependent(parset.getBool("calibrate.ignorechannel",false));
-            calME->leakageFree(parset.getBool("calibrate.ignoreleakage",false));
             return calME;
         }
 
