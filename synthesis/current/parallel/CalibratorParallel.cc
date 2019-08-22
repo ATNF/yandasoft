@@ -748,6 +748,8 @@ void CalibratorParallel::solveNE()
               const std::string parname = *it;
               localModel.add(parname, itsModel->value(parname));
           }
+          ASKAPDEBUGASSERT(namesEq.size() == localModel.size());
+          ASKAPLOG_INFO_STR(logger, "Added " << namesEq.size() << " local model parameters on worker " << itsComms.rank());
 
           ASKAPLOG_INFO_STR(logger, "Solving normal equations (parallel matrix)");
           casa::Timer timer;
@@ -767,6 +769,7 @@ void CalibratorParallel::solveNE()
           ASKAPLOG_INFO_STR(logger, "Receiving model parts on master");
 
           // Receive the local models from workers, and update the full model.
+          size_t nParametersUpdated = 0;
           for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
               scimath::Params localModel;
               receiveModelOnMaster(localModel, i + 1);
@@ -777,8 +780,11 @@ void CalibratorParallel::solveNE()
                    it != localNames.end(); ++it) {
                   const std::string parname = *it;
                   itsModel->update(parname, localModel.value(parname));
+                  nParametersUpdated++;
               }
           }
+          ASKAPDEBUGASSERT(itsModel->size() == nParametersUpdated);
+          ASKAPLOG_INFO_STR(logger, "Updated " << nParametersUpdated << " parameters of the full model on master");
       }
   }
 }
