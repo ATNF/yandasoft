@@ -130,10 +130,8 @@ namespace askap
         if (itsComms.nGroups() == 1) {
             ASKAPLOG_INFO_STR(logger, "Sending the whole model to all workers");
             if (names.size() == itsModel->names().size()) {
-                ASKAPLOG_INFO_STR(logger, "About to broadcast all model parameters: "<<names);
                 broadcastModelImpl(*itsModel);
             } else {
-                ASKAPLOG_INFO_STR(logger, "About to broadcast the following model parameters: "<<names);
                 scimath::Params buffer;
                 buffer.makeSlice(*itsModel, names);
                 broadcastModelImpl(buffer);
