@@ -22,10 +22,9 @@
 /// It should be merged with unit tests in LSQRSolverTest.h once we have the parallel unit tests support.
 ///
 
-// MPI-specific includes
 #ifdef HAVE_MPI
+// MPI-specific includes
 #include <mpi.h>
-#endif
 
 #include <iostream>
 #include <cassert>
@@ -58,7 +57,7 @@ using namespace askap;
 // [1] Least Squares Estimation, Sara A. van de Geer, Volume 2, pp. 1041-1045,
 //     in Encyclopedia of Statistics in Behavioral Science, 2005.
 //---------------------------------------------------------------------
-void testOverdetermined(int myrank, int nbproc, void* comm)
+void testOverdetermined(int myrank, int nbproc, const MPI_Comm &comm)
 {
     if (nbproc != 1 && nbproc != 3)
     {
@@ -107,7 +106,7 @@ void testOverdetermined(int myrank, int nbproc, void* comm)
     lsqr::LSQRSolver solver(nrows, nelements);
 
     lsqr::Vector x(nelements, 0.0);
-    solver.Solve(niter, rmin, matrix, b_RHS, x, myrank, nbproc);
+    solver.Solve(niter, rmin, matrix, b_RHS, x);
 
     double epsilon = 1.e-14;
 
@@ -140,7 +139,7 @@ struct WunschFixture
   lsqr::SparseMatrix* matrix;
   lsqr::Vector* b_RHS;
 
-  WunschFixture(int myrank, int nbproc, void* comm)
+  WunschFixture(int myrank, int nbproc, const MPI_Comm &comm)
   {
       ncols = 3 / nbproc; // Support only nbproc=1 and nbproc=3.
       nrows = 2;
@@ -195,7 +194,7 @@ struct WunschFixture
 // which is an exact solution and lies closer to the reference model, than the undamped solution.
 // this solution is stable for many orders of alpha: 1.e-3 <= alpha <= 1.e-12
 //------------------------------------------------------------------------------
-void testUnderdeterminedDamped(int myrank, int nbproc, void* comm)
+void testUnderdeterminedDamped(int myrank, int nbproc, const MPI_Comm &comm)
 {
     if (nbproc != 1 && nbproc != 3)
     {
@@ -225,7 +224,7 @@ void testUnderdeterminedDamped(int myrank, int nbproc, void* comm)
     lsqr::LSQRSolver solver(system.matrix->GetTotalNumberRows(), nelements);
 
     lsqr::Vector x(nelements, 0.0);
-    solver.Solve(niter, rmin, *system.matrix, *system.b_RHS, x, myrank, nbproc, true);
+    solver.Solve(niter, rmin, *system.matrix, *system.b_RHS, x, true);
 
     double epsilon = 1.e-5;
 
@@ -257,14 +256,16 @@ int main(int argc, char *argv[])
     int nbproc = comms.nProcs();
     int myrank = comms.rank();
 
-    void* comm = NULL;
-
-#ifdef HAVE_MPI
-    MPI_Comm comm_world = MPI_COMM_WORLD;
-    comm = (void *)&comm_world;
-#endif
+    MPI_Comm comm = MPI_COMM_WORLD;
 
     testOverdetermined(myrank, nbproc, comm);
     testUnderdeterminedDamped(myrank, nbproc, comm);
-}
 
+    return 0;
+}
+#else
+int main(int argc, char *argv[])
+{
+    return 0;
+}
+#endif

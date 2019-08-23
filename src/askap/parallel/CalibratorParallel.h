@@ -210,6 +210,9 @@ namespace askap
       /// @param[in] discard Discard old equation?
       void calcOne(const std::string& dataset, bool discard=true);
 
+      // @brief Checks whether the Linear solver is needed to be used.
+      bool useLinearSolver() const;
+
       /// uncorrupted model
       askap::scimath::Params::ShPtr itsPerfectModel;
 
@@ -292,13 +295,6 @@ namespace askap
       /// change from integration to integration. It is also used to give a warning if calibration effect is frequency
       /// independent and more than one channel is selected for preaveraging.
       casacore::uInt itsMaxNChanForPreAvg;
-
-      /// @brief solution ID to work with
-      /// @details This field should only be used if itsSolutionIDValid is true
-      long itsSolutionID;
-
-      /// @brief solution ID validity flag
-      bool itsSolutionIDValid;
 
       /// @brief flag to solve normal equation in parallel (on the matrix level).
       bool itsMatrixIsParallel;
