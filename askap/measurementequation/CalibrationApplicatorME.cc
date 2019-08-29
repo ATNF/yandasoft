@@ -59,7 +59,7 @@ namespace synthesis {
 /// @param[in] src calibration solution source to work with
 CalibrationApplicatorME::CalibrationApplicatorME(const boost::shared_ptr<accessors::ICalSolutionConstSource> &src) :
      CalibrationSolutionHandler(src), itsScaleNoise(false), itsFlagAllowed(false), itsBeamIndependent(false),
-     itsChannelIndependent(false), itsLeakageFree(false)
+     itsChannelIndependent(false)
 {}
 
 /// @brief correct model visibilities for one accessor (chunk).
@@ -240,18 +240,14 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   // it will be the same as rwFlag above by reference
   const casacore::Cube<casacore::Bool> &flag = chunk.flag();
 
-  //Check if we are applying leakage
-  casacore::SquareMatrix<casacore::Complex, 2> jones1(itsLeakageFree ?
-       casacore::SquareMatrix<casacore::Complex, 2>::Diagonal : casacore::SquareMatrix<casacore::Complex, 2>::General);
-  casacore::SquareMatrix<casacore::Complex, 2> jones2(itsLeakageFree ?
-       casacore::SquareMatrix<casacore::Complex, 2>::Diagonal : casacore::SquareMatrix<casacore::Complex, 2>::General);
-  casacore::SquareMatrix<casacore::Complex, 4> mueller;
+  casa::SquareMatrix<casa::Complex, 4> mueller;
+  bool needMueller = true;
   const float detThreshold = 1e-25;
 
   casa::uInt nChan = chunk.nChannel();
   casa::uInt nRow = chunk.nRow();
   casa::RigidVector<casa::Complex,4> vis;
-    
+
   for (casa::uInt row = 0; row < nRow; ++row) {
     bool validSolution = false;
     casa::Float det = 0.;
@@ -268,49 +264,37 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
              }
         }
         // don't bother with the rest of processing if the sample is flagged anyway in its entirety
-        // except that we need to do the chan=0 pass to fill the mueller matrix in the non bandpass case
-        if (allFlagged && (!itsChannelIndependent || chan!=0)) {
+        if (allFlagged) {
             continue;
         }
 
-        if (!itsChannelIndependent || chan==0) {
+        if (!itsChannelIndependent || needMueller) {
+            // we only need to fill the mueller matrix once in the non bandpass case
+            needMueller = false;
             const int b1 = itsBeamIndependent ? 0 : beam1[row];
             const int b2 = itsBeamIndependent ? 0 : beam2[row];
             if (solutionAccessorNeedsTime) {
                 solutionAccessorNeedsTime = false;
                 updateAccessor(chunk.time());
             }
-            validSolution = calSolution().jonesValid(antenna1[row], b1, chan) &&
-                     calSolution().jonesValid(antenna2[row], b2, chan);
+            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1 =
+                calSolution().jonesAndValidity(antenna1[row], b1, chan);
+            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2 =
+                calSolution().jonesAndValidity(antenna2[row], b2, chan);
+            validSolution = jv1.second && jv2.second;
             if (validSolution) {
-                if (itsLeakageFree) {
-                    // if the solution is diagonal, put it in a diagonal SquareMatrix
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesA =
-                        calSolution().jones(antenna1[row], b1, chan);
-                    const casa::SquareMatrix<casa::Complex, 2>& jonesB =
-                        calSolution().jones(antenna2[row], b2, chan);
-                    jones1(0,0) = jonesA(0,0);
-                    jones1(1,1) = jonesA(1,1);
-                    jones2(0,0) = jonesB(0,0);
-                    jones2(1,1) = jonesB(1,1);
-
-                } else {
-                    jones1 = calSolution().jones(antenna1[row], b1, chan);
-                    jones2 = calSolution().jones(antenna2[row], b2, chan);
-                }
-
-                const casa::SquareMatrix<casa::Complex, 2>& j1 = jones1;
-                const casa::SquareMatrix<casa::Complex, 2>& j2 = jones2;
+                const casa::SquareMatrix<casa::Complex, 2>& j1 = jv1.first;
+                const casa::SquareMatrix<casa::Complex, 2>& j2 = jv2.first;
                 const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
                 const casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
-                det = casa::abs(det1*det1*det2*det2);
+                det = casa::real(det1*conj(det1))*casa::real(det2*conj(det2));
                 // Inverse of 4x4 mueller is directProduct of 2x2 jones inverses
                 if (det > detThreshold) {
                     directProduct(mueller, j1.inverse(),conj(j2).inverse());
                 }
             }
         }
-        if (validSolution && !allFlagged) {
+        if (validSolution) {
             for (casa::uInt pol = 0; pol < nPol; ++pol) {
                 vis(pol) = rwVis(row,chan,pol);
             }
@@ -346,15 +330,18 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
             casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
             ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
             // propagating noise estimate through the matrix multiplication
-            casacore::RigidVector<casacore::Complex,4> noise = thisChanNoise;
+            casa::RigidVector<casa::Complex,4> noise = thisChanNoise;
+            // Somehow the indexing below calls the non const version and throws
+            // an exception for a diagonal matrix. Avoid this with explicitly const version
+            const casa::SquareMatrix<casa::Complex,4>& cmueller = mueller;
 
             for (casacore::uInt pol = 0; pol < nPol; ++pol) {
                 float tempRe = 0., tempIm = 0.;
-                for (casacore::uInt k = 0; k < nPol; ++k) {
-                    tempRe += casacore::square(casacore::real(mueller(pol,k)) * casacore::real(noise(k))) +
-                              casacore::square(casacore::imag(mueller(pol,k)) * casacore::imag(noise(k)));
-                    tempIm += casacore::square(casacore::real(mueller(pol,k)) * casacore::imag(noise(k))) +
-                              casacore::square(casacore::imag(mueller(pol,k)) * casacore::real(noise(k)));
+                for (casa::uInt k = 0; k < nPol; ++k) {
+                    tempRe += casa::square(casa::real(cmueller(pol,k)) * casa::real(noise(k))) +
+                              casa::square(casa::imag(cmueller(pol,k)) * casa::imag(noise(k)));
+                    tempIm += casa::square(casa::real(cmueller(pol,k)) * casa::imag(noise(k))) +
+                              casa::square(casa::imag(cmueller(pol,k)) * casa::real(noise(k)));
                 }
                 thisChanNoise(pol) = casacore::Complex(sqrt(tempRe),sqrt(tempIm));
             }
@@ -409,31 +396,17 @@ void CalibrationApplicatorME::beamIndependent(bool flag)
 }
 /// @brief determines whether channel dependent calibration is used or not
 /// @details It is handy to be able to apply the same solution for all channels. With
-/// this flag set, channel=0 solution will be used for all channels.
-/// @param[in] flag if true, channel=0 calibration is applied to all channels
+/// this flag set, the same solution will be used for all channels.
+/// @param[in] flag if true, the same calibration is applied to all channels
 void CalibrationApplicatorME::channelIndependent(bool flag)
 {
   itsChannelIndependent = flag;
   if (itsChannelIndependent) {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply channel=0 calibration solutions to all channels");
+      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply the same gain calibration solutions to all channels");
   } else {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply bandpass calibration solutions");
   }
 }
-/// @brief determines whether leakage calibration is used or not
-/// @details It is handy to know if leakages are present. With
-/// this flag set, the parallel hand solutions will be used.
-/// @param[in] flag if true, leakage free calibration is applied
-void CalibrationApplicatorME::leakageFree(bool flag)
-{
-  itsLeakageFree = flag;
-  if (itsLeakageFree) {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply leakage free calibration solutions");
-  } else {
-      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply leakage calibration solutions");
-  }
-}
-
 
 } // namespace synthesis
 

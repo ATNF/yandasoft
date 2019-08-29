@@ -43,8 +43,12 @@
 #include "RestoringBeamHelperTest.h"
 #include "VisMetaDataStatsTest.h"
 
+#include <askapparallel/AskapParallel.h>
+
 int main( int argc, char **argv)
 {
+    askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
     runner.addTest(askap::synthesis::VectorOperationsTest::suite());
