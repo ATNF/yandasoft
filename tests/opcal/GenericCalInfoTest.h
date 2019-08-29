@@ -33,7 +33,7 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <askap/opcal/GenericCalInfo.h>
+#include "askap/opcal/GenericCalInfo.h"
 #include <askap/askap/AskapError.h>
 
 namespace askap
