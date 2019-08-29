@@ -102,15 +102,15 @@ make install
 
       }
     }
-    stage('Building base-scimath') {
+    stage('Building base-askapparallel') {
       steps {
         dir(path: '.') {
-          sh '''if [ -d base-scimath ]; then
-echo "base-scimath directory already exists"
-rm -rf base-scimath
+          sh '''if [ -d base-askapparallel ]; then
+echo "base-askapparallel directory already exists"
+rm -rf base-askapparallel
 fi
-git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
-cd base-scimath
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
+cd base-askapparallel
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -121,15 +121,16 @@ make install
 
       }
     }
-    stage('Building base-askapparallel') {
+
+    stage('Building base-scimath') {
       steps {
         dir(path: '.') {
-          sh '''if [ -d base-askapparallel ]; then
-echo "base-askapparallel directory already exists"
-rm -rf base-askapparallel
+          sh '''if [ -d base-scimath ]; then
+echo "base-scimath directory already exists"
+rm -rf base-scimath
 fi
-git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
-cd base-askapparallel
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
+cd base-scimath
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
