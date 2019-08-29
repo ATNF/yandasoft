@@ -121,7 +121,7 @@ class CcalApplyApp : public askap::Application
 
                         if (itsNoiseAndFlagDANeeded) {
                             // quick and dirty for now (mv: note, it will definitely ignore updates to noise and may ignore
-                            // updates to flags as well, if the appropriate accessor doesn't supporot write operation!)
+                            // updates to flags as well, if the appropriate accessor doesn't support write operation!)
                             accessors::OnDemandNoiseAndFlagDA acc(*it);
                             acc.rwVisibility() = it->visibility();
 
@@ -229,7 +229,6 @@ class CcalApplyApp : public askap::Application
             calME->allowFlag(allowFlag);
             calME->beamIndependent(parset.getBool("calibrate.ignorebeam", false));
             calME->channelIndependent(parset.getBool("calibrate.ignorechannel",false));
-            calME->leakageFree(parset.getBool("calibrate.ignoreleakage",false));
             return calME;
         }
 

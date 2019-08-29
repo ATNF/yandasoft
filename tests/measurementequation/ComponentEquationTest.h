@@ -138,15 +138,15 @@ namespace askap
         {
           GenericNormalEquations ne; //(*params1);
           p2->calcEquations(ne);
-          std::vector<string> names(params1->freeNames());
-          for (uint row=0;row<names.size();row++)
-          {
-            for (uint col=0;col<names.size();col++)
-            {
-              const casa::Matrix<double> nm = ne.normalMatrix(names[row],names[col]);
-              casa::IPosition ip(nm.shape());
-              CPPUNIT_ASSERT(ip(0)==1);
-              CPPUNIT_ASSERT(ip(1)==1);
+          std::vector<std::string> names(params1->freeNames());
+          for (uint row=0;row<names.size();row++) {
+            for (uint col=0;col<names.size();col++) {
+                if ((&ne.normalMatrix(names[row], names[col])) != &emptyMatrix) {
+                    const casa::Matrix<double> nm = ne.normalMatrix(names[row], names[col]);
+                    casa::IPosition ip(nm.shape());
+                    CPPUNIT_ASSERT(ip(0)==1);
+                    CPPUNIT_ASSERT(ip(1)==1);
+                }
             }
           }
         }

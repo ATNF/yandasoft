@@ -52,6 +52,7 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <iomanip>
 
 // logging stuff
 #include <askap/askap_synthesis.h>
@@ -120,7 +121,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
-      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u),
       itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
 {
   const std::string what2solve = parset.getString("solve","gains");
@@ -162,8 +163,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       itsMatrixIsParallel = true;
   }
 
-  if ((itsComms.isMaster() && !itsMatrixIsParallel)
-      || (itsComms.isWorker() && itsMatrixIsParallel)) {
+  if (useLinearSolver()) {
       // Create the solver.
       itsSolver.reset(new LinearSolver);
       ASKAPCHECK(itsSolver, "Solver not defined correctly");
@@ -192,9 +192,13 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MPI_Comm_split(MPI_COMM_WORLD, color, rank, &newComm);
 
       if (itsComms.isWorker()) {
-          void *workersComm = (void *)&newComm;
+          ASKAPDEBUGASSERT(useLinearSolver());
+          ASKAPDEBUGASSERT(itsSolver);
           boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-          linearSolver->SetWorkersCommunicator(workersComm);
+          ASKAPCHECK(linearSolver, "Failed to obtain a Linear solver!");
+          if (linearSolver) {
+              linearSolver->setWorkersCommunicator(newComm);
+          }
       }
 #endif
   }
@@ -229,7 +233,6 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       if (calAccType == "service") {
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
         ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
-        itsSolutionIDValid = true;
 
         // get the string vector of solutions we are going to solve for ....
         const vector<string> willSolve = parset.getStringVector("solve", false);
@@ -481,6 +484,11 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
                      << " seconds ");
 }
 
+bool CalibratorParallel::useLinearSolver() const {
+    return ((itsComms.isMaster() && !itsMatrixIsParallel)
+            || (itsComms.isWorker() && itsMatrixIsParallel));
+}
+
 /// @brief create measurement equation
 /// @details This method initialises itsEquation with shared pointer to a proper type.
 /// It uses internal flags to create a correct type (i.e. polarisation calibration or
@@ -577,6 +585,17 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
             const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
             curChan = chanInfo.first;
             baseParName = chanInfo.second;
+            // in the distributed bandpass case this worker can only deal with a subset of channels. 
+            // I (MV) not sure it is a correct way to just ignore channels outside of the current rank's work unit,
+            // but just do it for now as it reverts to the old behaviour for such channels and we don't use ccalibrator for bandpass anyway
+            // for ASKAP. I must say that the code became quite messy with all these various use cases
+            if (curChan < itsStartChan) {
+                continue;
+            }
+            curChan -= itsStartChan;
+            if (curChan >= itsMaxNChanForPreAvg) {
+                continue;
+            }
         }
         const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(baseParName);
         casa::uInt pol = 0;
@@ -673,32 +692,40 @@ void CalibratorParallel::calcNE()
 
 void CalibratorParallel::solveNE()
 {
+  ASKAPLOG_INFO_STR(logger, "Started CalibratorParallel::solveNE()");
+
   itsMajorLoopIterationNumber++;
 
-  // Passing major loop iteration number to the solver.
-  if (itsSolver) {
-      boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
-      if (linearSolver) {
-          linearSolver->SetMajorLoopIterationNumber(itsMajorLoopIterationNumber);
+  if (useLinearSolver()) {
+      if (itsSolver) {
+          boost::shared_ptr<LinearSolver> linearSolver = boost::dynamic_pointer_cast<LinearSolver>(itsSolver);
+          ASKAPCHECK(linearSolver, "Failed to obtain a Linear solver!");
+
+          if (linearSolver) {
+              // Passing major loop iteration number to the linear solver.
+              linearSolver->setMajorLoopIterationNumber(itsMajorLoopIterationNumber);
+          }
       }
   }
 
   if (!itsMatrixIsParallel && itsComms.isMaster()) {
+      ASKAPDEBUGASSERT(itsSolver);
+      ASKAPDEBUGASSERT(itsModel);
+
       // Receive the normal equations
       if (itsComms.isParallel()) {
           receiveNE();
       }
 
-      ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-      casacore::Timer timer;
+      ASKAPLOG_INFO_STR(logger, "Solving normal equations (serial matrix)");
+      casa::Timer timer;
       timer.mark();
       Quality q;
-      ASKAPDEBUGASSERT(itsSolver);
 
-      itsSolver->solveNormalEquations(*itsModel,q);
+      itsSolver->solveNormalEquations(*itsModel, q);
 
-      ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
-      ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+      ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
+      ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
   }
 
   if (itsMatrixIsParallel) {
@@ -706,12 +733,10 @@ void CalibratorParallel::solveNE()
       ASKAPDEBUGASSERT((itsComms.rank() > 0) == itsComms.isWorker());
 
       if (itsComms.isWorker()) {
-          ASKAPLOG_INFO_STR(logger, "Solving normal equations");
-          casa::Timer timer;
-          timer.mark();
-          Quality q;
           ASKAPDEBUGASSERT(itsSolver);
+          ASKAPDEBUGASSERT(itsModel);
 
+          ASKAPLOG_INFO_STR(logger, "Building a local model on worker " << itsComms.rank());
           // TODO: Perhaps we could overload parametersToBroadcast() to send only local parts of the full model to workers,
           //       but when the broadcast is performed (in ccalibrator.cc) the equation is not yet built,
           //       so no direct access to the list of local parameters.
@@ -724,16 +749,28 @@ void CalibratorParallel::solveNE()
               const std::string parname = *it;
               localModel.add(parname, itsModel->value(parname));
           }
+          ASKAPDEBUGASSERT(namesEq.size() == localModel.size());
+          ASKAPLOG_INFO_STR(logger, "Added " << namesEq.size() << " local model parameters on worker " << itsComms.rank());
+
+          ASKAPLOG_INFO_STR(logger, "Solving normal equations (parallel matrix)");
+          casa::Timer timer;
+          timer.mark();
+          Quality q;
 
           itsSolver->solveNormalEquations(localModel, q);
 
-          ASKAPLOG_INFO_STR(logger, "Solved normal equations in "<< timer.real() << " seconds ");
-          ASKAPLOG_INFO_STR(logger, "Solution quality: "<<q);
+          ASKAPLOG_INFO_STR(logger, "Solved normal equations in " << timer.real() << " seconds");
+          ASKAPLOG_INFO_STR(logger, "Solution quality: " << q);
 
           sendModelToMaster(localModel);
       }
       if (itsComms.isMaster()) {
+          ASKAPDEBUGASSERT(itsModel);
+
+          ASKAPLOG_INFO_STR(logger, "Receiving model parts on master");
+
           // Receive the local models from workers, and update the full model.
+          size_t nParametersUpdated = 0;
           for (int i = 0; i < itsComms.nProcs() - 1; ++i) {
               scimath::Params localModel;
               receiveModelOnMaster(localModel, i + 1);
@@ -744,8 +781,11 @@ void CalibratorParallel::solveNE()
                    it != localNames.end(); ++it) {
                   const std::string parname = *it;
                   itsModel->update(parname, localModel.value(parname));
+                  nParametersUpdated++;
               }
           }
+          ASKAPDEBUGASSERT(itsModel->size() == nParametersUpdated);
+          ASKAPLOG_INFO_STR(logger, "Updated " << nParametersUpdated << " parameters of the full model on master");
       }
   }
 }
@@ -961,29 +1001,26 @@ bool CalibratorParallel::nextChunk() const
 void CalibratorParallel::writeModel(const std::string &postfix)
 {
   if (itsComms.isMaster()) {
-      ASKAPLOG_INFO_STR(logger, "Writing results of the calibration");
+      ASKAPLOG_INFO_STR(logger, "Writing results of the calibration for time "<<std::setprecision(15)<<solutionTime());
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
-      if (!itsSolutionIDValid) {
-          // obtain solution ID only once, the results can come in random order and the
-          // accessor is responsible for aggregating all of them together. This is done based on this ID.
-          //@todo Can probably get rid of this
-          itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
-          itsSolutionIDValid = true;
-      }
-      // if the solution time has changed - then you get a new SolutionID
-      // this should spot subsequent gain cal solution intervals
       
-      itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
-      boost::shared_ptr<ICalSolutionAccessor> solAcc = itsSolutionSource->rwSolution(itsSolutionID);
-      ASKAPASSERT(solAcc);
+      // solution accessor, shared pointer is uninitialised if solution ID hasn't been obtained
+      boost::shared_ptr<ICalSolutionAccessor> solAcc;
 
       ASKAPDEBUGASSERT(itsModel);
       std::vector<std::string> parlist = itsModel->freeNames();
       for (std::vector<std::string>::const_iterator it = parlist.begin();
            it != parlist.end(); ++it) {
-           casacore::Complex val = itsModel->complexValue(*it);
+           casa::Complex val = itsModel->complexValue(*it);
+           // we iterate over free parameters only, so if control gets here it means there are some good points
+           if (!solAcc) {
+               // first good parameter for the solution interval, need to obtain new solution ID
+               const long solutionID = itsSolutionSource->newSolutionID(solutionTime());
+               solAcc = itsSolutionSource->rwSolution(solutionID);
+               ASKAPASSERT(solAcc);
+           }
            if (itsSolveBandpass) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
