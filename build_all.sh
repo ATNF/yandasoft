@@ -428,8 +428,8 @@ if [ $clean_askap_dependencies == yes ]; then
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-askap.git 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git 
-	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git 
+	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git 
 	clean_and_uninstall https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git 
 fi
 
@@ -440,8 +440,8 @@ if [ $install_askap_dependencies == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
 fi
