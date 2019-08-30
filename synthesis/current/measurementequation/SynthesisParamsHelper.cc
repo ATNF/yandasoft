@@ -1317,51 +1317,85 @@ namespace askap
        ss.extendedSupport(psfSliceMatrix);
        casa::uInt support = ss.symmetricalSupport(psfSlice.shape());
        support = 2 * (support/2) + 1; // if even, move up to next odd.
+       casa::Vector<casa::Double> result, errors;
+       // allow for some retries on the beam fitting
+       int retry = 2;
+       while (retry > 0) {
 
-       ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
-       const casa::IPosition newShape(2,support,support);
-       for (int dim=0; dim<2; ++dim) {
-            ASKAPCHECK(psfSlice.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
-                       psfSlice.shape());
+           ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
+           const casa::IPosition newShape(2,support,support);
+           for (int dim=0; dim<2; ++dim) {
+                ASKAPCHECK(psfSlice.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
+                           psfSlice.shape());
+           }
+           //
+           casa::Array<float> floatPSFSlice(newShape);
+           casa::convertArray<float, double>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
+
+           // hack for debugging only
+           //floatPSFSlice = imageHandler().read("tmp.img").nonDegenerate();
+           //
+
+           // normalise to 1
+           const float maxPSF = casa::max(floatPSFSlice);
+           if (fabs(maxPSF-1.)>1e-6) {
+               floatPSFSlice /= maxPSF;
+           }
+           //
+
+           // actual fitting
+           casa::Vector<casa::Double> initialEstimate(6,0.);
+           initialEstimate[0]=1.; // PSF peak is always 1
+           initialEstimate[1]=newShape[0]/2; // centre
+           initialEstimate[2]=newShape[1]/2; // centre
+           initialEstimate[3]=1;  // 1 pixel wide
+           initialEstimate[4]=0.9;  // 1 pixel wide
+           initialEstimate[5]=casa::C::pi/4.; // quire arbitrary  pa.
+           casa::Vector<casa::Bool> parameterMask(6,casa::False);
+           parameterMask[3] = casa::True; // fit maj
+           parameterMask[4] = casa::True; // fit min
+           parameterMask[5] = casa::True; // fit pa
+
+           casa::LogIO os;
+           casa::Fit2D fitter(os);
+           fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
+           casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
+           const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
+           if (fitError != casa::Fit2D::OK) {
+               if (retry > 1) {
+                   // try reducing the support if fit fails, or increasing it if it's tiny
+                   support -= 2;
+                   if (support < 3) support = 5;
+                   ASKAPLOG_INFO_STR(logger, "Beam fit failed, retrying with support = "<<support);
+                   retry--;
+               } else {
+                   ASKAPCHECK(fitError == casa::Fit2D::OK, "Error fitting the beam. fitError="<<fitError<<
+                              " message: "<<fitter.errorMessage());
+               }
+           } else {
+               result = fitter.availableSolution();
+               errors = fitter.availableErrors();
+               ASKAPLOG_INFO_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors);
+               ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
+               // Check if fit is reasonable
+               if (result[3] > 2.0 * support || result[4] > 2.0 * support) {
+                   if (retry > 1) {
+                       // try reducing the support if fit fails, or increasing it if it's tiny
+                       support -= 2;
+                       if (support < 3) support = 5;
+                       ASKAPLOG_INFO_STR(logger, "Beam fit bad, retrying with support = "<<support);
+                       retry--;
+                   } else {
+                       // failed!
+                       ASKAPCHECK(result[3] <= 2.0 * support && result[4] <= 2.0 * support,
+                           "Error fitting the beam. Gaussian width >2x support");
+                   }
+               } else {
+                   // fit is fine, no need to retry
+                   retry = 0;
+               }
+           }
        }
-       //
-       casa::Array<float> floatPSFSlice(newShape);
-       casa::convertArray<float, double>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
-
-       // hack for debugging only
-       //floatPSFSlice = imageHandler().read("tmp.img").nonDegenerate();
-       //
-
-       // normalise to 1
-       const float maxPSF = casa::max(floatPSFSlice);
-       if (fabs(maxPSF-1.)>1e-6) {
-           floatPSFSlice /= maxPSF;
-       }
-       //
-
-       // actual fitting
-       casa::Vector<casa::Double> initialEstimate(6,0.);
-       initialEstimate[0]=1.; // PSF peak is always 1
-       initialEstimate[1]=newShape[0]/2; // centre
-       initialEstimate[2]=newShape[1]/2; // centre
-       initialEstimate[3]=1;  // 1 pixel wide
-       initialEstimate[4]=0.9;  // 1 pixel wide
-       initialEstimate[5]=casa::C::pi/4.; // quire arbitrary  pa.
-       casa::Vector<casa::Bool> parameterMask(6,casa::False);
-       parameterMask[3] = casa::True; // fit maj
-       parameterMask[4] = casa::True; // fit min
-       parameterMask[5] = casa::True; // fit pa
-
-       casa::LogIO os;
-       casa::Fit2D fitter(os);
-       fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
-       casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
-       const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
-       ASKAPCHECK(fitError == casa::Fit2D::OK, "Error fitting the beam. fitError="<<fitError<<
-                  " message: "<<fitter.errorMessage());
-       casa::Vector<casa::Double> result = fitter.availableSolution();
-       ASKAPLOG_INFO_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<<fitter.availableErrors());
-       ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
        ASKAPCHECK(axes.hasDirection(), "Direction axes are missing from the PSF parameter, unable to convert pixels to angular units");
        const casa::Vector<casa::Double> increments = axes.directionAxis().increment();
        ASKAPCHECK(increments.nelements() == 2, "Expect just two elements for increments of the direction axis, you have "<<
