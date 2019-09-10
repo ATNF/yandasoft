@@ -70,18 +70,18 @@ namespace askap
       CPPUNIT_TEST_SUITE_END();
     protected:
       static void modifyStubbedData(accessors::DataAccessorStub &acc) {
-         for (casa::uInt row=0; row<acc.nRow(); ++row) {
+         for (casacore::uInt row=0; row<acc.nRow(); ++row) {
             ++acc.itsFeed1[row];
             ++acc.itsFeed2[row];
             ++acc.itsAntenna1[row];
             ++acc.itsAntenna2[row];
-            for (casa::uInt dim=0; dim<3; ++dim) {
+            for (casacore::uInt dim=0; dim<3; ++dim) {
                  acc.itsUVW[row](dim) *= 10.;
             }
-            acc.itsPointingDir1[row].shift(-0.001,0.001,casa::True);
-            acc.itsPointingDir2[row].shift(-0.001,0.001,casa::True);            
+            acc.itsPointingDir1[row].shift(-0.001,0.001,casacore::True);
+            acc.itsPointingDir2[row].shift(-0.001,0.001,casacore::True);            
          }
-         for (casa::uInt chan=0; chan<acc.nChannel(); ++chan) {
+         for (casacore::uInt chan=0; chan<acc.nChannel(); ++chan) {
               acc.itsFrequency[chan] += 10e6;
          }
       }  
@@ -103,8 +103,8 @@ namespace askap
          CPPUNIT_ASSERT_EQUAL(2u, stats.nBeams());
          CPPUNIT_ASSERT_EQUAL(3480ul, stats.nVis());
          // test directions for "offset" beam
-         casa::MVDirection expectedDir(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
-         expectedDir.shift(-0.001,0.001,casa::True);
+         casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
+         expectedDir.shift(-0.001,0.001,casacore::True);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);         
@@ -122,8 +122,8 @@ namespace askap
          CPPUNIT_ASSERT_EQUAL(31u, stats.nAntennas());
          CPPUNIT_ASSERT_EQUAL(2u, stats.nBeams());
          CPPUNIT_ASSERT_EQUAL(6960ul, stats.nVis());
-         casa::MVDirection shiftedDir(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
-         shiftedDir.shift(-0.0005,0.0005,casa::True);
+         casacore::MVDirection shiftedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
+         shiftedDir.shift(-0.0005,0.0005,casacore::True);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., shiftedDir.separation(stats.centre()), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0005,stats.maxOffsets().first,1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0005,stats.maxOffsets().second,1e-6);         
@@ -156,7 +156,7 @@ namespace askap
          CPPUNIT_ASSERT_EQUAL(3480ul, stats.nVis());
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
-         const casa::MVDirection expectedDir(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
          // now change the data and accumulate again
          modifyStubbedData(acc);
@@ -166,7 +166,7 @@ namespace askap
       
       void testMerge() {
          accessors::DataAccessorStub acc(true);
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats1(tangent);
          stats1.process(acc);         
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats1.maxFreq(),1.);
@@ -187,7 +187,7 @@ namespace askap
       }
       
       void testBlobStream() {
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          accessors::DataAccessorStub acc(true);
          VisMetaDataStats stats1(tangent);
          stats1.process(acc);
@@ -223,7 +223,7 @@ namespace askap
       
       void testSnapShot() {
          accessors::DataAccessorStub acc(true);
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats(tangent,1);
          stats.process(acc);         
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats.maxFreq(),1.);
@@ -239,13 +239,13 @@ namespace askap
          CPPUNIT_ASSERT_EQUAL(3480ul, stats.nVis());
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
-         const casa::MVDirection expectedDir(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);         
       }
       
       void testTangentCheck() {
          accessors::DataAccessorStub acc(true);
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats(tangent);
          stats.process(acc);   
          VisMetaDataStats stats1;
@@ -254,7 +254,7 @@ namespace askap
       
       void testToleranceCheck() {
          accessors::DataAccessorStub acc(true);
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats(tangent,1.);
          stats.process(acc);   
          VisMetaDataStats stats1(tangent,700.);
@@ -263,7 +263,7 @@ namespace askap
       
       void testReset() {
          accessors::DataAccessorStub acc(true);
-         const casa::MVDirection tangent(casa::Quantity(0, "deg"), casa::Quantity(0, "deg"));
+         const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats1(tangent);
          stats1.process(acc);         
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats1.maxFreq(),1.);
@@ -291,15 +291,15 @@ namespace askap
          // set up the tree
          std::vector<boost::shared_ptr<VisMetaDataStats> > tree(7);
          for (size_t i = 0; i<tree.size(); ++i) {
-              const casa::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
+              const casacore::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
               
               accessors::DataAccessorStub acc(true);
-              const casa::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
+              const casacore::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
               acc.itsPointingDir1.set(testDir1);
               acc.itsPointingDir2.set(testDir1);
 
               if (i == 5) {
-                  const casa::MVDirection testDir2(asQuantity("12:35:39.34"), asQuantity("-044.59.28.59"));
+                  const casacore::MVDirection testDir2(asQuantity("12:35:39.34"), asQuantity("-044.59.28.59"));
                   acc.itsPointingDir1.set(testDir2);
                   acc.itsPointingDir2.set(testDir2);
               }
@@ -339,10 +339,10 @@ namespace askap
          std::vector<boost::shared_ptr<VisMetaDataStats> > tree(7);
 
          for (size_t i = 0; i<tree.size(); ++i) {
-              const casa::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
+              const casacore::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
               
               accessors::DataAccessorStub acc(true);
-              const casa::MVDirection testDir1(asQuantity("22:40:00.0"), asQuantity("-59.59.59.92"));
+              const casacore::MVDirection testDir1(asQuantity("22:40:00.0"), asQuantity("-59.59.59.92"));
               acc.itsPointingDir1.set(testDir1);
               acc.itsPointingDir2.set(testDir1);
    
@@ -365,16 +365,16 @@ namespace askap
       }
 
       void testDirOffsets() {
-         const casa::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
+         const casacore::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
          VisMetaDataStats stats1(tangent);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().first, 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().second, 1e-6);
 
          
-         const casa::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
+         const casacore::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
 
          const std::pair<double, double> offsets1 = stats1.getOffsets(testDir1);
-         const casa::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
+         const casacore::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
 
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., testDir1.separation(processedDir1), 1e-10);
       }
@@ -383,7 +383,7 @@ namespace askap
          // test similar to testDirOffset. Written during debugging of ASKAPSDP-1741
          // It starts from offsets, rather than directions.
 
-         const casa::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
+         const casacore::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
          VisMetaDataStats stats1(tangent);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().first, 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().second, 1e-6);
@@ -395,7 +395,7 @@ namespace askap
          // expect to have in our system
          const size_t nIter = 5;
          for (size_t iter = 0; iter < nIter; ++iter) {
-              const casa::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
+              const casacore::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
               offsets1 = stats1.getOffsets(processedDir1);
          }
          // for some reason the accuracy of MVDirection::shift is not good enough. 

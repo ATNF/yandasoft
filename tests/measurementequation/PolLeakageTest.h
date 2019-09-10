@@ -79,25 +79,25 @@ namespace askap
           accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);
           ASKAPASSERT(da.itsStokes.nelements() == 1);
           
-          casa::Vector<casa::Stokes::StokesTypes> stokes(4);
-          stokes[0] = casa::Stokes::XX;
-          stokes[1] = casa::Stokes::XY;
-          stokes[2] = casa::Stokes::YX;
-          stokes[3] = casa::Stokes::YY;         
+          casacore::Vector<casacore::Stokes::StokesTypes> stokes(4);
+          stokes[0] = casacore::Stokes::XX;
+          stokes[1] = casacore::Stokes::XY;
+          stokes[2] = casacore::Stokes::YX;
+          stokes[3] = casacore::Stokes::YY;         
           
           da.itsStokes.assign(stokes.copy());
           da.itsVisibility.resize(da.nRow(), 2 ,4);
-          da.itsVisibility.set(casa::Complex(-10.,15.));
+          da.itsVisibility.set(casacore::Complex(-10.,15.));
           da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
           da.itsNoise.set(1.);
           da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
-          da.itsFlag.set(casa::False);
+          da.itsFlag.set(casacore::False);
           da.itsFrequency.resize(da.nChannel());
-          for (casa::uInt ch = 0; ch < da.nChannel(); ++ch) {
+          for (casacore::uInt ch = 0; ch < da.nChannel(); ++ch) {
                da.itsFrequency[ch] = 1.4e9 + 20e6*double(ch);
           }
                     
-          const casa::uInt nAnt = 30;
+          const casacore::uInt nAnt = 30;
           
           // leakages, assume g12=g21
           const double realD[nAnt] = {0.1, -0.1, 0.05, -0.13, 0.333,
@@ -115,16 +115,16 @@ namespace askap
       
           itsParams1.reset(new scimath::Params);
           itsParams1->add("flux.i.cena", 100.);
-          itsParams1->add("direction.ra.cena", 0.5*casa::C::arcsec);
-          itsParams1->add("direction.dec.cena", -0.3*casa::C::arcsec);
-          itsParams1->add("shape.bmaj.cena", 3.0e-3*casa::C::arcsec);
-          itsParams1->add("shape.bmin.cena", 2.0e-3*casa::C::arcsec);
-          itsParams1->add("shape.bpa.cena", -55*casa::C::degree);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
+          itsParams1->add("direction.ra.cena", 0.5*casacore::C::arcsec);
+          itsParams1->add("direction.dec.cena", -0.3*casacore::C::arcsec);
+          itsParams1->add("shape.bmaj.cena", 3.0e-3*casacore::C::arcsec);
+          itsParams1->add("shape.bmin.cena", 2.0e-3*casacore::C::arcsec);
+          itsParams1->add("shape.bpa.cena", -55*casacore::C::degree);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
                itsParams1->add("leakage.d12."+toString(ant)+".0",
-                            casa::Complex(realD[ant],imagD[ant]));
+                            casacore::Complex(realD[ant],imagD[ant]));
                itsParams1->add("leakage.d21."+toString(ant)+".0",
-                            casa::Complex(realD[ant],imagD[ant]));
+                            casacore::Complex(realD[ant],imagD[ant]));
           }
           //
 
@@ -134,14 +134,14 @@ namespace askap
           
           itsParams2.reset(new scimath::Params);
           itsParams2->add("flux.i.cena", 100.);
-          itsParams2->add("direction.ra.cena", 0.50000*casa::C::arcsec);
-          itsParams2->add("direction.dec.cena", -0.30000*casa::C::arcsec);
-          itsParams2->add("shape.bmaj.cena", 3.0e-3*casa::C::arcsec);
-          itsParams2->add("shape.bmin.cena", 2.0e-3*casa::C::arcsec);
-          itsParams2->add("shape.bpa.cena", -55*casa::C::degree);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
-               itsParams2->add("leakage.d12."+toString(ant)+".0",casa::Complex(0.));
-               itsParams2->add("leakage.d21."+toString(ant)+".0",casa::Complex(0.));
+          itsParams2->add("direction.ra.cena", 0.50000*casacore::C::arcsec);
+          itsParams2->add("direction.dec.cena", -0.30000*casacore::C::arcsec);
+          itsParams2->add("shape.bmaj.cena", 3.0e-3*casacore::C::arcsec);
+          itsParams2->add("shape.bmin.cena", 2.0e-3*casacore::C::arcsec);
+          itsParams2->add("shape.bpa.cena", -55*casacore::C::degree);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+               itsParams2->add("leakage.d12."+toString(ant)+".0",casacore::Complex(0.));
+               itsParams2->add("leakage.d21."+toString(ant)+".0",casacore::Complex(0.));
           }
        
           itsCE2.reset(new ComponentEquation(*itsParams2, itsIter));
@@ -151,7 +151,7 @@ namespace askap
       /// @details This method resets and fills itsParams1 with some dummy values
       /// to be used in individual unit tests
       void fillGainsAndLeakages() {
-          const casa::uInt nAnt = 30;
+          const casacore::uInt nAnt = 30;
           // use the following values to form both gains and leakages
           const double realGains[nAnt] = {1.1, 0.9, 1.05, 0.87, 1.333,
                                           1.1, 1.0, 1.0, -1.0, 0.3, 
@@ -167,18 +167,18 @@ namespace askap
                                          -0.9, 0.72, -0.04, 0.05, -0.1}; 
           itsParams1.reset(new scimath::Params);
           itsParams1->add("flux.i.cena", 1.);
-          itsParams1->add("direction.ra.cena", 0.*casa::C::arcsec);
-          itsParams1->add("direction.dec.cena", 0.*casa::C::arcsec);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XX),
-                            casa::Complex(realGains[ant],imagGains[ant]));
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YY),
-                            casa::Complex(realGains[nAnt - 1 - ant],imagGains[nAnt - 1 - ant]));
+          itsParams1->add("direction.ra.cena", 0.*casacore::C::arcsec);
+          itsParams1->add("direction.dec.cena", 0.*casacore::C::arcsec);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::XX),
+                            casacore::Complex(realGains[ant],imagGains[ant]));
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::YY),
+                            casacore::Complex(realGains[nAnt - 1 - ant],imagGains[nAnt - 1 - ant]));
                             
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XY),
-                            casa::Complex(realGains[ant] - 1.,imagGains[ant])/casa::Complex(10.,0.));
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YX),
-                            casa::Complex(realGains[ant] - 1.,imagGains[ant])/casa::Complex(10.,0.));                                           
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::XY),
+                            casacore::Complex(realGains[ant] - 1.,imagGains[ant])/casacore::Complex(10.,0.));
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::YX),
+                            casacore::Complex(realGains[ant] - 1.,imagGains[ant])/casacore::Complex(10.,0.));                                           
                             
           }
       }
@@ -189,24 +189,24 @@ namespace askap
           accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);
           CPPUNIT_ASSERT_EQUAL(size_t(1u), da.itsStokes.nelements());
           
-          casa::Vector<casa::Stokes::StokesTypes> stokes(4);
-          stokes[0] = casa::Stokes::XX;
-          stokes[1] = casa::Stokes::XY;
-          stokes[2] = casa::Stokes::YX;
-          stokes[3] = casa::Stokes::YY;         
+          casacore::Vector<casacore::Stokes::StokesTypes> stokes(4);
+          stokes[0] = casacore::Stokes::XX;
+          stokes[1] = casacore::Stokes::XY;
+          stokes[2] = casacore::Stokes::YX;
+          stokes[3] = casacore::Stokes::YY;         
           
           da.itsStokes.assign(stokes.copy());
-          const casa::uInt nAnt = 6;
-          const casa::uInt nBaselines = nAnt * (nAnt - 1) / 2;
+          const casacore::uInt nAnt = 6;
+          const casacore::uInt nBaselines = nAnt * (nAnt - 1) / 2;
           da.itsVisibility.resize(nBaselines, 1 , stokes.nelements());
-          da.itsVisibility.set(casa::Complex(-10.,15.));
+          da.itsVisibility.set(casacore::Complex(-10.,15.));
           CPPUNIT_ASSERT_EQUAL(nBaselines, da.nRow());
           CPPUNIT_ASSERT_EQUAL(1u, da.nChannel());
           CPPUNIT_ASSERT_EQUAL(4u, da.nPol());
           da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
           da.itsNoise.set(1.);
           da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
-          da.itsFlag.set(casa::False);
+          da.itsFlag.set(casacore::False);
           da.itsFrequency.resize(da.nChannel());
           da.itsFrequency.set(1.4e9);
           da.itsAntenna1.resize(da.nRow());
@@ -215,8 +215,8 @@ namespace askap
           da.itsFeed2.resize(da.nRow());
           da.itsFeed1.set(0u);
           da.itsFeed2.set(0u);
-          for (casa::uInt ant1=0, row=0; ant1<nAnt; ++ant1) {
-               for (casa::uInt ant2=0; ant2<ant1; ++ant2,++row) {
+          for (casacore::uInt ant1=0, row=0; ant1<nAnt; ++ant1) {
+               for (casacore::uInt ant2=0; ant2<ant1; ++ant2,++row) {
                     CPPUNIT_ASSERT(row < da.nRow());
                     da.itsAntenna1[row] = ant1;
                     da.itsAntenna2[row] = ant2;
@@ -233,41 +233,41 @@ namespace askap
           // fill parameters
           itsParams1.reset(new scimath::Params);
           ASKAPDEBUGASSERT(itsParams1);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XX),
-                            casa::Complex(1.,0.));
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YY),
-                            casa::Complex(1.,0.));
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::XX),
+                            casacore::Complex(1.,0.));
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::YY),
+                            casacore::Complex(1.,0.));
                
-               const casa::Complex d12Term = casa::polar(d12[ant], float(xyPhase[ant]/180.*casa::C::pi));              
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::XY), d12Term);
-               const casa::Complex d21Term = casa::polar(d21[ant], -float(xyPhase[ant]/180.*casa::C::pi));              
-               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casa::Stokes::YX), d21Term);                            
+               const casacore::Complex d12Term = casacore::polar(d12[ant], float(xyPhase[ant]/180.*casacore::C::pi));              
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::XY), d12Term);
+               const casacore::Complex d21Term = casacore::polar(d21[ant], -float(xyPhase[ant]/180.*casacore::C::pi));              
+               itsParams1->add(accessors::CalParamNameHelper::paramName(ant,0,casacore::Stokes::YX), d21Term);                            
           }
           
           typedef Product<NoXPolGain,LeakageTerm> EffectType; 
           const EffectType effect(itsParams1);
-          for (casa::uInt testRow = 0; testRow < itsIter->nRow(); ++testRow) {                    
+          for (casacore::uInt testRow = 0; testRow < itsIter->nRow(); ++testRow) {                    
                const scimath::ComplexDiffMatrix cdm = effect.get(*itsIter,testRow);
-               const casa::uInt testAnt1 = itsIter->antenna1()[testRow];
-               const casa::uInt testAnt2 = itsIter->antenna2()[testRow];
-               casa::Matrix<casa::Complex> mueller(cdm.nRow(),cdm.nColumn());
+               const casacore::uInt testAnt1 = itsIter->antenna1()[testRow];
+               const casacore::uInt testAnt2 = itsIter->antenna2()[testRow];
+               casacore::Matrix<casacore::Complex> mueller(cdm.nRow(),cdm.nColumn());
                ASKAPDEBUGASSERT(mueller.nrow() == mueller.ncolumn());
-               casa::Vector<float> buf(mueller.nrow() * mueller.ncolumn() - mueller.nrow());
-               casa::uInt count = 0;
-               for (casa::uInt row=0; row<cdm.nRow(); ++row) {
-                    for (casa::uInt col=0; col<cdm.nColumn(); ++col) {
+               casacore::Vector<float> buf(mueller.nrow() * mueller.ncolumn() - mueller.nrow());
+               casacore::uInt count = 0;
+               for (casacore::uInt row=0; row<cdm.nRow(); ++row) {
+                    for (casacore::uInt col=0; col<cdm.nColumn(); ++col) {
                          mueller(row,col) = cdm(row,col).value();
                          if (row != col) {
                              CPPUNIT_ASSERT(count < buf.nelements());
-                             buf(count++) = casa::abs(mueller(row,col));
+                             buf(count++) = casacore::abs(mueller(row,col));
                          }
                     }
                }
                CPPUNIT_ASSERT_EQUAL(buf.nelements(), size_t(count));
                const float expectedMax = ((testAnt1 == 2) || (testAnt2 == 2)) ? 0.1 : 0.05;
-               CPPUNIT_ASSERT(casa::max(buf) < expectedMax); 
-               //std::cout<<testAnt1<<" "<<testAnt2<<" "<<casa::min(buf)<<" "<<casa::max(buf)<<" "<<casa::median(buf)<<std::endl;
+               CPPUNIT_ASSERT(casacore::max(buf) < expectedMax); 
+               //std::cout<<testAnt1<<" "<<testAnt2<<" "<<casacore::min(buf)<<" "<<casacore::max(buf)<<" "<<casacore::median(buf)<<std::endl;
           }
       }
       
@@ -278,30 +278,30 @@ namespace askap
           
           const EffectType effect(itsParams1);
           CPPUNIT_ASSERT(itsIter);
-          const casa::uInt nPol = 4;
+          const casacore::uInt nPol = 4;
           CPPUNIT_ASSERT(itsIter->stokes().nelements() == nPol);
           accessors::CachedCalSolutionAccessor acc(itsParams1);                    
           CPPUNIT_ASSERT(itsIter->nRow() > 0);
           CPPUNIT_ASSERT(itsIter->nPol() == nPol);
-          for (casa::uInt testRow = 0; testRow < itsIter->nRow(); ++testRow) {
+          for (casacore::uInt testRow = 0; testRow < itsIter->nRow(); ++testRow) {
           
                const scimath::ComplexDiffMatrix cdm = effect.get(*itsIter,testRow);
 
-               const casa::uInt testAnt1 = itsIter->antenna1()[testRow];
-               const casa::uInt testAnt2 = itsIter->antenna2()[testRow];
-               const casa::uInt testBeam1 = itsIter->feed1()[testRow];
-               const casa::uInt testBeam2 = itsIter->feed2()[testRow];
+               const casacore::uInt testAnt1 = itsIter->antenna1()[testRow];
+               const casacore::uInt testAnt2 = itsIter->antenna2()[testRow];
+               const casacore::uInt testBeam1 = itsIter->feed1()[testRow];
+               const casacore::uInt testBeam2 = itsIter->feed2()[testRow];
 
-               const casa::SquareMatrix<casa::Complex, 2> jones1 = acc.jones(testAnt1,testBeam1, 0);
-               const casa::SquareMatrix<casa::Complex, 2> jones2 = acc.jones(testAnt2,testBeam2, 0);
+               const casacore::SquareMatrix<casacore::Complex, 2> jones1 = acc.jones(testAnt1,testBeam1, 0);
+               const casacore::SquareMatrix<casacore::Complex, 2> jones2 = acc.jones(testAnt2,testBeam2, 0);
                
-               for (casa::uInt i = 0; i < nPol; ++i) {
-                    for (casa::uInt j = 0; j < nPol; ++j) {
+               for (casacore::uInt i = 0; i < nPol; ++i) {
+                    for (casacore::uInt j = 0; j < nPol; ++j) {
                          // element of the Mueller matrix obtained from first principles (outer product)
-                         const casa::Complex expected = jones1(i / 2, j / 2) * conj(jones2(i % 2, j % 2));
+                         const casacore::Complex expected = jones1(i / 2, j / 2) * conj(jones2(i % 2, j % 2));
                          CPPUNIT_ASSERT(i < cdm.nRow());
                          CPPUNIT_ASSERT(j < cdm.nColumn());                         
-                         const casa::Complex obtained = cdm(i,j).value();
+                         const casacore::Complex obtained = cdm(i,j).value();
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(real(expected),real(obtained),1e-6);
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(imag(expected),imag(obtained),1e-6);                         
                     }
@@ -347,10 +347,10 @@ namespace askap
           calME.correct(da);
 
           // check visibilities after calibration application
-          const casa::Cube<casa::Complex>& vis = da.visibility();
-          for (casa::uInt row = 0; row < da.nRow(); ++row) {
-               for (casa::uInt chan = 0; chan < da.nChannel(); ++chan) {
-                    for (casa::uInt pol = 0; pol < da.nPol(); ++pol) {
+          const casacore::Cube<casacore::Complex>& vis = da.visibility();
+          for (casacore::uInt row = 0; row < da.nRow(); ++row) {
+               for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
+                    for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
                     }
@@ -395,8 +395,8 @@ namespace askap
           
           itsParams2.reset(new scimath::Params);
           itsParams2->add("flux.i.cena", 1.);
-          itsParams2->add("direction.ra.cena", 0.*casa::C::arcsec);
-          itsParams2->add("direction.dec.cena", 0.*casa::C::arcsec);
+          itsParams2->add("direction.ra.cena", 0.*casacore::C::arcsec);
+          itsParams2->add("direction.dec.cena", 0.*casacore::C::arcsec);
           
           itsCE1.reset(new ComponentEquation(*itsParams2, itsIter));
           
@@ -412,7 +412,7 @@ namespace askap
           // check that itsParams1 and 2 are intact
           checkTwoParamsClasses(tmpParams2, *itsParams2);
           checkTwoParamsClasses(tmpParams1, *itsParams1);
-          const casa::Cube<casa::Complex> corruptedVis(da.visibility().copy());
+          const casacore::Cube<casacore::Complex> corruptedVis(da.visibility().copy());
           
           // now correct using the same solution source          
           CalibrationApplicatorME calME(cssPtr);
@@ -420,10 +420,10 @@ namespace askap
 
           
           // check visibilities after calibration application
-          const casa::Cube<casa::Complex>& vis = da.visibility();
-          for (casa::uInt row = 0; row < da.nRow(); ++row) {
-               for (casa::uInt chan = 0; chan < da.nChannel(); ++chan) {
-                    for (casa::uInt pol = 0; pol < da.nPol(); ++pol) {
+          const casacore::Cube<casacore::Complex>& vis = da.visibility();
+          for (casacore::uInt row = 0; row < da.nRow(); ++row) {
+               for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
+                    for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
                     }
@@ -435,9 +435,9 @@ namespace askap
           firstPrinciplesEqn->predict();
           // check that the result is the same as with the ME adapter
           CPPUNIT_ASSERT_EQUAL(corruptedVis.shape(),vis.shape());
-          for (casa::uInt row = 0; row < da.nRow(); ++row) {
-               for (casa::uInt chan = 0; chan < da.nChannel(); ++chan) {
-                    for (casa::uInt pol = 0; pol < da.nPol(); ++pol) {
+          for (casacore::uInt row = 0; row < da.nRow(); ++row) {
+               for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
+                    for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(real(vis(row,chan,pol)),real(corruptedVis(row,chan,pol)),1e-6);
                          CPPUNIT_ASSERT_DOUBLES_EQUAL(imag(vis(row,chan,pol)),imag(corruptedVis(row,chan,pol)),1e-6);                         
                     }
@@ -484,9 +484,9 @@ namespace askap
                 it!=freeNames.end();++it) {
                 CPPUNIT_ASSERT(itsParams2->has(*it));
                 CPPUNIT_ASSERT(itsParams1->has(*it));
-                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casacore::real(itsParams2->complexValue(*it) -
                                              itsParams1->complexValue(*it)), 0., 5e-3);
-                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casacore::imag(itsParams2->complexValue(*it) -
                                              itsParams1->complexValue(*it)), 0., 5e-3);
            }
        }
@@ -528,9 +528,9 @@ namespace askap
                 it!=freeNames.end();++it) {
                 CPPUNIT_ASSERT(itsParams2->has(*it));
                 CPPUNIT_ASSERT(itsParams1->has(*it));
-                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::real(itsParams2->complexValue(*it) -
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casacore::real(itsParams2->complexValue(*it) -
                                              itsParams1->complexValue(*it)), 0., 5e-3);
-                CPPUNIT_ASSERT_DOUBLES_EQUAL(casa::imag(itsParams2->complexValue(*it) -
+                CPPUNIT_ASSERT_DOUBLES_EQUAL(casacore::imag(itsParams2->complexValue(*it) -
                                              itsParams1->complexValue(*it)), 0., 5e-3);
            }
        }

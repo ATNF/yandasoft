@@ -73,16 +73,16 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
      void setUp() {
          itsParams.reset(new Params);
          itsParams->add("flux.i.src", 100.);
-         itsParams->add("direction.ra.src", 0.5*casa::C::arcsec);
-         itsParams->add("direction.dec.src", -0.3*casa::C::arcsec);
-         itsParams->add("shape.bmaj.src", 3.0e-3*casa::C::arcsec);
-         itsParams->add("shape.bmin.src", 2.0e-3*casa::C::arcsec);
-         itsParams->add("shape.bpa.src", -55*casa::C::degree);
+         itsParams->add("direction.ra.src", 0.5*casacore::C::arcsec);
+         itsParams->add("direction.dec.src", -0.3*casacore::C::arcsec);
+         itsParams->add("shape.bmaj.src", 3.0e-3*casacore::C::arcsec);
+         itsParams->add("shape.bmin.src", 2.0e-3*casacore::C::arcsec);
+         itsParams->add("shape.bpa.src", -55*casacore::C::degree);
          
          itsIter = accessors::SharedIter<accessors::DataIteratorStub>(new accessors::DataIteratorStub(1));
          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);
          ASKAPASSERT(da.itsStokes.nelements() == 1);
-         da.itsStokes[0] = casa::Stokes::I;   
+         da.itsStokes[0] = casacore::Stokes::I;   
          da.itsNoise.set(1.0);
          
          itsME.reset(new ComponentEquation(*itsParams, itsIter));               
@@ -98,16 +98,16 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(itsIter->nPol(),pacBuf.nPol());
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
-         CPPUNIT_ASSERT_EQUAL(1u,casa::uInt(pacBuf.flag().ncolumn()));
-         CPPUNIT_ASSERT_EQUAL(1u,casa::uInt(pacBuf.stokes().nelements()));
-         CPPUNIT_ASSERT_EQUAL(casa::Stokes::I, pacBuf.stokes()[0]);
+         CPPUNIT_ASSERT_EQUAL(1u,casacore::uInt(pacBuf.flag().ncolumn()));
+         CPPUNIT_ASSERT_EQUAL(1u,casacore::uInt(pacBuf.stokes().nelements()));
+         CPPUNIT_ASSERT_EQUAL(casacore::Stokes::I, pacBuf.stokes()[0]);
                   
-         for (casa::uInt row=0; row < pacBuf.nRow(); ++row)  {
+         for (casacore::uInt row=0; row < pacBuf.nRow(); ++row)  {
               CPPUNIT_ASSERT_EQUAL(itsIter->antenna1()[row],pacBuf.antenna1()[row]);
               CPPUNIT_ASSERT_EQUAL(itsIter->antenna2()[row],pacBuf.antenna2()[row]);
               CPPUNIT_ASSERT_EQUAL(itsIter->feed1()[row],pacBuf.feed1()[row]);
               CPPUNIT_ASSERT_EQUAL(itsIter->feed2()[row],pacBuf.feed2()[row]);
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    CPPUNIT_ASSERT_EQUAL(true,pacBuf.flag()(row,0,pol));
               }              
          }
@@ -115,7 +115,7 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
      
      /// @brief helper method to change the beam index for all accessor stub
      /// @param[in] beam new beam index
-     void setBeamIndex(const casa::uInt beam) {
+     void setBeamIndex(const casacore::uInt beam) {
          boost::shared_ptr<accessors::IDataAccessor> origDA(itsIter.operator->(),utility::NullDeleter());
          CPPUNIT_ASSERT(origDA);
          const boost::shared_ptr<accessors::DataAccessorStub> da = 
@@ -139,9 +139,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
-         CPPUNIT_ASSERT_EQUAL(4u,casa::uInt(pacBuf.stokes().nelements()));
+         CPPUNIT_ASSERT_EQUAL(4u,casacore::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
-         for (casa::uInt pol = 0; pol<4; ++pol) {
+         for (casacore::uInt pol = 0; pol<4; ++pol) {
               CPPUNIT_ASSERT_EQUAL(pol,scimath::PolConverter::getIndex(pacBuf.stokes()[pol]));
          }
          
@@ -170,9 +170,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(0u,pacBuf.ignoredDueToFlags());         
 
          const PolXProducts& pxp = pacBuf.polXProducts();
-         for (casa::uInt row=0; row<pacBuf.nRow(); ++row) {
+         for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    if ((pol == 0) && (pacBuf.feed1()[row] == 0)) {
                        CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,0,pol,pol))),
@@ -204,9 +204,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
-         CPPUNIT_ASSERT_EQUAL(4u,casa::uInt(pacBuf.stokes().nelements()));
+         CPPUNIT_ASSERT_EQUAL(4u,casacore::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
-         for (casa::uInt pol = 0; pol<4; ++pol) {
+         for (casacore::uInt pol = 0; pol<4; ++pol) {
               CPPUNIT_ASSERT_EQUAL(pol,scimath::PolConverter::getIndex(pacBuf.stokes()[pol]));
          }
          
@@ -235,9 +235,9 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(0u,pacBuf.ignoredDueToFlags());         
 
          const PolXProducts& pxp = pacBuf.polXProducts();
-         for (casa::uInt row=0; row<pacBuf.nRow(); ++row) {
+         for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    if ((pol == 0) && (pacBuf.feed1()[row] == 0)) {
                        CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,0,pol,pol))),
@@ -266,8 +266,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
          const scimath::PolXProducts &pxp = pacBuf.polXProducts();
-         for (casa::uInt pol1 = 0; pol1 < pacBuf.nPol(); ++pol1) {
-              for (casa::uInt pol2 = 0; pol2 <= pol1; ++pol2) {
+         for (casacore::uInt pol1 = 0; pol1 < pacBuf.nPol(); ++pol1) {
+              for (casacore::uInt pol2 = 0; pol2 <= pol1; ++pol2) {
                    // now check polarisation indexing inside pacBuf (now handled by PolXProducts class)
                    pxp.getModelProduct(0,0,pol1,pol2);
               }
@@ -275,12 +275,12 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
      }
      
      void testResults(const PreAvgCalBuffer &pacBuf, const int run = 1) {
-         for (casa::uInt row=0; row<pacBuf.nRow(); ++row) {
+         for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
               CPPUNIT_ASSERT(pacBuf.nPol() > 0);
               
               const scimath::PolXProducts &pxp = pacBuf.polXProducts();              
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,0,pol,pol))),
                                                 double(real(pxp.getModelMeasProduct(row,0,pol,pol))),1e-2*run);
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelMeasProduct(row,0,pol,pol))),1e-5);
@@ -290,23 +290,23 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                    CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                                     
     
                   // checking cross-pol terms, if any
-                  for (casa::uInt pol2 = 0; pol2<pol; ++pol2) {
-                       const casa::Complex expected = ((pol == 3) && (pol2 == 0)) ? casa::Complex(80000.*run,0.) : casa::Complex(0.,0.);
-                       CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelProduct(row,0,pol,pol2)),1e-2*run);
-                       CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelMeasProduct(row,0,pol,pol2)),1e-2*run);
+                  for (casacore::uInt pol2 = 0; pol2<pol; ++pol2) {
+                       const casacore::Complex expected = ((pol == 3) && (pol2 == 0)) ? casacore::Complex(80000.*run,0.) : casacore::Complex(0.,0.);
+                       CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelProduct(row,0,pol,pol2)),1e-2*run);
+                       CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelMeasProduct(row,0,pol,pol2)),1e-2*run);
                   }
               }
          }
      }
 
      void testFrequencyDependentResults(const PreAvgCalBuffer &pacBuf, const int run = 1) {
-         for (casa::uInt row=0; row<pacBuf.nRow(); ++row) {
+         for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
               CPPUNIT_ASSERT(pacBuf.nPol() > 0);
               
               const scimath::PolXProducts &pxp = pacBuf.polXProducts();              
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
-                   for (casa::uInt chan=0; chan<pacBuf.nChannel(); ++chan) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+                   for (casacore::uInt chan=0; chan<pacBuf.nChannel(); ++chan) {
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,chan,pol,pol))),
                                                      double(real(pxp.getModelMeasProduct(row,chan,pol,pol))),1e-2*run);
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelMeasProduct(row,chan,pol,pol))),1e-5);
@@ -316,10 +316,10 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                         CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,chan,pol));                                     
     
                         // checking cross-pol terms, if any
-                        for (casa::uInt pol2 = 0; pol2<pol; ++pol2) {
-                             const casa::Complex expected = ((pol == 3) && (pol2 == 0)) ? casa::Complex(10000.*run,0.) : casa::Complex(0.,0.);
-                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelProduct(row,chan,pol,pol2)),1e-2*run);
-                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelMeasProduct(row,chan,pol,pol2)),1e-2*run);
+                        for (casacore::uInt pol2 = 0; pol2<pol; ++pol2) {
+                             const casacore::Complex expected = ((pol == 3) && (pol2 == 0)) ? casacore::Complex(10000.*run,0.) : casacore::Complex(0.,0.);
+                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelProduct(row,chan,pol,pol2)),1e-2*run);
+                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelMeasProduct(row,chan,pol,pol2)),1e-2*run);
                         }
                         
                    }
@@ -420,14 +420,14 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
 
          //
          const scimath::PolXProducts &pxp = pacBuf.polXProducts();                            
-         for (casa::uInt row=0; row<pacBuf.nRow(); ++row) {
+         for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
               const bool dataExpected = (pacBuf.feed1()[row] == 0);
               
               // test pattern is different from testFrequencyDependentResults as only the first 
               // polarisation product as the dummy accessor has data
-              for (casa::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
-                   for (casa::uInt chan=0; chan<pacBuf.nChannel(); ++chan) {
+              for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
+                   for (casacore::uInt chan=0; chan<pacBuf.nChannel(); ++chan) {
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,chan,pol,pol))),
                                                      double(real(pxp.getModelMeasProduct(row,chan,pol,pol))),1e-2);
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelMeasProduct(row,chan,pol,pol))),1e-5);
@@ -437,11 +437,11 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                         CPPUNIT_ASSERT_EQUAL(!dataExpected || (pol > 0), pacBuf.flag()(row,chan,pol));                                     
     
                         // checking cross-pol terms, if any
-                        for (casa::uInt pol2 = 0; pol2<pol; ++pol2) {
-                             //const casa::Complex expected = ((pol == 3) && (pol2 == 0)) ? casa::Complex(10000.*run,0.) : casa::Complex(0.,0.);
-                             const casa::Complex expected(0.,0.);
-                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelProduct(row,chan,pol,pol2)),1e-2);
-                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casa::abs(expected - pxp.getModelMeasProduct(row,chan,pol,pol2)),1e-2);
+                        for (casacore::uInt pol2 = 0; pol2<pol; ++pol2) {
+                             //const casacore::Complex expected = ((pol == 3) && (pol2 == 0)) ? casacore::Complex(10000.*run,0.) : casacore::Complex(0.,0.);
+                             const casacore::Complex expected(0.,0.);
+                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelProduct(row,chan,pol,pol2)),1e-2);
+                             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,casacore::abs(expected - pxp.getModelMeasProduct(row,chan,pol,pol2)),1e-2);
                         }
                         
                    }
@@ -451,21 +451,21 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
      }
      
      void testAccumulateXPol() {
-         casa::Vector<casa::Stokes::StokesTypes> stokes(4);
-         stokes[0] = casa::Stokes::XX;
-         stokes[1] = casa::Stokes::XY;
-         stokes[2] = casa::Stokes::YX;
-         stokes[3] = casa::Stokes::YY;         
+         casacore::Vector<casacore::Stokes::StokesTypes> stokes(4);
+         stokes[0] = casacore::Stokes::XX;
+         stokes[1] = casacore::Stokes::XY;
+         stokes[2] = casacore::Stokes::YX;
+         stokes[3] = casacore::Stokes::YY;         
 
          CPPUNIT_ASSERT(itsIter);       
          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);          
          da.itsStokes.assign(stokes.copy());
          da.itsVisibility.resize(da.nRow(), da.nChannel() ,4);
-         da.itsVisibility.set(casa::Complex(-10.,15.));
+         da.itsVisibility.set(casacore::Complex(-10.,15.));
          da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
          da.itsNoise.set(1.);
          da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
-         da.itsFlag.set(casa::False);
+         da.itsFlag.set(casacore::False);
 
          CPPUNIT_ASSERT(itsParams);
          // increase Stokes I flux, so individual polarisation products would get the same

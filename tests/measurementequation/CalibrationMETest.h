@@ -94,10 +94,10 @@ namespace askap
           CPPUNIT_ASSERT(params);
           const std::string baseName = (chan >= 0 ? accessors::CalParamNameHelper::bpPrefix() : std::string()) + "gain";
           // taking care of the absolute phase uncertainty
-          const casa::uInt refAnt = 0;
+          const casacore::uInt refAnt = 0;
           const std::string refParamName = baseName + ".g11."+toString(refAnt)+".0" + (chan < 0 ? std::string() :
                       std::string(".") + toString(chan));
-          const casa::Complex refPhaseTerm = casa::polar(1.f, 
+          const casacore::Complex refPhaseTerm = casacore::polar(1.f, 
                   -arg(params->complexValue(refParamName)));
                        
           std::vector<std::string> freeNames(params->freeNames());
@@ -110,7 +110,7 @@ namespace askap
                         params->complexValue(parname)*refPhaseTerm);                                 
                } else if (parname.find("bp.gain") == 0) {
                    CPPUNIT_ASSERT(chan >= 0);
-                   if (accessors::CalParamNameHelper::extractChannelInfo(parname).first == casa::uInt(chan)) {
+                   if (accessors::CalParamNameHelper::extractChannelInfo(parname).first == casacore::uInt(chan)) {
                        params->update(parname,
                            params->complexValue(parname)*refPhaseTerm);                                 
                    }
@@ -138,7 +138,7 @@ namespace askap
                if (it->find(".g22") == 0) {
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params2->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
-                   const casa::Complex diff = params2->complexValue(parname)- 
+                   const casacore::Complex diff = params2->complexValue(parname)- 
                           (isBP ? params1->complexValue(accessors::CalParamNameHelper::extractChannelInfo("gain"+*it).second) : 
                           params1->complexValue(parname));
                    //std::cout<<parname<<" "<<diff<<" "<<abs(diff)<<std::endl;        
@@ -171,10 +171,10 @@ namespace askap
           idi = boost::shared_ptr<accessors::DataIteratorStub>(new accessors::DataIteratorStub(1));
           accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*idi);
           ASKAPASSERT(da.itsStokes.nelements() == 1);
-          da.itsStokes[0] = casa::Stokes::XX;
+          da.itsStokes[0] = casacore::Stokes::XX;
           
-          const casa::uInt nAnt = 30;
-          //const casa::uInt nAnt1 = 6;
+          const casacore::uInt nAnt = 30;
+          //const casacore::uInt nAnt1 = 6;
           const double realGains[nAnt] = {1.1, 0.9, 1.05, 0.87, 1.333,
                                           1.1, 1.0, 1.0, -1.0, 0.3, 
                                          -0.5, 1.1, 0.9, 0.98, 1.03,
@@ -190,14 +190,14 @@ namespace askap
           
           params1.reset(new Params);
           params1->add("flux.i.cena", 100.);
-          params1->add("direction.ra.cena", 0.5*casa::C::arcsec);
-          params1->add("direction.dec.cena", -0.3*casa::C::arcsec);
-          params1->add("shape.bmaj.cena", 3.0e-3*casa::C::arcsec);
-          params1->add("shape.bmin.cena", 2.0e-3*casa::C::arcsec);
-          params1->add("shape.bpa.cena", -55*casa::C::degree);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
+          params1->add("direction.ra.cena", 0.5*casacore::C::arcsec);
+          params1->add("direction.dec.cena", -0.3*casacore::C::arcsec);
+          params1->add("shape.bmaj.cena", 3.0e-3*casacore::C::arcsec);
+          params1->add("shape.bmin.cena", 2.0e-3*casacore::C::arcsec);
+          params1->add("shape.bpa.cena", -55*casacore::C::degree);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
                params1->add("gain.g11."+toString(ant)+".0",
-                            casa::Complex(realGains[ant],imagGains[ant]));
+                            casacore::Complex(realGains[ant],imagGains[ant]));
                params1->add("gain.g22."+toString(ant)+".0",1.);
           }
 
@@ -206,13 +206,13 @@ namespace askap
 
           params2.reset(new Params);
           params2->add("flux.i.cena", 100.);
-          params2->add("direction.ra.cena", 0.50000*casa::C::arcsec);
-          params2->add("direction.dec.cena", -0.30000*casa::C::arcsec);
-          params2->add("shape.bmaj.cena", 3.0e-3*casa::C::arcsec);
-          params2->add("shape.bmin.cena", 2.0e-3*casa::C::arcsec);
-          params2->add("shape.bpa.cena", -55*casa::C::degree);
-          for (casa::uInt ant=0; ant<nAnt; ++ant) {
-               params2->add("gain.g11."+toString(ant)+".0",casa::Complex(1.0,0.0));
+          params2->add("direction.ra.cena", 0.50000*casacore::C::arcsec);
+          params2->add("direction.dec.cena", -0.30000*casacore::C::arcsec);
+          params2->add("shape.bmaj.cena", 3.0e-3*casacore::C::arcsec);
+          params2->add("shape.bmin.cena", 2.0e-3*casacore::C::arcsec);
+          params2->add("shape.bpa.cena", -55*casacore::C::degree);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+               params2->add("gain.g11."+toString(ant)+".0",casacore::Complex(1.0,0.0));
                params2->add("gain.g22."+toString(ant)+".0",1.0);
                params2->fix("gain.g22."+toString(ant)+".0");
           }
@@ -319,7 +319,7 @@ namespace askap
           for (std::vector<std::string>::const_iterator it = freeNames.begin();
                it!=freeNames.end();++it) {
                if (it->find("gain") == 0) {
-                   for (casa::uInt chan = 0; chan < idi->nChannel(); ++chan) {
+                   for (casacore::uInt chan = 0; chan < idi->nChannel(); ++chan) {
                         params2->add(accessors::CalParamNameHelper::addChannelInfo(accessors::CalParamNameHelper::bpPrefix()+*it,chan),
                                   params2->complexValue(*it));
                         params2->fix(*it);
@@ -341,7 +341,7 @@ namespace askap
                //std::cout<<q<<std::endl;               
                               
                // taking care of the absolute phase uncertainty
-               for (casa::uInt chan = 0; chan<idi->nChannel(); ++chan) {               
+               for (casacore::uInt chan = 0; chan<idi->nChannel(); ++chan) {               
                     rotatePhase(params2,int(chan));
                }
           //std::cout<<*params2<<std::endl;
@@ -358,7 +358,7 @@ namespace askap
           for (std::vector<std::string>::const_iterator it = freeNames.begin();
                it!=freeNames.end();++it) {
                if (it->find("gain") == 0) {
-                   for (casa::uInt chan = 0; chan < idi->nChannel(); ++chan) {
+                   for (casacore::uInt chan = 0; chan < idi->nChannel(); ++chan) {
                         params2->add(accessors::CalParamNameHelper::addChannelInfo(accessors::CalParamNameHelper::bpPrefix()+*it,chan),
                                   params2->complexValue(*it));
                         params2->fix(*it);
@@ -385,7 +385,7 @@ namespace askap
                //std::cout<<q<<std::endl;
 
                // taking care of the absolute phase uncertainty
-               for (casa::uInt chan = 0; chan<idi->nChannel(); ++chan) {
+               for (casacore::uInt chan = 0; chan<idi->nChannel(); ++chan) {
                     rotatePhase(params2,int(chan));
                }
           }

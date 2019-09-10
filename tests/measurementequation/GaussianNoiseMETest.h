@@ -56,19 +56,19 @@ namespace synthesis
      { 
        accessors::DataAccessorStub acc(true);
        const double variance = 0.1;
-       const casa::uInt nRuns = 100;
+       const casacore::uInt nRuns = 100;
        GaussianNoiseME me(variance);
        double s = 0., s2 = 0., riCovar = 0.;
-       casa::uInt cnt = 0;
-       for (casa::uInt run=0; run<nRuns; ++run) {
+       casacore::uInt cnt = 0;
+       for (casacore::uInt run=0; run<nRuns; ++run) {
             me.predict(acc);
-            const casa::Vector<casa::Complex> visVec = 
-                  acc.rwVisibility().reform(casa::IPosition(1,acc.visibility().nelements()));
-            for (casa::uInt elem = 0; elem<visVec.nelements(); ++elem) {
-                 const casa::Complex cVal = visVec[elem];
-                 s += casa::real(cVal)+casa::imag(cVal);
-                 s2 += casa::norm(cVal);
-                 riCovar += casa::real(cVal)*casa::imag(cVal);
+            const casacore::Vector<casacore::Complex> visVec = 
+                  acc.rwVisibility().reform(casacore::IPosition(1,acc.visibility().nelements()));
+            for (casacore::uInt elem = 0; elem<visVec.nelements(); ++elem) {
+                 const casacore::Complex cVal = visVec[elem];
+                 s += casacore::real(cVal)+casacore::imag(cVal);
+                 s2 += casacore::norm(cVal);
+                 riCovar += casacore::real(cVal)*casacore::imag(cVal);
                  ++cnt;
             }
        }

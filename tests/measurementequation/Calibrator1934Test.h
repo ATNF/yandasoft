@@ -71,15 +71,15 @@ public:
       ComponentEquation ce(ip,idi);
       ce.predict();
       const double fluxes[] = {10.631, 13.181, 14.292, 14.768, 15.055, 15.138, 14.926, 14.389};
-      for (casa::uInt ch = 0; ch<acc.nChannel(); ++ch) {
-           const casa::Matrix<casa::Complex> vis = acc.itsVisibility.xzPlane(ch);
+      for (casacore::uInt ch = 0; ch<acc.nChannel(); ++ch) {
+           const casacore::Matrix<casacore::Complex> vis = acc.itsVisibility.xzPlane(ch);
            const double expectedFlux = fluxes[ch];
            CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
            CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
            
-           for (casa::uInt row = 0; row<vis.nrow(); ++row) {
-                for (casa::uInt col = 0; col<vis.ncolumn(); ++col) {
-                     const casa::Complex simFlux = vis(row,col); 
+           for (casacore::uInt row = 0; row<vis.nrow(); ++row) {
+                for (casacore::uInt col = 0; col<vis.ncolumn(); ++col) {
+                     const casacore::Complex simFlux = vis(row,col); 
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(expectedFlux, static_cast<double>(real(simFlux)), 1e-3);
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(0., static_cast<double>(imag(simFlux)), 1e-3);                     
                 }
@@ -93,19 +93,19 @@ public:
       accessors::DataAccessorStub &acc = dynamic_cast<accessors::DataAccessorStub&>(*idi);
       ASKAPASSERT(acc.itsStokes.nelements() == 1);
           
-      casa::Vector<casa::Stokes::StokesTypes> stokes(4);
-      stokes[0] = casa::Stokes::XX;
-      stokes[1] = casa::Stokes::XY;
-      stokes[2] = casa::Stokes::YX;
-      stokes[3] = casa::Stokes::YY;         
+      casacore::Vector<casacore::Stokes::StokesTypes> stokes(4);
+      stokes[0] = casacore::Stokes::XX;
+      stokes[1] = casacore::Stokes::XY;
+      stokes[2] = casacore::Stokes::YX;
+      stokes[3] = casacore::Stokes::YY;         
           
       acc.itsStokes.assign(stokes.copy());
       acc.itsVisibility.resize(acc.nRow(), acc.nChannel() ,4);
-      acc.itsVisibility.set(casa::Complex(-10.,15.));
+      acc.itsVisibility.set(casacore::Complex(-10.,15.));
       acc.itsNoise.resize(acc.nRow(),acc.nChannel(),acc.nPol());
       acc.itsNoise.set(1.);
       acc.itsFlag.resize(acc.nRow(),acc.nChannel(),acc.nPol());
-      acc.itsFlag.set(casa::False);
+      acc.itsFlag.set(casacore::False);
 
       // fill frequency axis with some points for which we know the flux of 1934-638 from miriad's calplot task
       const double freqs[] = {598.9e6,769.7e6,897.8e6,990.3e6,1094.6e6,1201.4e6,1391.1e6,1595.1e6};
@@ -117,16 +117,16 @@ public:
       ce.predict();
       CPPUNIT_ASSERT_EQUAL(4u, acc.nPol());
       const double fluxes[] = {10.631, 13.181, 14.292, 14.768, 15.055, 15.138, 14.926, 14.389};
-      for (casa::uInt ch = 0; ch<acc.nChannel(); ++ch) {
-           const casa::Matrix<casa::Complex> vis = acc.itsVisibility.xzPlane(ch);
+      for (casacore::uInt ch = 0; ch<acc.nChannel(); ++ch) {
+           const casacore::Matrix<casacore::Complex> vis = acc.itsVisibility.xzPlane(ch);
            CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
            CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
-           for (casa::uInt pol = 0; pol<acc.nPol(); ++pol) {
+           for (casacore::uInt pol = 0; pol<acc.nPol(); ++pol) {
                 // we simulate XX and YY; x-pols should all be zeros 
                 const double expectedFlux = (pol % 3 == 0) ? fluxes[ch] * 0.5 : 0.;
            
-                for (casa::uInt row = 0; row<vis.nrow(); ++row) {
-                     const casa::Complex simFlux = vis(row,pol); 
+                for (casacore::uInt row = 0; row<vis.nrow(); ++row) {
+                     const casacore::Complex simFlux = vis(row,pol); 
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(expectedFlux, static_cast<double>(real(simFlux)), 1e-3);
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(0., static_cast<double>(imag(simFlux)), 1e-3);                     
                 }
