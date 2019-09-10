@@ -73,7 +73,7 @@ namespace askap
         void testGaussianTaperCache() 
         {
           GaussianTaperCache gtc(25.,15.,-M_PI/18.);
-          casa::Array<casa::Complex> taper = gtc.taper(casa::IPosition(4,128,128,1,1));
+          casacore::Array<casacore::Complex> taper = gtc.taper(casacore::IPosition(4,128,128,1,1));
           
           std::vector<std::string> direction(3);
           direction[0]="12h30m00.0";
@@ -82,17 +82,17 @@ namespace askap
         
           std::vector<int> shape(2,128);
           std::vector<std::string> cellsize(2,"1arcsec");
-          casa::Vector<casa::Stokes::StokesTypes> stokes(1, casa::Stokes::I);
+          casacore::Vector<casacore::Stokes::StokesTypes> stokes(1, casacore::Stokes::I);
           
           scimath::Params params;
           SynthesisParamsHelper::add(params,"psf.test",direction,cellsize,shape,false,1.4e9,
                               1.4e9,1,stokes);
           
-          casa::Array<double> temp(taper.shape());
-          casa::convertArray<double,float>(temp, amplitude(taper));
+          casacore::Array<double> temp(taper.shape());
+          casacore::convertArray<double,float>(temp, amplitude(taper));
           params.update("psf.test",temp);
           
-          casa::Vector<casa::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.test");
+          casacore::Vector<casacore::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.test");
           CPPUNIT_ASSERT(fit.nelements() == 3);
           // the cell size is 1 arcsec, so the tolerance of 0.1 arcsec seems good enough
           CPPUNIT_ASSERT(fabs(fit[0].getValue("arcsec")-25.)<0.1);
@@ -104,39 +104,39 @@ namespace askap
         void testGaussianTaper()
         {
           GaussianTaperPreconditioner gtp(25.,15.,M_PI/18.);
-          casa::IPosition shape(2,128,128);
-          casa::Array<float> psf(shape), dirty(shape), pcf;
+          casacore::IPosition shape(2,128,128);
+          casacore::Array<float> psf(shape), dirty(shape), pcf;
           psf.set(0.); dirty.set(0.);
-          dirty(casa::IPosition(2,64,64)) = 1.;
+          dirty(casacore::IPosition(2,64,64)) = 1.;
           
-          casa::IPosition index(2);
+          casacore::IPosition index(2);
           const double fwhm2sigma = sqrt(8.*log(2.));
           for (index[0] = 0; index[0]<128; ++index[0]) {
                for (index[1] = 0; index[1]<128; ++index[1]) {
                     const double xOffset = (double(index[0])-64.);
                     const double yOffset = (double(index[1])-64.);
-                    const double expFactor = exp(-casa::square(xOffset/2*fwhm2sigma)/2.-
-                            casa::square(yOffset/1.3*fwhm2sigma)/2.);
+                    const double expFactor = exp(-casacore::square(xOffset/2*fwhm2sigma)/2.-
+                            casacore::square(yOffset/1.3*fwhm2sigma)/2.);
                     psf(index) = expFactor;
                }
           }
   
           gtp.doPreconditioning(psf,dirty,pcf);
           
-          casa::ArrayLattice<float> psfLattice(psf);
-          casa::ArrayLattice<casa::Complex> scratch(psf.shape());
-          scratch.copyData(casa::LatticeExpr<casa::Complex>(toComplex(psfLattice)));          
-          casa::LatticeFFT::cfft2d(scratch, true);
-          psfLattice.copyData(casa::LatticeExpr<float> ( real(scratch) ));
+          casacore::ArrayLattice<float> psfLattice(psf);
+          casacore::ArrayLattice<casacore::Complex> scratch(psf.shape());
+          scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(psfLattice)));          
+          casacore::LatticeFFT::cfft2d(scratch, true);
+          psfLattice.copyData(casacore::LatticeExpr<float> ( real(scratch) ));
           
           
-          casa::LogIO logger;
-          casa::Fit2D fitter(logger);
-          casa::Vector<casa::Double> param = fitter.estimate(casa::Fit2D::GAUSSIAN, psf);
-          fitter.addModel(casa::Fit2D::GAUSSIAN, param);
-          casa::Array<float> sigma(psf.shape());
+          casacore::LogIO logger;
+          casacore::Fit2D fitter(logger);
+          casacore::Vector<casacore::Double> param = fitter.estimate(casacore::Fit2D::GAUSSIAN, psf);
+          fitter.addModel(casacore::Fit2D::GAUSSIAN, param);
+          casacore::Array<float> sigma(psf.shape());
           sigma.set(1.);
-          CPPUNIT_ASSERT(fitter.fit(psf,sigma) == casa::Fit2D::OK);
+          CPPUNIT_ASSERT(fitter.fit(psf,sigma) == casacore::Fit2D::OK);
           param = fitter.availableSolution();
 
           /// @todo We need to revisit normalisation factors at some stage, 

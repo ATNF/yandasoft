@@ -52,10 +52,10 @@ namespace askap
       void testCreateExplicit() {
          RestoringBeamHelper rbh;
          CPPUNIT_ASSERT(!rbh.valid());
-         casa::Vector<casa::Quantum<double> > beam(3);
-         beam[0] = casa::Quantity(0.001,"rad");
-         beam[1] = casa::Quantity(0.002,"rad");
-         beam[2] = casa::Quantity(-1.1,"rad");         
+         casacore::Vector<casacore::Quantum<double> > beam(3);
+         beam[0] = casacore::Quantity(0.001,"rad");
+         beam[1] = casacore::Quantity(0.002,"rad");
+         beam[2] = casacore::Quantity(-1.1,"rad");         
          rbh.assign(beam);
          CPPUNIT_ASSERT(rbh.valid());
          CPPUNIT_ASSERT(!rbh.fitRequired());

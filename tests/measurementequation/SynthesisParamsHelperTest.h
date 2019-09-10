@@ -83,20 +83,20 @@ namespace askap
           direction[2]="J2000";
           std::vector<int> SourceShape(2,4096);
           std::vector<std::string> cellsize(2,"30arcsec");
-          casa::Vector<casa::Stokes::StokesTypes> stokes(1, casa::Stokes::I);
+          casacore::Vector<casacore::Stokes::StokesTypes> stokes(1, casacore::Stokes::I);
 
           SynthesisParamsHelper::add(SourceParams,"testsrc",direction,cellsize,SourceShape,false,1.4e9,
                                      1.4e9,1,stokes);
 
           // lets add some thing to the Model
 
-          const casa::DirectionCoordinate csSource =
+          const casacore::DirectionCoordinate csSource =
                    SynthesisParamsHelper::directionCoordinate(SourceParams,"testsrc");
 
-          casa::Vector<double> world(2);
+          casacore::Vector<double> world(2);
 
                    // first get blc
-          casa::Vector<double> blcPixel(2);
+          casacore::Vector<double> blcPixel(2);
           blcPixel(0)=double(SourceShape[0]/2);
           blcPixel(1)=double(SourceShape[1]/2);
 
@@ -112,7 +112,7 @@ namespace askap
           // will also set a particular sky position to 5.0
           //
           // set a pixel iterator that does not have the higher dimensions
-          casa::IPosition pos(4,int(SourceShape[0]/2),int(SourceShape[0]/2),0,0);
+          casacore::IPosition pos(4,int(SourceShape[0]/2),int(SourceShape[0]/2),0,0);
           SourceParams.value("testsrc")(pos) = 5.0;
 
           // this is the local is the local model
@@ -137,8 +137,8 @@ namespace askap
 
           // now lets look at the params
 
-          casa::Array<double> arr = SinkParams.value("testsrc");
-          const casa::IPosition OutShape = arr.shape();
+          casacore::Array<double> arr = SinkParams.value("testsrc");
+          const casacore::IPosition OutShape = arr.shape();
 
           //std::cout << "Global Shape before " << SourceShape[0] << "," << SourceShape[1] << std::endl;
           //std::cout << "Local Shape before " << SinkShape[0] << "," <<   SinkShape[1]  << std::endl;
@@ -147,13 +147,13 @@ namespace askap
           CPPUNIT_ASSERT(OutShape[0] == SinkShape[0]);
           CPPUNIT_ASSERT(OutShape[1] == SinkShape[1]);
 
-          const casa::DirectionCoordinate csSink =
+          const casacore::DirectionCoordinate csSink =
                    SynthesisParamsHelper::directionCoordinate(SinkParams,"testsrc");
 
 
           csSink.toPixel(blcPixel,world);
 
-          casa::IPosition pos2(4,int(blcPixel(0)),int(blcPixel(1)),0,0);
+          casacore::IPosition pos2(4,int(blcPixel(0)),int(blcPixel(1)),0,0);
 
           double before = SourceParams.value("testsrc")(pos);
           double after = SinkParams.value("testsrc")(pos2);
@@ -181,7 +181,7 @@ namespace askap
            ASKAPASSERT(is);
            int npoints;
            is>>npoints;
-           casa::Matrix<casa::Float> arr(npoints,npoints,0.);
+           casacore::Matrix<casacore::Float> arr(npoints,npoints,0.);
            for (int x=0;x<npoints;++x) {
                 for (int y=0; y<npoints;++y) {
                      ASKAPASSERT(is);
@@ -232,30 +232,30 @@ namespace askap
            makeParameter(params,"psf.testsrc",1);
            const askap::scimath::Axes axes = params.axes("psf.testsrc");
            CPPUNIT_ASSERT(axes.hasDirection());
-           casa::Vector<casa::Double> increments = axes.directionAxis().increment();
+           casacore::Vector<casacore::Double> increments = axes.directionAxis().increment();
            CPPUNIT_ASSERT(increments.nelements() == 2);
            CPPUNIT_ASSERT(fabs(fabs(increments[0])-fabs(increments[1]))<1e-6);
-           casa::IPosition shape = params.value("psf.testsrc").shape();
+           casacore::IPosition shape = params.value("psf.testsrc").shape();
            CPPUNIT_ASSERT(shape.nonDegenerate().nelements() == 2);
            CPPUNIT_ASSERT(shape[0] == shape[1]);
-           casa::Array<float> dirty(shape,0.);
-           casa::Array<float> psfArray(shape,0.);
-           casa::Array<float> pcfArray(shape,0.);
-           casa::Matrix<float> psf(psfArray.nonDegenerate());
-           casa::Matrix<float> pcf(pcfArray.nonDegenerate());
+           casacore::Array<float> dirty(shape,0.);
+           casacore::Array<float> psfArray(shape,0.);
+           casacore::Array<float> pcfArray(shape,0.);
+           casacore::Matrix<float> psf(psfArray.nonDegenerate());
+           casacore::Matrix<float> pcf(pcfArray.nonDegenerate());
            psf(shape[0]/2,shape[1]/2) = 1.;
            pcf(shape[0]/2,shape[1]/2) = 1.;
-           const double factor = 4.*log(2.) * fabs(increments[0]) * shape[0] / casa::C::pi;
+           const double factor = 4.*log(2.) * fabs(increments[0]) * shape[0] / casacore::C::pi;
            GaussianTaperPreconditioner gp(factor/SynthesisParamsHelper::convertQuantity("20arcsec","rad"));
            gp.doPreconditioning(psfArray,dirty,pcfArray);
 
            // update the parameter
-           casa::Array<double> temp(psfArray.shape());
-           casa::convertArray<double,float>(temp,psfArray);
+           casacore::Array<double> temp(psfArray.shape());
+           casacore::convertArray<double,float>(temp,psfArray);
            params.update("psf.testsrc",temp);
            //
 
-           casa::Vector<casa::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.testsrc");
+           casacore::Vector<casacore::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.testsrc");
            CPPUNIT_ASSERT(fit.nelements() == 3);
            // the cell size is 8 arcsec, so the tolerance of 0.5 arcsec seems good enough
            CPPUNIT_ASSERT(fabs(fit[0].getValue("arcsec")-20.)<0.5);
@@ -285,7 +285,7 @@ namespace askap
            const std::vector<std::string> &facets = params.freeNames();
            for (std::vector<std::string>::const_iterator ci = facets.begin(); ci!=facets.end(); ++ci) {
                  CPPUNIT_ASSERT(SynthesisParamsHelper::getFacet(params,*ci).shape() ==
-                          casa::IPosition(4,128,128,1,1));
+                          casacore::IPosition(4,128,128,1,1));
            }
         }
 
@@ -296,10 +296,10 @@ namespace askap
            makeParameter(params,"testsrc",2,facetStep);
            params.value("testsrc.facet.0.0").set(1.);
            SynthesisParamsHelper::clipImage(params,"testsrc.facet.0.0");
-           casa::Array<double> arr = params.value("testsrc.facet.0.0");
-           const casa::IPosition shape = arr.shape();
+           casacore::Array<double> arr = params.value("testsrc.facet.0.0");
+           const casacore::IPosition shape = arr.shape();
            ASKAPDEBUGASSERT(shape.nelements()>=2);
-           casa::IPosition index(shape.nelements(),0);
+           casacore::IPosition index(shape.nelements(),0);
            for (index[0]=0; index[0]<shape[0]; ++index[0]) {
                 for (index[1]=0; index[1]<shape[1]; ++index[1]) {
                      const bool isCentre = (index[0]>=(shape[0]-facetStep)/2) &&
@@ -334,7 +334,7 @@ namespace askap
                 for (int facetY = 0; facetY<nFacets; ++facetY) {
                      ImageParamsHelper iph("testsrc",facetX,facetY);
 
-                     casa::IPosition blc(4,0),trc(4,0);
+                     casacore::IPosition blc(4,0),trc(4,0);
 
                      //std::cout<<std::endl<<"facet "<<facetX<<" "<<facetY<<std::endl;
 
@@ -344,7 +344,7 @@ namespace askap
                      trc[1] = blc[1]+facetStep-1;
                      //std::cout<<"blc="<<blc<<" trc="<<trc<<std::endl;
 
-                     casa::IPosition blc2,trc2;
+                     casacore::IPosition blc2,trc2;
                      getCorners(params,iph.name(),iph.paramName(),facetStep, blc2,trc2);
                      CPPUNIT_ASSERT((blc2.nelements()>=2) && (trc2.nelements()>=2));
                      //std::cout<<"blc="<<blc2<<" trc="<<trc2<<std::endl;
@@ -352,10 +352,10 @@ namespace askap
                      // there is no exact match between two images, although we're using
                      // the same projection. Probably it is the second order effect
                      // resulted from approximation of the sphere by a plane.
-                     CPPUNIT_ASSERT(casa::abs(blc[0]-blc2[0])<=5);
-                     CPPUNIT_ASSERT(casa::abs(blc[1]-blc2[1])<=5);
-                     CPPUNIT_ASSERT(casa::abs(trc[0]-trc2[0])<=5);
-                     CPPUNIT_ASSERT(casa::abs(trc[1]-trc2[1])<=5);
+                     CPPUNIT_ASSERT(casacore::abs(blc[0]-blc2[0])<=5);
+                     CPPUNIT_ASSERT(casacore::abs(blc[1]-blc2[1])<=5);
+                     CPPUNIT_ASSERT(casacore::abs(trc[0]-trc2[0])<=5);
+                     CPPUNIT_ASSERT(casacore::abs(trc[1]-trc2[1])<=5);
 
                 }
            }
@@ -375,9 +375,9 @@ namespace askap
         /// @param[out] trc top right corner of the patch inside the full image
         static void getCorners(askap::scimath::Params &params, const std::string &fullName,
                      const std::string &patchName, const int patchSize,
-                     casa::IPosition &blc, casa::IPosition &trc)
+                     casacore::IPosition &blc, casacore::IPosition &trc)
         {
-           const casa::Array<double> fullImage = params.value(fullName);
+           const casacore::Array<double> fullImage = params.value(fullName);
 
            blc = fullImage.shape();
            trc = fullImage.shape();
@@ -389,21 +389,21 @@ namespace askap
                 trc[i] -= 1;
            }
 
-           const casa::IPosition patchShape = params.value(patchName).shape();
+           const casacore::IPosition patchShape = params.value(patchName).shape();
            ASKAPDEBUGASSERT(patchShape.nelements()>=2);
            ASKAPDEBUGASSERT((patchSize<=patchShape[0]) && (patchSize<=patchShape[1]));
 
            ASKAPDEBUGASSERT(patchSize>=1);
 
 
-           const casa::DirectionCoordinate csPatch =
+           const casacore::DirectionCoordinate csPatch =
                     SynthesisParamsHelper::directionCoordinate(params,patchName);
-           const casa::DirectionCoordinate csFull =
+           const casacore::DirectionCoordinate csFull =
                     SynthesisParamsHelper::directionCoordinate(params,fullName);
-           casa::Vector<double> world(2);
+           casacore::Vector<double> world(2);
 
            // first get blc
-           casa::Vector<double> blcPixel(2);
+           casacore::Vector<double> blcPixel(2);
            blcPixel(0)=double((patchShape[0]-patchSize)/2);
            blcPixel(1)=double((patchShape[1]-patchSize)/2);
 
@@ -415,7 +415,7 @@ namespace askap
            //std::cout<<blcPixel<<endl;
 
            // now get trc
-           casa::Vector<double> trcPixel(2);
+           casacore::Vector<double> trcPixel(2);
            trcPixel[0]=double((patchShape[0]+patchSize)/2-1);
            trcPixel[1]=double((patchShape[1]+patchSize)/2-1);
            ASKAPDEBUGASSERT((trcPixel[0]>0) && (trcPixel[1]>0));
@@ -450,7 +450,7 @@ namespace askap
            direction[2]="J2000";
            std::vector<int> shape(2,256);
            std::vector<std::string> cellsize(2,"8arcsec");
-           casa::Vector<casa::Stokes::StokesTypes> stokes(1, casa::Stokes::I);
+           casacore::Vector<casacore::Stokes::StokesTypes> stokes(1, casacore::Stokes::I);
            if (nfacets != 1) {
                SynthesisParamsHelper::add(params,name,direction,cellsize,shape,false,1.4e9,
                                       1.4e9,1,stokes, nfacets,facetstep);

@@ -77,9 +77,9 @@ namespace askap
           params1->add("flux.i.cena", 100.0);
           params1->add("direction.ra.cena", 0.5);
           params1->add("direction.dec.cena", -0.3);
-          params1->add("shape.bmaj.cena", 30.0*casa::C::arcsec);
-          params1->add("shape.bmin.cena", 20.0*casa::C::arcsec);
-          params1->add("shape.bpa.cena", -55*casa::C::degree);
+          params1->add("shape.bmaj.cena", 30.0*casacore::C::arcsec);
+          params1->add("shape.bmin.cena", 20.0*casacore::C::arcsec);
+          params1->add("shape.bpa.cena", -55*casacore::C::degree);
 
           p1 = new ComponentEquation(*params1, idi);
 
@@ -87,9 +87,9 @@ namespace askap
           params2->add("flux.i.cena", 100.0);
           params2->add("direction.ra.cena", 0.500005);
           params2->add("direction.dec.cena", -0.300003);
-          params2->add("shape.bmaj.cena", 33.0*casa::C::arcsec);
-          params2->add("shape.bmin.cena", 22.0*casa::C::arcsec);
-          params2->add("shape.bpa.cena", -57*casa::C::degree);
+          params2->add("shape.bmaj.cena", 33.0*casacore::C::arcsec);
+          params2->add("shape.bmin.cena", 22.0*casacore::C::arcsec);
+          params2->add("shape.bpa.cena", -57*casacore::C::degree);
 
           p2 = new ComponentEquation(*params2, idi);
 
@@ -142,8 +142,8 @@ namespace askap
           for (uint row=0;row<names.size();row++) {
             for (uint col=0;col<names.size();col++) {
                 if ((&ne.normalMatrix(names[row], names[col])) != &emptyMatrix) {
-                    const casa::Matrix<double> nm = ne.normalMatrix(names[row], names[col]);
-                    casa::IPosition ip(nm.shape());
+                    const casacore::Matrix<double> nm = ne.normalMatrix(names[row], names[col]);
+                    casacore::IPosition ip(nm.shape());
                     CPPUNIT_ASSERT(ip(0)==1);
                     CPPUNIT_ASSERT(ip(1)==1);
                 }

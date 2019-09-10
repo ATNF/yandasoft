@@ -56,7 +56,7 @@ int main( int argc, char **argv)
     runner.addTest(askap::synthesis::Calibrator1934Test::suite());
     runner.addTest(askap::synthesis::PreAvgCalBufferTest::suite());
     runner.addTest(askap::synthesis::CalibrationMETest::suite());
-    //runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
+    // runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
     runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
     runner.addTest(askap::synthesis::PreconditionerTests::suite());
     runner.addTest(askap::synthesis::SynthesisParamsHelperTest::suite());

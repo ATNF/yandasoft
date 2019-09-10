@@ -70,27 +70,28 @@ namespace askap
 
           uint npix=16;
           Axes imageAxes;
-          double arcsec=casa::C::pi/(3600.0*180.0);
-          casa::Matrix<double> xform(2,2,0.);
+          double arcsec=casacore::C::pi/(3600.0*180.0);
+          casacore::Matrix<double> xform(2,2,0.);
           xform.diagonal().set(1.);
                
-          imageAxes.addDirectionAxis(casa::DirectionCoordinate(casa::MDirection::J2000, 
-                     casa::Projection(casa::Projection::SIN), 0.,0.,15.*arcsec,15.*arcsec,xform,npix/2.,npix/2.));
+          imageAxes.addDirectionAxis(casacore::DirectionCoordinate(casacore::MDirection::J2000, 
+                     casacore::Projection(casacore::Projection::SIN), 0.,0.,15.*arcsec,15.*arcsec,xform,npix/2.,npix/2.));
           
           params1 = new Params;
-          casa::Array<double> imagePixels1(casa::IPosition(2, npix, npix));
+          casacore::Array<double> imagePixels1(casacore::IPosition(2, npix, npix));
           imagePixels1.set(0.0);
-          imagePixels1(casa::IPosition(2, npix/2, npix/2))=1.0;
-          imagePixels1(casa::IPosition(2, 12, 3))=0.7;
+          imagePixels1(casacore::IPosition(2, npix/2, npix/2))=1.0;
+          imagePixels1(casacore::IPosition(2, 12, 3))=0.7;
           params1->add("image.i.cena", imagePixels1, imageAxes);
+          std::cout << "Axes : " << imageAxes << std::endl;
 
           p1 = new ImageDFTEquation(*params1, idi);
 
           params2 = new Params;
-          casa::Array<double> imagePixels2(casa::IPosition(2, npix, npix));
+          casacore::Array<double> imagePixels2(casacore::IPosition(2, npix, npix));
           imagePixels2.set(0.0);
-          imagePixels2(casa::IPosition(2, npix/2, npix/2))=0.9;
-          imagePixels2(casa::IPosition(2, 12, 3))=0.75;
+          imagePixels2(casacore::IPosition(2, npix/2, npix/2))=0.9;
+          imagePixels2(casacore::IPosition(2, 12, 3))=0.75;
           params2->add("image.i.cena", imagePixels2, imageAxes);
 
           p2 = new ImageDFTEquation(*params2, idi);
@@ -121,14 +122,14 @@ namespace askap
             Quality q;
             solver1.setAlgorithm("SVD");
             solver1.solveNormalEquations(*params2,q);
-            casa::Array<double> improved = params2->value("image.i.cena");
+            casacore::Array<double> improved = params2->value("image.i.cena");
             uint npix=16;
             std::cout << q << std::endl;
             CPPUNIT_ASSERT(std::abs(q.cond()/1115634013709.060-1.0)<0.0001);
-            CPPUNIT_ASSERT(std::abs(improved(casa::IPosition(2, npix/2, npix/2))-1.0)<0.003);
-            std::cout << improved(casa::IPosition(2, npix/2, npix/2))-1.0 << std::endl;
-            CPPUNIT_ASSERT(std::abs(improved(casa::IPosition(2, 12, 3))-0.700)<0.003);
-            std::cout << improved(casa::IPosition(2, 12, 3))-0.700 << std::endl;
+            CPPUNIT_ASSERT(std::abs(improved(casacore::IPosition(2, npix/2, npix/2))-1.0)<0.003);
+            std::cout << improved(casacore::IPosition(2, npix/2, npix/2))-1.0 << std::endl;
+            CPPUNIT_ASSERT(std::abs(improved(casacore::IPosition(2, 12, 3))-0.700)<0.003);
+            std::cout << improved(casacore::IPosition(2, 12, 3))-0.700 << std::endl;
           }
         }
 

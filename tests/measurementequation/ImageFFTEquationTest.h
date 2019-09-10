@@ -82,31 +82,31 @@ namespace askap
 
         npix=1024;
         Axes imageAxes;
-        double arcsec=casa::C::pi/(3600.0*180.0);
+        double arcsec=casacore::C::pi/(3600.0*180.0);
         double cell=8.0*arcsec;
-        casa::Matrix<double> xform(2,2,0.);
+        casacore::Matrix<double> xform(2,2,0.);
         xform.diagonal().set(1.);
                
-        imageAxes.addDirectionAxis(casa::DirectionCoordinate(casa::MDirection::J2000, 
-                     casa::Projection(casa::Projection::SIN), 0.,0.,cell,cell,xform,npix/2.,npix/2.));
+        imageAxes.addDirectionAxis(casacore::DirectionCoordinate(casacore::MDirection::J2000, 
+                     casacore::Projection(casacore::Projection::SIN), 0.,0.,cell,cell,xform,npix/2.,npix/2.));
         
-        imageAxes.addStokesAxis(casa::Vector<casa::Stokes::StokesTypes>(1,casa::Stokes::I));
+        imageAxes.addStokesAxis(casacore::Vector<casacore::Stokes::StokesTypes>(1,casacore::Stokes::I));
         imageAxes.add("FREQUENCY",1.4e9,1.4e9);
 
         params1.reset(new Params);
-        casa::Array<double> imagePixels1(casa::IPosition(4, npix, npix, 1, 1));
+        casacore::Array<double> imagePixels1(casacore::IPosition(4, npix, npix, 1, 1));
         imagePixels1.set(0.0);
-        imagePixels1(casa::IPosition(4, npix/2, npix/2, 0, 0))=1.0;
-        imagePixels1(casa::IPosition(4, 3*npix/8, 7*npix/16, 0, 0))=0.7;
+        imagePixels1(casacore::IPosition(4, npix/2, npix/2, 0, 0))=1.0;
+        imagePixels1(casacore::IPosition(4, 3*npix/8, 7*npix/16, 0, 0))=0.7;
         params1->add("image.i.cena", imagePixels1, imageAxes);
 
         p1.reset(new ImageFFTEquation(*params1, idi));
 
         params2.reset(new Params);
-        casa::Array<double> imagePixels2(casa::IPosition(4, npix, npix, 1, 1));
+        casacore::Array<double> imagePixels2(casacore::IPosition(4, npix, npix, 1, 1));
         imagePixels2.set(0.0);
-        imagePixels2(casa::IPosition(4, npix/2, npix/2, 0, 0))=0.9;
-        imagePixels2(casa::IPosition(4, 3*npix/8, 7*npix/16, 0, 0))=0.75;
+        imagePixels2(casacore::IPosition(4, npix/2, npix/2, 0, 0))=0.9;
+        imagePixels2(casacore::IPosition(4, 3*npix/8, 7*npix/16, 0, 0))=0.75;
         params2->add("image.i.cena", imagePixels2, imageAxes);
         p2.reset(new ImageFFTEquation(*params2, idi));
 
@@ -126,26 +126,26 @@ namespace askap
          CPPUNIT_ASSERT(params1);
          CPPUNIT_ASSERT(params2);
          
-         casa::Array<casa::Double> pix = params1->value("image.i.cena").copy().reform(casa::IPosition(4,npix/2,npix/2,4,1));
+         casacore::Array<casacore::Double> pix = params1->value("image.i.cena").copy().reform(casacore::IPosition(4,npix/2,npix/2,4,1));
          pix.set(0.);
-         pix(casa::IPosition(4, npix/4, npix/4, 0, 0))=1.0;
-         pix(casa::IPosition(4, npix/4, npix/4, 1, 0))=0.01;
-         pix(casa::IPosition(4, npix/4, npix/4, 2, 0))=-0.01;         
-         pix(casa::IPosition(4, npix/4, npix/4, 3, 0))=0.9;
-         //pix(casa::IPosition(4, 3*npix/16, 7*npix/32, 0, 0))=0.7;
-         casa::Vector<casa::Stokes::StokesTypes> stokes(4);
-         stokes[0] = casa::Stokes::XX;
-         stokes[1] = casa::Stokes::XY;
-         stokes[2] = casa::Stokes::YX;
-         stokes[3] = casa::Stokes::YY;         
+         pix(casacore::IPosition(4, npix/4, npix/4, 0, 0))=1.0;
+         pix(casacore::IPosition(4, npix/4, npix/4, 1, 0))=0.01;
+         pix(casacore::IPosition(4, npix/4, npix/4, 2, 0))=-0.01;         
+         pix(casacore::IPosition(4, npix/4, npix/4, 3, 0))=0.9;
+         //pix(casacore::IPosition(4, 3*npix/16, 7*npix/32, 0, 0))=0.7;
+         casacore::Vector<casacore::Stokes::StokesTypes> stokes(4);
+         stokes[0] = casacore::Stokes::XX;
+         stokes[1] = casacore::Stokes::XY;
+         stokes[2] = casacore::Stokes::YX;
+         stokes[3] = casacore::Stokes::YY;         
          params1->axes("image.i.cena").addStokesAxis(stokes);
          // overwrite direction axis because we now have a smaller image
-         const double arcsec=casa::C::pi/(3600.0*180.0);
+         const double arcsec=casacore::C::pi/(3600.0*180.0);
          const double cell=8.0*arcsec;
-         casa::Matrix<double> xform(2,2,0.);
+         casacore::Matrix<double> xform(2,2,0.);
          xform.diagonal().set(1.);
-         params1->axes("image.i.cena").addDirectionAxis(casa::DirectionCoordinate(casa::MDirection::J2000, 
-                     casa::Projection(casa::Projection::SIN), 0.,0.,cell,cell,xform,npix/4.,npix/4.));
+         params1->axes("image.i.cena").addDirectionAxis(casacore::DirectionCoordinate(casacore::MDirection::J2000, 
+                     casacore::Projection(casacore::Projection::SIN), 0.,0.,cell,cell,xform,npix/4.,npix/4.));
          
          params1->value("image.i.cena").assign(pix);         
          p1.reset(new ImageFFTEquation(*params1, idi));
@@ -153,23 +153,23 @@ namespace askap
          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*idi);
          da.itsStokes.assign(stokes.copy());
          da.itsVisibility.resize(da.nRow(), 2 ,4);
-         da.itsVisibility.set(casa::Complex(-10.,15.));
+         da.itsVisibility.set(casacore::Complex(-10.,15.));
          da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
          da.itsNoise.set(1.);
          da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
-         da.itsFlag.set(casa::False);
+         da.itsFlag.set(casacore::False);
       
          
          p1->predict();
          CPPUNIT_ASSERT(da.nPol() == 4);
          CPPUNIT_ASSERT(da.nChannel() == 2);
                   
-         for (casa::uInt row=0; row<da.nRow(); ++row) {
-              for (casa::uInt ch=0; ch<da.nChannel(); ++ch) {
-                   CPPUNIT_ASSERT(casa::abs(casa::DComplex(1.,0.) - casa::DComplex(da.visibility()(row,ch,0)))<1e-5);
-                   CPPUNIT_ASSERT(casa::abs(casa::DComplex(0.01,0.) - casa::DComplex(da.visibility()(row,ch,1)))<1e-5);
-                   CPPUNIT_ASSERT(casa::abs(casa::DComplex(-0.01,0.) - casa::DComplex(da.visibility()(row,ch,2)))<1e-5);
-                   CPPUNIT_ASSERT(casa::abs(casa::DComplex(0.9,0.) - casa::DComplex(da.visibility()(row,ch,3)))<1e-5);              
+         for (casacore::uInt row=0; row<da.nRow(); ++row) {
+              for (casacore::uInt ch=0; ch<da.nChannel(); ++ch) {
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(1.,0.) - casacore::DComplex(da.visibility()(row,ch,0)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.01,0.) - casacore::DComplex(da.visibility()(row,ch,1)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(-0.01,0.) - casacore::DComplex(da.visibility()(row,ch,2)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.9,0.) - casacore::DComplex(da.visibility()(row,ch,3)))<1e-5);              
               }
          }
       }
@@ -180,7 +180,7 @@ namespace askap
         p1->predict();
         // perform a given number of major cycles
         const size_t nMajCycles = 1;
-        casa::Array<double> improved; // buffer for the result
+        casacore::Array<double> improved; // buffer for the result
         for (size_t cycle = 0; cycle<nMajCycles; ++cycle) {
              // Calculate gradients using "imperfect" parameters" 
              ImagingNormalEquations ne(*params2);
@@ -193,14 +193,14 @@ namespace askap
              improved = params2->value("image.i.cena");
         }
         /*
-        casa::Array<float> dbg(improved.shape());
-        casa::convertArray<float,double>(dbg,improved);
+        casacore::Array<float> dbg(improved.shape());
+        casacore::convertArray<float,double>(dbg,improved);
         SynthesisParamsHelper::saveAsCasaImage("dbg.img",dbg);
         */
         // This only works for the pixels with emission but it's a good test nevertheless
-        CPPUNIT_ASSERT(abs(improved(casa::IPosition(4, npix/2, npix/2, 0, 0))
+        CPPUNIT_ASSERT(abs(improved(casacore::IPosition(4, npix/2, npix/2, 0, 0))
             -1.0)<0.003);
-        CPPUNIT_ASSERT(abs(improved(casa::IPosition(4, 3*npix/8, 7*npix/16, 0,
+        CPPUNIT_ASSERT(abs(improved(casacore::IPosition(4, 3*npix/8, 7*npix/16, 0,
             0))-0.700)<0.003);            
       }
 
@@ -221,11 +221,11 @@ namespace askap
         ImageSolver solver1;
         solver1.addNormalEquations(ne);
         solver1.solveNormalEquations(*params2,q);
-        const casa::Array<double> improved = params2->value("image.i.cena");
+        const casacore::Array<double> improved = params2->value("image.i.cena");
         // This only works for the pixels with emission but it's a good test nevertheless
-        CPPUNIT_ASSERT(abs(improved(casa::IPosition(4, npix/2, npix/2, 0, 0))
+        CPPUNIT_ASSERT(abs(improved(casacore::IPosition(4, npix/2, npix/2, 0, 0))
             -1.0)<0.005);
-        CPPUNIT_ASSERT(abs(improved(casa::IPosition(4, 3*npix/8, 7*npix/16, 0,
+        CPPUNIT_ASSERT(abs(improved(casacore::IPosition(4, 3*npix/8, 7*npix/16, 0,
             0))-0.700)<0.005);
       }
 
