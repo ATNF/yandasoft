@@ -173,6 +173,8 @@ def runTestsParallel(ncycles):
     """
     Runs parallel tests for bandpass calibration using ccalibrator app, with parallel matrix using LSQR solver.
     The test is performed by running serial and parallel versions and comparing the results.
+    Basically, testing that a parallel matrix case (one big matrix with all channels) produces
+    the same results as serial matrices case (several small matrixes for each channel chunk).
     """
     msarchive = "vis_4chan.tar.bz2"
     msfile = "vis_4chan.ms"
@@ -244,19 +246,122 @@ def runTestsParallel(ncycles):
     os.system("mv result.dat %s" % result_parallel)
 
     tol = 1.e-6
-    gains_serial = loadParset(result_serial)
-    gains_parallel = loadParset(result_parallel)
+    compareGains(result_serial, result_parallel, tol)
+
+def runTestsSmoothnessConstraintsParallel():
+    """
+    Runs parallel tests for bandpass calibration using ccalibrator app, using LSQR solver with smoothness constraints.
+    The test is performed by running on one and several workers, and then comparing the results.
+    """
+    msarchive = "40chan.ms.tar.bz2"
+    msfile = "40chan.ms"
+
+    # Extracting measurement set from an archive.
+    if not os.path.exists(msarchive):
+        raise RuntimeError, "A tarball with measurement sets does not seem to exist (%s)" % msarchive
+
+    if os.path.exists(msfile):
+        print "Removing old %s" % msfile
+        os.system("rm -rf %s" % msfile)
+
+    os.system("tar -xjf %s" % msarchive)
+
+    #----------------------------------------------------------------------------------
+    tmp_parset = 'ccal_tmp.in'
+    os.system("rm -f %s" % tmp_parset)
+    os.system("touch %s" % tmp_parset)
+
+    spr = SynthesisProgramRunner(template_parset = tmp_parset)
+
+    spr.addToParset("Ccalibrator.dataset                      = [%s]" % msfile)
+    spr.addToParset("Ccalibrator.nAnt                         = 12")
+    spr.addToParset("Ccalibrator.nBeam                        = 1")
+    spr.addToParset("Ccalibrator.nChan                        = 40")
+    
+    spr.addToParset("Ccalibrator.refantenna                   = 1")
+
+    spr.addToParset("Ccalibrator.calibaccess                  = parset")
+    spr.addToParset("Ccalibrator.calibaccess.parset           = result.dat")
+
+    spr.addToParset("Ccalibrator.sources.names                = [field1]")
+    spr.addToParset("Ccalibrator.sources.field1.direction     = [19h39m25.036, -63.42.45.63, J2000]")
+    spr.addToParset("Ccalibrator.sources.field1.components    = [src]")
+    spr.addToParset("Ccalibrator.sources.src.calibrator       = 1934-638")
+
+    spr.addToParset("Ccalibrator.gridder                      = SphFunc")
+
+    spr.addToParset("Ccalibrator.ncycles                      = 20")
+
+    spr.addToParset("Ccalibrator.solve                        = bandpass")
+    spr.addToParset("Ccalibrator.solver                       = LSQR")
+    spr.addToParset("Ccalibrator.solver.LSQR.verbose          = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.alpha            = 1e5")
+    spr.addToParset("Ccalibrator.solver.LSQR.parallelMatrix   = true")
+
+    spr.addToParset("Ccalibrator.chunk                        = %w")
+
+    # Filenames for writing the calibration results (parsets).
+    result_w1 = "result_smoothing_w1.dat"
+    result_w4 = "result_smoothing_w4.dat"
+    result_w10 = "result_smoothing_w10.dat"
+
+    #------------------------------------------------------------------------------
+    # Set partitioning 40 channels with 2 cpus, i.e., all 40 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 40")
+
+    print "Bandpass test: One worker."
+    nprocs = 2
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w1)
+
+    #------------------------------------------------------------------------------
+    # Set partitioning 40 channels with 5 cpus, i.e., 10 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 10")
+
+    print "Bandpass test: Four workers."
+    nprocs = 5
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w4)
+
+    #------------------------------------------------------------------------------
+    # Set partitioning 40 channels with 11 cpus, i.e., 4 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 4")
+
+    # Parallel run.
+    print "Bandpass test: Ten workers."
+    nprocs = 11
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w10)
+
+    #------------------------------------------------------------------------------
+    # Compare the output results.
+
+    tol = 1.e-6
+    compareGains(result_w1, result_w4, tol)
+    compareGains(result_w4, result_w10, tol)
+
+def compareGains(file1, file2, tol):
+    gains1 = loadParset(file1)
+    gains2 = loadParset(file2)
 
     # Comparing the results between the serial and parallel runs.
-    for k, v in gains_serial.items():
-        if k not in gains_parallel:
-            raise RintimeError, "Gain parameter %s found in the serial result is missing in the parallel result!" % k
-        val_serial = gains_serial[k]
-        val_parallel = gains_parallel[k]
+    for k, v in gains1.items():
+        if k not in gains2:
+            raise RintimeError, "Gain parameter %s is missing!" % k
+        val1 = gains1[k]
+        val2 = gains2[k]
 
-        if abs(val_serial - val_parallel) > tol:
-            raise RuntimeError, "Gain parameter %s has a parallel value of %s which is different from serial value %s" % (k, val_parallel, val_serial)
+        if abs(val1 - val2) > tol:
+            raise RuntimeError, "Gain parameter %s has a value value of %s which is different from value %s" % (k, val1, val2)
 
+#==================================================================================================
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -268,3 +373,4 @@ if __name__ == '__main__':
     if opt.parallel:
         runTestsParallel(1)
         runTestsParallel(5)
+        runTestsSmoothnessConstraintsParallel()
