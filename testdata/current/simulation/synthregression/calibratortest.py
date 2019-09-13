@@ -8,11 +8,11 @@ from synthprogrunner import *
 from askapdev.rbuild import setup
 from askapdev.rbuild.dependencies import Dependency
 
+import cmath
+
 dep = Dependency(silent=False)
 dep.DEPFILE = "../../dependencies"
 dep.add_package()
-
-#import askap.parset
 
 def analyseResult(spr):
    '''
@@ -341,6 +341,16 @@ def runTestsSmoothnessConstraintsParallel():
     os.system("mv result.dat %s" % result_w10)
 
     #------------------------------------------------------------------------------
+    # Test that the gradient is small (i.e., solution is smooth).
+    nchan = 40
+    nant = 12
+    grad_cost = calculateGradientCost(result_w1, nchan, nant, True)
+    print 'grad_cost =', grad_cost
+
+    if abs(grad_cost) > 0.1:
+        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost
+
+    #------------------------------------------------------------------------------
     # Compare the output results.
 
     tol = 1.e-6
@@ -360,6 +370,40 @@ def compareGains(file1, file2, tol):
 
         if abs(val1 - val2) > tol:
             raise RuntimeError, "Gain parameter %s has a value value of %s which is different from value %s" % (k, val1, val2)
+
+def calculateGradientCost(filename, nchan, nant, useComplexNumberParts):
+    gains = loadParset(filename)
+
+    pols = ["g11", "g22"]
+
+    grad_cost = 0.
+    for pol in pols:
+        for ant in range(0, nant):
+            for chan in range(0, nchan - 1):
+                base_name = "gain." + pol + "." + str(ant) + ".0."
+                curr_parname = base_name + str(chan)        # current channel
+                next_parname = base_name + str(chan + 1)    # next channel
+    
+                curr_gain_complex_val = gains[curr_parname]
+                next_gain_complex_val = gains[next_parname]
+
+                # Calculate gradient in frequency, using forward difference approximation: x[i]' = x[i+1] - x[i]
+                if useComplexNumberParts:
+                    # Apply gradient directly on X and Y parts of a complex number g = X + iY.
+                    grad_cost += (next_gain_complex_val.real - curr_gain_complex_val.real)**2
+                    grad_cost += (next_gain_complex_val.imag - curr_gain_complex_val.imag)**2
+                else:
+                    # Apply gradient on the magnitude and phase of a complex number.
+                    curr_gain_magnitude = abs(curr_gain_complex_val)
+                    next_gain_magnitude = abs(next_gain_complex_val)
+                    
+                    curr_gain_phase = cmath.phase(curr_gain_complex_val)
+                    next_gain_phase = cmath.phase(next_gain_complex_val)
+        
+                    grad_cost += (next_gain_magnitude - curr_gain_magnitude)**2
+                    grad_cost += (next_gain_phase - curr_gain_phase)**2
+
+    return grad_cost
 
 #==================================================================================================
 if __name__ == '__main__':
