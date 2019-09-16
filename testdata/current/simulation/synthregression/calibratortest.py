@@ -347,7 +347,9 @@ def runTestsSmoothnessConstraintsParallel():
     grad_cost = calculateGradientCost(result_w1, nchan, nant, True)
     print 'grad_cost =', grad_cost
 
-    if abs(grad_cost) > 0.1:
+    # Note that the cost value calculated here differs from the one printed in the log (~0.0545)
+    # due to phase referencing performed in the end, which does not preserve this type of gradient.
+    if abs(grad_cost) > 0.0785:
         raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost
 
     #------------------------------------------------------------------------------
