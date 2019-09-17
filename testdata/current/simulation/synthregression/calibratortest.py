@@ -344,17 +344,27 @@ def runTestsSmoothnessConstraintsParallel():
     # Test that the gradient is small (i.e., solution is smooth).
     nchan = 40
     nant = 12
-    grad_cost = calculateGradientCost(result_w1, nchan, nant, True)
-    print 'grad_cost =', grad_cost
+    grad_cost_w1 = calculateGradientCost(result_w1, nchan, nant, True)
+    grad_cost_w4 = calculateGradientCost(result_w4, nchan, nant, True)
+    grad_cost_w10 = calculateGradientCost(result_w10, nchan, nant, True)
+
+    print 'grad_cost_w1 =', grad_cost_w1
+    print 'grad_cost_w4 =', grad_cost_w4
+    print 'grad_cost_w10 =', grad_cost_w10
 
     # Note that the cost value calculated here differs from the one printed in the log (~0.0545)
-    # due to phase referencing performed in the end, which does not preserve this type of gradient.
-    if abs(grad_cost) > 0.0785:
-        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost
+    # due to phase referencing performed in the end of calibration, which does not preserve this type of gradient.
+    expected_cost = 0.078488
+    tol = 1.e-6
+    if abs(grad_cost_w1 - expected_cost) > tol:
+        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w1
+    if abs(grad_cost_w4 - expected_cost) > tol:
+        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w4
+    if abs(grad_cost_w10 - expected_cost) > tol:
+        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w10
 
     #------------------------------------------------------------------------------
     # Compare the output results.
-
     tol = 1.e-6
     compareGains(result_w1, result_w4, tol)
     compareGains(result_w4, result_w10, tol)
