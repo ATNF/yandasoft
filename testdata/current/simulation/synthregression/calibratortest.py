@@ -251,7 +251,7 @@ def runTestsParallel(ncycles):
 def runTestsSmoothnessConstraintsParallel():
     """
     Runs parallel tests for bandpass calibration using ccalibrator app, using LSQR solver with smoothness constraints.
-    The test is performed by running on one and several workers, and then comparing the results.
+    The test is performed by running on one and several workers, and then comparing the output gains (expected to be the same).
     """
     msarchive = "40chan.ms.tar.bz2"
     msfile = "40chan.ms"
@@ -307,7 +307,7 @@ def runTestsSmoothnessConstraintsParallel():
     result_w10 = "result_smoothing_w10.dat"
 
     #------------------------------------------------------------------------------
-    # Set partitioning 40 channels with 2 cpus, i.e., all 40 channels per worker (exluding master rank).
+    # Set partitioning for 40 channels with 2 cpus, i.e., all 40 channels per worker (exluding master rank).
     spr.addToParset("Ccalibrator.chanperworker                = 40")
 
     print "Bandpass test: One worker."
@@ -318,7 +318,7 @@ def runTestsSmoothnessConstraintsParallel():
     os.system("mv result.dat %s" % result_w1)
 
     #------------------------------------------------------------------------------
-    # Set partitioning 40 channels with 5 cpus, i.e., 10 channels per worker (exluding master rank).
+    # Set partitioning for 40 channels with 5 cpus, i.e., 10 channels per worker (exluding master rank).
     spr.addToParset("Ccalibrator.chanperworker                = 10")
 
     print "Bandpass test: Four workers."
@@ -329,7 +329,7 @@ def runTestsSmoothnessConstraintsParallel():
     os.system("mv result.dat %s" % result_w4)
 
     #------------------------------------------------------------------------------
-    # Set partitioning 40 channels with 11 cpus, i.e., 4 channels per worker (exluding master rank).
+    # Set partitioning for 40 channels with 11 cpus, i.e., 4 channels per worker (exluding master rank).
     spr.addToParset("Ccalibrator.chanperworker                = 4")
 
     # Parallel run.
@@ -341,33 +341,114 @@ def runTestsSmoothnessConstraintsParallel():
     os.system("mv result.dat %s" % result_w10)
 
     #------------------------------------------------------------------------------
-    # Test that the gradient is small (i.e., solution is smooth).
-    nchan = 40
-    nant = 12
-    grad_cost_w1 = calculateGradientCost(result_w1, nchan, nant, True)
-    grad_cost_w4 = calculateGradientCost(result_w4, nchan, nant, True)
-    grad_cost_w10 = calculateGradientCost(result_w10, nchan, nant, True)
-
-    print 'grad_cost_w1 =', grad_cost_w1
-    print 'grad_cost_w4 =', grad_cost_w4
-    print 'grad_cost_w10 =', grad_cost_w10
-
-    # Note that the cost value calculated here differs from the one printed in the log (~0.0545)
-    # due to phase referencing performed in the end of calibration, which does not preserve this type of gradient.
-    expected_cost = 0.078488
-    tol = 1.e-6
-    if abs(grad_cost_w1 - expected_cost) > tol:
-        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w1
-    if abs(grad_cost_w4 - expected_cost) > tol:
-        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w4
-    if abs(grad_cost_w10 - expected_cost) > tol:
-        raise RuntimeError, "Gradient cost is too high! cost = %s" % grad_cost_w10
-
-    #------------------------------------------------------------------------------
     # Compare the output results.
     tol = 1.e-6
     compareGains(result_w1, result_w4, tol)
+    compareGains(result_w1, result_w10, tol)
     compareGains(result_w4, result_w10, tol)
+
+def runTestsSmoothnessConstraintsGradientCost():
+    """
+    Runs tests for bandpass calibration using ccalibrator app, using LSQR solver with smoothness constraints.
+    The test is performed by running calibration with and without smoothness constraints and comparing the gradient cost to expected values.
+    """
+    msarchive = "40chan.ms.tar.bz2"
+    msfile = "40chan.ms"
+
+    # Extracting measurement set from an archive.
+    if not os.path.exists(msarchive):
+        raise RuntimeError, "A tarball with measurement sets does not seem to exist (%s)" % msarchive
+
+    if os.path.exists(msfile):
+        print "Removing old %s" % msfile
+        os.system("rm -rf %s" % msfile)
+
+    os.system("tar -xjf %s" % msarchive)
+
+    #----------------------------------------------------------------------------------
+    tmp_parset = 'ccal_tmp.in'
+    os.system("rm -f %s" % tmp_parset)
+    os.system("touch %s" % tmp_parset)
+
+    spr = SynthesisProgramRunner(template_parset = tmp_parset)
+
+    spr.addToParset("Ccalibrator.dataset                      = [%s]" % msfile)
+    spr.addToParset("Ccalibrator.nAnt                         = 12")
+    spr.addToParset("Ccalibrator.nBeam                        = 1")
+    spr.addToParset("Ccalibrator.nChan                        = 40")
+    
+    spr.addToParset("Ccalibrator.refantenna                   = 1")
+
+    spr.addToParset("Ccalibrator.calibaccess                  = parset")
+    spr.addToParset("Ccalibrator.calibaccess.parset           = result.dat")
+
+    spr.addToParset("Ccalibrator.sources.names                = [field1]")
+    spr.addToParset("Ccalibrator.sources.field1.direction     = [19h39m25.036, -63.42.45.63, J2000]")
+    spr.addToParset("Ccalibrator.sources.field1.components    = [src]")
+    spr.addToParset("Ccalibrator.sources.src.calibrator       = 1934-638")
+
+    spr.addToParset("Ccalibrator.gridder                      = SphFunc")
+
+    spr.addToParset("Ccalibrator.ncycles                      = 20")
+
+    spr.addToParset("Ccalibrator.solve                        = bandpass")
+    spr.addToParset("Ccalibrator.solver                       = LSQR")
+    spr.addToParset("Ccalibrator.solver.LSQR.verbose          = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = false")
+    spr.addToParset("Ccalibrator.solver.LSQR.alpha            = 1e5")
+    spr.addToParset("Ccalibrator.solver.LSQR.parallelMatrix   = true")
+
+    spr.addToParset("Ccalibrator.chunk                        = %w")
+    spr.addToParset("Ccalibrator.chanperworker                = 40")
+
+    # Set partitioning for 40 channels with 2 cpus, i.e., all 40 channels on one worker (plus a master rank).
+    nprocs = 2
+
+    # Filenames for writing the calibration results (parsets).
+    result_nonsmooth = "result_nonsmooth.dat"
+    result_smooth = "result_smooth.dat"
+
+    #------------------------------------------------------------------------------
+    print "Bandpass test: without smoothing constraints."
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_nonsmooth)
+
+    #------------------------------------------------------------------------------
+    # Switch on the smoothing constraints.
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = true")
+
+    print "Bandpass test: with smoothing constraints."
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_smooth)
+
+    #------------------------------------------------------------------------------
+    # Calcualte the gradient cost.
+    nchan = 40
+    nant = 12
+    cost_nonsmooth = calculateGradientCost(result_nonsmooth, nchan, nant, True)
+    cost_smooth = calculateGradientCost(result_smooth, nchan, nant, True)
+
+    print 'cost nonsmooth =', cost_nonsmooth
+    print 'cost smooth =', cost_smooth
+
+    #------------------------------------------------------------------------------
+    # Verify the gradient cost.
+
+    # Note that the (smooth) cost value calculated here differs from the one printed in the log (~0.0545)
+    # due to phase referencing performed in the end of calibration, which does not preserve this type of the gradient.
+    expected_cost_nonsmooth = 22.645816
+    expected_cost_smooth = 0.078488
+
+    tol = 1.e-6
+    if abs(cost_nonsmooth - expected_cost_nonsmooth) > tol:
+        raise RuntimeError, "Nonsmooth gradient cost is wrong! cost = %s" % cost_nonsmooth
+
+    if abs(cost_smooth - expected_cost_smooth) > tol:
+        raise RuntimeError, "Smooth gradient cost is wrong! cost = %s" % cost_smooth
 
 def compareGains(file1, file2, tol):
     gains1 = loadParset(file1)
@@ -430,3 +511,4 @@ if __name__ == '__main__':
         runTestsParallel(1)
         runTestsParallel(5)
         runTestsSmoothnessConstraintsParallel()
+        runTestsSmoothnessConstraintsGradientCost()
