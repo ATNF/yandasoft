@@ -73,7 +73,8 @@ public:
 
                 std::string image = subset.getString("image","");
                 bool editImage = subset.getBool("editImage", false);
-                bool editStats = subset.getBool("editStats", false);               
+                bool editStats = subset.getBool("editStats", false);
+                float threshold = subset.getFloat("threshold", 5.);
                 
                 std::ifstream fin(statsfile.c_str());
                 std::string line, name;
@@ -110,7 +111,7 @@ public:
                 
                 double med=casa::median(std);
                 double mad=casa::median(abs(std-med));
-                double stdThreshold = med + 5. * mad;
+                double stdThreshold = med + threshold * mad;
                 ASKAPLOG_INFO_STR(logger, "Threshold for stdev = " << stdThreshold << " median="<< med << ", madfm="<<mad);
                 casa::Vector<double> tmp=(maxval-minval)/madfm;
                 std::vector<double> newtmp;
@@ -122,7 +123,7 @@ public:
                 casa::Vector<double> rangeOverNoise(newtmp);
                 med=casa::median(rangeOverNoise);
                 mad=casa::median(abs(rangeOverNoise-med));
-                double rangeThreshold = med + 5. * mad;
+                double rangeThreshold = med + threshold * mad;
                 ASKAPLOG_INFO_STR(logger, "Threshold for (max-min)/median = " << rangeThreshold << " median="<< med << ", madfm="<<mad);
 
                 boost::shared_ptr<accessors::IImageAccess> iacc = accessors::imageAccessFactory(subset);
