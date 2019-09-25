@@ -1317,9 +1317,10 @@ namespace askap
        ss.extendedSupport(psfSliceMatrix);
        casa::uInt support = ss.symmetricalSupport(psfSlice.shape());
        support = 2 * (support/2) + 1; // if even, move up to next odd.
+       casa::uInt initialSupport = support;
        casa::Vector<casa::Double> result, errors;
        // allow for some retries on the beam fitting
-       int retry = 2;
+       int retry = 3;
        while (retry > 0) {
 
            ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
@@ -1360,12 +1361,13 @@ namespace askap
            casa::Fit2D fitter(os);
            fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
            casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
+	   fitter.setIncludeRange(cutoff,1.0);
            const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
            if (fitError != casa::Fit2D::OK) {
                if (retry > 1) {
                    // try reducing the support if fit fails, or increasing it if it's tiny
                    support -= 2;
-                   if (support < 3) support = 5;
+                   if (support < 3) support = initialSupport + 2; 
                    ASKAPLOG_INFO_STR(logger, "Beam fit failed, retrying with support = "<<support);
                    retry--;
                } else {
@@ -1378,16 +1380,16 @@ namespace askap
                ASKAPLOG_INFO_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors);
                ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
                // Check if fit is reasonable
-               if (result[3] > 2.0 * support || result[4] > 2.0 * support) {
+               if (result[3] > 2.0 * initialSupport || result[4] > 2.0 * initialSupport) {
                    if (retry > 1) {
                        // try reducing the support if fit fails, or increasing it if it's tiny
                        support -= 2;
-                       if (support < 3) support = 5;
+                       if (support < 3) support = initialSupport + 2;
                        ASKAPLOG_INFO_STR(logger, "Beam fit bad, retrying with support = "<<support);
                        retry--;
                    } else {
                        // failed!
-                       ASKAPCHECK(result[3] <= 2.0 * support && result[4] <= 2.0 * support,
+                       ASKAPCHECK(result[3] <= 2.0 * initialSupport && result[4] <= 2.0 * initialSupport,
                            "Error fitting the beam. Gaussian width >2x support");
                    }
                } else {
