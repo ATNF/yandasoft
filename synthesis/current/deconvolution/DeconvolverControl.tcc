@@ -51,7 +51,7 @@ namespace askap {
                 itsAlgorithm(""), itsTerminationCause(NOTTERMINATED), itsTargetIter(1),
                 itsTargetObjectiveFunction(T(0)),itsTargetObjectiveFunction2(T(0)),
                 itsTargetFlux(T(0.0)),itsGain(1.0), itsTolerance(1e-4),
-                itsPSFWidth(0), itsLambda(T(100.0))
+                itsPSFWidth(0), itsDetectDivergence(False),itsLambda(T(100.0))
         {
             // Install a signal handler to count signals so receipt of a signal
             // can be used to terminate the minor-cycle loop
@@ -103,6 +103,17 @@ namespace askap {
                 return True;
             }
 
+            // Check if we have started to diverge
+            // Simplest check: next component > 2* initial residual
+            if (itsDetectDivergence && state.initialObjectiveFunction() > 0 &&
+                state.objectiveFunction() > 2 * state.initialObjectiveFunction() ) {
+                ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Objective function " <<
+                state.objectiveFunction() << " > 2 * initialObjectiveFunction = " <<
+                2*state.initialObjectiveFunction());
+                itsTerminationCause = DIVERGED;
+                return True;
+            }
+
             // Check for external signal
             if (itsSignalCounter.getCount() > 0) {
                 itsTerminationCause = SIGNALED;
@@ -151,6 +162,7 @@ namespace askap {
             this->setFractionalThreshold(parset.getFloat("fractionalthreshold", 0.0));
             this->setLambda(parset.getFloat("lambda", 0.0001));
             this->setPSFWidth(parset.getInt32("psfwidth", 0));
+            this->setDetectDivergence(parset.getBool("detectdivergence",false));
         }
 
     } // namespace synthesis

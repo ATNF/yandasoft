@@ -505,6 +505,10 @@ namespace askap {
                 ASKAPLOG_INFO_STR(decmtbflogger, "Performed Multi-Term BasisFunction CLEAN for "
                                       << this->state()->currentIter() << " iterations");
                 ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
+                // check for divergence
+                if (this->control()->terminationCause() == DeconvolverControl<T>::DIVERGED) {
+                    ASKAPTHROW(AskapError,"Clean diverged - stopping major cycles");
+                }
             } else {
                 ASKAPLOG_INFO_STR(decmtbflogger,
                     "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
@@ -801,11 +805,6 @@ namespace askap {
 
             // Now we adjust model and residual for this component
             const casa::IPosition residualShape(this->dirty(0).shape().nonDegenerate());
-            //IPosition subPsfStart(2, nx / 2 - subPsfShape(0) / 2, ny / 2 - subPsfShape(1) / 2);
-            //IPosition subPsfEnd(2, nx / 2 + subPsfShape(0) / 2 - 1, ny / 2 + subPsfShape(1) / 2 - 1);
-            //IPosition subPsfStride(2, 1, 1);
-
-            //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
             const casa::IPosition psfShape(2, this->itsBasisFunction->basisFunction().shape()(0),
                                            this->itsBasisFunction->basisFunction().shape()(1));
 
