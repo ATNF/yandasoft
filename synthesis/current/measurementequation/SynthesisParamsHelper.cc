@@ -1344,20 +1344,29 @@ namespace askap
            //
 
            // actual fitting
-           casa::Vector<casa::Double> initialEstimate(6,0.);
+           // the beam fitter fails at times - producing no or a bad solution
+           // We've tried a few approaches: 
+           //  - retry with different support - often works, but still some failures
+           //  - use setIncludeRange to exclude pixels below the cutoff - works sometimes, but worse at times
+           //  - use estimate to set the initial guess - this seems the best solution so far
+           casa::LogIO os;
+           casa::Fit2D fitter(os);
+	   // Using estimate to set the initial guess seems to make the fit more robust
+           casa::Vector<casa::Double> initialEstimate = fitter.estimate(casa::Fit2D::GAUSSIAN,floatPSFSlice);
+	   ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
            initialEstimate[0]=1.; // PSF peak is always 1
            initialEstimate[1]=newShape[0]/2; // centre
            initialEstimate[2]=newShape[1]/2; // centre
-           initialEstimate[3]=1;  // 1 pixel wide
-           initialEstimate[4]=0.9;  // 1 pixel wide
-           initialEstimate[5]=casa::C::pi/4.; // quire arbitrary  pa.
+           //initialEstimate[3]=1;  // 1 pixel wide
+           //initialEstimate[4]=0.9;  // 1 pixel wide
+           //initialEstimate[5]=casa::C::pi/4.; // quite arbitrary  pa.
            casa::Vector<casa::Bool> parameterMask(6,casa::False);
            parameterMask[3] = casa::True; // fit maj
            parameterMask[4] = casa::True; // fit min
            parameterMask[5] = casa::True; // fit pa
 
-           casa::LogIO os;
-           casa::Fit2D fitter(os);
+           // Tried this, but didn't always improve things
+           // fitter.setIncludeRange(cutoff,1.0);
            fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
            casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
            const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
