@@ -84,6 +84,8 @@ ContinuumMaster::~ContinuumMaster()
 
 void ContinuumMaster::run(void)
 {
+    // print out the parset
+    ASKAPLOG_INFO_STR(logger,"Parset: \n"<<itsParset);
     // Read from the configruation the list of datasets to process
     const vector<string> ms = getDatasets(itsParset);
     if (ms.size() == 0) {
@@ -150,7 +152,7 @@ void ContinuumMaster::run(void)
         ContinuumWorkRequest wrequest;
         ASKAPLOG_DEBUG_STR(logger,"Waiting for a request " << diadvise.getWorkUnitCount() \
         << " units remaining");
-        wrequest.receiveRequest(id, itsComms);   
+        wrequest.receiveRequest(id, itsComms);
         ASKAPLOG_DEBUG_STR(logger,"Received a request from " << id);
         /// Now we can just pop a work allocation off the stack for this rank
         ContinuumWorkUnit wu = diadvise.getAllocation(id-1);
@@ -161,10 +163,10 @@ void ContinuumMaster::run(void)
             ASKAPLOG_INFO_STR(logger,"Sent DONE to " << id);
             remainingWorkers--;
         }
-        
+
     }
     // all the work units allocated - lets send the DONEs
-    
+
 
 
     if (localSolver) {
@@ -182,7 +184,7 @@ void ContinuumMaster::run(void)
         ASKAPLOG_DEBUG_STR(logger, "Master beginning single - empty model");
         imager.broadcastModel(); // initially empty model
 
-        imager.calcNE(); // Needed here becuase it resets the itsNE
+        imager.calcNE(); // Needed here because it resets the itsNE
         imager.receiveNE();
         imager.writeModel();
 
@@ -197,7 +199,7 @@ void ContinuumMaster::run(void)
             }
             /// Minor Cycle
 
-            imager.calcNE(); // Needed here becuase it resets the itsNE as Master
+            imager.calcNE(); // Needed here because it resets the itsNE as Master
                             // Nothing else is done
             imager.solveNE(); /// Implicit receiveNE in here
 
