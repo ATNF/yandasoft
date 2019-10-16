@@ -1,0 +1,2 @@
+. ./ModuleFile
+./build_all.sh -C "-DCFITSIO_ROOT_DIR=$CFITSIO_ROOT" -r -a -y -O "-DCMAKE_INSTALL_PREFIX=/group/askap/sord/yanda -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCFITSIO_ROOT_DIR=/pawsey/cle60up05/devel/PrgEnv-gnu/6.0.4/gcc/7.2.0/ivybridge/cfitsio/3.420 -DWCSLIB_ROOT_DIR=/pawsey/cle60up05/devel/PrgEnv-gnu/6.0.4/gcc/7.2.0/ivybridge/wcslib/5.18 -DFFTW_ROOT=/group/askap/sord/software/cle60up05/apps/PrgEnv-gnu/6.0.4/gcc/7.2.0/ivybridge/fftw/3.3.8 -DCASACORE_ROOT_DIR=/group/askap/sord/yanda"
