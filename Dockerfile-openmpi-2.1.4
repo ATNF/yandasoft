@@ -40,7 +40,8 @@ RUN gunzip openmpi-2.1.4.tar.gz
 RUN tar -xvf openmpi-2.1.4.tar
 WORKDIR /home/openmpi-2.1.4
 RUN ./configure 
-RUN make install
+RUN make all install
+ENV LD_LIBRARY_PATH=/usr/local/lib
 #
 RUN mkdir /usr/local/share/casacore
 RUN mkdir /usr/local/share/casacore/data
