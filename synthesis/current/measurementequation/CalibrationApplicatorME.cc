@@ -241,7 +241,6 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   const casa::Cube<casa::Bool> &flag = chunk.flag();
 
   casa::SquareMatrix<casa::Complex, 4> mueller;
-  bool needMueller = true;
   const float detThreshold = 1e-25;
 
   casa::uInt nChan = chunk.nChannel();
@@ -249,6 +248,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::RigidVector<casa::Complex,4> vis;
 
   for (casa::uInt row = 0; row < nRow; ++row) {
+    bool needMueller = true;
     bool validSolution = false;
     casa::Float det = 0.;
     for (casa::uInt chan = 0; chan < nChan; ++chan) {
