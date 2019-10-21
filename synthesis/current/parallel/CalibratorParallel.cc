@@ -80,6 +80,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <measurementequation/NoXPolFreqDependentGain.h>
 #include <measurementequation/NoXPolBeamIndependentGain.h>
 #include <measurementequation/LeakageTerm.h>
+#include <measurementequation/BeamIndependentLeakageTerm.h>
 #include <measurementequation/Product.h>
 #include <measurementequation/ImagingEquationAdapter.h>
 #include <gridding/VisGridderFactory.h>
@@ -119,7 +120,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       MEParallelApp(comms,parset),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
-      itsBeamIndependentGains(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
+      itsBeamIndependentGains(false), itsBeamIndependentLeakages(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
       itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u),
       itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
 {
@@ -140,6 +141,10 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
   if (what2solve.find("leakages") != std::string::npos) {
       ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"')");
       itsSolveLeakage = true;
+      if (what2solve.find("antennaleakages") != std::string::npos) {
+          ASKAPLOG_INFO_STR(logger, "Same leakage values are assumed for all beams (i.e. antenna-based)");
+          itsBeamIndependentLeakages = true;
+      }
   }
 
   if (what2solve.find("bandpass") != std::string::npos) {
@@ -346,15 +351,18 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       }
       if (itsSolveLeakage) {
           ASKAPLOG_INFO_STR(logger, "Initialise leakages (unknowns) for "<<nAnt<<" antennas and "<<nBeam<<" beam(s).");
+          if (itsBeamIndependentLeakages) {
+              ASKAPCHECK(nBeam == 1, "Number of beams should be set to 1 for beam-independent case");
+          }
           for (casa::uInt ant = 0; ant<nAnt; ++ant) {
-               for (casa::uInt beam = 0; beam<nBeam; ++beam) {
+               for (casa::uInt beam = 0; beam < nBeam; ++beam) {
                     itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::XY),casa::Complex(0.,0.));
                     itsModel->add(accessors::CalParamNameHelper::paramName(ant, beam, casa::Stokes::YX),casa::Complex(0.,0.));
                }
           }
           // technically could've done it outside the if-statement but this way it reflects the intention to keep track
           // which parameters are added to the model
-          updatePreAvgBufferEstimates(nAnt, nBeam);
+          updatePreAvgBufferEstimates(nAnt, nBeam );
       }
       if (itsSolveBandpass) {
           const casa::uInt nChan = parset.getInt32("nChan",304);
@@ -547,8 +555,13 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
           preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
        }
    } else if (itsSolveLeakage && !itsSolveGains) {
-       preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+       if (itsBeamIndependentLeakages) {
+          preAvgME.reset(new CalibrationME<BeamIndependentLeakageTerm, PreAvgCalMEBase>());
+       } else {
+          preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+       }
    } else if (itsSolveLeakage && itsSolveGains) {
+   // TODO deal with Beam indep Leakage for this case?
        if (itsBeamIndependentGains) {
           preAvgME.reset(new CalibrationME<Product<NoXPolBeamIndependentGain,LeakageTerm>, PreAvgCalMEBase>());
        } else {
@@ -572,7 +585,7 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    preAvgME->initialise(itsMaxNAntForPreAvg, itsMaxNBeamForPreAvg, itsMaxNChanForPreAvg);
 
    // this is just an optimisation, should work without this line
-   preAvgME->beamIndependent(itsBeamIndependentGains);
+   preAvgME->beamIndependent(itsBeamIndependentGains||itsBeamIndependentLeakages);
    preAvgME->accumulate(dsi,perfectME);
    // fix model parameters for which we don't have data
    const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();

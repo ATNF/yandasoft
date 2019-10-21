@@ -242,6 +242,9 @@ namespace askap
       /// @brief flag to treat gains as beam-independent
       bool itsBeamIndependentGains;
 
+      /// @brief flag to treat leakages as beam-independent
+      bool itsBeamIndependentLeakages;
+
       /// @brief flag to set gain amplitudes to unity before output to file
       bool itsNormaliseGains;
 
