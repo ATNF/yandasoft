@@ -72,7 +72,7 @@ void testOverdetermined(int myrank, int nbproc, const MPI_Comm &comm)
 
     size_t nelements = nelements_total / nbproc;
 
-    lsqr::SparseMatrix matrix(nrows, nelements * nrows, comm);
+    lsqr::SparseMatrix matrix(nrows, comm);
 
     lsqr::Vector b_RHS(nrows, 0.0);
 
@@ -144,7 +144,7 @@ struct WunschFixture
       ncols = 3 / nbproc; // Support only nbproc=1 and nbproc=3.
       nrows = 2;
 
-      matrix = new lsqr::SparseMatrix(nrows, ncols * nrows, comm);
+      matrix = new lsqr::SparseMatrix(nrows, comm);
       b_RHS = new lsqr::Vector(nrows, 0.0);
 
       double a[3][2];
