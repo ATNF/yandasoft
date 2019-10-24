@@ -222,6 +222,13 @@ namespace askap {
                 /// @brief Get the desired PSF width in pixels
                 casacore::Int psfWidth() const {return itsPSFWidth;};
 
+                /// @brief Detect if the (clean) algorithm is diverging
+                /// @param[in] Set to True to detect divergence
+                void setDetectDivergence(casa::Bool detect) { itsDetectDivergence = detect;}
+
+                /// @brief Returns True if divergence detection is active
+                casa::Bool detectDivergence() { return itsDetectDivergence; }
+
             private:
                 casacore::String itsAlgorithm;
                 TerminationCause itsTerminationCause;
@@ -229,10 +236,11 @@ namespace askap {
                 T itsTargetObjectiveFunction;
                 T itsTargetObjectiveFunction2;
                 T itsTargetFlux;
-                casacore::Float itsFractionalThreshold;
-                casacore::Float itsGain;
-                casacore::Float itsTolerance;
-                casacore::Int itsPSFWidth;
+                casa::Float itsFractionalThreshold;
+                casa::Float itsGain;
+                casa::Float itsTolerance;
+                casa::Int itsPSFWidth;
+		casa::Bool itsDetectDivergence;
                 T itsLambda;
                 askap::SignalCounter itsSignalCounter;
                 askap::ISignalHandler* itsOldHandler;

@@ -173,6 +173,8 @@ def runTestsParallel(ncycles):
     """
     Runs parallel tests for bandpass calibration using ccalibrator app, with parallel matrix using LSQR solver.
     The test is performed by running serial and parallel versions and comparing the results.
+    Basically, testing that a parallel matrix case (one big matrix with all channels) produces
+    the same results as serial matrices case (several small matrixes for each channel chunk).
     """
     msarchive = "vis_4chan.tar.bz2"
     msfile = "vis_4chan.ms"
@@ -244,19 +246,259 @@ def runTestsParallel(ncycles):
     os.system("mv result.dat %s" % result_parallel)
 
     tol = 1.e-6
-    gains_serial = loadParset(result_serial)
-    gains_parallel = loadParset(result_parallel)
+    compareGains(result_serial, result_parallel, tol)
+
+def runTestsSmoothnessConstraintsParallel():
+    """
+    Runs parallel tests for bandpass calibration using ccalibrator app, using LSQR solver with smoothness constraints.
+    The test is performed by running on one and several workers, and then comparing the output gains (expected to be the same).
+    """
+    msarchive = "40chan.ms.tar.bz2"
+    msfile = "40chan.ms"
+
+    # Extracting measurement set from an archive.
+    if not os.path.exists(msarchive):
+        raise RuntimeError, "A tarball with measurement sets does not seem to exist (%s)" % msarchive
+
+    if os.path.exists(msfile):
+        print "Removing old %s" % msfile
+        os.system("rm -rf %s" % msfile)
+
+    os.system("tar -xjf %s" % msarchive)
+
+    #----------------------------------------------------------------------------------
+    tmp_parset = 'ccal_tmp.in'
+    os.system("rm -f %s" % tmp_parset)
+    os.system("touch %s" % tmp_parset)
+
+    spr = SynthesisProgramRunner(template_parset = tmp_parset)
+
+    spr.addToParset("Ccalibrator.dataset                      = [%s]" % msfile)
+    spr.addToParset("Ccalibrator.nAnt                         = 12")
+    spr.addToParset("Ccalibrator.nBeam                        = 1")
+    spr.addToParset("Ccalibrator.nChan                        = 40")
+    
+    spr.addToParset("Ccalibrator.refantenna                   = 1")
+
+    spr.addToParset("Ccalibrator.calibaccess                  = parset")
+    spr.addToParset("Ccalibrator.calibaccess.parset           = result.dat")
+
+    spr.addToParset("Ccalibrator.sources.names                = [field1]")
+    spr.addToParset("Ccalibrator.sources.field1.direction     = [19h39m25.036, -63.42.45.63, J2000]")
+    spr.addToParset("Ccalibrator.sources.field1.components    = [src]")
+    spr.addToParset("Ccalibrator.sources.src.calibrator       = 1934-638")
+
+    spr.addToParset("Ccalibrator.gridder                      = SphFunc")
+
+    spr.addToParset("Ccalibrator.ncycles                      = 20")
+
+    spr.addToParset("Ccalibrator.solve                        = bandpass")
+    spr.addToParset("Ccalibrator.solver                       = LSQR")
+    spr.addToParset("Ccalibrator.solver.LSQR.verbose          = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.alpha            = 1e5")
+    spr.addToParset("Ccalibrator.solver.LSQR.parallelMatrix   = true")
+
+    spr.addToParset("Ccalibrator.chunk                        = %w")
+
+    # Filenames for writing the calibration results (parsets).
+    result_w1 = "result_smoothing_w1.dat"
+    result_w4 = "result_smoothing_w4.dat"
+    result_w10 = "result_smoothing_w10.dat"
+
+    #------------------------------------------------------------------------------
+    # Set partitioning for 40 channels with 2 cpus, i.e., all 40 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 40")
+
+    print "Bandpass test: One worker."
+    nprocs = 2
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w1)
+
+    #------------------------------------------------------------------------------
+    # Set partitioning for 40 channels with 5 cpus, i.e., 10 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 10")
+
+    print "Bandpass test: Four workers."
+    nprocs = 5
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w4)
+
+    #------------------------------------------------------------------------------
+    # Set partitioning for 40 channels with 11 cpus, i.e., 4 channels per worker (exluding master rank).
+    spr.addToParset("Ccalibrator.chanperworker                = 4")
+
+    # Parallel run.
+    print "Bandpass test: Ten workers."
+    nprocs = 11
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_w10)
+
+    #------------------------------------------------------------------------------
+    # Compare the output results.
+    tol = 1.e-6
+    compareGains(result_w1, result_w4, tol)
+    compareGains(result_w1, result_w10, tol)
+    compareGains(result_w4, result_w10, tol)
+
+def runTestsSmoothnessConstraintsGradientCost():
+    """
+    Runs tests for bandpass calibration using ccalibrator app, using LSQR solver with smoothness constraints.
+    The test is performed by running calibration with and without smoothness constraints and comparing the gradient cost to expected values.
+    """
+    msarchive = "40chan.ms.tar.bz2"
+    msfile = "40chan.ms"
+
+    # Extracting measurement set from an archive.
+    if not os.path.exists(msarchive):
+        raise RuntimeError, "A tarball with measurement sets does not seem to exist (%s)" % msarchive
+
+    if os.path.exists(msfile):
+        print "Removing old %s" % msfile
+        os.system("rm -rf %s" % msfile)
+
+    os.system("tar -xjf %s" % msarchive)
+
+    #----------------------------------------------------------------------------------
+    tmp_parset = 'ccal_tmp.in'
+    os.system("rm -f %s" % tmp_parset)
+    os.system("touch %s" % tmp_parset)
+
+    spr = SynthesisProgramRunner(template_parset = tmp_parset)
+
+    spr.addToParset("Ccalibrator.dataset                      = [%s]" % msfile)
+    spr.addToParset("Ccalibrator.nAnt                         = 12")
+    spr.addToParset("Ccalibrator.nBeam                        = 1")
+    spr.addToParset("Ccalibrator.nChan                        = 40")
+    
+    spr.addToParset("Ccalibrator.refantenna                   = 1")
+
+    spr.addToParset("Ccalibrator.calibaccess                  = parset")
+    spr.addToParset("Ccalibrator.calibaccess.parset           = result.dat")
+
+    spr.addToParset("Ccalibrator.sources.names                = [field1]")
+    spr.addToParset("Ccalibrator.sources.field1.direction     = [19h39m25.036, -63.42.45.63, J2000]")
+    spr.addToParset("Ccalibrator.sources.field1.components    = [src]")
+    spr.addToParset("Ccalibrator.sources.src.calibrator       = 1934-638")
+
+    spr.addToParset("Ccalibrator.gridder                      = SphFunc")
+
+    spr.addToParset("Ccalibrator.ncycles                      = 20")
+
+    spr.addToParset("Ccalibrator.solve                        = bandpass")
+    spr.addToParset("Ccalibrator.solver                       = LSQR")
+    spr.addToParset("Ccalibrator.solver.LSQR.verbose          = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = false")
+    spr.addToParset("Ccalibrator.solver.LSQR.alpha            = 1e5")
+    spr.addToParset("Ccalibrator.solver.LSQR.parallelMatrix   = true")
+
+    spr.addToParset("Ccalibrator.chunk                        = %w")
+    spr.addToParset("Ccalibrator.chanperworker                = 40")
+
+    # Set partitioning for 40 channels with 2 cpus, i.e., all 40 channels on one worker (plus a master rank).
+    nprocs = 2
+
+    # Filenames for writing the calibration results (parsets).
+    result_nonsmooth = "result_nonsmooth.dat"
+    result_smooth = "result_smooth.dat"
+
+    #------------------------------------------------------------------------------
+    print "Bandpass test: without smoothing constraints."
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_nonsmooth)
+
+    #------------------------------------------------------------------------------
+    # Switch on the smoothing constraints.
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = true")
+
+    print "Bandpass test: with smoothing constraints."
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_smooth)
+
+    #------------------------------------------------------------------------------
+    # Calcualte the gradient cost.
+    nchan = 40
+    nant = 12
+    cost_nonsmooth = calculateGradientCost(result_nonsmooth, nchan, nant, True)
+    cost_smooth = calculateGradientCost(result_smooth, nchan, nant, True)
+
+    print 'cost nonsmooth =', cost_nonsmooth
+    print 'cost smooth =', cost_smooth
+
+    #------------------------------------------------------------------------------
+    # Verify the gradient cost.
+
+    # Note that the (smooth) cost value calculated here differs from the one printed in the log (~0.0545)
+    # due to phase referencing performed in the end of calibration, which does not preserve this type of the gradient.
+    expected_cost_nonsmooth = 22.645816
+    expected_cost_smooth = 0.078488
+
+    tol = 1.e-6
+    if abs(cost_nonsmooth - expected_cost_nonsmooth) > tol:
+        raise RuntimeError, "Nonsmooth gradient cost is wrong! cost = %s" % cost_nonsmooth
+
+    if abs(cost_smooth - expected_cost_smooth) > tol:
+        raise RuntimeError, "Smooth gradient cost is wrong! cost = %s" % cost_smooth
+
+def compareGains(file1, file2, tol):
+    gains1 = loadParset(file1)
+    gains2 = loadParset(file2)
 
     # Comparing the results between the serial and parallel runs.
-    for k, v in gains_serial.items():
-        if k not in gains_parallel:
-            raise RintimeError, "Gain parameter %s found in the serial result is missing in the parallel result!" % k
-        val_serial = gains_serial[k]
-        val_parallel = gains_parallel[k]
+    for k, v in gains1.items():
+        if k not in gains2:
+            raise RintimeError, "Gain parameter %s is missing!" % k
+        val1 = gains1[k]
+        val2 = gains2[k]
 
-        if abs(val_serial - val_parallel) > tol:
-            raise RuntimeError, "Gain parameter %s has a parallel value of %s which is different from serial value %s" % (k, val_parallel, val_serial)
+        if abs(val1 - val2) > tol:
+            raise RuntimeError, "Gain parameter %s has a value value of %s which is different from value %s" % (k, val1, val2)
 
+def calculateGradientCost(filename, nchan, nant, useComplexNumberParts):
+    gains = loadParset(filename)
+
+    pols = ["g11", "g22"]
+
+    grad_cost = 0.
+    for pol in pols:
+        for ant in range(0, nant):
+            for chan in range(0, nchan - 1):
+                base_name = "gain." + pol + "." + str(ant) + ".0."
+                curr_parname = base_name + str(chan)        # current channel
+                next_parname = base_name + str(chan + 1)    # next channel
+    
+                curr_gain_complex_val = gains[curr_parname]
+                next_gain_complex_val = gains[next_parname]
+
+                # Calculate gradient in frequency, using forward difference approximation: x[i]' = x[i+1] - x[i]
+                if useComplexNumberParts:
+                    # Apply gradient directly on X and Y parts of a complex number g = X + iY.
+                    grad_cost += (next_gain_complex_val.real - curr_gain_complex_val.real)**2
+                    grad_cost += (next_gain_complex_val.imag - curr_gain_complex_val.imag)**2
+                else:
+                    # Apply gradient on the magnitude and phase of a complex number.
+                    curr_gain_magnitude = abs(curr_gain_complex_val)
+                    next_gain_magnitude = abs(next_gain_complex_val)
+                    
+                    curr_gain_phase = cmath.phase(curr_gain_complex_val)
+                    next_gain_phase = cmath.phase(next_gain_complex_val)
+        
+                    grad_cost += (next_gain_magnitude - curr_gain_magnitude)**2
+                    grad_cost += (next_gain_phase - curr_gain_phase)**2
+
+    return grad_cost
+
+#==================================================================================================
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -268,3 +510,5 @@ if __name__ == '__main__':
     if opt.parallel:
         runTestsParallel(1)
         runTestsParallel(5)
+        runTestsSmoothnessConstraintsParallel()
+        runTestsSmoothnessConstraintsGradientCost()
