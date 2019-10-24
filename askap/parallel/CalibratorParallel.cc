@@ -60,32 +60,32 @@
 ASKAP_LOGGER(logger, ".parallel");
 
 // own includes
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 
-#include <dataaccess/TableDataSource.h>
-#include <dataaccess/ParsetInterface.h>
-#include <dataaccess/TimeChunkIteratorAdapter.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/dataaccess/TimeChunkIteratorAdapter.h>
 
-#include <fitting/LinearSolver.h>
-#include <fitting/GenericNormalEquations.h>
-#include <fitting/Params.h>
+#include <askap/scimath/fitting/LinearSolver.h>
+#include <askap/scimath/fitting/GenericNormalEquations.h>
+#include <askap/scimath/fitting/Params.h>
 
-#include <measurementequation/ImageFFTEquation.h>
-#include <measurementequation/SynthesisParamsHelper.h>
-#include <measurementequation/MEParsetInterface.h>
-#include <measurementequation/CalibrationME.h>
-#include <measurementequation/PreAvgCalMEBase.h>
-#include <measurementequation/ComponentEquation.h>
-#include <measurementequation/NoXPolGain.h>
-#include <measurementequation/NoXPolFreqDependentGain.h>
-#include <measurementequation/NoXPolBeamIndependentGain.h>
-#include <measurementequation/LeakageTerm.h>
-#include <measurementequation/BeamIndependentLeakageTerm.h>
-#include <measurementequation/Product.h>
-#include <measurementequation/ImagingEquationAdapter.h>
-#include <gridding/VisGridderFactory.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/measurementequation/ImageFFTEquation.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/MEParsetInterface.h>
+#include <askap/measurementequation/CalibrationME.h>
+#include <askap/measurementequation/PreAvgCalMEBase.h>
+#include <askap/measurementequation/ComponentEquation.h>
+#include <askap/measurementequation/NoXPolGain.h>
+#include <askap/measurementequation/NoXPolFreqDependentGain.h>
+#include <askap/measurementequation/NoXPolBeamIndependentGain.h>
+#include <askap/measurementequation/LeakageTerm.h>
+#include <askap/measurementequation/BeamIndependentLeakageTerm.h>
+#include <askap/measurementequation/Product.h>
+#include <askap/measurementequation/ImagingEquationAdapter.h>
+#include <askap/gridding/VisGridderFactory.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <askap/calibaccess/CalParamNameHelper.h>
 #include <askap/calibaccess/CalibAccessFactory.h>

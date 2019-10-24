@@ -81,6 +81,6 @@ struct BeamIndependentLeakageTerm : public ParameterizedMEComponent<false> {
 
 } // namespace askap
 
-#include <measurementequation/BeamIndependentLeakageTerm.tcc>
+#include <askap/measurementequation/BeamIndependentLeakageTerm.tcc>
 
 #endif // #ifndef BEAM_INDEPENDENT_LEAKAGE_TERM_H
