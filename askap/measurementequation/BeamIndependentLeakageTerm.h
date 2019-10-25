@@ -32,13 +32,13 @@
 #define BEAM_INDEPENDENT_LEAKAGE_TERM_H
 
 // own includes
-#include <fitting/ComplexDiffMatrix.h>
-#include <fitting/ComplexDiff.h>
-#include <fitting/Params.h>
-#include <dataaccess/IConstDataAccessor.h>
-#include <askap/AskapError.h>
-#include <measurementequation/ParameterizedMEComponent.h>
-#include <utils/PolConverter.h>
+#include <askap/scimath/fitting/ComplexDiffMatrix.h>
+#include <askap/scimath/fitting/ComplexDiff.h>
+#include <askap/scimath/fitting/Params.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
+#include <askap/askap/AskapError.h>
+#include <askap/measurementequation/ParameterizedMEComponent.h>
+#include <askap/scimath/utils/PolConverter.h>
 
 // std includes
 #include <string>
