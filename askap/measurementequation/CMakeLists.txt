@@ -55,6 +55,8 @@ endif()
 install (FILES
 BlockCDMOperations.h
 BlockCDMOperations.tcc
+BeamIndependentLeakageTerm.h
+BeamIndependentLeakageTerm.tcc
 CalibParamsMEAdapter.h
 CalibrationApplicatorME.h
 CalibrationIterator.h
