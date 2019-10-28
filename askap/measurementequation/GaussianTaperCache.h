@@ -50,26 +50,26 @@ public:
    /// @details This constructor just sets the taper size. The size is full width at
    /// half maximum expressed in pixels.
    /// @param[in] majFWHM full width at half maximum of the major axis in pixels
-   /// @param[in] minFWHM full width at half maximum of the minor axis in pixels 
+   /// @param[in] minFWHM full width at half maximum of the minor axis in pixels
    /// @param[in] pa position angle in radians
    GaussianTaperCache(double majFWHM, double minFWHM, double pa);
-   
-   /// @brief set up the taper handler with a circularly symmetric taper 
+
+   /// @brief set up the taper handler with a circularly symmetric taper
    /// @details This constructor just sets the taper size, same for both axis.
-   /// The size is full width at half maximum expressed in pixels 
+   /// The size is full width at half maximum expressed in pixels
    /// @param[in] fwhm size in pixels
    explicit GaussianTaperCache(double fwhm);
-   
+
    /// @brief Copy constructor
    /// @param[in] other input object
    /// @note We need a copy constructor because casa arrays use reference semantics
    GaussianTaperCache(const GaussianTaperCache &other);
-   
+
    /// @brief assignment operator
    /// @param[in] other object to assign from
    /// @return reference to itself
    /// @note We need an assignment operator because casa arrays use reference semantics
-   GaussianTaperCache& operator=(const GaussianTaperCache &other);   
+   GaussianTaperCache& operator=(const GaussianTaperCache &other);
 
    /// @brief obtain taper
    /// @details This method returns cached taper for a given shape. The taper
@@ -77,24 +77,31 @@ public:
    /// The output is guaranteed to have the requested shape.
    /// @param[in] shape required shape
    /// @return array with the taper (casa arrays use reference semantics)
-   casacore::Array<casacore::Complex> taper(const casacore::IPosition &shape) const;
-   
+   casa::Array<casa::Complex> taper(const casa::IPosition &shape) const;
+
    /// @return major axis in pixels
    inline double majorAxis() const {return itsMajorAxis;}
 
    /// @return minor axis in pixels
    inline double minorAxis() const {return itsMinorAxis;}
-   
+
    /// @return position angle in radians
    inline double posAngle() const {return itsPA;}
-   
-protected:           
-   /// @brief build the cache 
+
+
+protected:
+   /// @brief build the cache
    /// @details This method populates the cache using the values of
    /// data members
    /// @param[in] shape shape of the required array
-   void initTaperCache(const casacore::IPosition &shape) const;
-   
+   void initTaperCache(const casa::IPosition &shape) const;
+
+   /// @brief tune taper parameters based on achieved resolution
+   /// @param[in] beam - fitted beam fwhm major,minor in image pixels and pos angle in radians
+   /// @param[in] tolerance - fractional tolerance in fwhm, also tolerance in rad for pa
+   /// @return true if converged within tolerance
+   bool tuneTaper(casa::Vector<double> beam, double tolerance) const;
+
 private:
    /// @brief Major axis (sigma, rather than FWHM) in pixels
    double itsMajorAxis;
@@ -104,7 +111,9 @@ private:
    double itsPA;
    /// @brief cache of the taper image
    /// @note May be we can make it float?
-   mutable casacore::Array<casacore::Complex> itsTaperCache;
+   mutable casa::Array<casa::Complex> itsTaperCache;
+   /// @brief actual taper parameters after tuning
+   mutable casa::Vector<double> itsTaper;
 };
 
 } // namespace synthesis
@@ -112,4 +121,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef GAUSSIAN_TAPER_CACHE_H
-

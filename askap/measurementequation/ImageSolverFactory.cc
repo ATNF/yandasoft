@@ -86,8 +86,8 @@ namespace askap
 	for (std::vector<std::string>::const_iterator ci = thresholds.begin();
 	     ci != thresholds.end(); ++ci) {
 
-	  casacore::Quantity cThreshold;
-	  casacore::Quantity::read(cThreshold, *ci);
+	  casa::Quantity cThreshold;
+	  casa::Quantity::read(cThreshold, *ci);
 	  cThreshold.convert();
 	  if (cThreshold.isConform("Jy")) {
 	    ASKAPCHECK(!absoluteThreshold2Defined, "Parameter "<<parName<<
@@ -192,31 +192,34 @@ namespace askap
 	  const std::vector<int> shape = parset.getInt32Vector("Images.shape");
 	  ASKAPCHECK((cellsize.size() == 2) && (shape.size() == 2),
 		     "Images.cellsize and Images.shape parameters should have exactly two values");
+      bool isPsfSize = parset.getBool("preconditioner.GaussianTaper.isPsfSize",False);
+      // Try to use the same cutoff as used by the restore solver so final beams will match
+      double cutoff = parset.getDouble("restore.beam.cutoff",0.5);
 
 	  // additional scaling factor due to padding. by default - no padding
 	  const boost::shared_ptr<ImageCleaningSolver> ics = boost::dynamic_pointer_cast<ImageCleaningSolver>(solver);
 	  const double paddingFactor = ics ? ics->paddingFactor() : 1.;
 
 	  // factors which appear in nominator are effectively half sizes in radians
-	  const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casacore::C::pi;
-	  const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casacore::C::pi;
+	  const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casa::C::pi;
+	  const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casa::C::pi;
 
 	  if (taper.size() == 3) {
 
 	    ASKAPDEBUGASSERT((taper[0]!=0) && (taper[1]!=0));
 	    solver->addPreconditioner(IImagePreconditioner::ShPtr(new GaussianTaperPreconditioner(
-												  xFactor/taper[0],yFactor/taper[1],taper[2])));
+												  xFactor/taper[0],yFactor/taper[1],taper[2],isPsfSize,cutoff)));
 	  } else {
 	    ASKAPDEBUGASSERT(taper[0]!=0);
 	    if (std::abs(xFactor-yFactor)<4e-15) {
 	      // the image is square, can use the short cut
-	      solver->addPreconditioner(IImagePreconditioner::ShPtr(new GaussianTaperPreconditioner(xFactor/taper[0])));
+	      solver->addPreconditioner(IImagePreconditioner::ShPtr(new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff)));
 	    } else {
 	      // the image is rectangular. Although the gaussian taper is symmetric in
 	      // angular coordinates, it will be elongated along the vertical axis in
 	      // the uv-coordinates.
 	      solver->addPreconditioner(IImagePreconditioner::ShPtr(new GaussianTaperPreconditioner(xFactor/taper[0],
-												    yFactor/taper[0],0.)));
+												    yFactor/taper[0],0.,isPsfSize,cutoff)));
 	    } // xFactor!=yFactor
 	  } // else: taper.size() == 3
 	} else /* if( (*pc)=="ApproxPsf" ) { //later, add the option of specifying a beam, or fitting for it.
@@ -240,7 +243,7 @@ namespace askap
 		   "The use of the parameter solver.Clean.threshold is deprecated, use threshold.minorcycle instead");
 
 	string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
-    casacore::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
+    casa::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
 
 	if (algorithm=="MultiScale") {
 	  ASKAPLOG_INFO_STR(logger, "Constructing MultiScale Clean solver (ASKAP version)" );
@@ -258,13 +261,13 @@ namespace askap
 	else if ((algorithm=="MSMFS")||(algorithm=="MultiScaleMFS")) {
 	  ASKAPCHECK(!parset.isDefined("solver.nterms"), "Specify nterms for each image instead of using solver.nterms");
 	  ASKAPCHECK(!parset.isDefined("solver.Clean.nterms"), "Specify nterms for each image instead of using solver.Clean.nterms");
-	  solver.reset(new ImageMSMFSolver(casacore::Vector<float>(scales)));
+	  solver.reset(new ImageMSMFSolver(casa::Vector<float>(scales)));
 	  ASKAPLOG_INFO_STR(logger, "Constructed image multiscale multi-frequency solver (CASA version)" );
 	}
 	else if ((algorithm=="BFMFS")||(algorithm=="BasisfunctionMFS")) {
 	  ASKAPCHECK(!parset.isDefined("solver.nterms"), "Specify nterms for each image instead of using solver.nterms");
 	  ASKAPCHECK(!parset.isDefined("solver.Clean.nterms"), "Specify nterms for each image instead of using solver.Clean.nterms");
-	  solver.reset(new ImageAMSMFSolver(casacore::Vector<float>(scales)));
+	  solver.reset(new ImageAMSMFSolver(casa::Vector<float>(scales)));
 	  ASKAPLOG_INFO_STR(logger, "Constructed basis function multi-frequency solver" );
 	}
 	else {
