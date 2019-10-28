@@ -1,0 +1,21 @@
+module purge
+module load sandybridge
+module use /home/sord/software/sles12sp2/modulefiles
+module load gcc
+module load numpy
+module load lapack
+module load cfitsio
+module load wcslib
+module load boost
+module load apr
+module load apr-util
+module load apache-log4cxx/0.11.0
+module load fftw
+module load gsl
+module load xerces-c
+module load mpich
+module load cppunit
+module load cmake/3.10.0
+module unload casacore
+
+
