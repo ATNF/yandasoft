@@ -203,7 +203,7 @@ do
 			;;
 	esac
 done
-yandasoft_opts="${yandasoft_opts} ${opts} ${askap_opts} ${extra_opts} -DCASACORE_ROOT_DIR=${prefix}"
+yandasoft_opts="${yandasoft_opts} ${opts} ${askap_opts} ${extra_opts} "
 casacore_opts="${casacore_opts} ${opts}"
 casarest_opts="${casarest_opts} ${opts}"
 check_supported_values system $system centos ubuntu osx
