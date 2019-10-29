@@ -1,6 +1,7 @@
 module purge
 module load sandybridge
 module use /home/sord/software/sles12sp2/modulefiles
+module use /group/askap/sord/software/sles12sp2/modulefiles/
 module load gcc
 module load numpy
 module load lapack
@@ -16,6 +17,6 @@ module load xerces-c
 module load mpich
 module load cppunit
 module load cmake/3.10.0
-module unload casacore
+module load lmdb
 
 

@@ -56,6 +56,7 @@ print_usage() {
 	echo " -U 	       clean and uninstall yandasoft and dependencies (except casacore/casarest)"
         echo " -O <opts>       Options to apply to all builds."
         echo " -P              Use Python 3 "
+        echo " -i              Install Ingest (askap-services). "
 }
 
 try() {
@@ -97,6 +98,7 @@ install_casarest=no
 install_askap_dependencies=no
 install_yandasoft=no
 install_extra=no
+install_ingest=no
 clean_askap_dependencies=no
 clean_yandasoft=no
 build_adios=no
@@ -167,7 +169,10 @@ do
 		E)	extra_opts="$OPTARG"
 			install_extra=yes
 			;;
-		R)
+                i)      
+                        install_ingest=yes
+                        ;;
+                R)
 			casarest_opts="$OPTARG"
 			install_casarest=yes
 			;;
@@ -451,8 +456,9 @@ if [ $install_extra == yes ]; then
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
 fi
-	
-
+if [ $install_ingest == yes ]; then	
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-services.git master $yandasoft_opts
+fi
 
 if [ $clean_yandasoft == yes ]; then
    startdir="$PWD"
