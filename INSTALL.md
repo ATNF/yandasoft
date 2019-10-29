@@ -49,13 +49,13 @@ Options:
  -j <jobs>     Number of parallel compilation jobs, defaults to 1
  -p <prefix>   Prefix for installation, defaults to /usr/local
  -w <workdir>  Working directory, defaults to .
- -S 	     Install system dependencies. 
+ -S 	       Install system dependencies. 
  -W            Remove the working directory at the end of the build
  -C <opts      Install Casacore + cmake options
  -A <opts>     Install ASKAP dependencies + cmake options
  -R <opts>     Install casarest + cmake options
  -Y <opts>     Install YandaSoft + cmake options
- -U 	     clean and uninstall yandasoft and dependencies (except casacore/casarest)
+ -U 	       Clean and uninstall yandasoft and dependencies (except casacore/casarest)
  -P            Use Python 3 
 ```
 
@@ -63,12 +63,28 @@ Typically you would install the system dependencies, then casacore/casarest, the
 
 `build_all.sh -c -a -y`
 
-Assuming you want everything in ```/usr/local```. You can specify a prefix. If you find you need to provide cmake options the equivelant is:
+Assuming you want everything in ```/usr/local```. You can specify a prefix. If you find you need to provide cmake options the equivalent is:
 
 `build_all.sh -C <opt> -A <opt> -Y <opt>`
+
+If you are on Ubuntu and installing everything for the first time, make sure all system dependencies are installed. Then invoke the following build command, if you have administrator permission and want to install in the default location (`/usr/local`).
+
+```
+sudo ./build_all.sh -c -a -y -r -s ubuntu
+```
+
+If you are not administrator or want to install in another location within your own account, invoke the command with the following options.
+
+```
+./build_all.sh -c -a -y -r -s ubuntu -p another_location
+```
 
 If you want to clean up the mess:
 
 `build_all.sh -U`
 
 Will clean and uninstall everything. It will leave any downloaded repositories in place though.
+
+## Note
+
+The procedure above has been verified on Ubuntu 18.04.
