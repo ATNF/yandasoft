@@ -17,7 +17,7 @@ Csimulator.antennas.definition                  =       A27CR3P6B.in
 Csimulator.feeds.definition                     =       ASKAP1feed.in
 
 Csimulator.spws.names                      =       [Wide0]
-Csimulator.spws.Wide0  =[ 1, 1.420GHz, -10kHz, "I"]
+Csimulator.spws.Wide0  =[ 4, 1.420GHz, -10kHz, "I"]
 #
 # Standard settings for the simulaton step
 #
@@ -57,15 +57,16 @@ Cimager.dataset                                 = field1.ms
 Cimager.nUVWMachines                            = 1
 Cimager.uvwMachineDirTolerance                  = 1arcsec
 Cimager.imagetype                               = casa
+Cimager.nchanpercore                            = 4
+Cimager.solverpercore                            = true
 Cimager.memorybuffers                           = true
-
+Cimager.Channels                                = [4,0]
 Cimager.Images.Names                            = [image.field1]
 Cimager.Images.writeAtMajorCycle                = false
 Cimager.Images.reuse                            = false
 Cimager.Images.shape	                        = [1024,1024]
 Cimager.Images.cellsize	                        = [4.0arcsec, 4.0arcsec]
 Cimager.Images.image.field1.frequency	        = [1.164e9,1.420e9]
-Cimager.Images.image.field1.nchan		= 1
 Cimager.Images.image.field1.polarisation       = ["I"]
 #Cimager.Images.image.field1.direction	        = [12h40m50.00, -43.00.00.00, J2000]
 Cimager.Images.image.field1.direction	        = [12h30m00.00, -45.00.00.00, J2000]

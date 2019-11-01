@@ -57,6 +57,7 @@
 #include <askap/parallel/GroupVisAggregator.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/gridding/IVisGridder.h>
+#include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
 
 // Local includes
@@ -137,6 +138,11 @@ void CalcCore::doCalc()
         if (!getSolutionSource()) {
             ASKAPLOG_DEBUG_STR(logger,"Not applying calibration");
             ASKAPLOG_DEBUG_STR(logger, "building FFT/measurement equation" );
+            // the ImageFFTEquation actually clones the gridders and stores them internally
+            // which is good - but you do not get the expected behaviour here. You would think that
+            // this gridder is the one that is being used - unfortunately it is not.
+            // You therefore get no benefit from initialising the gridder.
+            // Also this is why you cannot get at the grid from outside FFT equation
             boost::shared_ptr<ImageFFTEquation> fftEquation(new ImageFFTEquation (*itsModel, it, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
             fftEquation->useAlternativePSF(parset());
@@ -173,6 +179,31 @@ void CalcCore::doCalc()
 
     ASKAPLOG_INFO_STR(logger,"Calculated normal equations in "<< timer.real()
                       << " seconds ");
+
+    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
+
+    // We will need to loop over all completions i.e. all sources
+    const std::vector<std::string> completions(itsModel->completions("image"));
+
+    // To minimize the number of data passes, we keep copies of the gridders in memory, and
+    // switch between these. This optimization may not be sufficient in the long run.
+    // Set up initial gridders for model and for the residuals. This enables us to
+    // do both at the same time.
+
+
+    for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
+    {
+      const string imageName("image"+(*it));
+   //   SynthesisParamsHelper::clipImage(parameters(),imageName);
+ 
+      boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
+      if (tvg) {
+        tvg->storeGrid("uvcoverage-"+std::to_string(itsChannel),0);
+      }
+    }
+    // end debugging code
+      
 
 }
 

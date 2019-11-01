@@ -151,6 +151,13 @@ namespace askap
         /// @param[in] obj new object function (or an empty shared pointer to turn this option off)
         void setVisUpdateObject(const boost::shared_ptr<IVisCubeUpdate> &obj);
 
+
+        /// I want access to the gridders but I dont want to change them
+
+        IVisGridder::ShPtr getResidualGridder(std::string name) const {
+            return itsResidualGridders[name];
+        };
+
       private:
 
       /// Pointer to prototype gridder
