@@ -516,6 +516,14 @@ void ContinuumWorker::processChannels()
       itsPSFCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, psf_name));
       itsResidualCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, residual_name));
       itsWeightsCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, weights_name));
+      /* not updated the CubeBuilder API yet 
+      if ( itsComms.dumpingGrids() ) {
+        grid_name = "grids";
+        itsGridCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, grid_name);
+
+      }
+      */
+
     }
 
 

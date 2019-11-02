@@ -76,7 +76,7 @@ class CubeBuilder {
     std::string filename() const{return itsFilename;};
 
     private:
-        boost::shared_ptr<accessors::IImageAccess> itsCube;
+        boost::shared_ptr<accessors::IImageAccess<casacore::Float> > itsCube;
 
 
     /// Image name from parset - must start with "image."

@@ -42,7 +42,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   if ( !accumulator.loadParset(parset) ) return;
 
   // initialise an image accessor
-  accessors::IImageAccess& iacc = SynthesisParamsHelper::imageHandler();
+  accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
   // if we have Taylor terms and we need to correct them for the beam spectral
   // index - do it now ...
 

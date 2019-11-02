@@ -74,7 +74,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
     if ( !accumulator.loadParset(parset) ) return;
 
     // initialise an image accessor
-    accessors::IImageAccess& iacc = SynthesisParamsHelper::imageHandler();
+    accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
     // loop over the mosaics, reading each in an adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames;

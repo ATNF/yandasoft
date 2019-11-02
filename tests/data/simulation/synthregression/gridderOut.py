@@ -57,7 +57,7 @@ spr = SynthesisProgramRunner(template_parset = 'gridOut.in')
 spr.runSimulator()
 
 
-spr.addToParset("Cimager.gridder = WProject")
+spr.addToParset("Cimager.gridder = AltWProject")
 spr.addToParset("Cimager.solverpercore = true")
 spr.addToParset("Cimager.Solver.Clean.solutiontype = MAXCHISQ")
 
@@ -65,8 +65,7 @@ spr.addToParset("Cimager.Solver.Clean.solutiontype = MAXCHISQ")
 #analyseResult(spr)
 
 spr.addToParset("Cimager.freqframe = lsrk")
-spr.addToParset("Cimager.Channels = [1,0]")
 spr.addToParset("Cimager.Frequencies = [1,1.42e9,-1e6]")
-spr.addToParset("Cimager.imagetype = fits")
-spr.runNewImager()
+spr.addToParset("Cimager.gridder.AltWProject.dumpgrid = true")
+spr.runNewImager(2)
 #analyseResult(spr)

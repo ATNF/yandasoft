@@ -121,6 +121,8 @@ void CalcCore::doCalc()
 
         sel->chooseCrossCorrelations();
         sel << itsParset;
+
+        // If we want more channels probably increase this ....
         sel->chooseChannels(1, itsChannel);
 
         IDataConverterPtr conv = ds.createConverter();
@@ -132,7 +134,7 @@ void CalcCore::doCalc()
 
 
         ASKAPCHECK(itsModel, "Model not defined");
-        ASKAPCHECK(gridder(), "Gridder not defined");
+        ASKAPCHECK(gridder(), "Prototype gridder not defined");
         // calibration can go below if required
 
         if (!getSolutionSource()) {
