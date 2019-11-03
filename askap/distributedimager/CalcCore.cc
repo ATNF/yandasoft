@@ -201,7 +201,7 @@ void CalcCore::doCalc()
  
       boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
       if (tvg) {
-        tvg->storeGrid("uvcoverage-"+std::to_string(itsChannel),0);
+        // tvg->storeGrid("uvcoverage-"+std::to_string(itsChannel),0);
       }
     }
     // end debugging code

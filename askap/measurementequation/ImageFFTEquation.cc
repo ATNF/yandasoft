@@ -451,10 +451,10 @@ namespace askap
 
         
         // for debugging/research, store grid prior to FFT
-        boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(itsResidualGridders[imageName]);
-        if (tvg) {
-            tvg->storeGrid("uvcoverage"+(*it),0);
-        }
+        // boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(itsResidualGridders[imageName]);
+        // if (tvg) {
+        //    tvg->storeGrid("uvcoverage"+(*it),0);
+        //}
         // end debugging code
         
 

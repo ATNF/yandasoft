@@ -57,7 +57,7 @@ spr = SynthesisProgramRunner(template_parset = 'gridOut.in')
 spr.runSimulator()
 
 
-spr.addToParset("Cimager.gridder = AltWProject")
+spr.addToParset("Cimager.gridder = WProject")
 spr.addToParset("Cimager.solverpercore = true")
 spr.addToParset("Cimager.Solver.Clean.solutiontype = MAXCHISQ")
 

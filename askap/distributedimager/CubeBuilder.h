@@ -47,6 +47,7 @@
 namespace askap {
 namespace cp {
 
+template <class T> 
 class CubeBuilder {
     public:
         /// Constructor
@@ -61,7 +62,7 @@ class CubeBuilder {
         /// Destructor
         ~CubeBuilder();
 
-        void writeSlice(const casacore::Array<float>& arr, const casacore::uInt chan);
+        void writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan);
 
         casacore::CoordinateSystem
         createCoordinateSystem(const LOFAR::ParameterSet& parset,
@@ -76,7 +77,9 @@ class CubeBuilder {
     std::string filename() const{return itsFilename;};
 
     private:
-        boost::shared_ptr<accessors::IImageAccess<casacore::Float> > itsCube;
+
+        
+        boost::shared_ptr<accessors::IImageAccess<T> > itsCube;
 
 
     /// Image name from parset - must start with "image."
@@ -91,5 +94,6 @@ class CubeBuilder {
 
 }
 }
+#include "CubeBuilder.tcc"
 
 #endif
