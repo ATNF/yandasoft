@@ -85,7 +85,6 @@ namespace cp {
 
         void zero();
 
-
         void check();
 
         void restoreImage();
@@ -112,13 +111,12 @@ namespace cp {
         accessors::TableDataSource itsData;
 
 
-        // Pointer to the gridder
+        // Pointer to the gridder prototype
+        // WARNING this is cloned by the Equation - so you get little from specifying it
         askap::synthesis::IVisGridder::ShPtr itsGridder_p;
 
         // Its channel in the dataset
         int itsChannel;
-
-
 
         // No support for assignment
         CalcCore& operator=(const CalcCore& rhs);

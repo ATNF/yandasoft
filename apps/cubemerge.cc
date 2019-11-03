@@ -71,8 +71,8 @@ int main(int argc, const char** argv) {
         }
         std::cout<<"Output will be stored to "<<outfile.getValue()<<std::endl;
         ASKAPCHECK(inputFiles.size()>0, "At least one input image should be defined");
-
-        accessors::CasaImageAccess ia;
+        // Although this is now templated - going to restrict to casacore::Float for the moment
+        accessors::CasaImageAccess<casacore::Float>  ia;
         const casa::IPosition shape = ia.shape(inputFiles[0]);
         ASKAPCHECK(shape.nelements()>=2,"Work with at least 2D images!");
 

@@ -512,19 +512,27 @@ void ContinuumWorker::processChannels()
 
 
     if ( itsComms.isCubeCreator() ) {
-      itsImageCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc,img_name));
-      itsPSFCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, psf_name));
-      itsResidualCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, residual_name));
-      itsWeightsCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, weights_name));
+      itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc,img_name));
+      itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
+      itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
+      itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
+      /* not updated the CubeBuilder API yet 
+      if ( itsComms.dumpingGrids() ) {
+        grid_name = "grids";
+        itsGriddedVis.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, grid_name);
+
+      }
+      */
+
     }
 
 
 
     if (!itsComms.isCubeCreator()) {
-      itsImageCube.reset(new CubeBuilder(itsParset, img_name));
-      itsPSFCube.reset(new CubeBuilder(itsParset,  psf_name));
-      itsResidualCube.reset(new CubeBuilder(itsParset,  residual_name));
-      itsWeightsCube.reset(new CubeBuilder(itsParset, weights_name));
+      itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, img_name));
+      itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset,  psf_name));
+      itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
+      itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, weights_name));
     }
 
     if (itsParset.getBool("restore", false)) {
@@ -543,16 +551,16 @@ void ContinuumWorker::processChannels()
       // Only create these if we are restoring, as that is when they get made
       if (itsComms.isCubeCreator()) {
         if (itsDoingPreconditioning) {
-          itsPSFimageCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, psf_image_name));
+          itsPSFimageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_image_name));
         }
-        itsRestoredCube.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
+        itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
       }
 
       if (!itsComms.isCubeCreator()) {
         if (itsDoingPreconditioning) {
-          itsPSFimageCube.reset(new CubeBuilder(itsParset,  psf_image_name));
+          itsPSFimageCube.reset(new CubeBuilder<casacore::Float>(itsParset,  psf_image_name));
         }
-        itsRestoredCube.reset(new CubeBuilder(itsParset, restored_image_name));
+        itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, restored_image_name));
       }
     }
   }
