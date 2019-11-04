@@ -32,6 +32,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <complex>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
+
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -1081,6 +1086,13 @@ void ContinuumWorker::processChannels()
       rootImager.params()->add("model.slice", rootImager.params()->value("image.slice"));
       ASKAPCHECK(rootImager.params()->has("model.slice"), "Params are missing model.slice parameter");
 
+      if (dumpgrids) {
+        ASKAPLOG_INFO_STR(logger,"Adding grid.slice");
+        casacore::Array<casacore::Complex> garr = rootImager.getGrid();
+        casacore::Vector<casacore::Complex> garrVec(garr.reform(IPosition(1,garr.nelements())));
+        rootImager.params()->addComplexVector("grid.slice",garrVec);
+      } 
+
       rootImager.check();
 
 
@@ -1347,6 +1359,14 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     casacore::Array<float> floatImagePixels(imagePixels.shape());
     casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsWeightsCube->writeSlice(floatImagePixels, chan);
+  }
+  // Write the grids
+
+  if (params->has("grid.slice")) {
+    ASKAPLOG_INFO_STR(logger, "Writing Grid");
+    const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
+    casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+    itsGriddedVis->writeSlice(grid,chan);
   }
 
   if (itsParset.getBool("restore", false)) {

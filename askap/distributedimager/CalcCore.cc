@@ -182,6 +182,10 @@ void CalcCore::doCalc()
     ASKAPLOG_INFO_STR(logger,"Calculated normal equations in "<< timer.real()
                       << " seconds ");
 
+    }
+casacore::Array<casacore::Complex> CalcCore::getGrid() {
+
+    ASKAPCHECK(itsEquation, "Equation not defined");
     ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
 
@@ -194,20 +198,11 @@ void CalcCore::doCalc()
     // do both at the same time.
 
 
-    for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
-    {
-      const string imageName("image"+(*it));
-   //   SynthesisParamsHelper::clipImage(parameters(),imageName);
- 
-      boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
-      if (tvg) {
-        // tvg->storeGrid("uvcoverage-"+std::to_string(itsChannel),0);
-      }
-    }
-    // end debugging code
-      
-
-}
+    std::vector<std::string>::const_iterator it=completions.begin();
+    const string imageName("image"+(*it));
+    boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
+    return tvg->getGrid();
+} 
 
 void CalcCore::calcNE()
 {

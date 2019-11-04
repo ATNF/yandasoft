@@ -183,7 +183,9 @@ namespace askap
       /// is empty (all pixels are zero). This makes sense for degridding only.
       /// @brief true, if the model is empty
       virtual bool isModelEmpty() const;
-
+      /// @brief return the current grid
+      /// @details essentially just returns the same grid that storeGrid can write out
+      inline const casacore::Array<casacore::Complex> getGrid() const {return itsGrid[0];}
   protected:
       /// @brief helper method to print CF cache stats in the log
       /// @details This method is largely intended for debugging. It writes down
@@ -427,6 +429,7 @@ protected:
 
       /// The grid is stored as a cube as well so we can index into that as well.
       std::vector<casacore::Array<casacore::Complex> > itsGrid;
+
 
   private:
 
