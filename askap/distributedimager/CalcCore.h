@@ -93,6 +93,8 @@ namespace cp {
 
         askap::synthesis::IVisGridder::ShPtr gridder() { return itsGridder_p;};
 
+        casacore::Array<casacore::Complex> getGrid();
+
     private:
 
         // Parameter set

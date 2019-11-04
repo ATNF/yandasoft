@@ -32,6 +32,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
+#include <complex>
+#include <cmath>
+#include <iostream>
+#include <iomanip>
+
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -435,6 +440,12 @@ void ContinuumWorker::processChannels()
     unitParset = itsParsets[0];
   }
 
+  const bool dumpgrids = unitParset.getBool("dumpgrids",false);
+
+  if (dumpgrids) {
+    ASKAPLOG_INFO_STR(logger,"Will output gridded visibilities");
+  }
+
   const bool localSolver = unitParset.getBool("solverpercore", false);
 
   if (localSolver) {
@@ -498,12 +509,19 @@ void ContinuumWorker::processChannels()
     std::string weights_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
 
+    root = "grid";
+
+    std::string grid_name = root + std::string(".wr.") \
+    + utility::toString(itsComms.rank());
+
+
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
       psf_name = "psf";
       residual_name = "residual";
       weights_name = "weights";
+      grid_name = "grid";
     }
 
     ASKAPLOG_DEBUG_STR(logger, "Configuring Spectral Cube");
@@ -516,13 +534,11 @@ void ContinuumWorker::processChannels()
       itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
-      /* not updated the CubeBuilder API yet 
-      if ( itsComms.dumpingGrids() ) {
-        grid_name = "grids";
-        itsGriddedVis.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, grid_name);
-
+      
+      if ( dumpgrids ) {
+        itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
       }
-      */
+      
 
     }
 
@@ -533,6 +549,12 @@ void ContinuumWorker::processChannels()
       itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset,  psf_name));
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, weights_name));
+
+ 
+      if ( dumpgrids ) {
+        itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
+      }
+      
     }
 
     if (itsParset.getBool("restore", false)) {
@@ -1064,6 +1086,13 @@ void ContinuumWorker::processChannels()
       rootImager.params()->add("model.slice", rootImager.params()->value("image.slice"));
       ASKAPCHECK(rootImager.params()->has("model.slice"), "Params are missing model.slice parameter");
 
+      if (dumpgrids) {
+        ASKAPLOG_INFO_STR(logger,"Adding grid.slice");
+        casacore::Array<casacore::Complex> garr = rootImager.getGrid();
+        casacore::Vector<casacore::Complex> garrVec(garr.reform(IPosition(1,garr.nelements())));
+        rootImager.params()->addComplexVector("grid.slice",garrVec);
+      } 
+
       rootImager.check();
 
 
@@ -1330,6 +1359,14 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     casacore::Array<float> floatImagePixels(imagePixels.shape());
     casacore::convertArray<float, double>(floatImagePixels, imagePixels);
     itsWeightsCube->writeSlice(floatImagePixels, chan);
+  }
+  // Write the grids
+
+  if (params->has("grid.slice")) {
+    ASKAPLOG_INFO_STR(logger, "Writing Grid");
+    const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
+    casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+    itsGriddedVis->writeSlice(grid,chan);
   }
 
   if (itsParset.getBool("restore", false)) {
