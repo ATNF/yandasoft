@@ -61,12 +61,9 @@ using namespace casa;
 using namespace std;
 using namespace askap::synthesis;
 
-template <class T>
-CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
+template <>
+CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     // as long as the cube exists all should be fine
-    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder with existing cube ");
-    itsCube = accessors::imageAccessFactory(parset);
-
     vector<string> filenames;
     if (parset.isDefined("Images.Names")) {
         filenames = parset.getStringVector("Images.Names", true);
@@ -92,9 +89,133 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
             itsFilename.replace(f, orig.length(), name);
         }
     }
-    
-    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder with existing cube " << itsFilename);
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
+    boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
+    itsCube = iaCASA;
 }
+
+template <class T>
+CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
+    // as long as the cube exists all should be fine
+    vector<string> filenames;
+    if (parset.isDefined("Images.Names")) {
+        filenames = parset.getStringVector("Images.Names", true);
+        itsFilename = filenames[0];
+    }
+    else if(parset.isDefined("Images.name")) {
+        itsFilename = parset.getString("Images.name");
+    }
+    else {
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
+    }
+    ASKAPCHECK(itsFilename.substr(0,5)=="image",
+               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
+
+    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
+    // unless name='restored', in which case we append ".restored"
+    if (!name.empty()) {
+        if (name == "restored") {
+            itsFilename = itsFilename + ".restored";
+        } else {
+            const string orig = "image";
+            const size_t f = itsFilename.find(orig);
+            itsFilename.replace(f, orig.length(), name);
+        }
+    }
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
+    itsCube = accessors::imageAccessFactory(parset);
+
+}
+template <>
+CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
+                         const casacore::uInt nchan,
+                         const casacore::Quantity& f0,
+                         const casacore::Quantity& inc,
+                         const std::string& name)
+{
+    vector<string> filenames;
+    if (parset.isDefined("Images.Names")) {
+        filenames = parset.getStringVector("Images.Names", true);
+        itsFilename = filenames[0];
+    }
+    else if(parset.isDefined("Images.name")) {
+        itsFilename = parset.getString("Images.name");
+    }
+    else {
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
+    }
+    ASKAPCHECK(itsFilename.substr(0,5)=="image",
+               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
+
+    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
+    // unless name='restored', in which case we append ".restored"
+    if (!name.empty()) {
+        if (name == "restored") {
+            itsFilename = itsFilename + ".restored";
+        } else {
+            const string orig = "image";
+            const size_t f = itsFilename.find(orig);
+            itsFilename.replace(f, orig.length(), name);
+        }
+    }
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
+    boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
+    itsCube = iaCASA;
+
+    const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
+    if (restFreqString == "HI") {
+#ifdef HAVE_CASACORE3
+        itsRestFrequency = casacore::QC::HI();
+#else
+        itsRestFrequency = casacore::QC::HI;
+#endif // HAVE_CASACORE3
+    } else {
+        itsRestFrequency = SynthesisParamsHelper::convertQuantity(restFreqString, "Hz");
+    }
+
+    // Polarisation
+    const std::vector<std::string>
+        stokesVec = parset.getStringVector("Images.polarisation", std::vector<std::string>(1,"I"));
+    // there could be many ways to define stokes, e.g. ["XX YY"] or ["XX","YY"] or "XX,YY"
+    // to allow some flexibility we have to concatenate all elements first and then
+    // allow the parser from PolConverter to take care of extracting the products.
+    std::string stokesStr;
+    for (size_t i=0; i<stokesVec.size(); ++i) {
+        stokesStr += stokesVec[i];
+    }
+    itsStokes = scimath::PolConverter::fromString(stokesStr);
+    const casacore::uInt npol=itsStokes.size();
+
+    // Get the image shape
+    const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
+    const casacore::uInt nx = imageShapeVector[0];
+    const casacore::uInt ny = imageShapeVector[1];
+    const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
+
+    // Use a tile shape appropriate for plane-by-plane access
+    casacore::IPosition tileShape(cubeShape.nelements(), 1);
+    tileShape(0) = 256;
+    tileShape(1) = 256;
+
+    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
+                       " with shape [xsize:" << nx << " ysize:" << ny <<
+                       " npol:" << npol << " nchan:" << nchan <<
+                       "], f0: " << f0.getValue("MHz") << " MHz, finc: " <<
+                       inc.getValue("kHz") << " kHz");
+
+    itsCube->create(itsFilename, cubeShape, csys);
+
+    // default flux units are Jy/pixel. If we set the restoring beam
+    // later on, can set to Jy/beam
+    itsCube->setUnits(itsFilename,"Jy/pixel");
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
+}
+
 template <class T>
 CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
@@ -127,15 +248,8 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
             itsFilename.replace(f, orig.length(), name);
         }
     }
-    if (!name.empty() && name == "grid") {
-      ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
-      boost::shared_ptr<CasaImageAccess<T> > iaCASA(new CasaImageAccess<T>());
-      itsCube = iaCASA;
-    }
-    else {
-      ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
-      itsCube = accessors::imageAccessFactory(parset);
-    }
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
+    itsCube = accessors::imageAccessFactory(parset);
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {

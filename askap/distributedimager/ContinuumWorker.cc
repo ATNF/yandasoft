@@ -435,6 +435,12 @@ void ContinuumWorker::processChannels()
     unitParset = itsParsets[0];
   }
 
+  const bool dumpgrids = unitParset.getBool("dumpgrids",false);
+
+  if (dumpgrids) {
+    ASKAPLOG_INFO_STR(logger,"Will output gridded visibilities");
+  }
+
   const bool localSolver = unitParset.getBool("solverpercore", false);
 
   if (localSolver) {
@@ -498,12 +504,19 @@ void ContinuumWorker::processChannels()
     std::string weights_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
 
+    root = "grid";
+
+    std::string grid_name = root + std::string(".wr.") \
+    + utility::toString(itsComms.rank());
+
+
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
       psf_name = "psf";
       residual_name = "residual";
       weights_name = "weights";
+      grid_name = "grid";
     }
 
     ASKAPLOG_DEBUG_STR(logger, "Configuring Spectral Cube");
@@ -516,13 +529,11 @@ void ContinuumWorker::processChannels()
       itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
-      /* not updated the CubeBuilder API yet 
-      if ( itsComms.dumpingGrids() ) {
-        grid_name = "grids";
-        itsGriddedVis.reset(new CubeBuilder(itsParset, this->nchanCube, f0, freqinc, grid_name);
-
+      
+      if ( dumpgrids ) {
+        itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
       }
-      */
+      
 
     }
 
@@ -533,6 +544,12 @@ void ContinuumWorker::processChannels()
       itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset,  psf_name));
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, weights_name));
+
+ 
+      if ( dumpgrids ) {
+        itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
+      }
+      
     }
 
     if (itsParset.getBool("restore", false)) {
