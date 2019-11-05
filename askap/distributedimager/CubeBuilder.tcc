@@ -56,10 +56,12 @@
 
 ASKAP_LOGGER(CubeBuilderLogger, ".CubeBuilder");
 
-using namespace askap::cp;
 using namespace casa;
 using namespace std;
 using namespace askap::synthesis;
+
+namespace askap {
+namespace cp {
 
 template <>
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
@@ -414,3 +416,6 @@ void CubeBuilder<T>::setUnits(const std::string &units)
 {
     itsCube->setUnits(itsFilename,units);
 }
+
+} // namespace cp
+} // namespace askap
