@@ -63,7 +63,7 @@ using namespace askap::synthesis;
 namespace askap {
 namespace cp {
 
-template <>
+template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     // as long as the cube exists all should be fine
     vector<string> filenames;
@@ -130,7 +130,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
     itsCube = accessors::imageAccessFactory(parset);
 
 }
-template <>
+template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
