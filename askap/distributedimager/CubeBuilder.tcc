@@ -56,12 +56,14 @@
 
 ASKAP_LOGGER(CubeBuilderLogger, ".CubeBuilder");
 
-using namespace askap::cp;
 using namespace casa;
 using namespace std;
 using namespace askap::synthesis;
 
-template <>
+namespace askap {
+namespace cp {
+
+template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     // as long as the cube exists all should be fine
     vector<string> filenames;
@@ -128,7 +130,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
     itsCube = accessors::imageAccessFactory(parset);
 
 }
-template <>
+template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
@@ -414,3 +416,6 @@ void CubeBuilder<T>::setUnits(const std::string &units)
 {
     itsCube->setUnits(itsFilename,units);
 }
+
+} // namespace cp
+} // namespace askap
