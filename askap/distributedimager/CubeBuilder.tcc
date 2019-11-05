@@ -28,7 +28,7 @@
 #include <askap/distributedimager/CubeBuilder.h>
 
 // Include package level header file
-#include <askap/askap_synthesis.h>
+// #include <askap/askap_synthesis.h>
 
 // System includes
 #include <iostream>
@@ -41,6 +41,7 @@
 #include <askap/AskapLogging.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/imageaccess/ImageAccessFactory.h>
+#include <askap/imageaccess/CasaImageAccess.h>
 #include <Common/ParameterSet.h>
 #include <askap/scimath/utils/PolConverter.h>
 #include <casacore/casa/Arrays/IPosition.h>
@@ -53,17 +54,18 @@
 #include <casacore/casa/Quanta/Unit.h>
 #include <casacore/casa/Quanta/QC.h>
 
-ASKAP_LOGGER(logger, ".CubeBuilder");
+ASKAP_LOGGER(CubeBuilderLogger, ".CubeBuilder");
 
-using namespace askap::cp;
 using namespace casa;
 using namespace std;
 using namespace askap::synthesis;
-CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
-    // as long as the cube exists all should be fine
-    ASKAPLOG_INFO_STR(logger, "Instantiating Cube Builder with existing cube ");
-    itsCube = accessors::imageAccessFactory(parset);
 
+namespace askap {
+namespace cp {
+
+template <> inline
+CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
+    // as long as the cube exists all should be fine
     vector<string> filenames;
     if (parset.isDefined("Images.Names")) {
         filenames = parset.getStringVector("Images.Names", true);
@@ -73,7 +75,7 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& na
         itsFilename = parset.getString("Images.name");
     }
     else {
-        ASKAPLOG_ERROR_STR(logger, "Could not find the image name(s) ");
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
     }
     ASKAPCHECK(itsFilename.substr(0,5)=="image",
                "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
@@ -89,18 +91,52 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& na
             itsFilename.replace(f, orig.length(), name);
         }
     }
-    
-    ASKAPLOG_INFO_STR(logger, "Instantiated Cube Builder with existing cube " << itsFilename);
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
+    boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
+    itsCube = iaCASA;
 }
-CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
+
+template <class T>
+CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
+    // as long as the cube exists all should be fine
+    vector<string> filenames;
+    if (parset.isDefined("Images.Names")) {
+        filenames = parset.getStringVector("Images.Names", true);
+        itsFilename = filenames[0];
+    }
+    else if(parset.isDefined("Images.name")) {
+        itsFilename = parset.getString("Images.name");
+    }
+    else {
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
+    }
+    ASKAPCHECK(itsFilename.substr(0,5)=="image",
+               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
+
+    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
+    // unless name='restored', in which case we append ".restored"
+    if (!name.empty()) {
+        if (name == "restored") {
+            itsFilename = itsFilename + ".restored";
+        } else {
+            const string orig = "image";
+            const size_t f = itsFilename.find(orig);
+            itsFilename.replace(f, orig.length(), name);
+        }
+    }
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
+    itsCube = accessors::imageAccessFactory(parset);
+
+}
+template <> inline
+CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
                          const std::string& name)
 {
-    ASKAPLOG_INFO_STR(logger, "Instantiating Cube Builder by creating cube ");
-    itsCube = accessors::imageAccessFactory(parset);
-
     vector<string> filenames;
     if (parset.isDefined("Images.Names")) {
         filenames = parset.getStringVector("Images.Names", true);
@@ -110,7 +146,7 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
         itsFilename = parset.getString("Images.name");
     }
     else {
-        ASKAPLOG_ERROR_STR(logger, "Could not find the image name(s) ");
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
     }
     ASKAPCHECK(itsFilename.substr(0,5)=="image",
                "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
@@ -126,6 +162,9 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
             itsFilename.replace(f, orig.length(), name);
         }
     }
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
+    boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
+    itsCube = iaCASA;
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
@@ -164,7 +203,7 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
 
     const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
 
-    ASKAPLOG_INFO_STR(logger, "Creating Cube " << itsFilename <<
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<
                        " npol:" << npol << " nchan:" << nchan <<
                        "], f0: " << f0.getValue("MHz") << " MHz, finc: " <<
@@ -176,21 +215,108 @@ CubeBuilder::CubeBuilder(const LOFAR::ParameterSet& parset,
     // later on, can set to Jy/beam
     itsCube->setUnits(itsFilename,"Jy/pixel");
 
-    ASKAPLOG_INFO_STR(logger, "Instantiated Cube Builder by creating cube " << itsFilename);
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
 
-CubeBuilder::~CubeBuilder()
+template <class T>
+CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
+                         const casacore::uInt nchan,
+                         const casacore::Quantity& f0,
+                         const casacore::Quantity& inc,
+                         const std::string& name)
+{
+    vector<string> filenames;
+    if (parset.isDefined("Images.Names")) {
+        filenames = parset.getStringVector("Images.Names", true);
+        itsFilename = filenames[0];
+    }
+    else if(parset.isDefined("Images.name")) {
+        itsFilename = parset.getString("Images.name");
+    }
+    else {
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
+    }
+    ASKAPCHECK(itsFilename.substr(0,5)=="image",
+               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
+
+    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
+    // unless name='restored', in which case we append ".restored"
+    if (!name.empty()) {
+        if (name == "restored") {
+            itsFilename = itsFilename + ".restored";
+        } else {
+            const string orig = "image";
+            const size_t f = itsFilename.find(orig);
+            itsFilename.replace(f, orig.length(), name);
+        }
+    }
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
+    itsCube = accessors::imageAccessFactory(parset);
+
+    const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
+    if (restFreqString == "HI") {
+#ifdef HAVE_CASACORE3
+        itsRestFrequency = casacore::QC::HI();
+#else
+        itsRestFrequency = casacore::QC::HI;
+#endif // HAVE_CASACORE3
+    } else {
+        itsRestFrequency = SynthesisParamsHelper::convertQuantity(restFreqString, "Hz");
+    }
+
+    // Polarisation
+    const std::vector<std::string>
+        stokesVec = parset.getStringVector("Images.polarisation", std::vector<std::string>(1,"I"));
+    // there could be many ways to define stokes, e.g. ["XX YY"] or ["XX","YY"] or "XX,YY"
+    // to allow some flexibility we have to concatenate all elements first and then
+    // allow the parser from PolConverter to take care of extracting the products.
+    std::string stokesStr;
+    for (size_t i=0; i<stokesVec.size(); ++i) {
+        stokesStr += stokesVec[i];
+    }
+    itsStokes = scimath::PolConverter::fromString(stokesStr);
+    const casacore::uInt npol=itsStokes.size();
+
+    // Get the image shape
+    const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
+    const casacore::uInt nx = imageShapeVector[0];
+    const casacore::uInt ny = imageShapeVector[1];
+    const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
+
+    // Use a tile shape appropriate for plane-by-plane access
+    casacore::IPosition tileShape(cubeShape.nelements(), 1);
+    tileShape(0) = 256;
+    tileShape(1) = 256;
+
+    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
+                       " with shape [xsize:" << nx << " ysize:" << ny <<
+                       " npol:" << npol << " nchan:" << nchan <<
+                       "], f0: " << f0.getValue("MHz") << " MHz, finc: " <<
+                       inc.getValue("kHz") << " kHz");
+
+    itsCube->create(itsFilename, cubeShape, csys);
+
+    // default flux units are Jy/pixel. If we set the restoring beam
+    // later on, can set to Jy/beam
+    itsCube->setUnits(itsFilename,"Jy/pixel");
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
+}
+template < class T >
+CubeBuilder<T>::~CubeBuilder()
 {
 }
-
-void CubeBuilder::writeSlice(const casacore::Array<float>& arr, const casacore::uInt chan)
+template < class T >
+void CubeBuilder<T>::writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
 {
     casacore::IPosition where(4, 0, 0, 0, chan);
     itsCube->write(itsFilename,arr, where);
 }
-
+template < class T >
 casacore::CoordinateSystem
-CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
+CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::uInt nx,
                                     const casacore::uInt ny,
                                     const casacore::Quantity& f0,
@@ -208,12 +334,12 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         xform.diagonal() = 1.0;
         const Quantum<Double> ra = asQuantity(dirVector.at(0), "deg");
         const Quantum<Double> dec = asQuantity(dirVector.at(1), "deg");
-        ASKAPLOG_DEBUG_STR(logger, "Direction: " << ra.getValue() << " degrees, "
+        ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Direction: " << ra.getValue() << " degrees, "
                            << dec.getValue() << " degrees");
 
         const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec") * -1.0;
         const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
-        ASKAPLOG_DEBUG_STR(logger, "Cellsize: " << xcellsize.getValue()
+        ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Cellsize: " << xcellsize.getValue()
                            << " arcsec, " << ycellsize.getValue() << " arcsec");
 
         casacore::MDirection::Types type;
@@ -246,13 +372,13 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         // setup frequency frame
         const std::string freqFrame = parset.getString("freqframe","topo");
         if (freqFrame == "topo") {
-            ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as topocentric");
+            ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as topocentric");
             freqRef = casacore::MFrequency::TOPO;
         } else if (freqFrame == "lsrk") {
-            ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as lsrk");
+            ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as lsrk");
             freqRef = casacore::MFrequency::LSRK;
         } else if (freqFrame == "bary") {
-        ASKAPLOG_INFO_STR(logger, "Image cube frequencies will be treated as barycentric");
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as barycentric");
             freqRef = casacore::MFrequency::BARY;
         } else {
             ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
@@ -268,7 +394,7 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
                     (itsFilename.find("residual.") != string::npos)) {
 
                 if (!sc.setRestFrequency(itsRestFrequency.getValue("Hz"))) {
-                    ASKAPLOG_ERROR_STR(logger, "Could not set the rest frequency to " <<
+                    ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not set the rest frequency to " <<
                                        itsRestFrequency.getValue("Hz") << "Hz");
                 }
             }
@@ -279,14 +405,17 @@ CubeBuilder::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
     return coordsys;
 }
-
-void CubeBuilder::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
+template <class T>
+void CubeBuilder<T>::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
 {
         itsCube->setBeamInfo(itsFilename,beam[0].getValue("rad"),beam[1].getValue("rad"),beam[2].getValue("rad"));
         setUnits("Jy/beam");
 }
-
-void CubeBuilder::setUnits(const std::string &units)
+template <class T>
+void CubeBuilder<T>::setUnits(const std::string &units)
 {
     itsCube->setUnits(itsFilename,units);
 }
+
+} // namespace cp
+} // namespace askap
