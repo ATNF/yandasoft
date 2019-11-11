@@ -86,8 +86,8 @@ namespace askap
 	for (std::vector<std::string>::const_iterator ci = thresholds.begin();
 	     ci != thresholds.end(); ++ci) {
 
-	  casa::Quantity cThreshold;
-	  casa::Quantity::read(cThreshold, *ci);
+	  casacore::Quantity cThreshold;
+	  casacore::Quantity::read(cThreshold, *ci);
 	  cThreshold.convert();
 	  if (cThreshold.isConform("Jy")) {
 	    ASKAPCHECK(!absoluteThreshold2Defined, "Parameter "<<parName<<
@@ -201,8 +201,8 @@ namespace askap
 	  const double paddingFactor = ics ? ics->paddingFactor() : 1.;
 
 	  // factors which appear in nominator are effectively half sizes in radians
-	  const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casa::C::pi;
-	  const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casa::C::pi;
+	  const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casacore::C::pi;
+	  const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casacore::C::pi;
 
 	  if (taper.size() == 3) {
 
@@ -243,7 +243,7 @@ namespace askap
 		   "The use of the parameter solver.Clean.threshold is deprecated, use threshold.minorcycle instead");
 
 	string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
-    casa::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
+    casacore::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
 
 	if (algorithm=="MultiScale") {
 	  ASKAPLOG_INFO_STR(logger, "Constructing MultiScale Clean solver (ASKAP version)" );
@@ -261,13 +261,13 @@ namespace askap
 	else if ((algorithm=="MSMFS")||(algorithm=="MultiScaleMFS")) {
 	  ASKAPCHECK(!parset.isDefined("solver.nterms"), "Specify nterms for each image instead of using solver.nterms");
 	  ASKAPCHECK(!parset.isDefined("solver.Clean.nterms"), "Specify nterms for each image instead of using solver.Clean.nterms");
-	  solver.reset(new ImageMSMFSolver(casa::Vector<float>(scales)));
+	  solver.reset(new ImageMSMFSolver(casacore::Vector<float>(scales)));
 	  ASKAPLOG_INFO_STR(logger, "Constructed image multiscale multi-frequency solver (CASA version)" );
 	}
 	else if ((algorithm=="BFMFS")||(algorithm=="BasisfunctionMFS")) {
 	  ASKAPCHECK(!parset.isDefined("solver.nterms"), "Specify nterms for each image instead of using solver.nterms");
 	  ASKAPCHECK(!parset.isDefined("solver.Clean.nterms"), "Specify nterms for each image instead of using solver.Clean.nterms");
-	  solver.reset(new ImageAMSMFSolver(casa::Vector<float>(scales)));
+	  solver.reset(new ImageAMSMFSolver(casacore::Vector<float>(scales)));
 	  ASKAPLOG_INFO_STR(logger, "Constructed basis function multi-frequency solver" );
 	}
 	else {
