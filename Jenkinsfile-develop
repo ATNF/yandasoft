@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'sord/yanda:latest'
+      image 'sord/yanda:base'
     }
 
   }
@@ -53,6 +53,7 @@ rm -rf base-askap
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
 cd base-askap
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -73,6 +74,7 @@ rm -rf base-logfilters
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
 cd base-logfilters
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -92,6 +94,7 @@ rm -rf base-imagemath
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
 cd base-imagemath
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -111,6 +114,7 @@ rm -rf base-askapparallel
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
 cd base-askapparallel
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -131,6 +135,7 @@ rm -rf base-scimath
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
 cd base-scimath
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -150,6 +155,7 @@ rm -rf base-accessors
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
 cd base-accessors
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -169,6 +175,7 @@ rm -rf base-components
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-components.git
 cd base-components
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -189,6 +196,7 @@ rm -rf askap-pipelinetasks
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
 cd askap-pipelinetasks
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -208,6 +216,7 @@ rm -rf askap-analysis
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
 cd askap-analysis
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -231,6 +240,7 @@ make uninstall
 cd ..
 fi
 rm -rf build
+git checkout develop
 mkdir build
 else
 mkdir build
