@@ -54,6 +54,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
 cd base-askap
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -75,6 +76,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
 cd base-logfilters
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -95,6 +97,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
 cd base-imagemath
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -115,6 +118,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
 cd base-askapparallel
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -136,6 +140,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
 cd base-scimath
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -156,6 +161,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
 cd base-accessors
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -176,6 +182,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-components.git
 cd base-components
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -197,6 +204,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
 cd askap-pipelinetasks
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -217,6 +225,7 @@ fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
 cd askap-analysis
 git checkout develop
+git pull
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -241,6 +250,7 @@ cd ..
 fi
 rm -rf build
 git checkout develop
+git pull
 mkdir build
 else
 mkdir build
