@@ -49,8 +49,7 @@ RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git
 WORKDIR /home/yandasoft
 RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data" 
 RUN ./build_all.sh -r 
-
-
+RUN apt-get install    -y  subversion            
 
 
 

@@ -47,6 +47,7 @@
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/LinearCoordinate.h>
 #include <casacore/coordinates/Coordinates/StokesCoordinate.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/measures/Measures/Stokes.h>
@@ -62,6 +63,118 @@ using namespace askap::synthesis;
 
 namespace askap {
 namespace cp {
+
+template <> inline
+casacore::CoordinateSystem
+CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                    const casacore::uInt nx,
+                                    const casacore::uInt ny,
+                                    const casacore::Quantity& f0,
+                                    const casacore::Quantity& inc)
+{
+    // This specialisation will be just for the grid cubes. After all who else wants a complex cube
+    // The coordinates are therefore those of the UV grid.
+    CoordinateSystem coordsys;
+    const vector<string> dirVector = parset.getStringVector("Images.direction");
+    const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
+    // Get the image shape (I get nx and ny passed to me so I probably dont need this)
+    const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
+
+
+    const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec");
+    const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
+    // UV cellsize is probably 
+    casacore::Vector<casacore::Double> UVCellSize; 
+    UVCellSize.resize(2);
+    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
+    UVCellSize[0] = 1./(xcellsize.getValue("rad")*(imageShapeVector[0]));
+    UVCellSize[1] = 1./(ycellsize.getValue("rad")*(imageShapeVector[1]));
+
+    // Direction Coordinate - which is now UV in metres - and now Linear
+    {
+        std::vector<std::string> units;
+        units.resize(2);
+        units[0] = "m";
+        units[1] = "m";
+       
+        std::vector<std::string> names;
+        names.resize(2);
+        names[0] = "u";
+        names[1] = "v";
+
+        Matrix<Double> xform(2, 2);
+        xform = 0.0;
+        xform.diagonal() = 1.0;
+
+        std::vector<Double> crpix;
+        crpix.resize(2);
+        std::vector<Double> crval;
+        crval.resize(2);
+
+        for (size_t dim = 0; dim < 2; ++dim) {
+            crpix[dim] = imageShapeVector[dim]/2;
+            crval[dim] = 0.0;
+        }
+        
+        LinearCoordinate lc(names, units, crval, UVCellSize,xform,crpix);
+        
+        coordsys.addCoordinate(lc);
+    }
+
+    // Stokes Coordinate
+    {
+
+        // To make a StokesCoordinate, need to convert the StokesTypes
+        // into integers explicitly
+        casacore::Vector<casacore::Int> stokes(itsStokes.size());
+        for(unsigned int i=0;i<stokes.size();i++){
+            stokes[i] = itsStokes[i];
+        }
+        const StokesCoordinate stokescoord(stokes);
+        coordsys.addCoordinate(stokescoord);
+
+    }
+    // Spectral Coordinate
+    {
+        const Double refPix = 0.0;  // is the reference pixel
+
+        MFrequency::Types freqRef=MFrequency::TOPO;
+        // setup frequency frame
+        const std::string freqFrame = parset.getString("freqframe","topo");
+        if (freqFrame == "topo") {
+            ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as topocentric");
+            freqRef = casacore::MFrequency::TOPO;
+        } else if (freqFrame == "lsrk") {
+            ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as lsrk");
+            freqRef = casacore::MFrequency::LSRK;
+        } else if (freqFrame == "bary") {
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Image cube frequencies will be treated as barycentric");
+            freqRef = casacore::MFrequency::BARY;
+        } else {
+            ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
+        }
+    
+        
+        SpectralCoordinate sc(freqRef, f0, inc, refPix);
+
+        // add rest frequency, but only if requested, and only for
+        // image.blah, residual.blah, image.blah.restored
+        if (itsRestFrequency.getValue("Hz") > 0.) {
+            if ((itsFilename.find("image.") != string::npos) ||
+                    (itsFilename.find("residual.") != string::npos)) {
+
+                if (!sc.setRestFrequency(itsRestFrequency.getValue("Hz"))) {
+                    ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not set the rest frequency to " <<
+                                       itsRestFrequency.getValue("Hz") << "Hz");
+                }
+            }
+        }
+
+        coordsys.addCoordinate(sc);
+    }
+
+    return coordsys;
+}
 
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
@@ -314,6 +427,7 @@ void CubeBuilder<T>::writeSlice(const casacore::Array<T>& arr, const casacore::u
     casacore::IPosition where(4, 0, 0, 0, chan);
     itsCube->write(itsFilename,arr, where);
 }
+
 template < class T >
 casacore::CoordinateSystem
 CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
