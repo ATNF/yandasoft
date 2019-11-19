@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:bionic as buildenv
 RUN apt-get update
 RUN apt-get upgrade -y
 RUN apt-get autoremove -y
@@ -47,11 +47,26 @@ RUN mkdir /var/lib/jenkins/workspace
 WORKDIR /home
 RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
 WORKDIR /home/yandasoft
-RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data" 
-RUN ./build_all.sh -r 
-RUN ./build_all.sh -a -O "-DHAVE_MPI=1"
-RUN ./build_all.sh -y -O "-DHAVE_MPI=1"
-RUN ./build_all.sh -e -O "-DHAVE_MPI=1"
+RUN git checkout develop
+WORKDIR /home/yandasoft/deploy/general
+RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data -DCMAKE_BUILD_TYPE=Release" 
+RUN ./build_all.sh -R "-DCMAKE_BUILD_TYPE=Release" 
+RUN ./build_all.sh -a -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -y -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -e -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+
+WORKDIR /
+
+##############################################################
+# Create a new image based on only the executable parts of the old image
+FROM ubuntu:bionic
+# In multistage builds arguments don't copy over
+ARG PREFIX=/usr/local
+COPY --from=buildenv ${PREFIX} ${PREFIX}
+COPY --from=buildenv /home/yandasoft/askap/askap_synthesis.h ${PREFIX}/include/askap
+
+
+
 
 
 
