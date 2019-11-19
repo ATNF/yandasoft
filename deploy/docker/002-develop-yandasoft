@@ -7,9 +7,9 @@ RUN git checkout develop
 WORKDIR /home/yandasoft/deploy/general
 RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data -DCMAKE_BUILD_TYPE=Release" 
 RUN ./build_all.sh -R "-DCMAKE_BUILD_TYPE=Release" 
-RUN ./build_all.sh -a -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
-RUN ./build_all.sh -y -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
-RUN ./build_all.sh -e -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -d -a -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -d -y -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -d -e -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
 
 WORKDIR /
 
