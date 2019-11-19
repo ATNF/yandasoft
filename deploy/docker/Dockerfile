@@ -47,7 +47,6 @@ RUN mkdir /var/lib/jenkins/workspace
 WORKDIR /home
 RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
 WORKDIR /home/yandasoft
-RUN git checkout develop
 WORKDIR /home/yandasoft/deploy/general
 RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data -DCMAKE_BUILD_TYPE=Release" 
 RUN ./build_all.sh -R "-DCMAKE_BUILD_TYPE=Release" 
