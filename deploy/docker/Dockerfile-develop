@@ -1,0 +1,63 @@
+FROM ubuntu:bionic as buildenv
+RUN apt-get update
+RUN apt-get upgrade -y
+RUN apt-get autoremove -y
+RUN apt-get install -y cmake          
+RUN apt-get install    -y  flex bison  
+RUN apt-get install    -y  gfortran                
+RUN apt-get install    -y  git                    
+RUN apt-get install    -y  g++                   
+RUN apt-get install    -y  libboost-dev         
+RUN apt-get install    -y  libboost-python-dev 
+RUN apt-get install    -y  libboost-filesystem-dev 
+RUN apt-get install    -y  libboost-program-options-dev 
+RUN apt-get install    -y  libboost-signals-dev      
+RUN apt-get install    -y  libboost-system-dev      
+RUN apt-get install    -y  libboost-thread-dev      
+RUN apt-get install    -y  libboost-regex-dev      
+RUN apt-get install    -y  libcppunit-dev          
+RUN apt-get install    -y  libcfitsio-dev         
+RUN apt-get install    -y  libffi-dev            
+RUN apt-get install    -y  libfftw3-dev          
+RUN apt-get install    -y  libgsl-dev             
+RUN apt-get install    -y  liblog4cxx-dev           
+RUN apt-get install    -y  libopenblas-dev          
+RUN apt-get install    -y  libopenmpi-dev          
+RUN apt-get install    -y  libpython-dev   
+RUN apt-get install    -y  make            
+RUN apt-get install    -y  patch             
+RUN apt-get install    -y  python-pip           
+RUN apt-get install    -y  subversion             
+RUN apt-get install    -y  wget                   
+RUN apt-get install    -y  docker        
+RUN apt-get install    -y  python-numpy   
+RUN apt-get install    -y  python-scipy  
+RUN apt-get install    -y  wcslib-dev    
+RUN apt-get install    -y  libxerces-c-dev            
+RUN mkdir /usr/local/share/casacore
+RUN mkdir /usr/local/share/casacore/data
+WORKDIR /usr/local/share/casacore/data
+RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
+RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz
+RUN gunzip WSRT_Measures.tar.gz
+RUN tar -xvf WSRT_Measures.tar
+RUN rm WSRT_Measures.tar
+RUN mkdir /var/lib/jenkins
+RUN mkdir /var/lib/jenkins/workspace
+WORKDIR /home
+RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
+RUN git checkout develop
+WORKDIR /home/yandasoft/deploy/general
+RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data -DCMAKE_BUILD_TYPE=Release" 
+RUN ./build_all.sh -R "-DCMAKE_BUILD_TYPE=Release" 
+RUN ./build_all.sh -a -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -y -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+RUN ./build_all.sh -e -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
+
+WORKDIR /
+
+
+
+
+
+
