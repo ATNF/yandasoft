@@ -2,7 +2,7 @@ FROM yandasoft as buildenv
 
 ##############################################################
 # Create a new image based on only the executable parts of the old image
-FROM ubuntu:bionic
+FROM yandabase
 # In multistage builds arguments don't copy over
 ARG PREFIX=/usr/local
 COPY --from=buildenv ${PREFIX} ${PREFIX}
