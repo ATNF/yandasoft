@@ -22,7 +22,6 @@ RUN apt-get install    -y  libfftw3-dev
 RUN apt-get install    -y  libgsl-dev             
 RUN apt-get install    -y  liblog4cxx-dev           
 RUN apt-get install    -y  libopenblas-dev          
-RUN apt-get install    -y  libopenmpi-dev          
 RUN apt-get install    -y  libpython-dev   
 RUN apt-get install    -y  make            
 RUN apt-get install    -y  patch             
@@ -33,7 +32,17 @@ RUN apt-get install    -y  docker
 RUN apt-get install    -y  python-numpy   
 RUN apt-get install    -y  python-scipy  
 RUN apt-get install    -y  wcslib-dev    
-RUN apt-get install    -y  libxerces-c-dev            
+RUN apt-get install    -y  libxerces-c-dev    
+# openmpi-2.1.4 install
+WORKDIR /home
+RUN wget https://download.open-mpi.org/release/open-mpi/v2.1/openmpi-2.1.4.tar.gz
+RUN gunzip openmpi-2.1.4.tar.gz
+RUN tar -xvf openmpi-2.1.4.tar
+WORKDIR /home/openmpi-2.1.4
+RUN ./configure 
+RUN make all install
+ENV LD_LIBRARY_PATH=/usr/local/lib
+#
 RUN mkdir /usr/local/share/casacore
 RUN mkdir /usr/local/share/casacore/data
 WORKDIR /usr/local/share/casacore/data
@@ -44,31 +53,4 @@ RUN tar -xvf WSRT_Measures.tar
 RUN rm WSRT_Measures.tar
 RUN mkdir /var/lib/jenkins
 RUN mkdir /var/lib/jenkins/workspace
-WORKDIR /home
-RUN git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git 
-WORKDIR /home/yandasoft
-WORKDIR /home/yandasoft/deploy/general
-RUN ./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data -DCMAKE_BUILD_TYPE=Release" 
-RUN ./build_all.sh -R "-DCMAKE_BUILD_TYPE=Release" 
-RUN ./build_all.sh -a -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
-RUN ./build_all.sh -y -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
-RUN ./build_all.sh -e -O "-DHAVE_MPI=1 -DCMAKE_BUILD_TYPE=Release"
-
-WORKDIR /
-
-##############################################################
-# Create a new image based on only the executable parts of the old image
-FROM ubuntu:bionic
-# In multistage builds arguments don't copy over
-ARG PREFIX=/usr/local
-COPY --from=buildenv ${PREFIX} ${PREFIX}
-COPY --from=buildenv /home/yandasoft/askap/askap_synthesis.h ${PREFIX}/include/askap
-
-
-
-
-
-
-
-
 
