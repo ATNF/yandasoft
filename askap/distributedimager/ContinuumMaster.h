@@ -94,15 +94,16 @@ class ContinuumMaster {
         /// Communications class
         CubeComms& itsComms;
 
-        /// The rest of these are for the Spectral line case - which I haven't added yet Ord-6/2016
         MSGroupInfo isMSGroupInfo;
 
-        boost::scoped_ptr<CubeBuilder> itsImageCube;
-        boost::scoped_ptr<CubeBuilder> itsPSFCube;
-        boost::scoped_ptr<CubeBuilder> itsResidualCube;
-        boost::scoped_ptr<CubeBuilder> itsWeightsCube;
-        boost::scoped_ptr<CubeBuilder> itsPSFimageCube;
-        boost::scoped_ptr<CubeBuilder> itsRestoredCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsImageCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsPSFCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
+        boost::scoped_ptr<CubeBuilder<casacore::Complex> > itsGriddedVis;
+
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
 

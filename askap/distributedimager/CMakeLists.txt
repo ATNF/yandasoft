@@ -4,7 +4,6 @@ CalcCore.cc
 ContinuumImager.cc
 ContinuumMaster.cc
 ContinuumWorker.cc
-CubeBuilder.cc
 CubeComms.cc
 MSGroupInfo.cc
 MSSplitter.cc
@@ -23,6 +22,7 @@ ContinuumImager.h
 ContinuumMaster.h
 ContinuumWorker.h
 CubeBuilder.h
+CubeBuilder.tcc
 CubeComms.h
 CubeManager.h
 MSGroupInfo.h

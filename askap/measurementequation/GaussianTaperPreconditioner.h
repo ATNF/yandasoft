@@ -44,35 +44,39 @@ namespace synthesis {
 /// @ingroup measurementequation
 class GaussianTaperPreconditioner : public IImagePreconditioner, private GaussianTaperCache {
 public:
-   /// @brief set up the preconditioner 
+   /// @brief set up the preconditioner
    /// @details This constructor just sets the taper size. The size is full width at
    /// half maximum expressed in the units of uv-cell.
-   /// @param[in] majFWHM full width at half maximum of the major axis in the uv-plane 
+   /// @param[in] majFWHM full width at half maximum of the major axis in the uv-plane
    /// (given as a fraction of the uv-cell size).
-   /// @param[in] minFWHM full width at half maximum of the minor axis in the uv-plane 
+   /// @param[in] minFWHM full width at half maximum of the minor axis in the uv-plane
    /// (given as a fraction of the uv-cell size).
    /// @param[in] pa position angle in radians
+   /// @param[in] isPsfSize the specified taper size is the required fitted beam size of the output
+   /// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
    /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
-   /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is 
+   /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
    /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
    /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
-   GaussianTaperPreconditioner(double majFWHM, double minFWHM, double pa);
-   
-   /// @brief set up the preconditioner for the circularly symmetric taper 
+   GaussianTaperPreconditioner(double majFWHM, double minFWHM, double pa, bool isPsfSize = false, double cutoff = 0.5);
+
+   /// @brief set up the preconditioner for the circularly symmetric taper
    /// @details This constructor just sets the taper size, same for both axis.
    /// The size is full width at half maximum expressed in the units of uv-cell.
    /// @param[in] fwhm full width at half maximum of the taper in the uv-plane
    /// (given as a fraction of the uv-cell size).
+   /// @param[in] isPsfSize the specified taper size is the required fitted beam size of the output
+   /// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
    /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
-   /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is 
+   /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
    /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
    /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
-   GaussianTaperPreconditioner(double fwhm);
-   
+   GaussianTaperPreconditioner(double fwhm, bool isPsfSize = false, double cutoff = 0.5);
+
    /// @brief Clone this object
    /// @return shared pointer to a cloned copy
    virtual IImagePreconditioner::ShPtr clone();
-        
+
    /// @brief Apply preconditioning to Image Arrays
    /// @details This is the actual method, which does preconditioning.
    /// It is applied to the PSF as well as the current residual image.
@@ -86,10 +90,17 @@ public:
    /// @brief a helper method to apply the taper to one given array
    /// @details We need exactly the same operation for psf and dirty image. This method
    /// encapsulates the code which is actually doing the job. It is called twice from
-   /// doPreconditioning. In addition, this method is used in Wiener preconditioner to 
-   /// smooth PSF before filter construction 
+   /// doPreconditioning. In addition, this method is used in Wiener preconditioner to
+   /// smooth PSF before filter construction
    /// @param[in] image an image to apply the taper to
    void applyTaper(casacore::Array<float> &image) const;
+
+   /// @ brief fit the psf with a gaussian and return size and pa
+   casacore::Vector<double> fitPsf(casacore::Array<float>& psf) const;
+
+private:
+    mutable bool itsFitBeam;
+    double itsCutoff;
 };
 
 } // namespace synthesis
@@ -97,4 +108,3 @@ public:
 } // namespace askap
 
 #endif // #ifndef GAUSSIAN_TAPER_PRECONDITIONER_H
-

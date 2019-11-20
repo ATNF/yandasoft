@@ -61,7 +61,7 @@ class TmergeApp : public askap::Application
             imagemath::LinmosAccumulator<double> accumulator;
 
             // initialise an image accessor
-            accessors::IImageAccess& iacc = SynthesisParamsHelper::imageHandler();
+            accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
             // initialise a shared pointer for the normal equation
             ImagingNormalEquations::ShPtr ne(new ImagingNormalEquations());
