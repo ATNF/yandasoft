@@ -65,32 +65,36 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
        /// Get the list of measurement sets and the column to use.
        itsDataColName = parset.getString("datacolumn", "DATA");
        itsMs = parset.getStringVector("dataset");
+//       ASKAPCHECK(itsMs.size()>0, "Need dataset specification");
 
-       ASKAPCHECK(itsMs.size()>0, "Need dataset specification");
-       const int nProcs = itsComms.nProcs();
-
-       if (itsMs.size() == 1) {
-           const string tmpl=itsMs[0];
-           if (nProcs>2) {
-               itsMs.resize(nProcs-1);
-           }
-           for (int i=0; i<nProcs-1; ++i) {
-                itsMs[i] = substitute(tmpl);
-                if ((itsComms.rank() - 1) == i) {
-                    ASKAPLOG_INFO_STR(logger, "Measurement set "<<tmpl<<
-                        " for rank "<<i+1<<" is substituted by "<<itsMs[i]);
-                }
-           }
-       } else {
-          ASKAPLOG_INFO_STR(logger,
-              "Skip measurment set substitution, names are given explicitly: "<<itsMs);
+       if (itsMs.size() == 0) {
+           ASKAPLOG_WARN_STR(logger,"dataset not present or empty");
        }
-       if (nProcs>1) {
-          if (int(itsMs.size()) != (nProcs-1)) {
-              ASKAPLOG_WARN_STR(logger,"Running in parallel, data set per node usually required");
-          }
-       }
+       else {
+           const int nProcs = itsComms.nProcs();
 
+           if (itsMs.size() == 1) {
+               const string tmpl=itsMs[0];
+               if (nProcs>2) {
+                   itsMs.resize(nProcs-1);
+               }
+               for (int i=0; i<nProcs-1; ++i) {
+                   itsMs[i] = substitute(tmpl);
+                   if ((itsComms.rank() - 1) == i) {
+                       ASKAPLOG_INFO_STR(logger, "Measurement set "<<tmpl<<
+                               " for rank "<<i+1<<" is substituted by "<<itsMs[i]);
+                   }
+               }
+           } else {
+               ASKAPLOG_INFO_STR(logger,
+                       "Skip measurment set substitution, names are given explicitly: "<<itsMs);
+           }
+           if (nProcs>1) {
+               if (int(itsMs.size()) != (nProcs-1)) {
+                   ASKAPLOG_WARN_STR(logger,"Running in parallel, data set per node usually required");
+               }
+           }
+       }
        // configure uvw-machine cache parameters (to be set up via Data Source)
        const int cacheSize = parset.getInt32("nUVWMachines",1);
        ASKAPCHECK(cacheSize > 0 ,
