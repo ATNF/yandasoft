@@ -408,9 +408,10 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
 
     // Smoothing constraints parameters.
     if (parset.isDefined("solver.LSQR.smoothing")) params["smoothing"] = parset.getString("solver.LSQR.smoothing");
-    if (parset.isDefined("solver.LSQR.smoothing.MinWeight")) params["smoothingMinWeight"] = parset.getString("solver.LSQR.smoothing.MinWeight");
-    if (parset.isDefined("solver.LSQR.smoothing.MaxWeight")) params["smoothingMaxWeight"] = parset.getString("solver.LSQR.smoothing.MaxWeight");
+    if (parset.isDefined("solver.LSQR.smoothing.minWeight")) params["smoothingMinWeight"] = parset.getString("solver.LSQR.smoothing.minWeight");
+    if (parset.isDefined("solver.LSQR.smoothing.maxWeight")) params["smoothingMaxWeight"] = parset.getString("solver.LSQR.smoothing.maxWeight");
     if (parset.isDefined("solver.LSQR.smoothing.nsteps")) params["smoothingNsteps"] = parset.getString("solver.LSQR.smoothing.nsteps");
+    if (parset.isDefined("solver.LSQR.smoothing.type")) params["smoothingType"] = parset.getString("solver.LSQR.smoothing.type");
 
     return params;
 }
