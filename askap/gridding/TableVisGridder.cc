@@ -596,10 +596,13 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            itsFirstGriddedVis = false;
        }
        if (itsPARotation) {
+           // make sure we set the swap before calculating the rotation matrix,
+           // as we're just swapping rows or columns in the matrix
+           itsPolConv.setSwapPols(itsSwapPols);
            // set parallactic angle
            double pa1=acc.feed1PA()(i) + itsPARotAngle;
            double pa2=acc.feed2PA()(i) + itsPARotAngle;
-           itsPolConv.setParAngle(pa1,pa2,itsSwapPols);
+           itsPolConv.setParAngle(pa1,pa2);
        }
 
        for (uint chan=0; chan<nChan; ++chan) {
