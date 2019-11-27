@@ -1,0 +1,14 @@
+FROM yandaslim as buildenv
+
+RUN useradd -ms /bin/bash yanda
+USER yanda
+WORKDIR /home/yanda
+
+
+
+
+
+
+
+
+
