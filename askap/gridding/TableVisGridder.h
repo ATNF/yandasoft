@@ -168,7 +168,7 @@ namespace askap
       { itsPARotation = flag; itsPARotAngle = angle;}
 
       /// @brief set or reset flag switching gridder to swap the polarisations
-      /// @details change itsSwapPols
+      /// @details change itsSwapPols, note that currently swap only works when PA Rotation is active
       /// @param[in] flag new value of the flag
       void inline doSwapPols(const bool flag) { itsSwapPols = flag;}
 
