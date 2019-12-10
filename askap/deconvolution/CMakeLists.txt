@@ -3,6 +3,12 @@ DeconvolverFactory.cc
 DeconvolverHelpers.cc
 )
 
+target_link_libraries(deconvolution
+	askap::askap
+	askap::scimath
+	askap::accessors
+)
+
 set_property(TARGET deconvolution PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 if (MPI_COMPILE_FLAGS)

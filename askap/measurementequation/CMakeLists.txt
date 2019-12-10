@@ -46,6 +46,11 @@ VoidMeasurementEquation.cc
 WienerPreconditioner.cc
 )
 
+target_link_libraries(measurementequation
+	askap::accessors
+	askap::scimath
+)
+
 set_property(TARGET measurementequation PROPERTY POSITION_INDEPENDENT_CODE ON)
 if (MPI_COMPILE_FLAGS)
 	set_property(TARGET measurementequation PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})

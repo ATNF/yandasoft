@@ -130,14 +130,7 @@ find_package(Components REQUIRED)
 find_package(MPI REQUIRED)
 
 include_directories(${FFTW_INCLUDE_DIRS})
-include_directories(${ASKAP_INCLUDE_DIRS})
-include_directories(${SCIMATH_INCLUDE_DIRS})
-include_directories(${LofarCommon_INCLUDE_DIRS})
-include_directories(${LofarBlob_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${ACCESSORS_INCLUDE_DIRS})
-include_directories(${IMAGEMATH_INCLUDE_DIRS})
-include_directories(${SCIMATH_INCLUDE_DIRS})
 include_directories(${COMPONENTS_INCLUDE_DIRS})
 
 include_directories(${MPI_INCLUDE_PATH})
@@ -189,19 +182,19 @@ add_library(yanda_synthesis SHARED
 	$<TARGET_OBJECTS:utils>
 	)
 
-target_link_libraries(yanda_synthesis 
-	${ASKAP_LIBRARY}
+target_link_libraries(yanda_synthesis
+	askap::askap
+	askap::scimath
+	askap::imagemath
+	lofar::Common
+	lofar::Blob
+	askap::accessors
+	askap::parallel
 	${log4cxx_LIBRARY}
 	${CASACORE_LIBRARIES}
-	${FFTW_LIBRARIES}
-	${SCIMATH_LIBRARY}
-	${IMAGEMATH_LIBRARY}
-	${LofarBlob_LIBRARY}
-	${LofarCommon_LIBRARY}
-	${Boost_LIBRARIES}
-	${ACCESSORS_LIBRARY}
 	${COMPONENTS_LIBRARY}
-	${ASKAPPARALLEL_LIBRARY}
+	${FFTW_LIBRARIES}
+	${Boost_LIBRARIES}
 	${MPI_LIBRARIES}
 	)
 if (MPI_FOUND)

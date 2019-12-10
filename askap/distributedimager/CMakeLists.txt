@@ -10,6 +10,13 @@ MSGroupInfo.cc
 MSSplitter.cc
 )
 
+target_link_libraries(distributedimager
+	lofar::Common
+	askap::parallel
+	askap::scimath
+	askap::accessors
+)
+
 set_property(TARGET distributedimager PROPERTY POSITION_INDEPENDENT_CODE ON)
 if (MPI_COMPILE_FLAGS)
 	set_property(TARGET distributedimager  PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
