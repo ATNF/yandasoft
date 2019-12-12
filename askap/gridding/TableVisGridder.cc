@@ -94,9 +94,9 @@ TableVisGridder::TableVisGridder() : itsSumWeights(),
     itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
     itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false),
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
-    itsTrackWeightPerOversamplePlane(false),its2dGrid(),itsVisPols(),itsPolConv(),
-    itsImagePolFrameVis(),itsImagePolFrameNoise(),itsPolVector(),itsImageChan(-1),
-    itsGridIndex(-1)
+    itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
+    its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1)
 {
 }
 
@@ -109,9 +109,9 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     itsTimeDegridded(0.0), itsDopsf(false), itsDopcf(false),
     itsFirstGriddedVis(true), itsFeedUsedForPSF(0), itsUseAllDataForPSF(false),
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
-    itsTrackWeightPerOversamplePlane(false),its2dGrid(),itsVisPols(),itsPolConv(),
-    itsImagePolFrameVis(),itsImagePolFrameNoise(),itsPolVector(),itsImageChan(-1),
-    itsGridIndex(-1)
+    itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
+    its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1)
 {
    ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
    ASKAPCHECK(support>0, "Maximum support must be greater than 0");
@@ -149,6 +149,8 @@ TableVisGridder::TableVisGridder(const TableVisGridder &other) :
      itsRowsRejectedDueToMaxPointingSeparation(other.itsRowsRejectedDueToMaxPointingSeparation),
      itsConvFuncOffsets(other.itsConvFuncOffsets),
      itsTrackWeightPerOversamplePlane(other.itsTrackWeightPerOversamplePlane),
+     itsPARotation(other.itsPARotation), itsPARotAngle(other.itsPARotAngle),
+     itsSwapPols(other.itsSwapPols),
      its2dGrid(other.its2dGrid.copy()),itsVisPols(other.itsVisPols.copy()),
      itsPolConv(other.itsPolConv),itsImagePolFrameVis(other.itsImagePolFrameVis.copy()),
      itsImagePolFrameNoise(other.itsImagePolFrameNoise.copy()),itsPolVector(other.itsPolVector.copy()),
@@ -531,6 +533,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    }
    #endif
 
+
    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
    casacore::IPosition ipStart(4, 0, 0, 0, 0);
    const casacore::IPosition onePlane(2,shape()(0),shape()(1));
@@ -591,6 +594,15 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                   " and field at "<<printDirection(itsPointingUsedForPSF)<<" to estimate the PSF");
            }
            itsFirstGriddedVis = false;
+       }
+       if (itsPARotation) {
+           // make sure we set the swap before calculating the rotation matrix,
+           // as we're just swapping rows or columns in the matrix
+           itsPolConv.setSwapPols(itsSwapPols);
+           // set parallactic angle
+           double pa1=acc.feed1PA()(i) + itsPARotAngle;
+           double pa2=acc.feed2PA()(i) + itsPARotAngle;
+           itsPolConv.setParAngle(pa1,pa2);
        }
 
        for (uint chan=0; chan<nChan; ++chan) {

@@ -52,22 +52,22 @@ namespace synthesis {
 /// @details This constructor just sets the taper size. The size is full width at
 /// half maximum expressed in pixels.
 /// @param[in] majFWHM full width at half maximum of the major axis in pixels
-/// @param[in] minFWHM full width at half maximum of the minor axis in pixels 
+/// @param[in] minFWHM full width at half maximum of the minor axis in pixels
 /// @param[in] pa position angle in radians
 GaussianTaperCache::GaussianTaperCache(double majFWHM, double minFWHM, double pa) :
      itsMajorAxis(majFWHM/sqrt(8.*log(2.))), itsMinorAxis(minFWHM/sqrt(8.*log(2.))),
      itsPA(pa) {}
 
-/// @brief set up the taper handler with a circularly symmetric taper 
+/// @brief set up the taper handler with a circularly symmetric taper
 /// @details This constructor just sets the taper size, same for both axis.
-/// The size is full width at half maximum expressed in pixels 
+/// The size is full width at half maximum expressed in pixels
 /// @param[in] fwhm size in pixels
-GaussianTaperCache::GaussianTaperCache(double fwhm) : 
-     itsMajorAxis(fwhm/sqrt(8.*log(2.))), itsPA(0.) 
+GaussianTaperCache::GaussianTaperCache(double fwhm) :
+     itsMajorAxis(fwhm/sqrt(8.*log(2.))), itsPA(0.)
 {
   itsMinorAxis = itsMajorAxis;
 }
-           
+
 /// @brief Copy constructor
 /// @param[in] other input object
 GaussianTaperCache::GaussianTaperCache(const GaussianTaperCache &other) :
@@ -84,10 +84,98 @@ GaussianTaperCache& GaussianTaperCache::operator=(const GaussianTaperCache &othe
       itsMajorAxis = other.itsMajorAxis;
       itsMinorAxis = other.itsMinorAxis;
       itsPA = other.itsPA;
-      itsTaperCache.assign(other.itsTaperCache.copy());
+      itsTaperCache.assign(other.itsTaperCache); //.copy());
   }
   return *this;
 }
+
+casacore::Vector<double> beam2Poly(const casacore::Vector<double> & beam) {
+    casacore::Vector<double> p(3);
+    double ct = cos(beam(2));
+    double st = sin(beam(2));
+    p(0) = casacore::square(beam(0)*ct) + casacore::square(beam(1)*st);
+    p(1) = 2 * (casacore::square(beam(1))-casacore::square(beam(0)))*st*ct;
+    p(2) = casacore::square(beam(0)*st) + casacore::square(beam(1)*ct);
+    return p;
+}
+
+casacore::Vector<double> poly2Beam(const casacore::Vector<double> & poly) {
+    casacore::Vector<double> bm(3,0.);
+    double a = poly(0) + poly(2);
+    double b = sqrt(casacore::square(poly(0)-poly(2)) + casacore::square(poly(1)));
+    bm(0) = sqrt((a+b)/2.);
+    if (a-b > 0) {
+        bm(1) = sqrt((a-b)/2.);
+    }
+    if (abs(poly(1))+abs(poly(0)-poly(2))>0) {
+        bm(2) = 0.5 * atan2(-poly(1),poly(0)-poly(2));
+    }
+    return bm;
+}
+
+/// @brief tune taper parameters based on achieved resolution
+/// @param[in] beam - fitted beam fwhm major,minor in image pixels and pos angle in radians
+/// @param[in] tolerance - fractional tolerance in fwhm, also tolerance in rad for pa
+/// @return true if converged within tolerance
+bool GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double tolerance) const
+{
+    ASKAPASSERT(itsTaper.nelements() == 3 && itsTaperCache.shape().nelements()>=2);
+    ASKAPLOG_DEBUG_STR(logger,"Current beam parameters: "<< beam );
+    // beam is in image pixels, taper in uvplane pixels
+    // The relation between FWHMs in fourier and image plane is
+    /// uvFWHM = (Npix / pixFWHM) * (4*log(2)/pi), where Npix is the number of pixels
+    /// and pixFWHM is the image-plane FWHM in pixels.
+    const double fwhm2sigma = sqrt(8.*log(2.));
+    int nx = itsTaperCache.shape()(0);
+    int ny = itsTaperCache.shape()(1);
+    // convert from beam fwhm in image pixels to taper sigma in uv pixels
+    // swap major/minor when going from image to uv plane
+    double taper0 = (nx / beam(0)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
+    double taper1 = (ny / beam(1)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
+    double pa = beam(2);
+    ASKAPLOG_DEBUG_STR(logger,"Eqv taper parameters   : "<< taper0*fwhm2sigma <<" "<<
+    taper1*fwhm2sigma <<" "<< pa);
+    ASKAPLOG_DEBUG_STR(logger,"Orig taper parameters  : "<< majorAxis()*fwhm2sigma <<" "<<
+    minorAxis()*fwhm2sigma <<" "<< posAngle());
+    casacore::Vector<double> cbeam(3);
+    cbeam(0) = nx / (majorAxis() * fwhm2sigma / (4 * log(2)/casacore::C::pi));
+    cbeam(1) = ny / (minorAxis() * fwhm2sigma / (4 * log(2)/casacore::C::pi));
+    cbeam(2) = posAngle();
+    ASKAPLOG_DEBUG_STR(logger,"Req beam parameters    : "<< cbeam);
+
+    if (abs(taper0 / majorAxis() - 1) < tolerance &&
+        abs(taper1 / minorAxis() - 1) < tolerance &&
+        abs((pa - posAngle())*(taper0-taper1)/taper0) < tolerance) return true;
+    ASKAPLOG_DEBUG_STR(logger,"Actual taper parameters: "<< itsTaper(0)*fwhm2sigma <<" "<<
+    itsTaper(1)*fwhm2sigma <<" "<< itsTaper(2));
+    casacore::Vector<double> abeam(3);
+    abeam(0) = nx / (itsTaper(0) * fwhm2sigma / (4 * log(2)/casacore::C::pi));
+    abeam(1) = ny / (itsTaper(1) * fwhm2sigma / (4 * log(2)/casacore::C::pi));
+    abeam(2) = itsTaper(2);
+    ASKAPLOG_DEBUG_STR(logger,"Actual beam parameters : "<< abeam);
+
+    // Transform to polynomial coeffs and back for update
+    casacore::Vector<double> a = beam2Poly(abeam);
+    //ASKAPLOG_DEBUG_STR(logger,"Actual beam poly parameters : "<< a);
+    casacore::Vector<double> b = beam2Poly(beam);
+    casacore::Vector<double> c = beam2Poly(cbeam);
+    a += 0.5 * (c - b);
+    abeam = poly2Beam(a);
+    // Avoid division by zero - minimum convolving beam size of 0.01 pixels
+    abeam(0) = fmax(abeam(0),0.01);
+    abeam(1) = fmax(abeam(1),0.01);
+    ASKAPLOG_DEBUG_STR(logger,"Updated beam parameters: "<< abeam);// << " poly: "<<a);
+    itsTaper(0) = (nx / abeam(0)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
+    itsTaper(1) = (ny / abeam(1)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
+    itsTaper(2) = abeam(2);
+    ASKAPLOG_DEBUG_STR(logger,"Updated taper parameters: "<< itsTaper(0)*fwhm2sigma <<" "<<
+    itsTaper(1)*fwhm2sigma <<" "<< itsTaper(2));
+    initTaperCache(itsTaperCache.shape());
+    return false;
+ }
+
+
+
 
 /// @brief obtain taper
 /// @details This method returns cached taper for a given shape. The taper
@@ -102,8 +190,8 @@ casacore::Array<casacore::Complex> GaussianTaperCache::taper(const casacore::IPo
   }
   return itsTaperCache;
 }
-           
-/// @brief build the cache 
+
+/// @brief build the cache
 /// @details This method populates the cache using the values of
 /// data members
 /// @param[in] shape shape of the required array
@@ -117,26 +205,34 @@ void GaussianTaperCache::initTaperCache(const casacore::IPosition &shape) const
   if (shape.nelements() > 2) {
      ASKAPASSERT(shape.nonDegenerate(2).nelements() == 2);
   }
-#endif  
+#endif
 
   itsTaperCache.resize(shape);
   const casacore::Int nx = shape[0];
   const casacore::Int ny = shape[1];
   casacore::IPosition index(shape.nelements(),0);
+
+  if (itsTaper.nelements()!=3) {
+      itsTaper.resize(3);
+      itsTaper(0) = itsMajorAxis;
+      itsTaper(1) = itsMinorAxis;
+      itsTaper(2) = itsPA;
+  }
+
   casacore::SquareMatrix<casacore::Double, 2> rotation(casacore::SquareMatrix<casacore::Double, 2>::General);
   // rotation direction is flipped here as we rotate the gaussian, not
   // the coordinate
 
-  rotation(0,0) = rotation(1,1) = sin(itsPA);
-  rotation(1,0) = cos(itsPA);
+  rotation(0,0) = rotation(1,1) = sin(itsTaper(2));
+  rotation(1,0) = cos(itsTaper(2));
   rotation(0,1) = -rotation(1,0);
-  
+
   // the following formula introduces some error if position angle is not 0
   // may be we need just to sum values?
   //const double normFactor = 2.*M_PI*itsMajorAxis*itsMinorAxis*erf(double(nx)/(2.*sqrt(2.)*itsMajorAxis))*
   //            erf(double(ny)/(2.*sqrt(2.)*itsMinorAxis));
-  double sum = 0.;    
-  const double maxRadius = double(casacore::min(nx,ny)/2);        
+  double sum = 0.;
+  const double maxRadius = double(casacore::min(nx,ny)/2);
   for (index[0] = 0; index[0]<nx; ++index[0]) {
        for (index[1] = 0; index[1]<ny; ++index[1]) {
             casacore::RigidVector<casacore::Double, 2> offset;
@@ -146,13 +242,13 @@ void GaussianTaperCache::initTaperCache(const casacore::IPosition &shape) const
                 // fill on a circular rather than rectangular support
                 itsTaperCache(index) = 0.;
                 continue;
-            } 
+            }
             // operator* is commented out in RigidVector due to
             // problems with some compilers. We have to use operator*= instead.
             // according to manual it is equivalent to v=Mv, rather than to v=v*M
             offset *= rotation;
-            const double taperingFactor = exp(-casacore::square(offset(0)/itsMajorAxis)/2.-
-                       casacore::square(offset(1)/itsMinorAxis)/2.);
+            const double taperingFactor = exp(-casacore::square(offset(0)/itsTaper(0))/2.-
+                       casacore::square(offset(1)/itsTaper(1))/2.);
             sum += taperingFactor;
             itsTaperCache(index) = taperingFactor;
        }
@@ -164,4 +260,3 @@ void GaussianTaperCache::initTaperCache(const casacore::IPosition &shape) const
 } // namespace synthesis
 
 } // namespace askap
-

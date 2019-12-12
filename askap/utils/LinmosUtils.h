@@ -70,7 +70,7 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
 /// @param[in] const string outImgName: current mosaic name
 /// @return bool true=success, false=fail
 Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
-                                    const accessors::IImageAccess &iacc,
+                                    const accessors::IImageAccess<casacore::Float> &iacc,
                                     const vector<string> &inImgNames);
 
 } // namespace askap

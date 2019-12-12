@@ -191,6 +191,40 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
                     ") is incompatible with the oversampleweight option (trying to set it to "<<osWeight<<")");
         }
     }
+    {
+        const bool paRot = parset.getBool("gridder.parotation",false);
+        double paRotAngle = parset.getDouble("gridder.parotation.angle",0.0) * casacore::C::pi / 180.;
+        if (paRot) {
+            ASKAPLOG_INFO_STR(logger, "Parallactic angle rotation active, additional angle = "
+            <<paRotAngle/casacore::C::pi * 180. <<" deg");
+        } else {
+            ASKAPLOG_INFO_STR(logger, "No parallactic angle rotation");
+        }
+        boost::shared_ptr<TableVisGridder> tvg =
+            boost::dynamic_pointer_cast<TableVisGridder>(gridder);
+        if (tvg) {
+            tvg->doPARotation(paRot,paRotAngle);
+        } else {
+            ASKAPLOG_WARN_STR(logger,"Gridder type ("<<parset.getString("gridder")<<
+                    ") is incompatible with the parotation option (trying to set it to "<<paRot<<")");
+        }
+
+        const bool swapPols = parset.getBool("gridder.swappols",false);
+        if (swapPols && paRot) {
+            ASKAPLOG_INFO_STR(logger, "Swapping polarisations");
+            if (tvg) {
+                tvg->doSwapPols(swapPols);
+            } else {
+                ASKAPLOG_WARN_STR(logger,"Gridder type ("<<parset.getString("gridder")<<
+                        ") is incompatible with the swappols option (trying to set it to "<<swapPols<<")");
+            }
+        } else if (swapPols) {
+            ASKAPLOG_WARN_STR(logger, "Polarisation swap requested, but not implemented - "<<
+                                        " requires parallactic angle rotation to be active");
+        } else {
+            ASKAPLOG_INFO_STR(logger, "Not swapping polarisations");
+        }
+    }
 
     // Initialize the Visibility Weights
     if (parset.getString("visweights","")=="MFS")

@@ -1,1 +1,12 @@
 build/*
+askap-cmake/*
+base-askap/*
+base-askapparallel/*
+base-accessors/*
+base-components/*
+base-imagemath/*
+base-logfilters/*
+base-scimath/*
+lofar-common/*
+lofar-blob/*
+

@@ -160,6 +160,18 @@ namespace askap
       /// @param[in] flag new value of the flag
       void inline trackWeightPerPlane(const bool flag) { itsTrackWeightPerOversamplePlane = flag;}
 
+      /// @brief set or reset flag switching gridder to do Parallactic angle rotation
+      /// @details change itsPARotation
+      /// @param[in] flag new value of the flag
+      /// @param[in] if flag = true, use given angle + feed angle from feed table
+      void inline doPARotation(const bool flag, const double angle)
+      { itsPARotation = flag; itsPARotAngle = angle;}
+
+      /// @brief set or reset flag switching gridder to swap the polarisations
+      /// @details change itsSwapPols, note that currently swap only works when PA Rotation is active
+      /// @param[in] flag new value of the flag
+      void inline doSwapPols(const bool flag) { itsSwapPols = flag;}
+
       /// @brief set the largest angular separation between the pointing centre and the image centre
       /// @details If the threshold is positive, it is interpreted as the largest allowed angular
       /// separation between the beam (feed in the accessor terminology) pointing centre and the
@@ -183,7 +195,9 @@ namespace askap
       /// is empty (all pixels are zero). This makes sense for degridding only.
       /// @brief true, if the model is empty
       virtual bool isModelEmpty() const;
-
+      /// @brief return the current grid
+      /// @details essentially just returns the same grid that storeGrid can write out
+      inline const casacore::Array<casacore::Complex> getGrid() const {return itsGrid[0];}
   protected:
       /// @brief helper method to print CF cache stats in the log
       /// @details This method is largely intended for debugging. It writes down
@@ -428,6 +442,7 @@ protected:
       /// The grid is stored as a cube as well so we can index into that as well.
       std::vector<casacore::Array<casacore::Complex> > itsGrid;
 
+
   private:
 
       /// @brief return the table name to store the result to
@@ -549,6 +564,13 @@ protected:
 
       /// @brief true, if itsSumWeights tracks weights per oversampling plane
       bool itsTrackWeightPerOversamplePlane;
+
+      /// Are we doing Parallactic angle rotation?
+      bool itsPARotation;
+      double itsPARotAngle;
+
+      /// Are we swapping the polarisations?
+      bool itsSwapPols;
 
       /// @brief view of the currently used 2d grid
       /// @details to avoid creation/destruction overheads we keep a matrix that

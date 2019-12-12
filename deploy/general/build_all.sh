@@ -57,6 +57,7 @@ print_usage() {
         echo " -O <opts>       Options to apply to all builds."
         echo " -P              Use Python 3 "
         echo " -i              Install Ingest (askap-services). "
+        echo " -d              Install develop branch of everything. "
 }
 
 try() {
@@ -103,6 +104,7 @@ clean_askap_dependencies=no
 clean_yandasoft=no
 build_adios=no
 casacore_version=master
+yanda_branch=master
 casacore_opts=
 casarest_version=components-only
 casarest_opts=
@@ -116,7 +118,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "A:ah?s:cm:j:p:w:WPoiC:cR:rY:yO:USx:eE:" opt
+while getopts "A:ah?s:cdm:j:p:w:WPoiC:cR:rY:yO:USx:eE:" opt
 do
 	case "$opt" in
 		[h?])
@@ -132,6 +134,9 @@ do
 		m)
 			cmake="$OPTARG"
 			;;
+        d)
+            yanda_branch="develop"
+            ;;
 		j)
 			jobs="$OPTARG"
 			;;
@@ -444,20 +449,20 @@ if [ $install_askap_dependencies == yes ]; then
 	
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git $yanda_branch $yandasoft_opts
 fi
 if [ $install_extra == yes ]; then
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git $yanda_branch $yandasoft_opts
 fi
 if [ $install_ingest == yes ]; then	
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-services.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-services.git $yanda_branch $yandasoft_opts
 fi
 
 if [ $clean_yandasoft == yes ]; then
