@@ -182,7 +182,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
   for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
        ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
-       ASKAPDEBUGASSERT(cdm.nCol() == itsBuffer.nPol());
+       ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
