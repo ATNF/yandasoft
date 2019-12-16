@@ -741,10 +741,6 @@ namespace askap {
             #pragma omp parallel
             {
                 bool IsNotCont;
-#ifdef _OPENMP
-                // STEVE remove this
-                std::cout << "OMP::I am " << omp_get_thread_num() << std::endl;
-#endif // _OPENMP
 
                 // Commence cleaning iterations
                 do {
