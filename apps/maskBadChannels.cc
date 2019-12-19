@@ -154,7 +154,7 @@ public:
                                         
                 unsigned int numBad=0;
                 for(unsigned int i=0;i<size;i++){
-                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values " << std[i] << " and " << rangeOverNoise[i]);
+                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values " << onepc[i] << " and " << madfm[i] << " for ratio of " << ratio[i]);
                     // if( (std[i] > stdThreshold) && (rangeOverNoise[i] > rangeThreshold) ) {
                     // if( (std[i] > stdThreshold) ) {
                     if ( ( ! madfm[i] > 0. ) || (abs(ratio[i]-med)/mad > threshold) ) {
@@ -170,7 +170,11 @@ public:
                             ASKAPLOG_INFO_STR(logger, "Writing data of shape " << data.shape() << " to position " << loc);
                             iacc->write(image,data,loc);
                             std::stringstream ss;
-                            ss << "Masked channel " << i << " : std.dev="<<std[i]<<", range/median="<<rangeOverNoise[i];
+                            if (madfm[i] > 0.) {
+                                ss << "Masked blank channel " << i;
+                            } else {
+                                ss << "Masked channel " << i << " : madfm="<<madfm[i]<<", 1%ile/madfm="<<ratio[i];
+                            }
                             //iacc->addHistory(image,ss.str());
                         }
                         if (editStats) {
