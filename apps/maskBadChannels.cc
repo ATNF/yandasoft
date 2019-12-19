@@ -109,7 +109,7 @@ public:
 
                 ASKAPLOG_INFO_STR(logger, "Successfully read " << nrow << " rows");
 
-                std::vector tmpratio;
+                std::vector<double> tmpratio;
                 for(size_t i=0;i<size;i++){
                     if(! casa::isNaN(madfm[i]) ) {
                         tmpratio.push_back(onepc[i]/madfm[i]);
