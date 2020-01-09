@@ -188,7 +188,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
                // cdm is a block matrix
-               cdm.extractBlock(chan * itsBuffer.nPol(), thisChanCDM);
+               cdm.extractBlock(chan * itsBuffer.nPol(), itsBuffer.nPol());
                ne.add(thisChanCDM, pxpSlice);
             } else {
                // cdm is a normal matrix
