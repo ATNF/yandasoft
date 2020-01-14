@@ -173,12 +173,6 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
   const bool fdp = isFrequencyDependent();
   ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-  // Declaring a fixed-size thisChanCDM assumes that the dimensions of the
-  // "cdm" matrix inside the first for loop are those stated in the assertions
-  // below; otherwise this breaks, and "thisChanCDM" would need to be allocated
-  // each time a "cdm" object is created
-  scimath::ComplexDiffMatrix thisChanCDM(itsBuffer.nPol(), itsBuffer.nPol());
-
   for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
        ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
@@ -188,8 +182,8 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
                // cdm is a block matrix
-               cdm.extractBlock(chan * itsBuffer.nPol(), thisChanCDM);
-               ne.add(thisChanCDM, pxpSlice);
+               size_t columnOffset = chan * itsBuffer.nPol();
+               ne.add(cdm, pxpSlice, columnOffset);
             } else {
                // cdm is a normal matrix
                ne.add(cdm, pxpSlice);
