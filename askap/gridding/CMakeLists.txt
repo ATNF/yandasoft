@@ -14,6 +14,7 @@ IBasicIllumination.cc
 IVisGridder.cc
 IVisWeights.cc
 PowerWSampling.cc
+SKA_LOWIllumination.cc
 SmearingGridderAdapter.cc
 SnapShotImagingGridderAdapter.cc
 SphFuncVisGridder.cc
@@ -51,6 +52,7 @@ IVisGridder.h
 IVisWeights.h
 IWSampling.h
 PowerWSampling.h
+SKA_LOWIllumination.h
 SmearingGridderAdapter.h
 SnapShotImagingGridderAdapter.h
 SphFuncVisGridder.h

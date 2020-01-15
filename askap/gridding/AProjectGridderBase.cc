@@ -38,6 +38,7 @@ ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 #include <askap/AskapUtil.h>
 #include <askap/gridding/DiskIllumination.h>
 #include <askap/gridding/ATCAIllumination.h>
+#include <askap/gridding/SKA_LOWIllumination.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <profile/AskapProfiler.h>
 
@@ -287,16 +288,21 @@ boost::shared_ptr<IBasicIllumination>
 AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 {
    const std::string illumType = parset.getString("illumination", "disk");
-   const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
-   const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
 
    if (illumType == "disk") {
+
+        const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
+        const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
    	    ASKAPLOG_INFO_STR(logger,
 					"Using disk illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
    
        	return boost::shared_ptr<IBasicIllumination>(new DiskIllumination(diameter,blockage));
+
    } else if (illumType == "ATCA") {
+
+        const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
+        const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
    	    ASKAPLOG_INFO_STR(logger,
 					"Using ATCA illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
@@ -349,7 +355,25 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 	    } else {
 	       ASKAPLOG_INFO_STR(logger,"Feed legs are not simulated.");
 	    }
+
 	    return illum;
+
+   } else if (illumType == "SKA_LOW") {
+
+   	    ASKAPLOG_INFO_STR(logger, "Using SKA_LOW illumination model");
+
+   	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination()); 
+
+	    const double diameter = SynthesisParamsHelper::convertQuantity(
+                                    parset.getString("diameter","35m"), "m" );   
+	    const double az = SynthesisParamsHelper::convertQuantity(
+                              parset.getString("illumination.pointing.azimuth","0"), "rad" );   
+	    const double za = SynthesisParamsHelper::convertQuantity(
+                              parset.getString("illumination.pointing.zenithangle","0"), "rad" );   
+	    illum->setPointing(az,za,diameter);
+
+	    return illum;
+
    }
    
    ASKAPTHROW(AskapError, "Unknown illumination type "<<illumType);
