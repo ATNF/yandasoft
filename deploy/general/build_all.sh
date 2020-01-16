@@ -89,6 +89,7 @@ cmake=cmake
 jobs=1
 prefix=/usr/local
 workdir="$PWD"
+yandadir="$PWD"/../../
 remove_workdir=no
 build_oskar=yes
 use_python3=no
@@ -481,6 +482,8 @@ fi
 
 if [ $install_yandasoft == yes ]; then
 # Go, go, go, yandasoft!
+  startdir="PWD"
+  cd $yandadir
   if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"
   fi
@@ -508,6 +511,8 @@ if [ $install_yandasoft == yes ]; then
   try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
   try make -j${jobs} all
   try make -j${jobs} install
+
+  cd "$startdir"
 fi
 
 
