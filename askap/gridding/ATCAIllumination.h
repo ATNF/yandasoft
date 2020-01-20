@@ -33,6 +33,7 @@
 #define ATCA_ILLUMINATION_H
 
 #include <askap/gridding/IBasicIllumination.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
 
 namespace askap {
 
@@ -66,14 +67,26 @@ struct ATCAIllumination : virtual public IBasicIllumination {
   /// @param[in] m angular offset in the v-direction (in radians)
   /// @param[in] pa parallactic angle, or strictly speaking the angle between 
   /// uv-coordinate system and the system where the pattern is defined (unused)
-  virtual void getPattern(double freq, UVPattern &pattern, double l = 0., 
-                          double m = 0., double pa = 0.) const;
+  virtual void getPattern(double freq, UVPattern &pattern, double l, 
+                          double m, double pa) const;
+
+  virtual void getPattern(double freq, UVPattern &pattern,
+                          const casacore::MVDirection &imageCentre = {},
+                          const casacore::MVDirection &beamCentre = {},
+                          const double pa = 0., const bool isPSF = false) const;
 
   /// @brief check whether the pattern is symmetric
   /// @details Some illumination patterns are known a priori to be symmetric.
   /// This method returns true if feed legs are not simulated to reflect this
   /// @return true if feed legs are not simulated
   virtual bool isSymmetric() const;
+
+  /// @brief check whether the output pattern is image-based, rather than an illumination pattern.
+  /// @details Some illumination patterns need to be generated in the image domain, and given
+  /// the standard usage (FFT to image-domain for combination with other functions) any image
+  /// domain function may as well stay in the image domain. So check the state before doing the FFT.
+  /// @return false 
+  virtual bool isImageBased() const;
 
   // class-specific methods to configure other modes
   // can add methods to switch off these modes if there is a use case
@@ -197,6 +210,7 @@ private:
   /// @details The model has triangular blockage near the edge of each feed leg shadow.
   /// This parameter controls the starting point of the wedge.
   double itsWedgeStartingRadius;
+
 };
 
 

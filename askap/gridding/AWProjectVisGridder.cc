@@ -234,6 +234,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     // just to avoid a repeated call to a virtual function from inside the loop
     const bool hasSymmetricIllumination = itsIllumination->isSymmetric();
 
+    // check whether the output pattern is image based. If so, inverse FFT is not needed
+    const bool imageBasedPattern = itsIllumination->isImageBased();
+
     validateCFCache(acc, hasSymmetricIllumination);
 
     /// We have to calculate the lookup function converting from
@@ -302,13 +305,27 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
             for (int chan = 0; chan < nChan; ++chan) {
 
+std::cout << "DAM" << std::endl;
+std::cout << "DAM image centre ra,dec = " << out.getLong() << ", " << out.getLat() << std::endl;
+std::cout << "DAM beam centre ra,dec = " << offset.getLong() << ", " << offset.getLat() << std::endl;
+std::cout << "DAM beam offset = " << offset.separation(out) << std::endl;
+std::cout << "DAM  - rwSlopes()(0, feed, currentField()) = " << rwSlopes()(0, feed, currentField()) << std::endl;
+std::cout << "DAM  - rwSlopes()(1, feed, currentField()) = " << rwSlopes()(1, feed, currentField()) << std::endl;
+
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(acc.frequency()[chan], pattern,
-                                            rwSlopes()(0, feed, currentField()),
-                                            rwSlopes()(1, feed, currentField()), parallacticAngle);
+                                            out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
 
-                scimath::fft2d(pattern.pattern(), false);
+                /// Extract illumination pattern for this channel
+                //itsIllumination->getPattern(acc.frequency()[chan], pattern,
+                //                            rwSlopes()(0, feed, currentField()),
+                //                            rwSlopes()(1, feed, currentField()), parallacticAngle);
 
+                if( !imageBasedPattern ) {
+                    scimath::fft2d(pattern.pattern(), false);
+                }
+
+std::cout << "DAM" << std::endl;
 
                 /// Calculate the total convolution function including
                 /// the w term and the antenna convolution function
@@ -318,7 +335,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
 
                     // Loop over the central nx, ny region, setting it to the product
-                    // of the phase screen and the spheroidal function
+                    // of the phase screen and the a-projection function
                     double maxCF = 0.0;
                     const double w = 2.0f * casacore::C::pi * getWTerm(iw);
                     //std::cout<<"plane "<<iw<<" w="<<w<<std::endl;
@@ -458,10 +475,11 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
     if (nDone == itsMaxFeeds*itsMaxFields*nWPlanes()) {
         if (isSupportPlaneDependent()) {
-            ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
+            ASKAPLOG_INFO_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
+            ASKAPLOG_INFO_STR(logger, "Maximum kernel size is " << itsConvFunc[0].shape());
+
             ASKAPLOG_DEBUG_STR(logger, "Variable support size is used:");
             const size_t step = casacore::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
-
             for (size_t plane = 0; plane < itsConvFunc.size(); plane += step * itsOverSample * itsOverSample) {
                 ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
                                    " prior to oversampling) shape is " << itsConvFunc[plane].shape());
