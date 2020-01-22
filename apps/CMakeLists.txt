@@ -15,6 +15,7 @@ cubetest
 gridderExperiments
 illumextractor
 imager
+imcontsub
 imgNaN2zero
 imgscale
 imgstat

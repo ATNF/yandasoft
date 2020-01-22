@@ -45,6 +45,8 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
 
+//#define BUILD_INDEXED_NORMAL_MATRIX
+
 using namespace askap;
 using namespace askap::synthesis;
 
@@ -169,35 +171,46 @@ void PreAvgCalMEBase::updateMetadata(scimath::GenericNormalEquations &ne, const 
 /// @param[in] ne normal equations to update
 void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) const
 {
-  const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
-  const bool fdp = isFrequencyDependent();
-  ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
+    ASKAPLOG_INFO_STR(logger, "Calculating Generic Equations.");
 
-  // Declaring a fixed-size thisChanCDM assumes that the dimensions of the
-  // "cdm" matrix inside the first for loop are those stated in the assertions
-  // below; otherwise this breaks, and "thisChanCDM" would need to be allocated
-  // each time a "cdm" object is created
-  scimath::ComplexDiffMatrix thisChanCDM(itsBuffer.nPol(), itsBuffer.nPol());
+    const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
+    const bool fdp = isFrequencyDependent();
+    ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
-       scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
-       ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
-       ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
-       for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+    if (fdp) {
+        // Building the integer index for parameter names.
+        for (const auto &name : rwParameters()->freeNames()) {
+            ne.addParameterNameToIndexMap(name);
+        }
+        size_t nChannelsLocal = itsBuffer.nChannel();
+        size_t nBaseParameters = ne.getNumberBaseParameters();
+
+        // Allocate and initialize the indexed normal matrix.
+        ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters);
+    }
+#endif
+
+    for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
+        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
+        ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
+        ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
+
+        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
-               // cdm is a block matrix
-               cdm.extractBlock(chan * itsBuffer.nPol(), thisChanCDM);
-               ne.add(thisChanCDM, pxpSlice);
+                // cdm is a block matrix
+                size_t columnOffset = chan * itsBuffer.nPol();
+                ne.add(cdm, pxpSlice, columnOffset);
             } else {
-               // cdm is a normal matrix
-               ne.add(cdm, pxpSlice);
+                // cdm is a normal matrix
+                ne.add(cdm, pxpSlice);
             }
-       }
-  }
-  updateMetadata(ne, "min_time", itsMinTime);
-  updateMetadata(ne, "max_time", itsMaxTime);
+        }
+    }
+    updateMetadata(ne, "min_time", itsMinTime);
+    updateMetadata(ne, "max_time", itsMaxTime);
 }
   
 /// @brief initialise accumulation
