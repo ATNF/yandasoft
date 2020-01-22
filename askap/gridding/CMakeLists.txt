@@ -1,4 +1,4 @@
-add_library( gridding OBJECT 
+add_sources_to_yandasoft(
 AProjectGridderBase.cc
 AProjectWStackVisGridder.cc
 ATCAIllumination.cc
@@ -26,18 +26,6 @@ WDependentGridderBase.cc
 WProjectVisGridder.cc
 WStackVisGridder.cc
 )
-
-target_link_libraries(gridding
-	askap::askap
-	askap::scimath
-	askap::accessors
-)
-
-set_property(TARGET gridding PROPERTY POSITION_INDEPENDENT_CODE ON)
-if (MPI_COMPILE_FLAGS)
-	set_property(TARGET gridding PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
-endif()
-
 
 install (FILES
 AProjectGridderBase.h

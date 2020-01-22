@@ -1,4 +1,4 @@
-add_library( parallel OBJECT 
+add_sources_to_yandasoft(
 AdviseParallel.cc
 BPCalibratorParallel.cc
 CalibratorParallel.cc
@@ -13,20 +13,6 @@ ParallelWriteIterator.cc
 SimParallel.cc
 SynParallel.cc
 )
-
-target_link_libraries(parallel
-	lofar::Common
-	askap::parallel
-	askap::scimath
-	askap::parallel
-	askap::accessors
-)
-
-set_property(TARGET parallel PROPERTY POSITION_INDEPENDENT_CODE ON)
-if (MPI_COMPILE_FLAGS)
-	set_property(TARGET parallel  PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
-endif()
-
 
 install (FILES
 AdviseParallel.h

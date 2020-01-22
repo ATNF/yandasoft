@@ -63,7 +63,7 @@ foreach(prog ${_progs})
 
 
 	target_link_libraries (${prog}
-		yanda_synthesis
+		askap::yandasoft
 	)
 
 	install (TARGETS ${prog} DESTINATION bin)

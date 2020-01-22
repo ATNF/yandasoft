@@ -56,98 +56,40 @@ option (BUILD_SHARED_LIBS "" YES)
     endif (ENABLE_RPATH)
 endif(ENABLE_SHARED)
 
-# Manage the synthesis build
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
 # Yanda depends
 
 # Yanda Packages
 # YandaSoft dependencies .. in order
-include(install_yanda_depends)
-find_package(LofarCommon)
-
-set (EXTERNAL_INSTALL_DIR ${CMAKE_INSTALL_PREFIX})
-
-if (NOT LofarCommon_FOUND)
-	install_yanda_depends(lofar-common)
-	find_package(LofarCommon REQUIRED)
-endif ()
-
-find_package(LofarBlob)
-if (NOT LofarBlob_FOUND)
-	install_yanda_depends(lofar-blob)
-	find_package(LofarBlob REQUIRED)
-endif ()
-
-find_package(Askap)
-if (NOT ASKAP_FOUND)
-	install_yanda_depends(base-askap)
-	find_package(Askap REQUIRED)
-endif ()
-
-find_package(Imagemath)
-if (NOT IMAGEMATH_FOUND)
-	install_yanda_depends(base-imagemath)
-	find_package(Imagemath REQUIRED)
-endif ()
-
-find_package(Scimath)
-if (NOT SCIMATH_FOUND)
-	install_yanda_depends(base-scimath)
-	find_package(Scimath REQUIRED)
-endif ()
-
-find_package(AskapParallel)
-if (NOT ASKAPPARALLEL_FOUND)
-	install_yanda_depends(base-askapparallel)
-	find_package(AskapParallel REQUIRED)
-endif ()
-
-find_package(Accessors)
-if (NOT ACCESSORS_FOUND)
-	install_yanda_depends(base-accessors)
-	find_package(Accessors REQUIRED)
-endif ()
-
-
-
+find_package(lofar-common REQUIRED)
+find_package(lofar-blob REQUIRED)
+find_package(askap-askap REQUIRED)
+find_package(askap-imagemath REQUIRED)
+find_package(askap-scimath REQUIRED)
+find_package(askap-parallel REQUIRED)
+find_package(askap-accessors REQUIRED)
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
-find_package(FFTW REQUIRED)
 find_package(GSL REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 find_package(Components REQUIRED)
-find_package(MPI REQUIRED)
-
-include_directories(${FFTW_INCLUDE_DIRS})
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${COMPONENTS_INCLUDE_DIRS})
-
-include_directories(${MPI_INCLUDE_PATH})
-
-if (MPI_FOUND)
-	add_definitions(-DHAVE_MPI)
+find_package(MPI)
+if (ENABLE_OPENMP)
+	find_package(OpenMP REQUIRED)
 endif()
 
-include_directories(${log4cxx_INCLUDE_DIRS})
-add_definitions(-DHAVE_LOG4CXX)
-include_directories(${CASACORE_INCLUDE_DIRS})
-add_definitions(-DHAVE_AIPSPP)
-add_definitions(-Dcasa=casacore)
-
-if (NOT GSL_VERSION VERSION_LESS 2.0)
-	add_definitions(-DHAVE_GSL2)
-endif()
-
-if (CASACORE3)
-	add_definitions(-DHAVE_CASACORE3)
-endif()
 
 if (CASACORE3 OR CXX11)
 	set(CMAKE_CXX_STANDARD 11)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
+
+add_library(yandasoft SHARED)
+
+macro(add_sources_to_yandasoft)
+	foreach(arg IN ITEMS ${ARGN})
+		target_sources(yandasoft PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${arg})
+	endforeach()
+endmacro()
 
 add_subdirectory(askap/deconvolution)
 add_subdirectory(askap/distributedimager)
@@ -159,21 +101,13 @@ add_subdirectory(askap/parallel)
 add_subdirectory(askap/simulation)
 add_subdirectory(askap/utils)
 
+set_target_properties(yandasoft PROPERTIES
+	OUTPUT_NAME yanda_synthesis
+)
 
-add_library(yanda_synthesis SHARED
-	askap/dummy.cpp
-    $<TARGET_OBJECTS:deconvolution>
-	$<TARGET_OBJECTS:distributedimager>
-	$<TARGET_OBJECTS:gridding>
-	$<TARGET_OBJECTS:measurementequation>
-	$<TARGET_OBJECTS:messages>
-	$<TARGET_OBJECTS:opcal>
-	$<TARGET_OBJECTS:parallel>
-	$<TARGET_OBJECTS:simulation>
-	$<TARGET_OBJECTS:utils>
-	)
+add_library(askap::yandasoft ALIAS yandasoft)
 
-target_link_libraries(yanda_synthesis
+target_link_libraries(yandasoft PUBLIC
 	askap::askap
 	askap::scimath
 	askap::imagemath
@@ -184,24 +118,59 @@ target_link_libraries(yanda_synthesis
 	${log4cxx_LIBRARY}
 	${CASACORE_LIBRARIES}
 	${COMPONENTS_LIBRARY}
-	${FFTW_LIBRARIES}
 	${Boost_LIBRARIES}
-	${MPI_LIBRARIES}
-	)
+)
+
+target_compile_definitions(yandasoft PUBLIC
+    casa=casacore
+    HAVE_AIPSPP
+    HAVE_LOG4CXX
+)
+
+target_include_directories(yandasoft PUBLIC
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:include>
+  ${Boost_INCLUDE_DIRS}
+  ${COMPONENTS_INCLUDE_DIRS}
+  ${log4cxx_INCLUDE_DIRS}
+  ${CASACORE_INCLUDE_DIRS}
+)
+
 if (MPI_FOUND)
-	target_link_libraries(yanda_synthesis
+	target_link_libraries(yandasoft PUBLIC
 		${MPI_LIBRARIES}
 	)
-
+	target_include_directories(yandasoft PUBLIC
+		${MPI_INCLUDE_PATH}
+	)
+	target_compile_definitions(yandasoft PUBLIC
+		HAVE_MPI
+	)
+   if (MPI_COMPILE_FLAGS)
+		target_compile_options(yandasoft PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+	endif()
 endif (MPI_FOUND)
 
 if (ENABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
-    target_link_libraries(yanda_synthesis PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(yandasoft PRIVATE OpenMP::OpenMP_CXX)
 endif (ENABLE_OPENMP)
 
+if (NOT GSL_VERSION VERSION_LESS 2.0)
+	target_compile_definitions(yandasoft PUBLIC
+		HAVE_GSL2
+	)
+endif()
+
+if (CASACORE3)
+	target_compile_definitions(yandasoft PUBLIC
+		HAVE_CASACORE3
+	)
+endif()
+
+
 install (
-TARGETS yanda_synthesis
+TARGETS yandasoft
+EXPORT yandasoft-targets
 RUNTIME DESTINATION bin
 LIBRARY DESTINATION lib
 ARCHIVE DESTINATION lib
@@ -212,10 +181,6 @@ add_subdirectory(apps)
 
 find_package(CPPUnit)
 if (CPPUNIT_FOUND)
-    include_directories(${CPPUNIT_INCLUDE_DIR})
-    target_link_libraries(yanda_synthesis
-       ${CPPUNIT_LIBRARY}
-    )
 	include(CTest)
 	enable_testing()
 	add_subdirectory(tests/deconvolution)
@@ -224,3 +189,6 @@ if (CPPUNIT_FOUND)
 	add_subdirectory(tests/opcal)
 endif ()
 
+
+include(yanda_export)
+yanda_export(askap)
