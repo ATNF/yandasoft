@@ -45,6 +45,8 @@
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
 
+//#define BUILD_INDEXED_NORMAL_MATRIX
+
 using namespace askap;
 using namespace askap::synthesis;
 
@@ -175,10 +177,19 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     const bool fdp = isFrequencyDependent();
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-    // Building the integer index for parameter names.
-    for (const auto &name : rwParameters()->freeNames()) {
-        ne.addParameterNameToIndexMap(name);
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+    if (fdp) {
+        // Building the integer index for parameter names.
+        for (const auto &name : rwParameters()->freeNames()) {
+            ne.addParameterNameToIndexMap(name);
+        }
+        size_t nChannelsLocal = itsBuffer.nChannel();
+        size_t nBaseParameters = ne.getNumberBaseParameters();
+
+        // Allocate and initialize the indexed normal matrix.
+        ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters);
     }
+#endif
 
     for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
         scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
