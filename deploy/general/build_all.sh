@@ -356,7 +356,8 @@ build_and_install() {
 	if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
 	elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+                export CRAYPE_LINK_TYPE=dynamic
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
@@ -504,7 +505,8 @@ if [ $install_yandasoft == yes ]; then
   if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
   elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+               export CRAYPE_LINK_TYPE=dynamic
   else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
   fi
