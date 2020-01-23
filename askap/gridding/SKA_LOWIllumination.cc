@@ -1,10 +1,9 @@
-/// @file 
+/// @file SKA_LOWIllumination.cc
 /// @brief SKA_LOW illumination model
 /// @details This class represents a SKA_LOW illumination model, 
-/// which is the Fourier transform of the SKA_LOW_PB PrimaryBeam model.
-/// Optionally a phase slope can be applied to simulate offset pointing.
+/// represented in the image domain via the SKA_LOW_PB PrimaryBeam model.
 ///
-/// @copyright (c) 2008 CSIRO
+/// @copyright (c) 2020 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -26,7 +25,7 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
-/// @author Max Voronkov <maxim.voronkov@csiro.au>
+/// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
@@ -45,6 +44,9 @@ ASKAP_LOGGER(logger, ".gridding.ska-lowllumination");
 
 #include <profile/AskapProfiler.h>
 
+// for debugging - to export intermediate images
+#include <askap/scimath/utils/ImageUtils.h>
+
 using namespace askap;
 using namespace askap::synthesis;
 using namespace askap::imagemath;
@@ -56,18 +58,28 @@ SKA_LOWIllumination::SKA_LOWIllumination()
 
 /// @brief  Set pointing parameters
 /// @details Set pointing parameters
-/// @param[in] az pointing azimuth in degrees
-/// @param[in] za pointing zenith angle in degrees
-void SKA_LOWIllumination::setPointing(double az, double za, double diam)
+/// @param[in] ra pointing right ascension in radians
+/// @param[in] dec pointing declination in radians
+void SKA_LOWIllumination::setPointing(double ra, double dec, double diam)
 {
-    ASKAPCHECK((za>=0) && (za<=casacore::C::pi_2), "pointing zenith angle must be in range [0,pi/2] rad, not "<<za);
+
     ASKAPCHECK(diam>0, "aperture diameter much be greater than zero, not "<<diam);
-
-   	ASKAPLOG_INFO_STR(logger, "Aperture diam = "<<diam<<" m, pointing az,za = "<<az<<", "<<za<<" rad");
-
-    itsAz0 = az;
-    itsZa0 = za;
     itsDiameter = diam;
+
+// when used in csimulator, should the feeds offset be updated? e.g. SimParallel::readFeeds() & Simulator::initFeeds()
+// or should thhat be kept as a separate method of defining a beam offset?
+
+    // if ra and dec are set, check validity
+    if (itsFixedPointing) {
+        ASKAPCHECK((dec>=-casacore::C::pi_2) && (dec<=casacore::C::pi_2),
+            "pointing declination must be in range [-pi/2,pi/2] rad, not "<<dec);
+        itsRA0 = ra;
+        itsDec0 = dec;
+   	    ASKAPLOG_INFO_STR(logger, "PB: aperture diam = "<<diam<<" m, pointing ra,dec = "<<ra<<", "<<dec<<" rad");
+    } else {
+   	    ASKAPLOG_INFO_STR(logger, "PB: aperture diam = "<<diam<<" m, pointing ra,dec to be set from FEED table");
+    }
+
 }
 
 /// @brief obtain illumination pattern
@@ -102,118 +114,74 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
 { 
 
     ASKAPTRACE("SKA_LOWIllumination::getPattern");
-    const casacore::uInt oversample = pattern.overSample();
-    const double cellU = pattern.uCellSize()/oversample;
-    const double cellV = pattern.vCellSize()/oversample;
-
-    // calculate beam offset
-    double l = 0.0;
-    double m = 0.0;
-    if (!isPSF) {
-        l = sin(beamCentre.getLong() - imageCentre.getLong()) * cos(beamCentre.getLat());
-        m = sin(beamCentre.getLat()) * cos(imageCentre.getLat()) -
-            cos(beamCentre.getLat()) * sin(imageCentre.getLat()) *
-            cos(beamCentre.getLong() - imageCentre.getLong());
+       
+    ASKAPCHECK(std::abs(std::abs(pattern.uCellSize()/pattern.vCellSize())-1.)<1e-7, 
+               "Rectangular cells are not supported, you have "<<pattern.uCellSize()<<","<<pattern.vCellSize());
+    
+    // set image and beam centres
+    const double ra0 = imageCentre.getLong();
+    const double dec0 = imageCentre.getLat();
+    double raB, decB;
+    if (isPSF) {
+   	    ASKAPLOG_INFO_STR(logger, "PB: using centred beam pointing (for PSF):");
+        raB = ra0;
+        decB = dec0;
+    } else if (itsFixedPointing) {
+   	    ASKAPLOG_INFO_STR(logger, "PB: using user-defined beam pointing:");
+        raB = itsRA0;
+        decB = itsDec0;
+    } else {
+   	    ASKAPLOG_INFO_STR(logger, "PB: using FEED table for beam pointing:");
+        raB = beamCentre.getLong();
+        decB = beamCentre.getLat();
     }
-
-    // scaled l and m to take the calculations out of the loop
-    // these quantities are effectively dimensionless 
-    const double lScaled = 2.*casacore::C::pi*cellU * l;
-    const double mScaled = 2.*casacore::C::pi*cellV * m;
-    
-    // zero value of the pattern by default
-    pattern.pattern().set(0.);
-    
-    ASKAPCHECK(std::abs(std::abs(cellU/cellV)-1.)<1e-7, 
-               "Rectangular cells are not supported at the moment, you have ("<<cellU<<" , "<<cellV<<")");
-    
-    const double cell = std::abs(cellU*(casacore::C::c/freq));
-    
-    const double apertureRadiusInCells = itsDiameter/(2.0*cell);  
-    
-    // square of the station radius
-    const double rMaxSquared = casacore::square(apertureRadiusInCells);
-	
-    // sizes of the grid to fill with pattern values
-    const casacore::uInt nU = pattern.uSize();
-    const casacore::uInt nV = pattern.vSize();
-	
-    ASKAPCHECK((casacore::square(double(nU)) > rMaxSquared) &&
-               (casacore::square(double(nV)) > rMaxSquared),
-               "The pattern buffer passed to SKA_LOWIllumination::getPattern is too small for the given model. "
-               "Sizes should be greater than "<<sqrt(rMaxSquared)<<" on each axis, you have "
-                <<nU<<" x "<<nV);
-	
-    // maximum possible support for this class corresponds to the dish size
-    pattern.setMaxSupport(1+2*casacore::uInt(apertureRadiusInCells)/oversample);
+    ASKAPLOG_INFO_STR(logger, "PB:  - RA = " << raB*12./casacore::C::pi << " hours");
+    ASKAPLOG_INFO_STR(logger, "PB:  - Dec = " << decB/casacore::C::degree << " degrees");
 
     // initialise the primary beam
     LOFAR::ParameterSet PBparset;
     PBparset.add("primarybeam","SKA_LOW_PB");
-    PBparset.add("primarybeam.SKA_LOW_PB.pointing.az",std::to_string(itsAz0));
-    PBparset.add("primarybeam.SKA_LOW_PB.pointing.za",std::to_string(itsZa0));
+    PBparset.add("primarybeam.SKA_LOW_PB.pointing.ra",std::to_string(raB));
+    PBparset.add("primarybeam.SKA_LOW_PB.pointing.dec",std::to_string(decB));
     PrimaryBeam::ShPtr PB = PrimaryBeamFactory::make(PBparset);
-
-    //std::cout << "DAM PBparset:" << std::endl << PBparset << std::endl;
-    std::cout << "DAM image size = " << pattern.uSize() << " / " << pattern.overSample() << std::endl;
-    std::cout << "DAM apertureRadiusInCells = " << apertureRadiusInCells << std::endl;
-    std::cout << "DAM 1+2*apertureRadiusInCells = " << 1+2*casacore::uInt(apertureRadiusInCells) << std::endl;
-    std::cout << "DAM rMaxSquared = " << rMaxSquared << std::endl;
-    std::cout << "DAM rMaxSquared x OS = " << rMaxSquared*pattern.overSample() << std::endl;
-    std::cout << "DAM freq = " << freq << " Hz" << std::endl;
-    std::cout << "DAM lambda = " << casacore::C::c/freq << " metres" << std::endl;
-    std::cout << "DAM itsDiameter = " << itsDiameter << " metres" << std::endl;
-    std::cout << "DAM itsAz0 = " << itsAz0/casacore::C::degree << " degrees" << std::endl;
-    std::cout << "DAM itsZa0 = " << itsZa0/casacore::C::degree << " degrees" << std::endl;
-
-    casacore::Matrix<casacore::Complex> Jones(2,2,0.0);
-    double az = 90*casacore::C::degree, za;
-    za = 10*casacore::C::degree + 0.0 * casacore::C::c/freq / itsDiameter;
-    Jones = PB->getJonesAtOffset(az,za,freq);
-    std::cout << "DAM gain at offset of " << (za - 10*casacore::C::degree)/casacore::C::degree << " degrees";
-    std::cout << " = " << Jones(0,0) << std::endl;
-    za = 10*casacore::C::degree + 0.5 * casacore::C::c/freq / itsDiameter;
-    Jones = PB->getJonesAtOffset(az,za,freq);
-    std::cout << "DAM gain at offset of " << (za - 10*casacore::C::degree)/casacore::C::degree << " degrees";
-    std::cout << " = " << Jones(0,0) << std::endl;
-    za = 10*casacore::C::degree + 1.0 * casacore::C::c/freq / itsDiameter;
-    Jones = PB->getJonesAtOffset(az,za,freq);
-    std::cout << "DAM gain at offset of " << (za - 10*casacore::C::degree)/casacore::C::degree << " degrees";
-    std::cout << " = " << Jones(0,0) << std::endl;
+ 
+    // sizes of the grid to fill with pattern values
+    const casacore::uInt nU = pattern.uSize();
+    const casacore::uInt nV = pattern.vSize();
 
     // Find the actual cellsizes in x and y (radians)
     // corresponding to the limited support
-    const double ccellx = 1.0 / (double(nU / oversample) * pattern.uCellSize());
-    const double ccelly = 1.0 / (double(nV / oversample) * pattern.vCellSize());
+    const double ccellx = 1.0 / (double(nU / pattern.overSample()) * pattern.uCellSize());
+    const double ccelly = 1.0 / (double(nV / pattern.overSample()) * pattern.vCellSize());
 
-    double sum=0.; // normalisation factor
+    // zero pad pixels outside 1/(n * cellsize) to avoid aliasing? This isn't right...
+    // const double cellmax = double(nU)/2 / (double(nU) * pattern.uCellSize());
+ 
+    // zero value of the pattern by default
+    pattern.pattern().set(0.);
+
+    double ra, dec;
+    // double sum=0.; // normalisation factor
+    casacore::Matrix<casacore::Complex> Jones(2,2,0.0);
     for (casacore::uInt iy = 0; iy < nV; ++iy) {
-        const double y = (double(iy) - double(nV) / 2) * ccelly;
+        const double m = (double(iy) - double(nV) / 2) * ccelly;
         for (casacore::uInt ix = 0; ix < nU; ++ix) {
-            const double x = (double(ix) - double(nU) / 2) * ccellx;
+            const double l = (double(ix) - double(nU) / 2) * ccellx;
             // should there be a check of whether x, y and xy_dist are valid?
-            const double az = casacore::C::pi/2.0 - atan2(y,x);
-            const double za = asin(sqrt(x*x+y*y));
-            Jones = PB->getJonesAtOffset(az,za,freq);
-            // note sure about polarisation. Need to check useage elsewhere (and in AWProjectVisGridder)
+            const double n = sqrt(1. - l*l - m*m);
+            ra  = ra0 + atan2( l, n*cos(dec0) - m*sin(dec0) );
+            dec = asin( m*cos(dec0) + n*sin(dec0) );
+
+            Jones = PB->getJones(ra,dec,freq);
+            // not sure about polarisation. Need to check useage elsewhere (and in AWProjectVisGridder)
             pattern(ix, iy) = Jones(0,0);
-            sum += abs(pattern(ix, iy));
+            //sum += abs(pattern(ix, iy));
+
         }
     }
 
-    //scimath::fft2d(pattern.pattern(), true);
-
-    std::cout << "DAM pixel sum = " << sum << std::endl;
-
-// DAM normalising to give peak of 1. Probably should be the integral...
-
     //ASKAPCHECK(sum > 0., "Integral of the aperture should be non-zero");
     //pattern.pattern() *= casacore::DComplex(1.0/float(sum),0.);
-
-for (casacore::uInt iU=0; iU<nU; ++iU) {
-    const double offsetU = double(iU)-double(nU)/2.;
-    if (abs(offsetU) < 10) std::cout << "DAM " << iU << ", " << offsetU << ": " << pattern(iU, nU/2) << std::endl;
-}
 
 }
 

@@ -49,6 +49,8 @@ ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 #include <askap/gridding/SupportSearcher.h>
 #include <askap/profile/AskapProfiler.h>
 
+// for debugging - to export intermediate images
+#include <askap/scimath/utils/ImageUtils.h>
 
 namespace askap {
 namespace synthesis {
@@ -305,34 +307,20 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
             for (int chan = 0; chan < nChan; ++chan) {
 
-std::cout << "DAM" << std::endl;
-std::cout << "DAM image centre ra,dec = " << out.getLong() << ", " << out.getLat() << std::endl;
-std::cout << "DAM beam centre ra,dec = " << offset.getLong() << ", " << offset.getLat() << std::endl;
-std::cout << "DAM beam offset = " << offset.separation(out) << std::endl;
-std::cout << "DAM  - rwSlopes()(0, feed, currentField()) = " << rwSlopes()(0, feed, currentField()) << std::endl;
-std::cout << "DAM  - rwSlopes()(1, feed, currentField()) = " << rwSlopes()(1, feed, currentField()) << std::endl;
-
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(acc.frequency()[chan], pattern,
                                             out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
 
-                /// Extract illumination pattern for this channel
-                //itsIllumination->getPattern(acc.frequency()[chan], pattern,
-                //                            rwSlopes()(0, feed, currentField()),
-                //                            rwSlopes()(1, feed, currentField()), parallacticAngle);
-
+                // If the pattern is in the Fourier domain, FFT to the image domain
                 if( !imageBasedPattern ) {
                     scimath::fft2d(pattern.pattern(), false);
                 }
-
-std::cout << "DAM" << std::endl;
 
                 /// Calculate the total convolution function including
                 /// the w term and the antenna convolution function
 
                 for (int iw = 0; iw < nWPlanes(); ++iw) {
                     thisPlane.set(0.0);
-
 
                     // Loop over the central nx, ny region, setting it to the product
                     // of the phase screen and the a-projection function
@@ -350,6 +338,7 @@ std::cout << "DAM" << std::endl;
                             if (r2 < 1.0) {
                                 const double phase = w * (1.0 - sqrt(1.0 - r2));
                                 // grid correction is temporary disabled as otherwise the fluxes are overestimated
+                                // for polarised beams this should be J*J'
                                 const casacore::DComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
                                 //*casacore::DComplex(ccfx(ix)*ccfy(iy));
                                 // this ensures the oversampling is done
@@ -399,8 +388,9 @@ std::cout << "DAM" << std::endl;
 
                         if (itsSupport == 0) {
                             itsSupport = cfSupport.itsSize;
-                            ASKAPLOG_DEBUG_STR(logger, "Number of planes in convolution function = "
-                                                   << itsConvFunc.size() << " or " << itsConvFunc.size() / itsOverSample / itsOverSample <<
+                            ASKAPLOG_DEBUG_STR(logger, "Number of planes in convolution function = " <<
+                                               itsConvFunc.size() << " or " <<
+                                               itsConvFunc.size() / itsOverSample / itsOverSample <<
                                                " before oversampling with factor " << itsOverSample);
                         }
 
@@ -411,9 +401,10 @@ std::cout << "DAM" << std::endl;
                         // just for log output
                         const double cell = std::abs(itsUVCellSize(0) * (casacore::C::c
                                                      / acc.frequency()[chan]));
-                        ASKAPLOG_DEBUG_STR(logger, "CF cache w-plane=" << iw << " feed=" << feed << " field=" << currentField() <<
-                                           ": maximum extent = " << support*cell << " (m) sampled at " << cell / itsOverSample << " (m)" <<
-                                           " offset (m): " << cfSupport.itsOffsetU*cell << " " << cfSupport.itsOffsetV*cell);
+                        ASKAPLOG_DEBUG_STR(logger, "CF cache w-plane=" << iw << " feed=" << feed << " field=" <<
+                                           currentField() << ": maximum extent = " << support*cell <<
+                                           " (m) sampled at " << cell / itsOverSample << " (m)" << " offset (m): " <<
+                                           cfSupport.itsOffsetU*cell << " " << cfSupport.itsOffsetV*cell);
                     }
 
                     // use either support determined for this particular plane or a generic one,
@@ -435,22 +426,21 @@ std::cout << "DAM" << std::endl;
 
                             // Now cut out the inner part of the convolution function and
                             // insert it into the convolution function
-                            for (int iy = -support; iy < support; iy++) {
-                                for (int ix = -support; ix < support; ix++) {
-                                    ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
+                            for (int iy = -support; iy < support+1; iy++) {
+                                const int oy = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2;
+                                ASKAPDEBUGASSERT(iy + support >= 0);
+                                ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
+                                ASKAPDEBUGASSERT(oy >= 0);
+                                ASKAPDEBUGASSERT(oy < int(thisPlane.ncolumn()));
+                                for (int ix = -support; ix < support+1; ix++) {
+                                    const int ox = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2;
+                                    ASKAPDEBUGASSERT(ix + support >= 0);
                                     ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
-                                    ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                                    ASKAPDEBUGASSERT((ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2 >= 0);
-                                    ASKAPDEBUGASSERT((iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2 >= 0);
-                                    ASKAPDEBUGASSERT((ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2 < int(thisPlane.nrow()));
-                                    ASKAPDEBUGASSERT((iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2 < int(thisPlane.ncolumn()));
-
-                                    itsConvFunc[plane](ix + support, iy + support)
-                                    = rescale * thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
-                                                          (iy + cfSupport.itsOffsetV) * itsOverSample + fracv + ny / 2);
-                                } // for ix
-                            } // for iy
-
+                                    ASKAPDEBUGASSERT(ox >= 0);
+                                    ASKAPDEBUGASSERT(ox < int(thisPlane.nrow()));
+                                    itsConvFunc[plane](ix + support, iy + support) = rescale * thisPlane(ox,oy);
+                                }
+                            }
 
                             /*
                             // force normalization for all fractional offsets (or planes)

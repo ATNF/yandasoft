@@ -144,8 +144,6 @@ void DiskIllumination::getPattern(double freq, UVPattern &pattern,
         --rMinSquared;
     }
 
-// DAM should the order of the iU and iV loops be swapped???
-
     double sum=0.; // normalisation factor
     #ifdef _OPENMP_WORKING_WORKING
     #pragma omp parallel default(shared)

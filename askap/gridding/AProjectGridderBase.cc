@@ -39,9 +39,11 @@ ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 #include <askap/gridding/DiskIllumination.h>
 #include <askap/gridding/ATCAIllumination.h>
 #include <askap/gridding/SKA_LOWIllumination.h>
+#include <askap/gridding/TableVisGridder.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <profile/AskapProfiler.h>
 
+#include <limits>
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -364,13 +366,22 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 
    	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination()); 
 
-	    const double diameter = SynthesisParamsHelper::convertQuantity(
+        const double diameter = SynthesisParamsHelper::convertQuantity(
                                     parset.getString("diameter","35m"), "m" );   
-	    const double az = SynthesisParamsHelper::convertQuantity(
-                              parset.getString("illumination.pointing.azimuth","0"), "rad" );   
-	    const double za = SynthesisParamsHelper::convertQuantity(
-                              parset.getString("illumination.pointing.zenithangle","0"), "rad" );   
-	    illum->setPointing(az,za,diameter);
+
+        double ra=std::numeric_limits<float>::quiet_NaN();
+        double dec=std::numeric_limits<float>::quiet_NaN();
+        if ( parset.isDefined("illumination.pointing.ra") && parset.isDefined("illumination.pointing.dec") ) {
+            illum->setPointingToFixed();
+            ra  = SynthesisParamsHelper::convertQuantity(
+                      parset.getString("illumination.pointing.ra"), "rad" );
+            dec = SynthesisParamsHelper::convertQuantity(
+                      parset.getString("illumination.pointing.dec"), "rad" );
+        }
+
+        // was thinking of updating the pointingDir1() data accessor, however this is a temporary beam
+        // model so leave it for now. Accessor-based offsets are still available via MS FEED tables.
+        illum->setPointing(ra,dec,diameter);
 
 	    return illum;
 
@@ -379,6 +390,5 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
    ASKAPTHROW(AskapError, "Unknown illumination type "<<illumType);
    return boost::shared_ptr<IBasicIllumination>(); // to keep the compiler happy
 }
-
 
 

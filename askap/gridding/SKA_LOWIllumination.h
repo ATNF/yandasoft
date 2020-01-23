@@ -1,10 +1,9 @@
-/// @file 
+/// @file SKA_LOWIllumination.h
 /// @brief SKA_LOW illumination model
 /// @details This class represents a SKA_LOW illumination model, 
-/// which is the Fourier transform of the SKA_LOW_PB PrimaryBeam model.
-/// Optionally a phase slope can be applied to simulate offset pointing.
+/// represented in the image domain via the SKA_LOW_PB PrimaryBeam model.
 ///
-/// @copyright (c) 2008 CSIRO
+/// @copyright (c) 2020 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -26,7 +25,7 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
-/// @author Max Voronkov <maxim.voronkov@csiro.au>
+/// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 
 #ifndef SKA_LOW_ILLUMINATION_H
 #define SKA_LOW_ILLUMINATION_H
@@ -47,8 +46,6 @@ struct SKA_LOWIllumination : virtual public IBasicIllumination {
 
   /// @brief construct the model
   /// @param[in] diam station diameter in metres
-  // DAM BLOCKAGE /// @param[in] blockage a diameter of the central hole in metres
-  // DAM BLOCKAGE SKA_LOWIllumination(double diam, double blockage);
   SKA_LOWIllumination();
     
   /// @brief obtain illumination pattern
@@ -88,9 +85,11 @@ struct SKA_LOWIllumination : virtual public IBasicIllumination {
 
   /// @brief  Set pointing parameters
   /// @details Set pointing parameters
-  /// @param[in] az pointing azimuth in degrees
-  /// @param[in] za pointing zenith angle in degrees
-  void setPointing(double az, double za, double diam);
+  /// @param[in] ra pointing right ascension in radians
+  /// @param[in] dec pointing declination in radians
+  void setPointing(double ra, double dec, double diam);
+
+  void setPointingToFixed() { itsFixedPointing = true; }
 
 private:
   
@@ -101,12 +100,16 @@ private:
   // setDipoleDelays should set steering delays, but since we are
   // temporarily using a Gaussian, just set pointing centre azimuth
   // and zenith angle
-  /// @brief pointing azimuth in degrees
-  double itsAz0;
-  /// @brief pointing zenith angle in degrees
-  double itsZa0;
+  /// @brief pointing right ascension in radians
+  double itsRA0;
+  /// @brief pointing declination in radians
+  double itsDec0;
   /// @brief station diameter in metres
   double itsDiameter;
+
+  /// @brief flag to determine whether or not to have a pointing centre set dynamically from image/feed info
+  /// @details true if pointing centre is set by parset and should not change
+  bool itsFixedPointing = false;
 
 };
 
