@@ -119,6 +119,7 @@ find_package(GSL REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 find_package(Components REQUIRED)
 find_package(MPI REQUIRED)
+find_package(XercesC REQUIRED)
 
 include_directories(${FFTW_INCLUDE_DIRS})
 include_directories(${ASKAP_INCLUDE_DIRS})
@@ -193,7 +194,8 @@ target_link_libraries(yanda_synthesis
 	${ACCESSORS_LIBRARY}
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
-	${MPI_LIBRARIES}
+    	${MPI_LIBRARIES}
+        ${XercesC_LIBRARY}
 	)
 if (MPI_FOUND)
 	target_link_libraries(yanda_synthesis
