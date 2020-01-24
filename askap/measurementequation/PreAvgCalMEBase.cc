@@ -32,6 +32,8 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
+#include <algorithm>
+
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/dataaccess/IDataIterator.h>
 #include <askap/AskapError.h>
@@ -40,6 +42,7 @@
 #include <askap/scimath/fitting/DesignMatrix.h>
 #include <askap/scimath/fitting/PolXProducts.h>
 #include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/CalParamNameHelper.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
@@ -179,12 +182,13 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
 
 #ifdef BUILD_INDEXED_NORMAL_MATRIX
     if (fdp) {
-        // Building the integer index for parameter names.
+        std::set<std::string> baseParamNames;
         for (const auto &name : rwParameters()->freeNames()) {
-            ne.addParameterNameToIndexMap(name);
+            std::string baseParamName = scimath::CalParamNameHelper::extractBaseParamName(name);
+            baseParamNames.insert(baseParamName);
         }
         size_t nChannelsLocal = itsBuffer.nChannel();
-        size_t nBaseParameters = ne.getNumberBaseParameters();
+        size_t nBaseParameters = baseParamNames.size();
 
         // Allocate and initialize the indexed normal matrix.
         ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters);
@@ -196,19 +200,62 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
         ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
         ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
 
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+        // Building parameter index map.
+        // Note, this is a not too efficient way. Should be optimised provided to be a problem.
+        for (scimath::ComplexDiffMatrix::parameter_iterator param = cdm.paramBegin();
+             param != cdm.paramEnd(); ++param) {
+            ne.addParameterNameToIndexMap(*param);
+        }
+#endif
+
         for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
                 // cdm is a block matrix
                 size_t columnOffset = chan * itsBuffer.nPol();
-                ne.add(cdm, pxpSlice, columnOffset);
+                ne.add(cdm, pxpSlice, columnOffset, chan);
             } else {
                 // cdm is a normal matrix
                 ne.add(cdm, pxpSlice);
             }
         }
     }
+
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+// Comparing two normal matrixes for testing.
+    const auto &channels = ne.getParameterChannels();
+    auto chanMin = *std::min_element(channels.begin(), channels.end());
+    size_t nBaseParameters = ne.getNumberBaseParameters();
+    for (auto chan: channels) {
+        for (size_t row = 0; row < nBaseParameters; ++row) {
+            std::string baseRowName = ne.getBaseParameterNameByIndex(row);
+            std::string rowName = scimath::CalParamNameHelper::addChannelInfo(baseRowName, chan);
+
+            for (size_t col = 0; col < nBaseParameters; ++col) {
+                std::string baseColName = ne.getBaseParameterNameByIndex(col);
+                std::string colName = scimath::CalParamNameHelper::addChannelInfo(baseColName, chan);
+
+                size_t chanLocal = chan - chanMin;
+                const auto &normalMatrixElement = ne.normalMatrix(colName, rowName);
+                const auto &indexedElement = ne.indexedNormalMatrix(col, row, chanLocal);
+
+                bool same_values;
+                if (normalMatrixElement.shape() == casacore::IPosition(2, 0, 0)) {
+                    same_values = std::all_of(indexedElement.begin(), indexedElement.end(), [](const double d) { return d == 0.; });
+                }
+                else {
+                    ASKAPCHECK(indexedElement.shape() == casacore::IPosition(2, 2, 2), "Empty indexed element in col/row/chan: " << col << "/" << row << "/" << chan);
+                    auto equality = normalMatrixElement == indexedElement;
+                    same_values = std::all_of(equality.begin(), equality.end(), [](const bool b) { return b == true; });
+                }
+                ASKAPCHECK(same_values, "Indexed matrix has wrong contents!");
+            }
+        }
+    }
+#endif
+
     updateMetadata(ne, "min_time", itsMinTime);
     updateMetadata(ne, "max_time", itsMaxTime);
 }
