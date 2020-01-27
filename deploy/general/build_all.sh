@@ -468,7 +468,7 @@ if [ $install_ingest == yes ]; then
 fi
 
 if [ $clean_yandasoft == yes ]; then
-   startdir="$PWD"
+   startdir=${PWD}
    if [ -d build ]; then
 	echo "yandasoft build directory already exists"
 	cd build
@@ -483,7 +483,7 @@ fi
 
 if [ $install_yandasoft == yes ]; then
 # Go, go, go, yandasoft!
-  startdir="PWD"
+  startdir=${PWD}
   cd $yandadir
   if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"

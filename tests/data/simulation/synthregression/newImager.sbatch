@@ -14,7 +14,10 @@
 #SBATCH --chdir=/group/askap/sord/yandasoft/tests/data/simulation/synthregression
 
 export PATH=${PATH}:/group/askap/sord/yanda/bin
-source /group/askap/sord/yandasoft/deploy/pawsey/Modulefile
-mpirun -np 1 /group/askap/sord/yanda/bin/csimulator -c wtermtest_template.in
-mpirun -np 2 /group/askap/sord/yanda/bin/imager -c sbatch_test.in
+source /group/askap/sord/yandasoft/deploy/pawsey/ModuleFile
+module unload askapdata
+module load askapdata
+export MEASURESDATA=${AIPSPATH}/data
+srun -n 1 /group/askap/sord/yanda/bin/csimulator -c wtermtest_template.in
+srun -n 2 /group/askap/sord/yanda/bin/imager -c sbatch_test.in
 

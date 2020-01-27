@@ -208,7 +208,6 @@ if (ENABLE_OPENMP)
     find_package(OpenMP REQUIRED)
     target_link_libraries(yanda_synthesis PRIVATE OpenMP::OpenMP_CXX)
 endif (ENABLE_OPENMP)
-
 install (
 TARGETS yanda_synthesis
 RUNTIME DESTINATION bin
