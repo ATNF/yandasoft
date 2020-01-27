@@ -53,7 +53,7 @@ foreach(prog ${_progs})
 	add_executable (${prog} 
             ${prog}.cc
             $<TARGET_OBJECTS:deconvolution>
-	    $<TARGET_OBJECTS:distributedimager>
+  	    $<TARGET_OBJECTS:distributedimager>
 	    $<TARGET_OBJECTS:gridding>
 	    $<TARGET_OBJECTS:measurementequation>
 	    $<TARGET_OBJECTS:messages>
@@ -88,6 +88,12 @@ foreach(prog ${_progs})
 	${ASKAPPARALLEL_LIBRARY}
         ${GSL_LIBRARIES}
         ${CPPUNIT_LIBRARY})
+if (MPI_FOUND)
+	target_link_libraries(${prog}
+		${MPI_LIBRARIES}
+	)
+endif (MPI_FOUND)
+
 
 	install (TARGETS ${prog} DESTINATION bin)
 
