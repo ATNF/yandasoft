@@ -50,7 +50,18 @@ tstuvw2
 
 
 foreach(prog ${_progs})
-	add_executable (${prog} ${prog}.cc)
+	add_executable (${prog} 
+            ${prog}.cc
+            $<TARGET_OBJECTS:deconvolution>
+	    $<TARGET_OBJECTS:distributedimager>
+	    $<TARGET_OBJECTS:gridding>
+	    $<TARGET_OBJECTS:measurementequation>
+	    $<TARGET_OBJECTS:messages>
+	    $<TARGET_OBJECTS:opcal>
+	    $<TARGET_OBJECTS:parallel>
+	    $<TARGET_OBJECTS:simulation>
+	    $<TARGET_OBJECTS:utils>
+        )
         if(MPI_COMPILE_FLAGS)
   		set_target_properties(${prog} PROPERTIES
     		COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
@@ -61,8 +72,8 @@ foreach(prog ${_progs})
     		LINK_FLAGS "${MPI_LINK_FLAGS}")
 	endif()
 
-
-        target_link_libraries (${prog} yanda_synthesis 	${ASKAP_LIBRARY}
+        target_link_libraries (${prog} 
+        ${ASKAP_LIBRARY}
 	${log4cxx_LIBRARY}
 	${CASACORE_LIBRARIES}
 	${FFTW_LIBRARIES}
@@ -72,9 +83,11 @@ foreach(prog ${_progs})
 	${LofarCommon_LIBRARY}
 	${Boost_LIBRARIES}
 	${ACCESSORS_LIBRARY}
+        ${XercesC_LIBRARY}
 	${COMPONENTS_LIBRARY}
 	${ASKAPPARALLEL_LIBRARY}
-        ${GSL_LIBRARIES})
+        ${GSL_LIBRARIES}
+        ${CPPUNIT_LIBRARY})
 
 	install (TARGETS ${prog} DESTINATION bin)
 
