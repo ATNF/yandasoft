@@ -32,6 +32,8 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
+#include <algorithm>
+
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/dataaccess/IDataIterator.h>
 #include <askap/AskapError.h>
@@ -40,10 +42,13 @@
 #include <askap/scimath/fitting/DesignMatrix.h>
 #include <askap/scimath/fitting/PolXProducts.h>
 #include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/CalParamNameHelper.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
+
+//#define BUILD_INDEXED_NORMAL_MATRIX
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -169,35 +174,90 @@ void PreAvgCalMEBase::updateMetadata(scimath::GenericNormalEquations &ne, const 
 /// @param[in] ne normal equations to update
 void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) const
 {
-  const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
-  const bool fdp = isFrequencyDependent();
-  ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
+    ASKAPLOG_INFO_STR(logger, "Calculating Generic Equations.");
 
-  // Declaring a fixed-size thisChanCDM assumes that the dimensions of the
-  // "cdm" matrix inside the first for loop are those stated in the assertions
-  // below; otherwise this breaks, and "thisChanCDM" would need to be allocated
-  // each time a "cdm" object is created
-  scimath::ComplexDiffMatrix thisChanCDM(itsBuffer.nPol(), itsBuffer.nPol());
+    const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
+    const bool fdp = isFrequencyDependent();
+    ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
-       scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
-       ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
-       ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
-       for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+    if (fdp) {
+        std::set<std::string> baseParamNames;
+        for (const auto &name : rwParameters()->freeNames()) {
+            std::string baseParamName = scimath::CalParamNameHelper::extractBaseParamName(name);
+            baseParamNames.insert(baseParamName);
+        }
+        size_t nChannelsLocal = itsBuffer.nChannel();
+        size_t nBaseParameters = baseParamNames.size();
+
+        // Allocate and initialize the indexed normal matrix.
+        ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters);
+    }
+#endif
+
+    for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
+        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
+        ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
+        ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
+
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+        // Building parameter index map.
+        // Note, this is a not too efficient way. Should be optimised provided to be a problem.
+        for (scimath::ComplexDiffMatrix::parameter_iterator param = cdm.paramBegin();
+             param != cdm.paramEnd(); ++param) {
+            ne.addParameterNameToIndexMap(*param);
+        }
+#endif
+
+        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
-               // cdm is a block matrix
-               cdm.extractBlock(chan * itsBuffer.nPol(), thisChanCDM);
-               ne.add(thisChanCDM, pxpSlice);
+                // cdm is a block matrix
+                size_t columnOffset = chan * itsBuffer.nPol();
+                ne.add(cdm, pxpSlice, columnOffset, chan);
             } else {
-               // cdm is a normal matrix
-               ne.add(cdm, pxpSlice);
+                // cdm is a normal matrix
+                ne.add(cdm, pxpSlice);
             }
-       }
-  }
-  updateMetadata(ne, "min_time", itsMinTime);
-  updateMetadata(ne, "max_time", itsMaxTime);
+        }
+    }
+
+#ifdef BUILD_INDEXED_NORMAL_MATRIX
+// Comparing two normal matrixes for testing.
+    const auto &channels = ne.getParameterChannels();
+    auto chanMin = *std::min_element(channels.begin(), channels.end());
+    size_t nBaseParameters = ne.getNumberBaseParameters();
+    for (auto chan: channels) {
+        for (size_t row = 0; row < nBaseParameters; ++row) {
+            std::string baseRowName = ne.getBaseParameterNameByIndex(row);
+            std::string rowName = scimath::CalParamNameHelper::addChannelInfo(baseRowName, chan);
+
+            for (size_t col = 0; col < nBaseParameters; ++col) {
+                std::string baseColName = ne.getBaseParameterNameByIndex(col);
+                std::string colName = scimath::CalParamNameHelper::addChannelInfo(baseColName, chan);
+
+                size_t chanLocal = chan - chanMin;
+                const auto &normalMatrixElement = ne.normalMatrix(colName, rowName);
+                const auto &indexedElement = ne.indexedNormalMatrix(col, row, chanLocal);
+
+                bool same_values;
+                if (normalMatrixElement.shape() == casacore::IPosition(2, 0, 0)) {
+                    same_values = std::all_of(indexedElement.begin(), indexedElement.end(), [](const double d) { return d == 0.; });
+                }
+                else {
+                    ASKAPCHECK(indexedElement.shape() == casacore::IPosition(2, 2, 2), "Empty indexed element in col/row/chan: " << col << "/" << row << "/" << chan);
+                    auto equality = normalMatrixElement == indexedElement;
+                    same_values = std::all_of(equality.begin(), equality.end(), [](const bool b) { return b == true; });
+                }
+                ASKAPCHECK(same_values, "Indexed matrix has wrong contents!");
+            }
+        }
+    }
+#endif
+
+    updateMetadata(ne, "min_time", itsMinTime);
+    updateMetadata(ne, "max_time", itsMaxTime);
 }
   
 /// @brief initialise accumulation

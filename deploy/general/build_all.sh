@@ -89,6 +89,7 @@ cmake=cmake
 jobs=1
 prefix=/usr/local
 workdir="$PWD"
+yandadir="$PWD"/../../
 remove_workdir=no
 build_oskar=yes
 use_python3=no
@@ -355,7 +356,8 @@ build_and_install() {
 	if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
 	elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+                export CRAYPE_LINK_TYPE=dynamic
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
@@ -466,7 +468,7 @@ if [ $install_ingest == yes ]; then
 fi
 
 if [ $clean_yandasoft == yes ]; then
-   startdir="$PWD"
+   startdir=${PWD}
    if [ -d build ]; then
 	echo "yandasoft build directory already exists"
 	cd build
@@ -481,6 +483,8 @@ fi
 
 if [ $install_yandasoft == yes ]; then
 # Go, go, go, yandasoft!
+  startdir=${PWD}
+  cd $yandadir
   if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"
   fi
@@ -501,13 +505,16 @@ if [ $install_yandasoft == yes ]; then
   if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
   elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+               export CRAYPE_LINK_TYPE=dynamic
   else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
   fi
   try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
   try make -j${jobs} all
   try make -j${jobs} install
+
+  cd "$startdir"
 fi
 
 
