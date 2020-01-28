@@ -181,6 +181,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
 #ifdef BUILD_INDEXED_NORMAL_MATRIX
+    const casacore::uInt chanOffset = static_cast<casacore::uInt>(rwParameters()->has("chan_offset") ? rwParameters()->scalarValue("chan_offset") : 0);
     if (fdp) {
         std::set<std::string> baseParamNames;
         for (const auto &name : rwParameters()->freeNames()) {
@@ -191,7 +192,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
         size_t nBaseParameters = baseParamNames.size();
 
         // Allocate and initialize the indexed normal matrix.
-        ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters);
+        ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters, chanOffset);
     }
 #endif
 
@@ -225,21 +226,19 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
 
 #ifdef BUILD_INDEXED_NORMAL_MATRIX
 // Comparing two normal matrixes for testing.
-    const auto &channels = ne.getParameterChannels();
-    auto chanMin = *std::min_element(channels.begin(), channels.end());
     size_t nBaseParameters = ne.getNumberBaseParameters();
-    for (auto chan: channels) {
+
+    for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
         for (size_t row = 0; row < nBaseParameters; ++row) {
             std::string baseRowName = ne.getBaseParameterNameByIndex(row);
-            std::string rowName = scimath::CalParamNameHelper::addChannelInfo(baseRowName, chan);
+            std::string rowName = scimath::CalParamNameHelper::addChannelInfo(baseRowName, chan + chanOffset);
 
             for (size_t col = 0; col < nBaseParameters; ++col) {
                 std::string baseColName = ne.getBaseParameterNameByIndex(col);
-                std::string colName = scimath::CalParamNameHelper::addChannelInfo(baseColName, chan);
+                std::string colName = scimath::CalParamNameHelper::addChannelInfo(baseColName, chan + chanOffset);
 
-                size_t chanLocal = chan - chanMin;
                 const auto &normalMatrixElement = ne.normalMatrix(colName, rowName);
-                const auto &indexedElement = ne.indexedNormalMatrix(col, row, chanLocal);
+                const auto &indexedElement = ne.indexedNormalMatrix(col, row, chan);
 
                 bool same_values;
                 if (normalMatrixElement.shape() == casacore::IPosition(2, 0, 0)) {
