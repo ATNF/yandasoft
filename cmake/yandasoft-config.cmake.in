@@ -1,7 +1,4 @@
 get_filename_component(YANDASOFT_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
-if (NOT TARGET askap::yandasoft)
-	include("${YANDASOFT_CMAKE_DIR}/yandasoft-targets.cmake")
-endif()
 
 include(CMakeFindDependencyMacro)
 find_dependency(lofar-common)
@@ -21,4 +18,8 @@ if ("@CPPUNIT_FOUND@")
 endif()
 if ("@MPI_FOUND@")
 	find_dependency(MPI)
+endif()
+
+if (NOT TARGET askap::yandasoft)
+	include("${YANDASOFT_CMAKE_DIR}/yandasoft-targets.cmake")
 endif()
