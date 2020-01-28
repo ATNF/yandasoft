@@ -52,6 +52,7 @@
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/calibaccess/ICalSolutionSource.h>
 #include <askap/scimath/utils/MultiDimPosIter.h>
+#include <askap/IndexConverter.h>
 
 
 // std includes
@@ -256,6 +257,12 @@ namespace askap
       
       /// @brief solution ID validity flag
       bool itsSolutionIDValid;
+
+      /// @brief beam index converter
+      /// @details It seems to be handy to be able to run bandpass calibrator for a sparse subset of beams.
+      /// This map provides such an optional index conversion. It is setup from "beamindices" parset keyword,
+      /// if present. Otherwise, it passes the index without conversion and it spans 0..nBeam()-1 space.
+      utility::IndexConverter itsBeamIndexConverter;
     };
 
   }
