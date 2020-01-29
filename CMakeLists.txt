@@ -148,7 +148,7 @@ if (MPI_FOUND)
 		HAVE_MPI
 	)
    if (MPI_COMPILE_FLAGS)
-		target_compile_options(yandasoft PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
+		target_compile_options(yandasoft PRIVATE ${MPI_COMPILE_FLAGS})
 	endif()
 endif (MPI_FOUND)
 
