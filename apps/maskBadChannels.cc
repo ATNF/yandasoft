@@ -111,14 +111,20 @@ public:
 
                 std::vector<double> tmpratio;
                 for(size_t i=0;i<size;i++){
-                    if(! casa::isNaN(madfm[i]) ) {
+                    if ( madfm[i] > 0.) {
                         tmpratio.push_back(onepc[i]/madfm[i]);
+                    }
+                    else {
+                        tmpratio.push_back(0.);
                     }
                 }
                 casa::Vector<double> ratio(tmpratio);
                 double med = casa::median(ratio);
                 double mad = casa::median(abs(ratio-med));
-                double ratioThreshold = med + threshold * mad;
+                ASKAPLOG_INFO_STR(logger, "Ratio median = " << med << " and madfm = " << mad);
+                ASKAPLOG_INFO_STR(logger, "Acceptable channels have ratio values between "
+                                  << med - threshold * mad << " and " 
+                                  << med + threshold * mad );
 
                 // double med=casa::median(std);
                 // double mad=casa::median(abs(std-med));
