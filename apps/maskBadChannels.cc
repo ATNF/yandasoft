@@ -111,31 +111,22 @@ public:
 
                 std::vector<double> tmpratio;
                 for(size_t i=0;i<size;i++){
-                    if(! casa::isNaN(madfm[i]) ) {
+                    if ( madfm[i] > 0.) {
                         tmpratio.push_back(onepc[i]/madfm[i]);
+                    }
+                    else {
+                        tmpratio.push_back(0.);
                     }
                 }
                 casa::Vector<double> ratio(tmpratio);
                 double med = casa::median(ratio);
                 double mad = casa::median(abs(ratio-med));
-                double ratioThreshold = med + threshold * mad;
+                casa::Vector<double> significance=(ratio-med)/mad;
+                ASKAPLOG_INFO_STR(logger, "Ratio median = " << med << " and madfm = " << mad);
+                ASKAPLOG_INFO_STR(logger, "Acceptable channels have ratio values between "
+                                  << med - threshold * mad << " and " 
+                                  << med + threshold * mad );
 
-                // double med=casa::median(std);
-                // double mad=casa::median(abs(std-med));
-                // double stdThreshold = med + threshold * mad;
-                // ASKAPLOG_INFO_STR(logger, "Threshold for stdev = " << stdThreshold << " median="<< med << ", madfm="<<mad);
-                // casa::Vector<double> tmp=(maxval-minval)/madfm;
-                // std::vector<double> newtmp;
-                // for(size_t i=0;i<tmp.size();i++){
-                //     if(! casa::isNaN(tmp[i])){
-                //         newtmp.push_back(tmp[i]);
-                //     }
-                // }
-                // casa::Vector<double> rangeOverNoise(newtmp);
-                // med=casa::median(rangeOverNoise);
-                // mad=casa::median(abs(rangeOverNoise-med));
-                // double rangeThreshold = med + threshold * mad;
-                // ASKAPLOG_INFO_STR(logger, "Threshold for (max-min)/median = " << rangeThreshold << " median="<< med << ", madfm="<<mad);
 
                 boost::shared_ptr<accessors::IImageAccess> iacc = accessors::imageAccessFactory(subset);
                 casa::IPosition shape = iacc->shape(image);
@@ -154,12 +145,17 @@ public:
                                         
                 unsigned int numBad=0;
                 for(unsigned int i=0;i<size;i++){
-                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values " << onepc[i] << " and " << madfm[i] << " for ratio of " << ratio[i]);
-                    // if( (std[i] > stdThreshold) && (rangeOverNoise[i] > rangeThreshold) ) {
-                    // if( (std[i] > stdThreshold) ) {
-                    if ( ( ! madfm[i] > 0. ) || (abs(ratio[i]-med)/mad > threshold) ) {
+                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values " 
+                                      << onepc[i] << " and " 
+                                      << madfm[i] << " for ratio of " 
+                                      << ratio[i] << " and significance of "
+                                      << significance[i]);
+                    if ( ( ! madfm[i] > 0. ) || (abs(significance[i]) > threshold) ) {
                         if (madfm[i] > 0.) {
-                            ASKAPLOG_INFO_STR(logger, "Bad Channel #" << i << ": MADFM = "<< madfm[i] << " 1%ile = " << onepc[i] << " 1%ile/MADFM = " << ratio[i]);
+                            ASKAPLOG_INFO_STR(logger, "Bad Channel #" << i 
+                                              << ": MADFM = "<< madfm[i] 
+                                              << " 1%ile = " << onepc[i] 
+                                              << " 1%ile/MADFM = " << ratio[i]);
                         } else {
                             ASKAPLOG_INFO_STR(logger, "Blank Channel #" << i << ": std = "<<std[i]);
                         }

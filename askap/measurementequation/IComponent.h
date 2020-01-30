@@ -108,7 +108,7 @@ struct IComponent {
   /// other values an exception is thrown.
   /// @param[in] pol required polarization
   /// @return an index (I: 0, Q: 1, U: 2 and V: 3)
-  static size_t stokesIndex(casacore::Stokes::StokesTypes pol) throw(AskapError);
+  static size_t stokesIndex(casacore::Stokes::StokesTypes pol);
   
 }; 
 
