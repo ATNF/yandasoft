@@ -77,6 +77,8 @@ public:
                 float threshold = subset.getFloat("threshold", 10.);
                 
                 std::ifstream fin(statsfile.c_str());
+                ASKAPCHECK(fin.is_open(), "Could not open statsFile " << statsfile);
+                    
                 std::string line, name;
                 unsigned int size=0;
                 
