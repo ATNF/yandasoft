@@ -11,7 +11,7 @@ namespace askap::synthesis {};
 /// @mainpage ASKAP synthesis package
 ///
 /// @section synth_intro Introduction
-/// The synthesis package supports processing of radio synthesis observations,
+/// The yandasoft synthesis package supports processing of radio synthesis observations,
 /// including calibration, editing, and imaging. The emphasis is on the
 /// processing of ASKAP and KAT scale data sets i.e. TBs per hour.
 ///
@@ -85,4 +85,4 @@ namespace askap::synthesis {};
 /// @li @ref simulation
 /// @li @ref opcal
 ///
-/// @copyright 2007 CSIRO, All Rights Reserved.
+/// @copyright 2020 CSIRO, All Rights Reserved.
