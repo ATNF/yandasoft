@@ -1,0 +1,9 @@
+/// Package config file. ONLY include in ".cc" files never in header files!
+
+// std include
+#include <string>
+
+  std::string askap::getAskapPackageVersion_synthesis() {
+    return @VERSION_SHORT@;
+}
+
