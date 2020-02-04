@@ -193,6 +193,16 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
 
         // Allocate and initialize the indexed normal matrix.
         ne.initIndexedNormalMatrix(nChannelsLocal, nBaseParameters, chanOffset);
+
+        // Building parameter index map.
+        for (const auto& baseName: baseParamNames) {
+            for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+                size_t trueChanNumber = chan + chanOffset;
+                std::string parName = scimath::CalParamNameHelper::addChannelInfo(baseName, trueChanNumber);
+                ne.addParameterNameToIndexMap(parName);
+            }
+        }
+        ASKAPCHECK(nBaseParameters == ne.getNumberBaseParameters(), "Wrong number of base parameters!");
     }
 #endif
 
@@ -200,17 +210,6 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
         scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
         ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
         ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
-
-#ifdef BUILD_INDEXED_NORMAL_MATRIX
-        if (fdp) {
-            // Building parameter index map.
-            // Note, this is a not too efficient way. Should be optimised provided to be a problem.
-            for (scimath::ComplexDiffMatrix::parameter_iterator param = cdm.paramBegin();
-                 param != cdm.paramEnd(); ++param) {
-                ne.addParameterNameToIndexMap(*param);
-            }
-        }
-#endif
 
         for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
