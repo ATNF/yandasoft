@@ -2,8 +2,9 @@
 
 // std include
 #include <string>
+#include "askap/askap_synthesis.h"
 
   std::string askap::getAskapPackageVersion_synthesis() {
-    return @VERSION_SHORT@;
+    return "@VERSION_SHORT@";
 }
 

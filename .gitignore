@@ -9,4 +9,5 @@ base-logfilters/*
 base-scimath/*
 lofar-common/*
 lofar-blob/*
-
+askap/askap_synthesis.h
+askap/askap_synthesis.cc

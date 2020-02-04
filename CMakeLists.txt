@@ -108,7 +108,9 @@ macro(add_sources_to_yandasoft)
 		target_sources(yandasoft PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${arg})
 	endforeach()
 endmacro()
-
+add_sources_to_yandasoft(
+    askap/askap_synthesis.cc
+)
 add_subdirectory(askap/deconvolution)
 add_subdirectory(askap/distributedimager)
 add_subdirectory(askap/gridding)
