@@ -449,8 +449,8 @@ fi
 
 if [ $install_askap_dependencies == yes ]; then
 	
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git $yanda_branch $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git $yanda_branch $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git $yanda_branch $yandasoft_opts
 	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git $yanda_branch $yandasoft_opts
