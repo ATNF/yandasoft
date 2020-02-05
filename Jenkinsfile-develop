@@ -15,6 +15,7 @@ rm -rf lofar-common
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
 cd lofar-common
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -34,6 +35,7 @@ rm -rf lofar-blob
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git
 cd lofar-blob
+git checkout develop
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
@@ -265,6 +267,25 @@ make -j2 install
         }
 
       }
+    }
+  }
+  post {
+    failure {
+        wrap([$class: 'BuildUser']) {
+        mail to: "${BUILD_USER_EMAIL}",
+             from: "jenkins@csiro.au",
+             subject: "Failed Pipeline: ${currentBuild.fullDisplayName}",
+             body: "Something is wrong with ${env.BUILD_URL}"
+        
+    }
+    }
+    success {
+        wrap([$class: 'BuildUser']) {
+            mail to: "${BUILD_USER_EMAIL}",
+             from: "jenkins@csiro.au",
+             subject: "Passed Pipeline: ${currentBuild.fullDisplayName}",
+             body: "${env.BUILD_URL} succeeded"
+    }
     }
   }
   environment {
