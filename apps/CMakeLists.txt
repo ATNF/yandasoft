@@ -21,6 +21,7 @@ imgscale
 imgstat
 linmos-mpi
 linmos
+maskBadChannels
 msconcat
 mslist
 msmerge

@@ -29,7 +29,7 @@
 
 
 // Package level header file
-#include "askap_synthesis.h"
+#include "askap/askap_synthesis.h"
 
 // System includes
 #include <iostream>
@@ -130,7 +130,7 @@ public:
                                   << med + threshold * mad );
 
 
-                boost::shared_ptr<accessors::IImageAccess> iacc = accessors::imageAccessFactory(subset);
+                boost::shared_ptr<accessors::IImageAccess<casacore::Float> > iacc = accessors::imageAccessFactory(subset);
                 casa::IPosition shape = iacc->shape(image);
                 ASKAPLOG_INFO_STR(logger, "Shape of input image = " << shape);
                 casa::CoordinateSystem coo = iacc->coordSys(image);
