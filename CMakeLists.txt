@@ -1,7 +1,6 @@
 
 cmake_minimum_required (VERSION 3.1.0)
 include(CheckCXXCompilerFlag)
-project(yandasoft VERSION 0.0.1 LANGUAGES CXX C)
 
 if (EXISTS ${CMAKE_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
@@ -12,8 +11,26 @@ else ()
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif ()
 
-
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/askap-cmake")
+include(version_utils)
+get_version_string()
+
+project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
+
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/askap_synthesis.h.in
+                ${CMAKE_CURRENT_SOURCE_DIR}/askap/askap_synthesis.h)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/askap_synthesis.cc.in
+                ${CMAKE_CURRENT_SOURCE_DIR}/askap/askap_synthesis.cc)
+
+# Required Version of ASKAP dependencies is the MAJOR and MINOR version
+# of this package. This allows the PATCH versions to change on everything
+# but the version number cannot be less or more than the current version
+# 
+set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
+
+
 
 option (CXX11 "Compile as C++11 if possible" YES)
 # Detect if the compiler supports C++11 if we want to use it.
@@ -62,11 +79,11 @@ endif(ENABLE_SHARED)
 # YandaSoft dependencies .. in order
 find_package(lofar-common REQUIRED)
 find_package(lofar-blob REQUIRED)
-find_package(askap-askap REQUIRED)
-find_package(askap-imagemath REQUIRED)
-find_package(askap-scimath REQUIRED)
-find_package(askap-parallel REQUIRED)
-find_package(askap-accessors REQUIRED)
+find_package(askap-askap ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-imagemath ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-scimath ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-parallel ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-accessors ${REQUIRED_VERSION} REQUIRED)
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(GSL REQUIRED)
@@ -91,7 +108,9 @@ macro(add_sources_to_yandasoft)
 		target_sources(yandasoft PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${arg})
 	endforeach()
 endmacro()
-
+add_sources_to_yandasoft(
+    askap/askap_synthesis.cc
+)
 add_subdirectory(askap/deconvolution)
 add_subdirectory(askap/distributedimager)
 add_subdirectory(askap/gridding)
