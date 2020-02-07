@@ -36,6 +36,7 @@
 #include <askap/Application.h>
 #include <askap/StatReporter.h>
 #include <askapparallel/AskapParallel.h>
+#include <askap/imageaccess/FitsImageAccessParallel.h>
 #include <Common/ParameterSet.h>
 
 // casacore includes
@@ -43,26 +44,13 @@
 #include <casacore/scimath/Functionals/Polynomial.h>
 #include <casacore/casa/OS/CanonicalConversion.h>
 
-#include <fitsio.h>
-// System include
-//#include <string>
-//#include <iostream>
-//#include <stdlib.h>
-
 // robust contsub C++ version
-// Need: image accessors that can do parallel write like MPI-IO, reading/writing section of cube in any direction
-// E.g., read spectrum for one or more image rows. Current fits image accessor just does one or more 2-d slices of
-// contiguous data
-
-// Need:
-// 1. Fits image class that can do collective MPI-IO read/write
-// 2. median/quartile determination, selection. excluding NaNs
-// 3. polynomial fitting & evaluation
 
 ASKAP_LOGGER(logger, ".imcontsub");
 
-using namespace std;
+//using namespace std;
 using namespace askap;
+using namespace askap::accessors;
 //using namespace casacore;
 //using namespace askap::synthesis;
 
@@ -72,7 +60,7 @@ public:
     virtual int run(int argc, char* argv[])
     {
         // This class must have scope outside the main try/catch block
-        askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+        askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
 
         try {
             StatReporter stats;
@@ -80,87 +68,51 @@ public:
 
             ASKAPLOG_INFO_STR(logger, "ASKAP image based continuum subtraction application " << ASKAP_PACKAGE_VERSION);
 
-            const casa::String infile = subset.getString("inputfitscube","");
+            casa::String infile = subset.getString("inputfitscube","");
             casa::String outfile = subset.getString("outputfitscube","");
+            size_t pos = infile.rfind(".fits");
+            if (pos==std::string::npos) {
+                infile += ".fits";
+            }
             if (outfile=="") {
-                size_t pos = infile.rfind(".fits");
+                pos = infile.rfind(".fits");
                 outfile = infile.substr(0,pos) + ".contsub.fits";
             }
             float threshold = subset.getFloat("threshold",2.0);
             int order = subset.getInt("order",2);
 
-            // get header and data size, get image dimensions
-            casa::Int nx,ny,nz;
-            casa::Long headersize;
-            decode_header(infile, nx, ny, nz, headersize);
+            FitsImageAccessParallel accessor;
 
             if (comms.isMaster()) {
                 ASKAPLOG_INFO_STR(logger,"In = "<<infile <<", Out = "<<
                                       outfile <<", threshold = "<<threshold << ", order = "<< order);
-                ASKAPLOG_INFO_STR(logger,"Input image dimensions: "<< nx <<", "<< ny << ", "<<nz);
-                copy_header(infile, outfile, headersize);
+                ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
+                accessor.copy_header(infile, outfile);
             }
 
             // All wait for header to be written
-            //ASKAPLOG_INFO_STR(logger,"Waiting at barrier");
             comms.barrier();
 
             // Now process the rest of the file in parallel
-            MPI_Status status;
-            const int myrank = comms.rank();
-            const int numprocs = comms.nProcs();
-            const int nrow = ny / numprocs;
-            ASKAPASSERT(ny == nrow * numprocs);
-            const MPI::Offset blocksize = nx * nrow;    // number of floats
-            const MPI::Offset bufsize = nx * nrow * nz;  // local number to read
-
-            MPI_Datatype filetype;
-            // # blocks, blocklength, stride (distance between blocks)
-            MPI_Type_vector(nz, nx*nrow, nx*ny, MPI_FLOAT, &filetype);
-            MPI_Type_commit(&filetype);
-            const MPI_Offset offset = headersize + myrank * blocksize * sizeof(float);
-            MPI_File fh;
-            MPI_File_open(MPI_COMM_WORLD, infile.c_str(), MPI_MODE_RDONLY, MPI_INFO_NULL, &fh);
-            MPI_File_set_view(fh, offset, MPI_FLOAT, filetype, "native", MPI_INFO_NULL);
-            casa::Float* buf = new casa::Float[bufsize];
-            casa::Float* bufl = new casa::Float[bufsize];
-            // Collective read of the whole cube
-            ASKAPLOG_INFO_STR(logger,"Reading the cube");
-            MPI_File_read_all(fh, buf, bufsize, MPI_FLOAT, &status);
-            // Take care of endianness
-            casa::CanonicalConversion::toLocal(bufl, buf, bufsize);
-            MPI_File_close(&fh);
+            // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
+            const int iax = 1;
+            casa::Cube<casa::Float> arr = accessor.read_all(comms,infile,iax);
 
             // Process spectrum by spectrum
             ASKAPLOG_INFO_STR(logger,"Process the spectra");
-            casa::Vector<casa::Float> vec(casa::IPosition(1,bufsize), bufl, casa::StorageInitPolicy::SHARE);
-            for (int i = 0; i< nx*nrow; i++ ) {
-                casa::Vector<casa::Float> spec(vec(casa::Slice(i,nz,blocksize)));
-                process_spectrum(spec, threshold, order);
+            for (uint y = 0; y< arr.shape()(1); y++ ) {
+                for (uint x = 0; x < arr.shape()(0); x++ ) {
+                    casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
+                    process_spectrum(spec, threshold, order);
+                }
             }
 
-            // Write results to output file
-            MPI_File_open(MPI_COMM_WORLD, outfile.c_str(), MPI_MODE_APPEND|MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
-            MPI_File_set_view(fh, offset, MPI_FLOAT, filetype, "native", MPI_INFO_NULL);
-            casa::CanonicalConversion::fromLocal(buf, bufl, bufsize);
-            ASKAPLOG_INFO_STR(logger,"Writing the cube");
-            MPI_File_write_all(fh, buf, bufsize, MPI_FLOAT, &status);
-            MPI_File_close(&fh);
-            delete [] buf;
-            delete [] bufl;
-
-            // Add fits padding to make file size multiple of 2880
-            if (comms.isMaster()) {
-                fits_padding(outfile);
-            }
-
-            // All wait for padding to be written
-            //ASKAPLOG_INFO_STR(logger,"Waiting at barrier");
-            comms.barrier();
+            // Write results to output file - make sure you use the same axis as for reading
+            accessor.write_all(comms,outfile,arr,iax);
             ASKAPLOG_INFO_STR(logger,"Done");
             // Done
             stats.logSummary();
-            } catch (const askap::AskapError& x) {
+            } catch (const AskapError& x) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << x.what());
                 std::cerr << "Askap error in " << argv[0] << ": " << x.what() << std::endl;
                 exit(1);
@@ -172,79 +124,6 @@ public:
             return 0;
         }
 
-
-        void decode_header(const casa::String& infile, casa::Int& nx, casa::Int& ny,
-                            casa::Int& nz, casa::Long& headersize)
-        {
-            fitsfile *infptr, *outfptr;  // FITS file pointers
-            int status = 0;  // CFITSIO status value MUST be initialized to zero!
-
-            fits_open_file(&infptr, infile.c_str(), READONLY, &status); // open input image
-            if (status) {
-                fits_report_error(stderr, status); // print error message
-                return;
-            }
-            LONGLONG headstart, datastart, dataend;
-            fits_get_hduaddrll (infptr, &headstart, &datastart, &dataend, &status);
-            //ASKAPLOG_INFO_STR(logger,"header starts at: "<<headstart<<" data start: "<<datastart<<" end: "<<dataend);
-            headersize = datastart;
-            int naxis;
-            long naxes[4];
-            fits_get_img_dim(infptr, &naxis, &status);  // read dimensions
-            //ASKAPLOG_INFO_STR(logger,"Input image #dimensions: " << naxis);
-            fits_get_img_size(infptr, 4, naxes, &status);
-            nx = naxes[0];
-            ny = naxes[1];
-            nz = naxes[2];
-            if (naxis >3) {
-                //ASKAPLOG_INFO_STR(logger,"Input image dimensions: "<< naxes[0] <<", "<< naxes[1] << ", "<<
-                //naxes[2] << ", " << naxes[3]);
-                if (nz==1) nz = naxes[3];
-            } else {
-                //ASKAPLOG_INFO_STR(logger,"Input image dimensions: "<< naxes[0] <<", "<< naxes[1] << ", "<<
-                //naxes[2]);
-            }
-            fits_close_file(infptr, &status);
-        }
-
-        void copy_header(const casa::String &infile, const casa::String& outfile, casa::Long headersize)
-        {
-            // create the new output file and copy header
-            ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
-            //streampos size;
-            char * header;
-            ifstream file (infile, ios::in|ios::binary);
-            if (file.is_open())
-            {
-                header = new char [headersize];
-                file.read (header, headersize);
-                file.close();
-                ofstream ofile (outfile, ios::out|ios::binary|ios::trunc);
-                if (ofile.is_open()) {
-                    ofile.write(header,headersize);
-                    ofile.close();
-                }
-                delete[] header;
-            }
-        }
-
-        void fits_padding(const casa::String& filename)
-        {
-            std::ifstream infile(filename, std::ios::binary | std::ios::ate);
-            const size_t file_size = infile.tellg();
-            const size_t padding = 2880 - (file_size % 2880);
-            infile.close();
-            if (padding != 2880) {
-                std::ofstream ofile;
-                ofile.open(filename, std::ios::binary | std::ios::app);
-                char * buf = new char[padding];
-                for (char* bufp = &buf[padding-1]; bufp >= buf; bufp--) *bufp = 0;
-                ofile.write(buf,padding);
-                ofile.close();
-                delete [] buf;
-            }
-            ASKAPLOG_INFO_STR(logger,"master added "<< padding % 2880 << " bytes of FITS padding to file of size "<<file_size);
-        }
 
         void process_spectrum(casa::Vector<casa::Float>& vec, float threshold, int order) {
             size_t n = vec.nelements();
