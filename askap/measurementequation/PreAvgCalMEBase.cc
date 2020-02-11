@@ -227,54 +227,6 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
             }
         }
     }
-
-#ifdef BUILD_INDEXED_NORMAL_MATRIX
-    if (fdp) {
-        // Comparing two normal matrixes for testing.
-        size_t nBaseParameters = ne.getNumberBaseParameters();
-
-        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
-            for (size_t row = 0; row < nBaseParameters; ++row) {
-                std::string baseRowName = ne.getBaseParameterNameByIndex(row);
-                std::string rowName = scimath::CalParamNameHelper::addChannelInfo(baseRowName, chan + chanOffset);
-
-                const casacore::Vector<double>& dvElement = ne.dataVector(rowName);
-                const scimath::IndexedDataVector::element_type& dvIndexedElement = ne.indexedDataVector(row, chan);
-
-                ASKAPCHECK(dvElement[0] == dvIndexedElement.real(), "Wrong data vector (real part)!");
-                ASKAPCHECK(dvElement[1] == dvIndexedElement.imag(), "Wrong data vector (imag part)!");
-
-                for (size_t col = 0; col < nBaseParameters; ++col) {
-                    std::string baseColName = ne.getBaseParameterNameByIndex(col);
-                    std::string colName = scimath::CalParamNameHelper::addChannelInfo(baseColName, chan + chanOffset);
-
-                    const auto &normalMatrixElement = ne.normalMatrix(colName, rowName);
-                    //const auto &indexedElement = ne.indexedNormalMatrix(col, row, chan);
-                    const auto indexedElement2 = ne.indexedNormalMatrix(colName, rowName);
-
-                    bool same_values, same_values2;
-                    if (normalMatrixElement.shape() == casacore::IPosition(2, 0, 0)) {
-                        //same_values = std::all_of(indexedElement.begin(), indexedElement.end(), [](const double d) { return d == 0.; });
-                        same_values2 = std::all_of(indexedElement2.begin(), indexedElement2.end(), [](const double d) { return d == 0.; });
-                    }
-                    else {
-                        //ASKAPCHECK(indexedElement.shape() == casacore::IPosition(2, 2, 2), "Empty indexed element in col/row/chan: " << col << "/" << row << "/" << chan);
-                        ASKAPCHECK(indexedElement2.shape() == casacore::IPosition(2, 2, 2), "Empty indexed element2 in col/row/chan: " << col << "/" << row << "/" << chan);
-
-                        //auto equality = normalMatrixElement == indexedElement;
-                        //same_values = std::all_of(equality.begin(), equality.end(), [](const bool b) { return b == true; });
-
-                        auto equality2 = normalMatrixElement == indexedElement2;
-                        same_values2 = std::all_of(equality2.begin(), equality2.end(), [](const bool b) { return b == true; });
-                    }
-                    //ASKAPCHECK(same_values, "Indexed matrix has wrong contents (1)!");
-                    ASKAPCHECK(same_values2, "Indexed matrix has wrong contents (2)!");
-                }
-            }
-        }
-    }
-#endif
-
     updateMetadata(ne, "min_time", itsMinTime);
     updateMetadata(ne, "max_time", itsMaxTime);
 }
