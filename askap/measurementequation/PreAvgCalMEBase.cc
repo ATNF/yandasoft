@@ -217,6 +217,8 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     }
 #endif
 
+    ASKAPLOG_INFO_STR(logger, "Building the normal matrix.");
+
     for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
         scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
         ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
