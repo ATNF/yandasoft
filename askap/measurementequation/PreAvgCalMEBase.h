@@ -180,6 +180,10 @@ protected:
   void updateMetadata(scimath::GenericNormalEquations &ne, const std::string &keyword, 
                       const double val) const;
 private:
+  /// @brief Initialize index normal matrix and paramete index map.
+  /// @param[in] ne normal equations
+  void initIndexedNormalMatrixAndParameterIndex(scimath::GenericNormalEquations &ne) const;
+
   /// @brief buffer with partial sums
   PreAvgCalBuffer itsBuffer;    
   

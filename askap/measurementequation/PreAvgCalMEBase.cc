@@ -167,9 +167,40 @@ void PreAvgCalMEBase::updateMetadata(scimath::GenericNormalEquations &ne, const 
   }
 }
 
-/// @brief calculate normal equations in the general form 
+void PreAvgCalMEBase::initIndexedNormalMatrixAndParameterIndex(scimath::GenericNormalEquations &ne) const
+{
+    ASKAPLOG_INFO_STR(logger, "Initializing indexed normal matrix and parameter index.");
+
+    const casacore::uInt chanOffset = static_cast<casacore::uInt>(rwParameters()->has("chan_offset") ? rwParameters()->scalarValue("chan_offset") : 0);
+
+    std::set<std::string> baseParamNames;
+    for (const auto &name : rwParameters()->freeNames()) {
+        std::string baseParamName = scimath::CalParamNameHelper::extractBaseParamName(name);
+        baseParamNames.insert(baseParamName);
+    }
+    size_t nChannelsLocal = itsBuffer.nChannel();
+    size_t nBaseParameters = baseParamNames.size();
+
+    // Allocate and initialize the indexed normal matrix.
+    ne.initIndexedNormalMatrix(nBaseParameters, nChannelsLocal, chanOffset);
+
+    // Allocate and initialize the indexed data vector.
+    ne.initIndexedDataVector(nBaseParameters, nChannelsLocal);
+
+    // Building parameter index map.
+    for (const auto& baseName: baseParamNames) {
+        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+            size_t trueChanNumber = chan + chanOffset;
+            std::string parName = scimath::CalParamNameHelper::addChannelInfo(baseName, trueChanNumber);
+            ne.addParameterNameToIndexMap(parName);
+        }
+    }
+    ASKAPCHECK(nBaseParameters == ne.getNumberBaseParameters(), "Wrong number of base parameters!");
+}
+
+/// @brief calculate normal equations in the general form
 /// @details This method calculates normal equations for the
-/// given set of parameters. It is assumed that some data have already 
+/// given set of parameters. It is assumed that some data have already
 /// been accumulated.
 /// @param[in] ne normal equations to update
 void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) const
@@ -181,31 +212,8 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
 #ifdef BUILD_INDEXED_NORMAL_MATRIX
-    const casacore::uInt chanOffset = static_cast<casacore::uInt>(rwParameters()->has("chan_offset") ? rwParameters()->scalarValue("chan_offset") : 0);
     if (fdp) {
-        std::set<std::string> baseParamNames;
-        for (const auto &name : rwParameters()->freeNames()) {
-            std::string baseParamName = scimath::CalParamNameHelper::extractBaseParamName(name);
-            baseParamNames.insert(baseParamName);
-        }
-        size_t nChannelsLocal = itsBuffer.nChannel();
-        size_t nBaseParameters = baseParamNames.size();
-
-        // Allocate and initialize the indexed normal matrix.
-        ne.initIndexedNormalMatrix(nBaseParameters, nChannelsLocal, chanOffset);
-
-        // Allocate and initialize the indexed data vector.
-        ne.initIndexedDataVector(nBaseParameters, nChannelsLocal);
-
-        // Building parameter index map.
-        for (const auto& baseName: baseParamNames) {
-            for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
-                size_t trueChanNumber = chan + chanOffset;
-                std::string parName = scimath::CalParamNameHelper::addChannelInfo(baseName, trueChanNumber);
-                ne.addParameterNameToIndexMap(parName);
-            }
-        }
-        ASKAPCHECK(nBaseParameters == ne.getNumberBaseParameters(), "Wrong number of base parameters!");
+        initIndexedNormalMatrixAndParameterIndex(ne);
     }
 #endif
 
