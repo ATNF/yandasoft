@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-#
-# This script automates 3 things:
-# 1) Create Dockerfiles for all MPI implementations.
-# 2) If required, create the corresponding Docker images.
-# 3) Create sample SLURM batch files.
+# 
+# Creates base image containing Casacore and Casarest,
+# with specified MPI implementations.
+# Note that -i (or --image) option must be used to actually create the image.
+# Otherwise, only the Dockerfile is created.
 # 
 # Author: Paulus Lahur
 #
@@ -32,15 +32,11 @@ git_repository = "https://github.com/ATNF/yandasoft.git"
 # Docker image name is in this format: 
 # target_prepend + (specific machine target OR mpi target for generic machine) + target_append
 #image_prepend = "lahur/yandasoft-"
-image_prepend = "lahur/yandasoft-"
+image_prepend = "lahur/casabase-"
 image_append = ":latest"
 
 # Set True if this is just a dry run. No Docker image will be created.
 dry_run = True
-
-# Name for sample batch files (leave empty if not needed)
-# sample_batch = "pearcey"
-sample_batch = ""
 
 #------------------------------------------------------------------------------
 # CODE
@@ -138,30 +134,92 @@ def main():
 
     header = ("# This file is automatically created by " + __file__ + "\n")
 
+    cmake_ver = "3.15.7"
+    cmake_source = "cmake-" + cmake_ver + ".tar.gz"
+
+    common_top_part = (
+    "RUN apt-get update\n"
+    "RUN apt-get upgrade -y\n"
+    "RUN apt-get autoremove -y\n"
+    "RUN apt-get install -y build-essential\n"
+    "RUN apt-get install -y gfortran\n" 
+    "RUN apt-get install -y g++\n"
+    "RUN apt-get install -y libncurses5-dev\n"
+    "RUN apt-get install -y libreadline-dev\n"
+    "RUN apt-get install -y flex\n"
+    "RUN apt-get install -y bison\n"
+    "RUN apt-get install -y libopenblas-dev\n"        
+    "RUN apt-get install -y liblapacke-dev\n"
+    "RUN apt-get install -y libcfitsio-dev\n"
+    "RUN apt-get install -y wcslib-dev\n"
+    "RUN apt-get install -y libhdf5-serial-dev\n" 
+    "RUN apt-get install -y libfftw3-dev\n" 
+    "RUN apt-get install -y libpython3-dev\n" 
+    "RUN apt-get install -y libpython2.7-dev\n"
+    "RUN apt-get install -y python-pip\n"           
+    "RUN apt-get install -y python-numpy\n"
+    "RUN apt-get install -y python-scipy\n"
+    "RUN apt-get install -y libboost-python-dev\n" 
+    "RUN apt-get install -y libboost-dev\n"         
+    "RUN apt-get install -y libboost-filesystem-dev\n" 
+    "RUN apt-get install -y libboost-program-options-dev\n" 
+    "RUN apt-get install -y libboost-signals-dev\n"
+    "RUN apt-get install -y libboost-system-dev\n"  
+    "RUN apt-get install -y libboost-thread-dev\n"   
+    "RUN apt-get install -y libboost-regex-dev\n"  
+    "RUN apt-get install -y libcppunit-dev\n"   
+    "RUN apt-get install -y git\n"
+    "RUN apt-get install -y libffi-dev\n"     
+    "RUN apt-get install -y libgsl-dev\n"        
+    "RUN apt-get install -y liblog4cxx-dev\n"           
+    "RUN apt-get install -y make\n"
+    "RUN apt-get install -y patch\n"           
+    "RUN apt-get install -y subversion\n"          
+    "RUN apt-get install -y wget\n"          
+    "RUN apt-get install -y docker\n"       
+    "RUN apt-get install -y libxerces-c-dev\n"
+    "RUN apt-get install -y libcurl4-openssl-dev\n"
+    "# Make cmake from source\n"
+    "RUN mkdir /usr/local/share/cmake\n"
+    "WORKDIR /usr/local/share/cmake\n"
+    "RUN wget https://github.com/Kitware/CMake/releases/download/v" + cmake_ver + "/" + cmake_source + "\n"
+    "RUN tar -zxf " + cmake_source + "\n"
+    "WORKDIR /usr/local/share/cmake/cmake-" + cmake_ver + "\n"
+    "RUN ./bootstrap --system-curl\n"
+    "RUN make\n"
+    "RUN make install\n")
+
     common_bottom_part = (
+    "RUN mkdir /usr/local/share/casacore\n"
+    "RUN mkdir /usr/local/share/casacore/data\n"
+    "WORKDIR /usr/local/share/casacore/data\n"
+    "RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar\n"
+    "RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz\n"
+    "RUN gunzip WSRT_Measures.tar.gz\n"
+    "RUN tar -xf WSRT_Measures.tar\n"
+    "RUN rm WSRT_Measures.tar\n"
+    "RUN mkdir /var/lib/jenkins\n"
+    "RUN mkdir /var/lib/jenkins/workspace\n"
+    "WORKDIR /home\n"
+    "RUN git clone " + git_repository + "\n"
     "WORKDIR /home/yandasoft\n"
-    "RUN git pull " + git_repository + "\n"
-    "RUN ./build_all.sh -a -O \"-DHAVE_MPI=1\"\n"
-    "RUN ./build_all.sh -y -O \"-DHAVE_MPI=1\"\n"
-    "RUN ./build_all.sh -e -O \"-DHAVE_MPI=1\"\n")
+    "RUN ./build_all.sh -C \"-DDATA_DIR=/usr/local/share/casacore/data\"\n" 
+    "RUN ./build_all.sh -r\n")
 
     for machine_target in machine_targets:
         if machine_target == "generic":
+            base_system_part = ("FROM ubuntu:bionic\n")
+
             for mpi_target in mpi_targets:
                 (mpi_type, mpi_ver) = get_mpi_type_and_version(mpi_target)
 
                 if (mpi_type == "mpich"):
                     if (mpi_ver == ""):
                         # if MPICH version is not specified, get the precompiled generic version
-                        base_part = ("FROM csirocass/casabase-mpich:latest\n")
                         mpi_part = "RUN apt-get install -y mpich\n"
 
                     else:
-                        # Otherwise, specific version of MPICH
-
-                        base_part = ("FROM csirocass/casabase-mpich-" + mpi_ver + ":latest\n")
-                        
-                        # Download the source from MPICH website and build from source     
+                        # else (if version is specified), download the source from website and build           
                         mpich_dir = "https://www.mpich.org/static/downloads/" + mpi_ver
 
                         # TODO: Check whether the version is correct and the file exists
@@ -179,10 +237,8 @@ def main():
                         "ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/$USER/mpich-install/lib/:/usr/local/lib\n")
 
                 elif (mpi_type == "openmpi"):
+                    # Download the source from OpenMPI website and build
 
-                    base_part = ("FROM csirocass/casabase-openmpi-" + mpi_ver + ":latest\n")
-
-                    # Download the source from OpenMPI website and build from source
                     openmpi_common_top_part = (
                     "WORKDIR /home\n")
 
@@ -213,18 +269,20 @@ def main():
                     quit()
 
                 docker_target = DockerClass()
-                docker_target.set_file_name("Dockerfile-" + mpi_target)
-                docker_target.set_content(header + base_part + mpi_part + common_bottom_part)
+                docker_target.set_file_name("Dockerfile-casabase-" + mpi_target)
+                docker_target.set_content(header + base_system_part + common_top_part + mpi_part + common_bottom_part)
                 docker_target.set_image(image_prepend + mpi_target + image_append)
                 docker_targets.append(docker_target)
             # Next mpi target
 
         elif (machine_target == "galaxy"):
-            base_part = ("FROM csirocass/casabase-galaxy:latest\n")
+            # Galaxy (of Pawsey) has Docker image with its MPICH implementation already baked into 
+            # an Ubuntu base.
+            base_system_part = ("FROM pawsey/mpi-base:latest\n")
 
             docker_target = DockerClass()
-            docker_target.set_file_name("Dockerfile-" + machine_target)
-            docker_target.set_content(header + base_part + common_bottom_part)
+            docker_target.set_file_name("Dockerfile-casabase-" + machine_target)
+            docker_target.set_content(header + base_system_part + common_top_part + common_bottom_part)
             docker_target.set_image(image_prepend + machine_target + image_append)
             docker_targets.append(docker_target)
 
@@ -248,52 +306,6 @@ def main():
             subprocess.run(docker_command, shell=True)
         else:
             subprocess.run("echo " + docker_command, shell=True)
-
-    # Consider: Add automatic upload to DockerHub? This requires Docker login.
-
-    if (sample_batch != ""):
-        print()
-        print("Making sample batch files ...")
-
-        for mpi_target in mpi_targets:
-            batch_common_part = (
-            "#!/bin/bash -l\n"
-            "## This file is automatically created by " + __file__ + "\n"
-            "#SBATCH --ntasks=5\n"
-            "##SBATCH --ntasks=305\n"
-            "#SBATCH --time=02:00:00\n"
-            "#SBATCH --job-name=cimager\n"
-            "#SBATCH --export=NONE\n\n"
-            "module load singularity/3.5.0\n")
-
-            mpi_type = get_mpi_type(mpi_target)
-            if (mpi_type == "mpich"):
-                module = "mpich/3.3.0"
-                image = "yandasoft-mpich_latest.sif"
-                batch_mpi_part = (
-                "module load " + module + "\n\n"
-                "mpirun -n 5 singularity exec " + image +
-                " cimager -c dirty.in > dirty_${SLURM_JOB_ID}.log\n")
-
-            elif (mpi_type == "openmpi"):
-                openmpi_ver = get_openmpi_version(mpi_target)
-                if (openmpi_ver != None):
-                    module = "openmpi/" + openmpi_ver + "-ofed45-gcc"
-                    image = "yandasoft-" + openmpi_ver + "_latest.sif"
-                    batch_mpi_part = (
-                    "module load " + module + "\n\n"
-                    "mpirun -n 5 -oversubscribe singularity exec " + image +
-                    " cimager -c dirty.in > dirty_${SLURM_JOB_ID}.log\n")
-                else:
-                    break
-            else:
-                break
-
-            batch_file = "sample-" + HPC + "-" + mpi_target + ".sbatch"
-            print("Making batch file:", batch_file)
-            f = open(batch_file, "w")
-            f.write(batch_common_part + batch_mpi_part)
-            f.close()
 
 
 if (__name__ == "__main__"):
