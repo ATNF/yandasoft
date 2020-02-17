@@ -96,7 +96,7 @@ echo "base-accessors directory already exists"
 rm -rf base-accessors
 fi
 git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
-cd base-scimath
+cd base-accessors
 git checkout develop
 mkdir build
 cd build
