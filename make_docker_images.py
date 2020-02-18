@@ -1,51 +1,44 @@
 #!/usr/bin/env python3
 #
-# This script automates 3 things:
-# 1) Create Dockerfiles for all MPI implementations.
-# 2) If required, create the corresponding Docker images.
-# 3) Create sample SLURM batch files.
+# Create Docker images for all cases as specified in the settings below.
+# Possible targets are:
+# - Specific machine (currently only Galaxy, with Cray MPICH)
+# - Generic machine, with these MPI implementations
+#   - MPICH
+#   - OpenMPI of any version
 # 
 # Author: Paulus Lahur
 #
 #------------------------------------------------------------------------------
 # SETTINGS
 #
-# Docker images will be created for all:
-# - Specific machine targets
-# - All MPI targets in generic machine target
-#
-# Note that, for specific machine, MPI target is already specified.
-# Example:
-# machine_targets = ["generic", "galaxy"]
-#machine_targets = ["galaxy"]
-machine_targets = ["generic"]
+# Set machine targets in the list below.
+# Currently, we target generic HPCs and Galaxy.
+machine_targets = ["generic", "galaxy"]
 
-# MPI implementations for "generic" machine.
+# Set MPI implementations for "generic" machine in the list below.
+# Note that a specific machine already has its MPI specified.
 # A valid mpi target is either "mpich" or "openmpi-X.Y.Z", 
 # where X, Y and Z are version numbers (major, minor and revision).
-# Example:
-mpi_targets = ["mpich", "openmpi-2.1.6", "openmpi-3.1.4", "openmpi-4.0.2"]
-#mpi_targets = ["mpich"]
-
-# Git repository of Yandasoft
-git_repository = "https://github.com/ATNF/yandasoft.git"
-
-# Header for all automatically generated Dockerfile
-header = ("# This file is automatically created by " + __file__ + "\n")
-
-# Name for sample batch files (leave empty if not needed)
-# sample_batch = "pearcey"
-sample_batch = ""
+# Our current MPI targets:
+mpi_targets = ["mpich", "openmpi-4.0.2", "openmpi-3.1.4", "openmpi-2.1.6"]
 
 #------------------------------------------------------------------------------
 # CODE
+# TODO: Add logging
+# TODO: Add timing
 
 import sys
 import argparse
 import subprocess
 
-# Sanitizing parameters
+# Git repository of Yandasoft
+git_repository = "https://github.com/ATNF/yandasoft.git"
 
+# Header for all automatically generated Dockerfiles
+header = ("# This file is automatically created by " + __file__ + "\n")
+
+# Sanitizing parameters
 machine_targets = list(map(str.lower, machine_targets))
 mpi_targets = list(map(str.lower, mpi_targets))
 
@@ -116,7 +109,8 @@ def get_openmpi_version(mpi_name):
 
 def make_base_image(machine, mpi, prepend, append, actual):
     '''
-    Make base image
+    Make base image for components that are seldom changed:
+    base OS, upgrades, standard libraries and apps, Casacore and Casarest.
     '''
     cmake_ver = "3.15.7"
     cmake_source = "cmake-" + cmake_ver + ".tar.gz"
@@ -179,9 +173,8 @@ def make_base_image(machine, mpi, prepend, append, actual):
     "WORKDIR /usr/local/share/casacore/data\n"
     "RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar\n"
     "RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz\n"
-    "RUN gunzip WSRT_Measures.tar.gz\n"
-    "RUN tar -xf WSRT_Measures.tar\n"
-    "RUN rm WSRT_Measures.tar\n"
+    "RUN tar -zxf WSRT_Measures.tar.gz\n"
+    "RUN rm WSRT_Measures.tar.gz\n"
     "RUN mkdir /var/lib/jenkins\n"
     "RUN mkdir /var/lib/jenkins/workspace\n"
     "WORKDIR /home\n"
@@ -209,8 +202,7 @@ def make_base_image(machine, mpi, prepend, append, actual):
                 mpi_part = (
                 "WORKDIR /home\n"
                 "RUN wget " + mpich_dir + "/" + mpi + ".tar.gz\n"
-                "RUN gunzip " + mpi + ".tar.gz\n"
-                "RUN tar -xf " + mpi + ".tar\n"
+                "RUN tar -zxf " + mpi + ".tar.gz\n"
                 "WORKDIR /home/" + mpi + "\n"
                 "RUN ./configure --prefix=\"/home/$USER/mpich-install\n"
                 "RUN make\n"
@@ -240,8 +232,7 @@ def make_base_image(machine, mpi, prepend, append, actual):
 
             openmpi_version_part = (
             "RUN wget " + openmpi_dir + "/" + mpi + ".tar.gz\n"
-            "RUN gunzip " + mpi + ".tar.gz\n"
-            "RUN tar -xf " + mpi + ".tar\n"
+            "RUN tar -zxf " + mpi + ".tar.gz\n"
             "WORKDIR /home/" + mpi + "\n")
 
             mpi_part = openmpi_common_top_part + openmpi_version_part + openmpi_common_bottom_part
@@ -282,7 +273,7 @@ def make_base_image(machine, mpi, prepend, append, actual):
 
 def make_final_image(machine, mpi, prepend, append, base_image, actual):
     '''
-    Make final image
+    Make the final image on top of base image.
     '''
 
     common_bottom_part = (
@@ -315,8 +306,7 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
                 mpi_part = (
                 "WORKDIR /home\n"
                 "RUN wget " + mpich_dir + "/" + mpi + ".tar.gz\n"
-                "RUN gunzip " + mpi + ".tar.gz\n"
-                "RUN tar -xf " + mpi + ".tar\n"
+                "RUN tar -zxf " + mpi + ".tar.gz\n"
                 "WORKDIR /home/" + mpi + "\n"
                 "RUN ./configure --prefix=\"/home/$USER/mpich-install\n"
                 "RUN make\n"
@@ -347,8 +337,7 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
 
             openmpi_version_part = (
             "RUN wget " + openmpi_dir + "/" + mpi + ".tar.gz\n"
-            "RUN gunzip " + mpi + ".tar.gz\n"
-            "RUN tar -xf " + mpi + ".tar\n"
+            "RUN tar -zxf " + mpi + ".tar.gz\n"
             "WORKDIR /home/" + mpi + "\n")
 
             mpi_part = openmpi_common_top_part + openmpi_version_part + openmpi_common_bottom_part
