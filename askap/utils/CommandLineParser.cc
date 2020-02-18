@@ -38,7 +38,7 @@ void BaseParameter::setDefinedFlag(bool is_defined) throw()
 
 // FlagParameter  - a flag parameter, e.g. "-C"
 FlagParameter::FlagParameter(const std::string &iflag)
-    throw(std::exception) : flag(iflag) {}
+    : flag(iflag) {}
 
 size_t FlagParameter::howManyArgs2Define() const throw()
 {
@@ -47,7 +47,7 @@ size_t FlagParameter::howManyArgs2Define() const throw()
 
 // fill itself from a vector of parameters
 // (relevant parameters start from the 0th element)
-void FlagParameter::fill(const char **argv) throw(std::exception)
+void FlagParameter::fill(const char **argv)
 {
   if (flag!=argv[0])
       throw runtime_error("Assert in FlagParamter::fill, that shouldn't happend");
@@ -56,7 +56,7 @@ void FlagParameter::fill(const char **argv) throw(std::exception)
 
 //  test whether the specified vector of parameters
 // comforms to a particular instance of this class
-bool FlagParameter::test(const char **argv) const throw(std::exception)
+bool FlagParameter::test(const char **argv) const
 {
   return flag==argv[0];
 }
@@ -67,20 +67,18 @@ bool FlagParameter::test(const char **argv) const throw(std::exception)
 // in all cases all parameters are considered mandatory
 Parser::Parser() {}
 
-Parser::Parser(BaseParameter &par) throw(std::exception)
+Parser::Parser(BaseParameter &par)
 {
   add(par);
 }
 
 Parser::Parser(BaseParameter &par1, BaseParameter &par2)
-     throw(std::exception)
 {
   add(par1);
   add(par2);
 }
 
 Parser::Parser(BaseParameter &par1, BaseParameter &par2, BaseParameter &par3)
-       throw(std::exception)
 {
   add(par1);
   add(par2);
@@ -89,7 +87,6 @@ Parser::Parser(BaseParameter &par1, BaseParameter &par2, BaseParameter &par3)
 
 // add one more parameter
 void Parser::add(BaseParameter &par,int absence_action)
-     throw(std::exception)
 {
   params.push_back(&par);
   absence_actions.push_back(absence_action);
@@ -97,7 +94,7 @@ void Parser::add(BaseParameter &par,int absence_action)
 
 // process a command line, after this all mandatory parameters
 // have to be filled
-void Parser::process(int argc, const char **argv) const throw(std::exception)
+void Parser::process(int argc, const char **argv) const
 {
   curarg=1;
   argc_buf=argc;
@@ -119,7 +116,7 @@ void Parser::process(int argc, const char **argv) const throw(std::exception)
       throw XParserExtra(); // something extra is present
 }
 
-bool Parser::testParameter(BaseParameter *par) const throw(std::exception)
+bool Parser::testParameter(BaseParameter *par) const
 {
   if (curarg+int(par->howManyArgs2Define())>argc_buf)
       return false; // this parameter requires too many arguments

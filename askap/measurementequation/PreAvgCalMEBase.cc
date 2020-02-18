@@ -32,6 +32,9 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
+#include <algorithm>
+#include <cstdlib>
+
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/dataaccess/IDataIterator.h>
 #include <askap/AskapError.h>
@@ -40,6 +43,7 @@
 #include <askap/scimath/fitting/DesignMatrix.h>
 #include <askap/scimath/fitting/PolXProducts.h>
 #include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fitting/CalParamNameHelper.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
@@ -162,36 +166,77 @@ void PreAvgCalMEBase::updateMetadata(scimath::GenericNormalEquations &ne, const 
   }
 }
 
-/// @brief calculate normal equations in the general form 
+void PreAvgCalMEBase::initIndexedNormalMatrixAndParameterIndex(scimath::GenericNormalEquations &ne) const
+{
+    ASKAPLOG_INFO_STR(logger, "Initializing indexed normal matrix and parameter index.");
+
+    const casacore::uInt chanOffset = static_cast<casacore::uInt>(rwParameters()->has("chan_offset") ? rwParameters()->scalarValue("chan_offset") : 0);
+
+    std::set<std::string> baseParamNames;
+    for (const auto &name : rwParameters()->freeNames()) {
+        std::string baseParamName = scimath::CalParamNameHelper::extractBaseParamName(name);
+        baseParamNames.insert(baseParamName);
+    }
+    size_t nChannelsLocal = itsBuffer.nChannel();
+    size_t nBaseParameters = baseParamNames.size();
+
+    // Allocate and initialize the indexed normal matrix.
+    ne.initIndexedNormalMatrix(nBaseParameters, nChannelsLocal, chanOffset);
+
+    // Allocate and initialize the indexed data vector.
+    ne.initIndexedDataVector(nBaseParameters, nChannelsLocal);
+
+    // Building parameter index map.
+    for (const auto& baseName: baseParamNames) {
+        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+            size_t trueChanNumber = chan + chanOffset;
+            std::string parName = scimath::CalParamNameHelper::addChannelInfo(baseName, trueChanNumber);
+            ne.addParameterNameToIndexMap(parName);
+        }
+    }
+    ASKAPCHECK(nBaseParameters == ne.getNumberBaseParameters(), "Wrong number of base parameters!");
+}
+
+/// @brief calculate normal equations in the general form
 /// @details This method calculates normal equations for the
-/// given set of parameters. It is assumed that some data have already 
+/// given set of parameters. It is assumed that some data have already
 /// been accumulated.
 /// @param[in] ne normal equations to update
 void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) const
 {
-  const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
-  const bool fdp = isFrequencyDependent();
-  ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
+    ASKAPLOG_INFO_STR(logger, "Calculating Generic Equations.");
 
-  for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
-       scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
-       ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
-       ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
-       for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+    const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
+    const bool fdp = isFrequencyDependent();
+    ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
+
+    auto *use_indexed_containers = std::getenv("YANDASOFT_USE_INDEXED_NORMAL_CONTAINERS");
+    if (use_indexed_containers && fdp) {
+        initIndexedNormalMatrixAndParameterIndex(ne);
+    }
+
+    ASKAPLOG_INFO_STR(logger, "Building the normal matrix.");
+
+    for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
+        scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
+        ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
+        ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
+
+        for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
             if (fdp) {
-               // cdm is a block matrix
-               size_t columnOffset = chan * itsBuffer.nPol();
-               ne.add(cdm, pxpSlice, columnOffset);
+                // cdm is a block matrix
+                size_t columnOffset = chan * itsBuffer.nPol();
+                ne.add(cdm, pxpSlice, columnOffset, chan);
             } else {
-               // cdm is a normal matrix
-               ne.add(cdm, pxpSlice);
+                // cdm is a normal matrix
+                ne.add(cdm, pxpSlice);
             }
-       }
-  }
-  updateMetadata(ne, "min_time", itsMinTime);
-  updateMetadata(ne, "max_time", itsMaxTime);
+        }
+    }
+    updateMetadata(ne, "min_time", itsMinTime);
+    updateMetadata(ne, "max_time", itsMaxTime);
 }
   
 /// @brief initialise accumulation

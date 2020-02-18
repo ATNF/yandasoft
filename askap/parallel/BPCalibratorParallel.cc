@@ -97,9 +97,12 @@ ASKAP_LOGGER(logger, ".parallel");
 
 #include <algorithm>
 
+
 namespace askap {
 
 namespace synthesis {
+
+using askap::operator<<;
 
 /// @brief Constructor from ParameterSet
 /// @details The parset is used to construct the internal state. We could
@@ -169,7 +172,18 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
 
       ASKAPCHECK((measurementSets().size() == 1) || (measurementSets().size() == nBeam()),
           "Number of measurement sets given in the parset ("<<measurementSets().size()<<
-          ") should be either 1 or equal the number of beams ("<<nBeam()<<")");
+          ") should be either 1 or equal the number of beams solved for ("<<nBeam()<<")");
+
+      // optional beam index mapping
+      const std::vector<uint> beamIndices = parset.getUintVector("beamindices", std::vector<uint>());
+      if (beamIndices.size() != 0) {
+          ASKAPCHECK(beamIndices.size() == nBeam(), 
+                "The number of explicit beam indices is different from the number of beams to solve for ("<<nBeam()<<")");
+          ASKAPLOG_INFO_STR(logger, "Will solve for beams: "<<beamIndices);
+          for (size_t index = 0; index < beamIndices.size(); ++index) {
+               itsBeamIndexConverter.add(static_cast<int>(index), static_cast<int>(beamIndices[index]));
+          }
+      }
   }
   if (!itsComms.isParallel()) {
       // setup work units in the serial case - all work to be done here
@@ -318,7 +332,8 @@ std::pair<casacore::uInt, casacore::uInt> BPCalibratorParallel::currentBeamAndCh
       const casacore::IPosition cursor = itsWorkUnitIterator.cursor();
       ASKAPDEBUGASSERT(cursor.nelements() == 2);
       ASKAPDEBUGASSERT((cursor[0] >= 0) && (cursor[1] >= 0));
-      const std::pair<casacore::uInt,casacore::uInt> result(static_cast<casacore::uInt>(cursor[0]), static_cast<casacore::uInt>(cursor[1]));
+      ASKAPDEBUGASSERT(static_cast<casacore::uInt>(cursor[0]) < nBeam());
+      const std::pair<casacore::uInt,casacore::uInt> result(static_cast<casacore::uInt>(itsBeamIndexConverter(cursor[0])), static_cast<casacore::uInt>(cursor[1]));
       ASKAPDEBUGASSERT(result.first < nBeam());
       ASKAPDEBUGASSERT(result.second < nChan());
       return result;

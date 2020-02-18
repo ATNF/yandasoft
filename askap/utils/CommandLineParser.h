@@ -44,29 +44,29 @@ protected:
     
     // should fill itself from a vector of parameters
     // (relevant parameters start from the 0th element)
-    virtual void fill(const char **argv) throw(std::exception) = 0;
+    virtual void fill(const char **argv) = 0;
 
     // should test whether the specified vector of parameters
     // comforms to a particular instance of this class
-    virtual bool test(const char **argv) const throw(std::exception) = 0;
+    virtual bool test(const char **argv) const = 0;
 };
 
 // FlagParameter    - a flag parameter, e.g. "-C"
 class FlagParameter : virtual public BaseParameter  {
    std::string flag;
 public:
-   FlagParameter(const std::string &iflag) throw(std::exception);
+   FlagParameter(const std::string &iflag);
 protected:
    // return a number of arguments are required to define this parameter
-   virtual size_t howManyArgs2Define() const throw();   
+   virtual size_t howManyArgs2Define() const throw();
 
    // fill itself from a vector of parameters
    // (relevant parameters start from the 0th element)
-   virtual void fill(const char **argv) throw(std::exception);
+   virtual void fill(const char **argv);
 
    // test whether the specified vector of parameters
    // comforms to a particular instance of this class
-   virtual bool test(const char **argv) const throw(std::exception);   
+   virtual bool test(const char **argv) const;
 };
 
 // Generic input parameter
@@ -88,7 +88,7 @@ protected:
    
    // fill itself from a vector of parameters
    // (relevant parameters start from the 0th element)
-   virtual void fill(const char **argv) throw(std::exception) {
+   virtual void fill(const char **argv) {
        std::istringstream is(argv[0]);
        is>>value;
        if (!is)
@@ -99,7 +99,7 @@ protected:
 
    // test whether the specified vector of parameters
    // comforms to a particular instance of this class
-   virtual bool test(const char **) const throw(std::exception)
+   virtual bool test(const char **) const
    {
      return true;
    }
@@ -111,7 +111,7 @@ struct FlaggedParameter : public GenericParameter<T>,
                                 public FlagParameter
 {
   FlaggedParameter(const std::string &flag,
-                          const T &default_value=T()) throw(std::exception) :
+                          const T &default_value=T()):
 	  GenericParameter<T>(default_value), FlagParameter(flag) {}
 protected:
    // return a number of arguments are required to define this parameter
@@ -119,12 +119,12 @@ protected:
 
    // fill itself from a vector of parameters
    // (relevant parameters start from the 0th element)
-   virtual void fill(const char **argv) throw(std::exception) {
+   virtual void fill(const char **argv) {
        GenericParameter<T>::fill(argv+1);
    }
    // test whether the specified vector of parameters
    // comforms to a particular instance of this class
-   virtual bool test(const char **argv) const throw(std::exception) {
+   virtual bool test(const char **argv) const {
       return FlagParameter::test(argv);  
    }
 };
@@ -142,25 +142,23 @@ public:
    // a set of handy constructors to add a few parameters straight away
    // in all cases all parameters are considered mandatory
    Parser(); // an empty object
-   Parser(BaseParameter &par) throw(std::exception);
-   Parser(BaseParameter &par1, BaseParameter &par2) throw(std::exception);
-   Parser(BaseParameter &par1, BaseParameter &par2, BaseParameter &par3)
-          throw(std::exception);
+   Parser(BaseParameter &par);
+   Parser(BaseParameter &par1, BaseParameter &par2);
+   Parser(BaseParameter &par1, BaseParameter &par2, BaseParameter &par3);
 
    // add one more parameter
-   void add(BaseParameter &par,int absence_action = throw_exception)
-        throw(std::exception);
+   void add(BaseParameter &par,int absence_action = throw_exception);
 	
    // process a command line, after this all mandatory parameters
    // have to be filled
-   void process(int argc, const char **argv) const throw(std::exception);
+   void process(int argc, const char **argv) const;
 
    // overloaded version of the process with different constness
-   inline void process(int argc, char **argv) const throw(std::exception)
+   inline void process(int argc, char **argv) const
     { process(argc, const_cast<const char **>(argv));}
 
 protected:
-   bool testParameter(BaseParameter *par) const throw(std::exception);
+   bool testParameter(BaseParameter *par) const;
 private:
    mutable int curarg; // current argument
    mutable int argc_buf;   //buffers for command line parameters

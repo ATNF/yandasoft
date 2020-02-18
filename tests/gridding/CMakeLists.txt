@@ -1,6 +1,7 @@
 add_executable(tgridding tgridding.cc)
+include_directories(${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(tgridding 
-	yanda_synthesis
+	askap::yandasoft
 	${CPPUNIT_LIBRARY}
 )
 add_test(
