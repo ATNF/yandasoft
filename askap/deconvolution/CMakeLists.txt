@@ -1,14 +1,7 @@
-add_library( deconvolution OBJECT 
+add_sources_to_yandasoft(
 DeconvolverFactory.cc
 DeconvolverHelpers.cc
 )
-
-set_property(TARGET deconvolution PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-if (MPI_COMPILE_FLAGS)
-	set_property(TARGET deconvolution PROPERTY COMPILE_FLAGS ${MPI_COMPILE_FLAGS})
-endif()
-
 
 install (FILES
 BasisFunction.h

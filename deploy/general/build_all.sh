@@ -57,6 +57,7 @@ print_usage() {
         echo " -O <opts>       Options to apply to all builds."
         echo " -P              Use Python 3 "
         echo " -i              Install Ingest (askap-services). "
+        echo " -d              Install develop branch of everything. "
 }
 
 try() {
@@ -88,6 +89,7 @@ cmake=cmake
 jobs=1
 prefix=/usr/local
 workdir="$PWD"
+yandadir="$PWD"/../../
 remove_workdir=no
 build_oskar=yes
 use_python3=no
@@ -103,6 +105,7 @@ clean_askap_dependencies=no
 clean_yandasoft=no
 build_adios=no
 casacore_version=master
+yanda_branch=master
 casacore_opts=
 casarest_version=components-only
 casarest_opts=
@@ -116,7 +119,7 @@ if [ $# -eq 0 ]; then
 	exit 0
 fi
 
-while getopts "A:ah?s:cm:j:p:w:WPoiC:cR:rY:yO:USx:eE:" opt
+while getopts "A:ah?s:cdm:j:p:w:WPoiC:cR:rY:yO:USx:eE:" opt
 do
 	case "$opt" in
 		[h?])
@@ -132,6 +135,9 @@ do
 		m)
 			cmake="$OPTARG"
 			;;
+        d)
+            yanda_branch="develop"
+            ;;
 		j)
 			jobs="$OPTARG"
 			;;
@@ -350,7 +356,8 @@ build_and_install() {
 	if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
 	elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+                export CRAYPE_LINK_TYPE=dynamic
 	else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
 	fi
@@ -442,26 +449,26 @@ fi
 
 if [ $install_askap_dependencies == yes ]; then
 	
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askap.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/base-components.git $yanda_branch $yandasoft_opts
 fi
 if [ $install_extra == yes ]; then
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git master $yandasoft_opts
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git $yanda_branch $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git $yanda_branch $yandasoft_opts
 fi
 if [ $install_ingest == yes ]; then	
-	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-services.git master $yandasoft_opts
+	build_and_install https://bitbucket.csiro.au/scm/askapsdp/askap-services.git $yanda_branch $yandasoft_opts
 fi
 
 if [ $clean_yandasoft == yes ]; then
-   startdir="$PWD"
+   startdir=${PWD}
    if [ -d build ]; then
 	echo "yandasoft build directory already exists"
 	cd build
@@ -476,6 +483,8 @@ fi
 
 if [ $install_yandasoft == yes ]; then
 # Go, go, go, yandasoft!
+  startdir=${PWD}
+  cd $yandadir
   if [ $casacore_version == master ]; then
 	yandasoft_opts+=" -DCMAKE_CXX_FLAGS=-Dcasa=casacore"
   fi
@@ -496,13 +505,16 @@ if [ $install_yandasoft == yes ]; then
   if [ $compiler == clang ]; then
 		comp_opts="-DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang"
   elif [ $compiler == cray ]; then
-		comp_opts="-DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
+               export CRAYPE_LINK_TYPE=dynamic
   else
 		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
   fi
   try ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts $yandasoft_opts ..
   try make -j${jobs} all
   try make -j${jobs} install
+
+  cd "$startdir"
 fi
 
 

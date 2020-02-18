@@ -15,11 +15,13 @@ cubetest
 gridderExperiments
 illumextractor
 imager
+imcontsub
 imgNaN2zero
 imgscale
 imgstat
 linmos-mpi
 linmos
+maskBadChannels
 msconcat
 mslist
 msmerge
@@ -61,19 +63,9 @@ foreach(prog ${_progs})
 	endif()
 
 
-        target_link_libraries (${prog} yanda_synthesis 	${ASKAP_LIBRARY}
-	${log4cxx_LIBRARY}
-	${CASACORE_LIBRARIES}
-	${FFTW_LIBRARIES}
-	${SCIMATH_LIBRARY}
-	${IMAGEMATH_LIBRARY}
-	${LofarBlob_LIBRARY}
-	${LofarCommon_LIBRARY}
-	${Boost_LIBRARIES}
-	${ACCESSORS_LIBRARY}
-	${COMPONENTS_LIBRARY}
-	${ASKAPPARALLEL_LIBRARY}
-        ${GSL_LIBRARIES})
+	target_link_libraries (${prog}
+		askap::yandasoft
+	)
 
 	install (TARGETS ${prog} DESTINATION bin)
 

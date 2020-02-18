@@ -1,0 +1,14 @@
+FROM yandasoft as buildenv
+
+WORKDIR /
+RUN printf "/opt/cray/pe/mpt/7.7.0/gni/mpich-gnu-abi/5.1/lib\n" >> /etc/ld.so.conf 
+RUN printf "/opt/cray/pmi/default/lib64\n/opt/cray/ugni/default/lib64\n" >> /etc/ld.so.conf
+RUN printf "/opt/cray/udreg/default/lib64\n/opt/cray/xpmem/default/lib64\n" >> /etc/ld.so.conf 
+RUN printf "/opt/cray/alps/default/lib64\n/opt/cray/wlm_detect/default/lib64\n" >> /etc/ld.so.conf
+RUN ldconfig
+
+
+
+
+
+

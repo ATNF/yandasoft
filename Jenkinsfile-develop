@@ -1,0 +1,277 @@
+pipeline {
+  agent {
+    docker {
+      image 'sord/yanda:test'
+    }
+
+  }
+  stages {
+    stage('Building lofar-common') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d  ]; then
+echo "lofar-common directory already exists"
+rm -rf lofar-common
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-common.git
+cd lofar-common
+git checkout develop
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }    
+    stage('Building lofar-blob') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d lofar-blob ]; then
+echo "lofar-blob directory already exists"
+rm -rf lofar-blob
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/lofar-blob.git
+cd lofar-blob
+git checkout develop
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building base-askap') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-askap ]; then
+echo "base-askap directory already exists"
+rm -rf base-askap
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-askap.git
+cd base-askap
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+
+    stage('Building base-logfilters') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-logfilters ]; then
+echo "base-logfilters directory already exists"
+rm -rf base-logfilters
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-logfilters.git
+cd base-logfilters
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building base-imagemath') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-imagemath ]; then
+echo "base-imagemath directory already exists"
+rm -rf base-imagemath
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-imagemath.git
+cd base-imagemath
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building base-askapparallel') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-askapparallel ]; then
+echo "base-askapparallel directory already exists"
+rm -rf base-askapparallel
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-askapparallel.git
+cd base-askapparallel
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+
+    stage('Building base-scimath') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-scimath ]; then
+echo "base-scimath directory already exists"
+rm -rf base-scimath
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-scimath.git
+cd base-scimath
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building base-accessors') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-accessors ]; then
+echo "base-accessors directory already exists"
+rm -rf base-accessors
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-accessors.git
+cd base-accessors
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building base-components') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d base-components ]; then
+echo "base-components directory already exists"
+rm -rf base-components
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/base-components.git
+cd base-components
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+
+    stage('Building askap-pipelinetasks') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d askap-pipelinetasks ]; then
+echo "askap-pipelinetasks directory already exists"
+rm -rf askap-pipelinetasks
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/askap-pipelinetasks.git
+cd askap-pipelinetasks
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make 
+make install
+'''
+        }
+
+      }
+    }
+    stage('Building askap-analysis') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d askap-analysis ]; then
+echo "askap-analysis directory already exists"
+rm -rf askap-analysis
+fi
+git clone https://bitbucket.csiro.au/scm/askapsdp/askap-analysis.git
+cd askap-analysis
+git checkout develop
+git pull
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make duchamp
+make busyfit
+make install
+'''
+        }
+
+      }
+    }
+
+    stage('Building yandasoft') {
+      steps {
+        dir(path: '.') {
+          sh '''if [ -d build ]; then
+echo "yandasoft build directory already exists"
+cd build
+if [ -f install_manifest.txt ]; then
+make uninstall
+cd ..
+fi
+rm -rf build
+git checkout develop
+git pull
+mkdir build
+else
+mkdir build
+fi'''
+        }
+
+        dir(path: 'build') {
+          sh '''cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+make -j2
+make -j2 install
+'''
+        }
+
+      }
+    }
+  }
+  environment {
+    WORKSPACE = pwd()
+    PREFIX = "${WORKSPACE}/install"
+  }
+}
+

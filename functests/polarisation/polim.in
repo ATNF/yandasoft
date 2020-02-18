@@ -1,0 +1,65 @@
+Cimager.dataset                                 = vela-60.ms
+Cimager.imagetype                               = fits
+#
+Cimager.Images.Names                           = [image.IQUV.vela]
+Cimager.ScanNumber                              = 0
+Cimager.Images.polarisation                     = ["IQUV"]
+Cimager.Images.shape                            = [1024,1024]
+Cimager.Images.cellsize                         = [1arcsec, 1arcsec]
+Cimager.Images.direction                       = [08h35m20.611, -45.10.34.86, J2000]
+# No rest frequency specified for continuum cubes
+# Options for the alternate imager
+Cimager.nchanpercore                           = 1
+Cimager.usetmpfs                               = false
+Cimager.tmpfs                                   = /dev/shm
+# barycentre and multiple solver mode not supported in continuum imaging (yet)
+Cimager.barycentre                              = false
+Cimager.solverpercore                           = true
+Cimager.nwriters                                = 1
+Cimager.singleoutputfile                        = true
+#
+# This defines the parameters for the gridding.
+Cimager.gridder.snapshotimaging                 = false
+Cimager.gridder.snapshotimaging.wtolerance      = 2600
+Cimager.gridder.snapshotimaging.longtrack       = true
+Cimager.gridder.snapshotimaging.clipping        = 0.01
+Cimager.gridder                                 = WProject
+Cimager.gridder.WProject.wmax                   = 35000
+Cimager.gridder.WProject.nwplanes               = 257
+Cimager.gridder.WProject.oversample             = 5
+Cimager.gridder.WProject.maxsupport             = 1024
+Cimager.gridder.WProject.variablesupport        = true
+Cimager.gridder.WProject.offsetsupport          = true
+Cimager.gridder.WProject.sharecf                = true
+Cimager.gridder.parotation                      = true
+Cimager.gridder.parotation.angle                = 105 # polaxis = -60, angle = -polaxis + 45
+Cimager.gridder.swappols                        = true
+#
+# These parameters define the clean algorithm
+Cimager.solver                                  = Clean
+Cimager.solver.Clean.algorithm                  = BasisfunctionMFS
+Cimager.solver.Clean.niter                      = 600
+Cimager.solver.Clean.gain                       = 0.2
+Cimager.solver.Clean.scales                     = [0,3,10]
+Cimager.solver.Clean.solutiontype               = MAXBASE
+Cimager.solver.Clean.verbose                    = False
+Cimager.solver.Clean.tolerance                  = 0.01
+Cimager.solver.Clean.weightcutoff               = zero
+Cimager.solver.Clean.weightcutoff.clean         = false
+Cimager.solver.Clean.psfwidth                   = 256
+Cimager.solver.Clean.logevery                   = 50
+Cimager.threshold.minorcycle                    = [40%, 0.5mJy, 0.05mJy]
+Cimager.threshold.majorcycle                    = 0.06mJy
+Cimager.ncycles                                 = 3
+Cimager.Images.writeAtMajorCycle                = false
+
+#
+Cimager.preconditioner.Names                    = [Wiener]
+Cimager.preconditioner.preservecf               = true
+Cimager.preconditioner.Wiener.robustness        = -0.5
+#ß
+# These parameter govern the restoring of the image and the recording of the beam
+Cimager.restore                                 = true
+Cimager.restore.beam                            = fit
+Cimager.restore.beam.cutoff                     = 0.5
+Cimager.restore.beamReference                   = mid

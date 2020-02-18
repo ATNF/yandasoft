@@ -1,0 +1,38 @@
+FROM ubuntu:bionic as buildenv
+LABEL maintainer="stephen.ord@csiro.au"
+RUN apt-get update --fix-missing 
+RUN apt-get install -y autoconf 
+RUN apt-get install -y automake 
+RUN apt-get install -y gcc 
+RUN apt-get install -y g++ 
+RUN apt-get install -y make 
+RUN apt-get install -y gfortran 
+RUN apt-get install -y wget 
+RUN apt-get install -y python 
+RUN apt-get install -y python-dev 
+RUN apt-get clean all 
+RUN rm -rf /var/lib/apt/lists/*
+
+### Build MPICH ###
+ENV MPICH_VERSION=3.2
+RUN mkdir /tmp/mpich-build
+WORKDIR /tmp/mpich-build
+RUN wget http://www.mpich.org/static/downloads/${MPICH_VERSION}/mpich-${MPICH_VERSION}.tar.gz 
+RUN tar xvzf mpich-${MPICH_VERSION}.tar.gz 
+WORKDIR /tmp/mpich-build/mpich-${MPICH_VERSION} 
+RUN ./configure ${MPICH_CONFIGURE_OPTIONS} 
+RUN make ${MPICH_MAKE_OPTIONS} 
+RUN make install 
+RUN rm -rf /tmp/mpich-build
+
+RUN mkdir /usr/local/share/casacore
+RUN mkdir /usr/local/share/casacore/data
+WORKDIR /usr/local/share/casacore/data
+RUN wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
+RUN mv WSRT_Measures.ztar WSRT_Measures.tar.gz
+RUN gunzip WSRT_Measures.tar.gz
+RUN tar -xvf WSRT_Measures.tar
+RUN rm WSRT_Measures.tar
+RUN mkdir /var/lib/jenkins
+RUN mkdir /var/lib/jenkins/workspace
+

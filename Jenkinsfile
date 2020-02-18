@@ -1,7 +1,7 @@
 pipeline {
   agent {
     docker {
-      image 'sord/yanda:latest'
+      image 'sord/yanda:test'
     }
 
   }

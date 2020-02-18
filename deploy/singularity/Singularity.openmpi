@@ -1,0 +1,79 @@
+Bootstrap: docker
+From: ubuntu:bionic
+%post
+apt-get update
+apt-get upgrade -y
+apt-get autoremove -y
+apt-get install -y cmake
+apt-get install    -y  flex bison
+apt-get install    -y  gfortran
+apt-get install    -y  git
+apt-get install    -y  g++
+apt-get install    -y  libboost-dev
+apt-get install    -y  libboost-python-dev
+apt-get install    -y  libboost-filesystem-dev
+apt-get install    -y  libboost-program-options-dev
+apt-get install    -y  libboost-signals-dev
+apt-get install    -y  libboost-system-dev
+apt-get install    -y  libboost-thread-dev
+apt-get install    -y  libboost-regex-dev
+apt-get install    -y  libcppunit-dev
+apt-get install    -y  libcfitsio-dev
+apt-get install    -y  libffi-dev
+apt-get install    -y  libfftw3-dev
+apt-get install    -y  libgsl-dev
+apt-get install    -y  liblog4cxx-dev
+apt-get install    -y  libopenblas-dev
+apt-get install    -y  libpython-dev
+apt-get install    -y  make
+apt-get install    -y  patch
+apt-get install    -y  python-pip
+apt-get install    -y  subversion
+apt-get install    -y  wget
+apt-get install    -y  docker
+apt-get install    -y  python-numpy
+apt-get install    -y  python-scipy
+apt-get install    -y  wcslib-dev
+apt-get install    -y  libxerces-c-dev
+# openmpi-2.1.4 install
+cd /home
+wget https://download.open-mpi.org/release/open-mpi/v2.1/openmpi-2.1.4.tar.gz
+gunzip openmpi-2.1.4.tar.gz
+tar -xvf openmpi-2.1.4.tar
+cd /home/openmpi-2.1.4
+./configure
+make all install
+LD_LIBRARY_PATH=/usr/local/lib
+#
+mkdir /usr/local/share/casacore
+mkdir /usr/local/share/casacore/data
+cd /usr/local/share/casacore/data
+wget ftp://ftp.astron.nl/outgoing/Measures/WSRT_Measures.ztar
+mv WSRT_Measures.ztar WSRT_Measures.tar.gz
+gunzip WSRT_Measures.tar.gz
+tar -xvf WSRT_Measures.tar
+rm WSRT_Measures.tar
+mkdir /var/lib/jenkins
+mkdir /var/lib/jenkins/workspace
+cd /home
+git clone https://ord006@bitbucket.csiro.au/scm/askapsdp/yandasoft.git
+cd /home/yandasoft
+./build_all.sh -C "-DDATA_DIR=/usr/local/share/casacore/data"
+./build_all.sh -r
+./build_all.sh -a -O "-DHAVE_MPI=1"
+./build_all.sh -y -O "-DHAVE_MPI=1"
+./build_all.sh -e -O "-DHAVE_MPI=1"
+
+
+
+
+
+
+%environment
+export LD_LIBRARY_PATH=/usr/local/lib
+%runscript
+cd /home/yandasoft
+exec /bin/bash "$@"
+%startscript
+cd /home/yandasoft
+exec /bin/bash "$@"

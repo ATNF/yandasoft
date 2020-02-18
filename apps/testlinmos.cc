@@ -125,7 +125,7 @@ void process() {
   const double cutoff = 2e-1;
   const double fwhm = 1.22*3e8/928e6/12;
   
-  accessors::IImageAccess& iacc = SynthesisParamsHelper::imageHandler();
+  accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
   const casa::IPosition shape = iacc.shape("beam0.img");
   const casa::Vector<casa::Quantum<double> > beamInfo = iacc.beamInfo("beam0.img");
   ASKAPCHECK(beamInfo.nelements()>=3, "beamInfo is supposed to have at least 3 elements");
