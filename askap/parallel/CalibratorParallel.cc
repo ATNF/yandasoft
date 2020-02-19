@@ -418,8 +418,6 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
 
 void CalibratorParallel::calcOne(const std::string& ms, bool discard)
 {
-  casacore::Timer timer;
-  timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
   // First time around we need to generate the equation
   if ((!itsEquation) || discard) {
@@ -488,6 +486,8 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
       itsEquation->setParameters(*itsModel);
   }
   ASKAPCHECK(itsNe, "NormalEquations are not defined");
+
+  casacore::Timer timer;
   itsEquation->calcEquations(*itsNe);
   ASKAPLOG_INFO_STR(logger, "Calculated normal equations for "<< ms << " in "<< timer.real()
                      << " seconds ");
@@ -588,7 +588,11 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
 
    // this is just an optimisation, should work without this line
    preAvgME->beamIndependent(itsBeamIndependentGains||itsBeamIndependentLeakages);
+
+   casacore::Timer accumulation_timer;
    preAvgME->accumulate(dsi,perfectME);
+   ASKAPLOG_INFO_STR(logger, "Data accumulation in pre-averaging measurement equation took " << accumulation_timer.real() << " seconds");
+
    // fix model parameters for which we don't have data
    const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();
    const std::vector<std::string> params(itsModel->freeNames());
