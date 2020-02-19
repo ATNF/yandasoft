@@ -5,8 +5,24 @@
 # - Specific machine (currently only Galaxy, with Cray MPICH)
 # - Generic machine, with these MPI implementations
 #   - MPICH
-#   - OpenMPI of any version
-# 
+#   - OpenMPI of various versions
+#
+# Note that the images are split into base image (for components that are 
+# seldom changed) and the final image (Yandasoft).
+# This is done for deployment efficiency.
+#
+# Usage:
+# 1) Make sure that the targets are correct (see SETTINGS section below).
+# 2) Execute the script.
+#    If you want only the final images (since base image is still the same):
+#    ./make_docker_image.py -f
+#
+#    If you want to make both base and final images:
+#    ./make_docker_image.py -bf
+#
+#    If you want no image, just Dockerfiles, for example for dry run: 
+#    ./make_docker_image.py
+#
 # Author: Paulus Lahur
 #
 #------------------------------------------------------------------------------
@@ -27,6 +43,7 @@ mpi_targets = ["mpich", "openmpi-4.0.2", "openmpi-3.1.4", "openmpi-2.1.6"]
 # CODE
 # TODO: Add logging
 # TODO: Add timing
+# TODO: Add error handling, as this is going to be used within CI/CD
 
 import sys
 import argparse
@@ -378,6 +395,7 @@ def make_batch_file(machine, mpi):
     '''
     Make sample batch files for SLURN
     '''
+    # Currently not being used
 
     batch_common_part = (
     "#!/bin/bash -l\n"
@@ -419,18 +437,29 @@ def main():
     '''
     The main code
     '''
-    print("Making Dockerfiles for all targets ...")
+    parser = argparse.ArgumentParser(
+        description="Make Docker images for various MPI implementations",
+        epilog="The targets can be changed from inside the script (the SETTINGS section)")
+    parser.add_argument('-b', '--base_image', help='Create base image', action='store_true')
+    parser.add_argument('-f', '--final_image', help='Create final image', action='store_true')
+    #parser.add_argument('-s', '--slurm', help='Create sample batch files for SLURM', action='store_true')
+    args = parser.parse_args()
 
     base_prepend = "csirocass/casabase-"
     base_append = ":latest"
     final_prepend = "csirocass/yandasoft-"
     final_append = ":latest"
 
-    parser = argparse.ArgumentParser(description="Make Docker images for various MPI implementations")
-    parser.add_argument('-b', '--base_image', help='Create base image', action='store_true')
-    parser.add_argument('-f', '--final_image', help='Create final image', action='store_true')
-    parser.add_argument('-s', '--slurm', help='Create sample batch files for SLURM', action='store_true')
-    args = parser.parse_args()
+    print("Making Dockerfiles for all targets ...")
+    if args.base_image:
+        print("Making base images ...")
+    else:
+        print("Base image will not be made")
+
+    if args.final_image:
+        print("Making final images ...")
+    else:
+        print("Final image will not be made")
 
     for machine in machine_targets:
         if machine == "generic":
