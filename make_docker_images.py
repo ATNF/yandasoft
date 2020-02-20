@@ -507,12 +507,20 @@ def main():
                 if docker != None:
                     docker = make_final_image(machine, mpi, final_prepend, final_append, 
                         docker.image_name, args.final_image)
+                    if docker == None:
+                        raise ValueError("Failed to make final image:", machine, mpi)
+                else:
+                    raise ValueError("Failed to make base image:", machine, mpi)
         else:
             # Specific machine
             docker = make_base_image(machine, None, base_prepend, base_append, args.base_image)
             if docker != None:
                 docker = make_final_image(machine, None, final_prepend, final_append, 
                     docker.image_name, args.final_image)
+                if docker == None:
+                    raise ValueError("Failed to make final image:", machine)
+            else:
+                raise ValueError("Failed to make base image:", machine)
 
 
 
