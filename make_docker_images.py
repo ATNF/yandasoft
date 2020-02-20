@@ -23,7 +23,8 @@
 #    If you want no image, just Dockerfiles, for example for dry run: 
 #    ./make_docker_image.py
 #
-# Author: Paulus Lahur
+# Author: Paulus Lahur <paulus.lahur@csiro.au>
+# Copyright: CSIRO 2020
 #
 #------------------------------------------------------------------------------
 # SETTINGS
@@ -459,14 +460,29 @@ def make_batch_file(machine, mpi):
 
 
 
+def show_targets():
+    print("The list of Docker targets: ")
+    for machine in machine_targets:
+        print("- Machine:", machine)
+        if machine == "generic":
+            for mpi in mpi_targets:
+                print("  - MPI:", mpi)
+    print("Note that specific machine has a preset MPI target")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Make Docker images for various MPI implementations",
         epilog="The targets can be changed from inside the script (the SETTINGS section)")
     parser.add_argument('-b', '--base_image', help='Create base image', action='store_true')
     parser.add_argument('-f', '--final_image', help='Create final image', action='store_true')
+    parser.add_argument('-s', '--show_targets_only', help='Show targets only', action='store_true')
     #parser.add_argument('-s', '--slurm', help='Create sample batch files for SLURM', action='store_true')
     args = parser.parse_args()
+
+    if args.show_targets_only:
+        show_targets()
+        sys.exit(0)
 
     # The common components of image names in DockerHub
     base_prepend = "csirocass/casabase-"
