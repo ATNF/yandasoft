@@ -1,13 +1,13 @@
 /// @file cbpcalibrator.cc
 ///
-/// @brief Specialised tool for bandpass calibration
+/// @brief Specialised tool for bandpass gain and leakage calibration
 /// @details This is an application wrapper for BPCalibratorParallel to do optimised bandpass calibration with
 /// limited functionality. Unlike ccalibrator, this tool
 ///
-///      * solves for bandpass only
+///      * solves for bandpass gain & bandpass leakage only
 ///      * works only with preaveraging calibration approach
 ///      * does not support multiple chunks in time (i.e. only one solution is made for the whole dataset)
-///      * does not support data distribution except per beam 
+///      * does not support data distribution except per beam
 ///      * does not support a distributed model (e.g. with individual workers dealing with individual Taylor terms)
 ///      * does not require exact match between number of workers and number of channel chunks, data are dealt with
 ///        serially by each worker with multiple iterations over data, if required.
@@ -16,7 +16,7 @@
 /// This specialised tool matches closely BETA needs and will be used for BETA initially (at least until we converge
 /// on the best approach to do bandpass calibration). The lifetime of this tool is uncertain at present. In many
 /// instances the code is quick and dirty, just to suit our immediate needs.
-    
+
 /// @brief Perform calibration and write result in the parset file
 /// @details This application performs calibration of a measurement set
 /// and writes the solution to an external parset file
@@ -82,16 +82,16 @@ class CBPCalibratorApp : public askap::Application
                 }
 
                 BPCalibratorParallel calib(comms, subset);
-                ASKAPLOG_INFO_STR(logger, "ASKAP synthesis specialised bandpass calibrator " << ASKAP_PACKAGE_VERSION);
+                ASKAPLOG_INFO_STR(logger, "ASKAP synthesis specialised bandpass/leakage calibrator " << ASKAP_PACKAGE_VERSION);
 
                 if (comms.isMaster()) {
                     ASKAPLOG_INFO_STR(logger, "Parset file contents:\n" << config());
                 }
-                
+
                 calib.run();
 
                 stats.logSummary();
-                
+
             } catch (const askap::AskapError& x) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << x.what());
                 std::cerr << "Askap error in " << argv[0] << ": " << x.what() << std::endl;
