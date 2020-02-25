@@ -23,31 +23,37 @@
 #    If you want no image, just Dockerfiles, for example for dry run: 
 #    ./make_docker_image.py
 #
-# Author: Paulus Lahur
+# Author: Paulus Lahur <paulus.lahur@csiro.au>
+# Copyright: CSIRO 2020
 #
 #------------------------------------------------------------------------------
 # SETTINGS
 #
 # Set machine targets in the list below.
 # Currently, we target generic HPCs and Galaxy.
-machine_targets = ["generic", "galaxy"]
+#machine_targets = ["generic", "galaxy"]
+machine_targets = ["generic"]
 
 # Set MPI implementations for "generic" machine in the list below.
 # Note that a specific machine already has its MPI specified.
 # A valid mpi target is either "mpich" or "openmpi-X.Y.Z", 
 # where X, Y and Z are version numbers (major, minor and revision).
 # Our current MPI targets:
-mpi_targets = ["mpich", "openmpi-4.0.2", "openmpi-3.1.4", "openmpi-2.1.6"]
+#mpi_targets = ["mpich", "openmpi-4.0.2", "openmpi-3.1.4", "openmpi-2.1.6", "openmpi-1.10.7"]
+mpi_targets = ["mpich"]
 
 #------------------------------------------------------------------------------
-# CODE
 # TODO: Add logging
 # TODO: Add timing
 # TODO: Add error handling, as this is going to be used within CI/CD
+# Consider checking whether all files to be downloaded actually exist!
+# TODO: Slim down the image. Some dev stuff can be removed from final image.
+# THINK: Why is native app much faster?
 
 import sys
 import argparse
 import subprocess
+from pathlib import Path
 
 # Git repository of Yandasoft
 git_repository = "https://github.com/ATNF/yandasoft.git"
@@ -55,26 +61,91 @@ git_repository = "https://github.com/ATNF/yandasoft.git"
 # Header for all automatically generated Dockerfiles
 header = ("# This file is automatically created by " + __file__ + "\n")
 
+forbidden_chars_string = "?!@#$%^&* ;<>?|\"\a\b\f\n\r\t\v"
+forbidden_chars = list(forbidden_chars_string)
+# print(forbidden_chars)
+
 # Sanitizing parameters
 machine_targets = list(map(str.lower, machine_targets))
 mpi_targets = list(map(str.lower, mpi_targets))
 
 
+def is_proper_name(name):
+    '''
+    Return true if the name is non-empty and does not contain certain characters. 
+    False otherwise.
+    '''
+    if type(name) != str:
+        raise TypeError("Name is not string")
+    if name == "":
+        return False
+    for c in forbidden_chars:
+        if name.find(c) >= 0:
+            return False
+    return True
+
+
 class DockerClass:
-    def set_file_name(self, file_name):
-        self.file_name = file_name
+    recipe_name = ""
+    image_name = ""
+    recipe = ""
 
-    def set_content(self, content):
-        self.content = content
+    def set_recipe_name(self, recipe_name):
+        '''Set Dockerfile name'''
+        if is_proper_name(recipe_name):
+            self.recipe_name = recipe_name
+        else:
+            raise ValueError("Illegal recipe_name:", recipe_name)
 
-    def set_image(self, image):
-        self.image = image
+    def set_recipe(self, recipe):
+        '''Set the content of Dockerfile'''
+        if type(recipe) == str:
+            if recipe != "":
+                self.recipe = recipe
+            else:
+                raise ValueError("Recipe is empty string")
+        else:
+            raise TypeError("Recipe is not string")
 
-    def write(self):
-        '''Write dockerfile'''
-        f = open(self.file_name, "w")
-        f.write(self.content)
-        f.close()
+    def set_image_name(self, image_name):
+        '''Set Docker image name'''
+        if is_proper_name(image_name):
+            self.image_name = image_name
+        else:
+            raise ValueError("Illegal image_name:", image_name)
+
+    def write_recipe(self):
+        '''Write recipe into Dockerfile'''
+        if self.recipe_name == "":
+            raise ValueError("Docker recipe file name has not been set")
+        elif self.recipe == "":
+            raise ValueError("Docker recipe content has not been set")
+        else:
+            with open(self.recipe_name, "w") as file:
+                file.write(self.recipe)
+
+    def get_build_command(self):
+        '''Return build command'''
+        if (self.recipe_name == ""):
+            raise ValueError("Docker recipe file name has not been set")
+        elif (self.image_name == ""):
+            raise ValueError("Docker image file name has not been set")
+        else:
+            return ("docker build -t " + self.image_name + " -f " + self.recipe_name + " .")
+         
+    def build_image(self):
+        '''Build the Docker image'''
+        build_command = self.get_build_command()
+        if (self.recipe_name == ""):
+            raise ValueError("Docker recipe file name has not been set")
+        else:
+            file = Path(self.recipe_name)
+            if file.is_file():
+                # TODO: store log file, handle error
+                subprocess.run(build_command, shell=True)
+            else:
+                raise FileExistsError("Docker recipe file does not exist:", self.recipe_name)
+
 
 
 def get_mpi_type_and_version(mpi_name):
@@ -82,46 +153,39 @@ def get_mpi_type_and_version(mpi_name):
     Given the full name of MPI, return the MPI type: mpich or openmpi
     as well as the version.
     '''
-    if (len(mpi_name) > 5):
-        if (mpi_name[0:5] == "mpich"):
-            return ("mpich", mpi_name[6:])
-        elif (mpi_name[0:8] == "openmpi-"):
-            return ("openmpi", mpi_name[8:])
+    if (type(mpi_name) == str):
+        if (len(mpi_name) > 5):
+            if (mpi_name[0:5] == "mpich"):
+                # MPICH with specified version number
+                return ("mpich", mpi_name[6:])
+            elif (mpi_name[0:8] == "openmpi-"):
+                # OpenMPI with specified version number
+                return ("openmpi", mpi_name[8:])
+            else:
+                raise ValueError("Illegal MPI name", mpi_name)
+        elif (len(mpi_name) == 5):
+            if (mpi_name == "mpich"):
+                # Generic MPICH (no version number)
+                return("mpich", "")
+            else:
+                raise ValueError("Expecting mpich", mpi_name)
         else:
-            raise ValueError("Illegal MPI name", mpi_name)
-    elif (len(mpi_name) == 5):
-        if (mpi_name == "mpich"):
-            return("mpich", "")
-        else:
-            raise ValueError("Illegal MPI name", mpi_name)
+            raise ValueError("Illegal MPI name (too short)", mpi_name)
     else:
-        raise ValueError("Illegal MPI name", mpi_name)
+        raise TypeError("MPI name is not a string", mpi_name)
 
 
-def get_mpi_type(mpi_name):
-    '''
-    Given the full name of MPI implementation, return the type: 
-    MPICH, OpenMPI or None
-    '''
-    if (mpi_name == "mpich"):
-        return "mpich"
-    elif (mpi_name[0:8] == "openmpi-"):
-        return "openmpi"
-    else:
-        print("ERROR: Illegal MPI name: ", mpi_name)
-        return None
 
+def convert_version_string_to_integer(ver_string, ver_int):
+    '''
+    Convert version number in string format to a list of 3 integer.
+    '''
+    # Note that some integer can be of multi-digits
+    # Get major version number
+    # Get minor version number
+    # Get revision number
+    # return a list of 3 integers
 
-def get_openmpi_version(mpi_name):
-    '''
-    Given the full name of MPI implementation, return OpenMPI version.
-    Return None if not OpenMPI.
-    '''
-    if (mpi_name[0:8] == "openmpi-"):
-        return mpi_name[8:]
-    else:
-        print("ERROR: This is not OpenMPI: ", mpi_name)
-        return None
 
 
 def make_base_image(machine, mpi, prepend, append, actual):
@@ -243,6 +307,8 @@ def make_base_image(machine, mpi, prepend, append, actual):
             # TODO: Check whether the version number is correct
 
             # Directory name for OpenMPI download
+            # TODO: Make this works for the case where version number is of generic format!
+            #       Convert from string to a list of 3 integers
             openmpi_dir = "https://download.open-mpi.org/release/open-mpi/v" + openmpi_ver[0:3]
 
             # TODO: Check whether this file exist
@@ -255,13 +321,12 @@ def make_base_image(machine, mpi, prepend, append, actual):
             mpi_part = openmpi_common_top_part + openmpi_version_part + openmpi_common_bottom_part
 
         else:
-            print("ERROR: unknown MPI target: ", mpi)
-            return None
+            raise ValueError("Unknown MPI target:", mpi)
 
         docker_target = DockerClass()
-        docker_target.set_file_name("Dockerfile-casabase-" + mpi)
-        docker_target.set_content(header + base_system_part + common_top_part + mpi_part + common_bottom_part)
-        docker_target.set_image(prepend + mpi + append)
+        docker_target.set_recipe_name("Dockerfile-casabase-" + mpi)
+        docker_target.set_recipe(header + base_system_part + common_top_part + mpi_part + common_bottom_part)
+        docker_target.set_image_name(prepend + mpi + append)
 
     elif (machine == "galaxy"):
         # Galaxy (of Pawsey) has Docker image with its MPICH implementation already baked into 
@@ -269,20 +334,18 @@ def make_base_image(machine, mpi, prepend, append, actual):
         base_system_part = ("FROM pawsey/mpi-base:latest\n")
 
         docker_target = DockerClass()
-        docker_target.set_file_name("Dockerfile-casabase-" + machine)
-        docker_target.set_content(header + base_system_part + common_top_part + common_bottom_part)
-        docker_target.set_image(prepend + machine + append)
+        docker_target.set_recipe_name("Dockerfile-casabase-" + machine)
+        docker_target.set_recipe(header + base_system_part + common_top_part + common_bottom_part)
+        docker_target.set_image_name(prepend + machine + append)
 
     else:
-        print("ERROR: unknown machine target: ", machine)
-        return None
+        raise ValueError("Unknown machine target:", machine)
 
-    docker_target.write()
-    docker_command = ("docker build -t " + docker_target.image + " -f " + docker_target.file_name + " .")
+    docker_target.write_recipe()
     if actual:
-        subprocess.run(docker_command, shell=True)
+        docker_target.build_image()
     else:
-        subprocess.run("echo " + docker_command, shell=True)
+        print(docker_target.get_build_command())
 
     return docker_target
 
@@ -308,13 +371,10 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
         if (mpi_type == "mpich"):
             if (mpi_ver == ""):
                 # if MPICH version is not specified, get the precompiled generic version
-                #base_part = ("FROM csirocass/casabase-mpich:latest\n")
                 mpi_part = "RUN apt-get install -y mpich\n"
 
             else:
-                # Otherwise, specific version of MPICH
-                #base_part = ("FROM csirocass/casabase-mpich-" + mpi_ver + ":latest\n")
-                
+                # Otherwise, specific version of MPICH                
                 # Download the source from MPICH website and build from source     
                 mpich_dir = "https://www.mpich.org/static/downloads/" + mpi_ver
 
@@ -332,8 +392,6 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
                 "ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/$USER/mpich-install/lib/:/usr/local/lib\n")
 
         elif (mpi_type == "openmpi"):
-            #base_part = ("FROM csirocass/casabase-openmpi-" + mpi_ver + ":latest\n")
-
             # Download the source from OpenMPI website and build from source
             openmpi_common_top_part = (
             "WORKDIR /home\n")
@@ -360,32 +418,27 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
             mpi_part = openmpi_common_top_part + openmpi_version_part + openmpi_common_bottom_part
 
         else:
-            print("ERROR: unknown MPI target: ", mpi)
-            return None
+            raise ValueError("Unknown MPI target:", mpi)
 
         docker_target = DockerClass()
-        docker_target.set_file_name("Dockerfile-yandasoft-" + mpi)
-        docker_target.set_content(header + base_part + mpi_part + common_bottom_part)
-        docker_target.set_image(prepend + mpi + append)
+        docker_target.set_recipe_name("Dockerfile-yandasoft-" + mpi)
+        docker_target.set_recipe(header + base_part + mpi_part + common_bottom_part)
+        docker_target.set_image_name(prepend + mpi + append)
 
     elif (machine == "galaxy"):
-        #base_part = ("FROM csirocass/casabase-galaxy:latest\n")
-
         docker_target = DockerClass()
-        docker_target.set_file_name("Dockerfile-yandasoft" + machine)
-        docker_target.set_content(header + base_part + common_bottom_part)
-        docker_target.set_image(prepend + machine + append)
+        docker_target.set_recipe_name("Dockerfile-yandasoft" + machine)
+        docker_target.set_recipe(header + base_part + common_bottom_part)
+        docker_target.set_image_name(prepend + machine + append)
 
     else:
-        print("ERROR: unknown machine target: ", machine)
-        return None
+        raise ValueError("Unknown machine target:", machine)
 
-    docker_target.write()
-    docker_command = ("docker build -t " + docker_target.image + " -f " + docker_target.file_name + " .")
+    docker_target.write_recipe()
     if actual:
-        subprocess.run(docker_command, shell=True)
+        docker_target.build_image()
     else:
-        subprocess.run("echo " + docker_command, shell=True)
+        print(docker_target.get_build_command())
 
     return docker_target
 
@@ -395,7 +448,6 @@ def make_batch_file(machine, mpi):
     '''
     Make sample batch files for SLURN
     '''
-    # Currently not being used
 
     batch_common_part = (
     "#!/bin/bash -l\n"
@@ -407,7 +459,7 @@ def make_batch_file(machine, mpi):
     "#SBATCH --export=NONE\n\n"
     "module load singularity/3.5.0\n")
 
-    mpi_type = get_mpi_type(mpi)
+    (mpi_type, mpi_ver) = get_mpi_type_and_version(mpi)
     if (mpi_type == "mpich"):
         module = "mpich/3.3.0"
         image = "yandasoft-mpich_latest.sif"
@@ -417,40 +469,55 @@ def make_batch_file(machine, mpi):
         " cimager -c dirty.in > dirty_${SLURM_JOB_ID}.log\n")
 
     elif (mpi_type == "openmpi"):
-        openmpi_ver = get_openmpi_version(mpi)
-        if (openmpi_ver != None):
-            module = "openmpi/" + openmpi_ver + "-ofed45-gcc"
-            image = "yandasoft-" + openmpi_ver + "_latest.sif"
+        if (mpi_ver != None):
+            module = "openmpi/" + mpi_ver + "-ofed45-gcc"
+            image = "yandasoft-" + mpi_ver + "_latest.sif"
             batch_mpi_part = (
             "module load " + module + "\n\n"
             "mpirun -n 5 -oversubscribe singularity exec " + image +
             " cimager -c dirty.in > dirty_${SLURM_JOB_ID}.log\n")
 
+    else:
+        raise ValueError("Unknown MPI target:", mpi)
+
     batch_file = "sample-" + machine + "-" + mpi + ".sbatch"
     print("Making batch file:", batch_file)
-    f = open(batch_file, "w")
-    f.write(batch_common_part + batch_mpi_part)
-    f.close()
+    with open(batch_file, "w") as file:
+        file.write(batch_common_part + batch_mpi_part)
+
+
+
+def show_targets():
+    print("The list of Docker targets: ")
+    for machine in machine_targets:
+        print("- Machine:", machine)
+        if machine == "generic":
+            for mpi in mpi_targets:
+                print("  - MPI:", mpi)
+    print("Note that specific machine has a preset MPI target")
+
 
 
 def main():
-    '''
-    The main code
-    '''
     parser = argparse.ArgumentParser(
         description="Make Docker images for various MPI implementations",
         epilog="The targets can be changed from inside the script (the SETTINGS section)")
     parser.add_argument('-b', '--base_image', help='Create base image', action='store_true')
     parser.add_argument('-f', '--final_image', help='Create final image', action='store_true')
+    parser.add_argument('-s', '--show_targets_only', help='Show targets only', action='store_true')
     #parser.add_argument('-s', '--slurm', help='Create sample batch files for SLURM', action='store_true')
     args = parser.parse_args()
 
+    if args.show_targets_only:
+        show_targets()
+        sys.exit(0)
+
+    # The common components of image names in DockerHub
     base_prepend = "csirocass/casabase-"
     base_append = ":latest"
     final_prepend = "csirocass/yandasoft-"
     final_append = ":latest"
 
-    print("Making Dockerfiles for all targets ...")
     if args.base_image:
         print("Making base images ...")
     else:
@@ -466,14 +533,23 @@ def main():
             for mpi in mpi_targets:
                 docker = make_base_image(machine, mpi, base_prepend, base_append, args.base_image)
                 if docker != None:
-                    docker = make_final_image(machine, mpi, final_prepend, final_append, docker.image, 
-                        args.final_image)
+                    docker = make_final_image(machine, mpi, final_prepend, final_append, 
+                        docker.image_name, args.final_image)
+                    if docker == None:
+                        raise ValueError("Failed to make final image:", machine, mpi)
+                else:
+                    raise ValueError("Failed to make base image:", machine, mpi)
         else:
             # Specific machine
             docker = make_base_image(machine, None, base_prepend, base_append, args.base_image)
             if docker != None:
-                docker = make_final_image(machine, None, final_prepend, final_append, docker.image, 
-                    args.final_image)
+                docker = make_final_image(machine, None, final_prepend, final_append, 
+                    docker.image_name, args.final_image)
+                if docker == None:
+                    raise ValueError("Failed to make final image:", machine)
+            else:
+                raise ValueError("Failed to make base image:", machine)
+
 
 
 if (__name__ == "__main__"):
