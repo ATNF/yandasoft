@@ -46,9 +46,15 @@ if (CXX11)
     endif()
 endif()
 
+check_cxx_compiler_flag(-fcx-limited-range HAS_FCX)
+if (HAS_FCX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcx-limited-range")
+endif()
+
 option (ENABLE_OPENMP "Build with OPENMP Support" NO)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
+option (ENABLE_GRID_WITH_POINTERS "Grid with pointers" YES)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} $ENV{CPPFLAGS}")
 message(STATUS "CXXFLAGS are ${CMAKE_CXX_FLAGS}")
@@ -197,7 +203,11 @@ if (CASACORE3)
 		HAVE_CASACORE3
 	)
 endif()
-
+if (ENABLE_GRID_WITH_POINTERS)
+    target_compile_definitions(yandasoft PUBLIC
+        ASKAP_GRID_WITH_POINTERS
+    )
+endif()
 
 install (
 TARGETS yandasoft
