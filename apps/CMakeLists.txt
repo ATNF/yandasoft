@@ -1,4 +1,5 @@
 set (_progs
+bfweights
 cadvise
 cbpcalibrator
 ccalapply
