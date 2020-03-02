@@ -697,6 +697,7 @@ namespace askap {
             this->itsBasisFunctionChanged = False;
         }
 
+
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::ManyIterations()
         {
@@ -713,7 +714,6 @@ namespace askap {
             Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
             Matrix<T> mask, mask_base;
-            uInt ncol, nrow;
             IPosition minPos(2, 0);
             IPosition maxPos(2, 0);
             T minVal(0.0), maxVal(0.0);
@@ -735,6 +735,9 @@ namespace askap {
             memset(TimerStart, 0, sizeof(TimerStart));
             memset(TimerStop, 0, sizeof(TimerStop));
             memset(Times, 0, sizeof(Times));
+
+			// Termination
+			int converged;
 
             if (this->control()->targetIter() != 0) {
 
@@ -765,15 +768,14 @@ namespace askap {
                         uInt ncol = mask.ncolumn();
                         uInt nrow = mask.nrow();
                         // Declare private versions of these
-                        T val; T* pMask;
+                        T* pMask;
                         uInt i, j;
                         if  (this->itsSolutionType == "MAXCHISQ") {
-                            #pragma omp for schedule(static) nowait
+                            #pragma omp for schedule(static)
                             for (j = 0; j < ncol; j++ ) {
                                 pMask = &mask(0,j);
                                 for (i = 0; i < nrow; i++ ) {
-                                    val = abs(*(pMask+i) * (*(pMask+i)));
-                                    pMask[i] = val;
+                                    pMask[i] = abs(*(pMask+i) * (*(pMask+i)));
                                 }
                             }
                         }
@@ -801,6 +803,7 @@ namespace askap {
                                     #pragma omp section
                                     if (base > 0) mask = this->itsWeight(0).nonDegenerate();
                                 }
+
                                 uInt ncol = mask.ncolumn();
                                 uInt nrow = mask.nrow();
                                 if (base>0) {
@@ -809,7 +812,6 @@ namespace askap {
                                         #pragma omp for schedule(static)
                                         for (uInt j = 0; j < ncol; j++ ) {
                                             T* pMask = &mask(0,j);
-                                            //T* pMask = mask(0,j).getStorage(IsNotCont);
                                             for (uInt i = 0; i < nrow; i++ ) {
                                                 T val = *(pMask+i) * (*(pMask+i));
                                                 pMask[i] = val;
@@ -889,7 +891,7 @@ namespace askap {
 
                                 for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
                                     T* coeff_pointer = coefficients(term1).getStorage(IsNotCont);
-                                    T* res_pointer = this->itsResidualBasis(base)(term2).getStorage(IsNotCont);
+                                    T* res_pointer = (float*)this->itsResidualBasis(base)(term2).getStorage(IsNotCont);
                                     #pragma omp for schedule(static)
                                     for (int index = 0; index < coefficients(term1).nelements(); index++) {
                                         coeff_pointer[index] += res_pointer[index]*T(this->itsInverseCouplingMatrix(base)(term1,term2));
@@ -909,9 +911,8 @@ namespace askap {
 
                                 if (haveMask) {
                                     absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, mask);
-
                                 } else {
-                                absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
+                                    absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
                                 }
 
                                 #pragma omp for schedule(static)
@@ -928,12 +929,9 @@ namespace askap {
                                 #pragma omp single nowait
                                 TimerStart[5] = MPI_Wtime();
 
-                                #pragma omp sections
+                                #pragma omp single
                                 {
-                                    #pragma omp section
                                     negchisq.resize(this->dirty(0).shape().nonDegenerate());
-
-                                    #pragma omp section
                                     negchisq.set(T(0.0));
                                 }
 
@@ -962,7 +960,7 @@ namespace askap {
                                 // Small loop
                                 #pragma omp for schedule(static)
                                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
-                                                minValues(term) = coefficients(term)(minPos);
+                                            minValues(term) = coefficients(term)(minPos);
                                             maxValues(term) = coefficients(term)(maxPos);
                                 }
 
@@ -1004,33 +1002,25 @@ namespace askap {
                     #pragma omp single nowait
                     TimerStart[6] = MPI_Wtime();
 
-                    #pragma omp sections
+                    #pragma omp single
                     {
-
-                        #pragma omp section
-                        {
-                            for (uInt term1 = 0; term1 < this->itsNumberTerms; ++term1) {
-                                peakValues(term1) = 0.0;
-                                for (uInt term2 = 0; term2 < this->itsNumberTerms; ++term2) {
-                                    peakValues(term1) +=
-                                        T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) *
-                                        this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
-                                }
+                        for (uInt term1 = 0; term1 < this->itsNumberTerms; ++term1) {
+                            peakValues(term1) = 0.0;
+                            for (uInt term2 = 0; term2 < this->itsNumberTerms; ++term2) {
+                                peakValues(term1) +=
+                                    T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) *
+                                    this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
                             }
                         }
 
                         // Record location of peak in mask
-                        #pragma omp section
                         if (this->itsMask.nelements()) this->itsMask(optimumBase)(absPeakPos)=T(1.0);
 
                         // Take square root to get value comparable to peak residual
-                        #pragma omp section
-                        {
-                            if (this->itsSolutionType == "MAXCHISQ") {
-                                absPeakVal = sqrt(max(T(0.0), absPeakVal));
-                            }
+                        if (this->itsSolutionType == "MAXCHISQ") {
+                            absPeakVal = sqrt(max(T(0.0), absPeakVal));
                         }
-                    }
+                    } // End of omp single section
 
                     // End of section 6
                     #pragma omp single nowait
@@ -1237,8 +1227,8 @@ namespace askap {
 
                     #pragma omp single
                     {
-                    this->monitor()->monitor(*(this->state()));
-                    this->state()->incIter();
+                        this->monitor()->monitor(*(this->state()));
+                        this->state()->incIter();
                     } 
 
                     // End of section 9
@@ -1248,7 +1238,12 @@ namespace askap {
                     //End of all iterations
                     #pragma omp barrier
 
-                } while (!this->control()->terminate(*(this->state())));
+                    #pragma omp single
+                    {
+                        converged = this->control()->terminate(*(this->state()));
+                    }
+
+                } while (!converged);
 
             } // End of parallel section
 
@@ -1268,9 +1263,6 @@ namespace askap {
                     "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
             }
         } // End of many iterations function
-
-
-
 
 
         template<class T, class FT>
