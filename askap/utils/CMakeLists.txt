@@ -5,7 +5,7 @@ add_sources_to_yandasoft(
 	IlluminationUtils.cc
 	ImplCalWeightSolver.cc
 	SkyCatalogTabWriter.cc
-
+    DelaySolverImpl.cc
 )
 
 install (FILES
@@ -15,6 +15,6 @@ install (FILES
 	IlluminationUtils.h
 	ImplCalWeightSolver.h
 	SkyCatalogTabWriter.h
-
+    DelaySolverImpl.h
     DESTINATION include/askap/utils
 )
