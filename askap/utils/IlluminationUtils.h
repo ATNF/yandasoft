@@ -31,7 +31,7 @@
 #define ILLUMINATION_UTILS_H
 
 #include <boost/shared_ptr.hpp>
-#include <gridding/IBasicIllumination.h>
+#include <askap/gridding/IBasicIllumination.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 
 
