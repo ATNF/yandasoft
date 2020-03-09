@@ -2,7 +2,7 @@
 ///
 /// @brief combine a number of images as a linear mosaic
 /// @details This is a utility to merge images into a mosaic. Images can be set
-/// explicitly or found automatically based on input tags. 
+/// explicitly or found automatically based on input tags.
 ///
 /// @copyright (c) 2012,2014,2015 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -76,7 +76,7 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
     ASKAPLOG_INFO_STR(linmoslogger, " -> looking for the feed spacing");
     Quantity qspacing = askap::asQuantity(parset.getString("feeds.spacing"));
     double spacing = qspacing.getValue("rad");
-    ASKAPLOG_INFO_STR(linmoslogger, "    beam spacing set to " << qspacing);       
+    ASKAPLOG_INFO_STR(linmoslogger, "    beam spacing set to " << qspacing);
 
     ASKAPLOG_INFO_STR(linmoslogger, " -> looking for a feed offset for each image");
     for (uint beam = 0; beam < beamNames.size(); ++beam) {
@@ -85,7 +85,9 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
          //ASKAPCHECK(xy.size() == 2, "Expect two elements for each offset");
          // the shift appears to be positive in HA, so multiply by -1. Simulator.cc states:
          // "x direction is flipped to convert az-el type frame to ra-dec"
-         centres[beam].shift(-xy[0]*spacing, xy[1]*spacing, casacore::True);
+         //centres[beam].shift(-xy[0]*spacing, xy[1]*spacing, casacore::True);
+         // Note: with ASKAP-36 the x shift as taken from the footprint file doesn't need this flip
+         centres[beam].shift(xy[0]*spacing, xy[1]*spacing, casacore::True);
          ASKAPLOG_INFO_STR(linmoslogger, " -> " << parName << " centre: " << centres[beam] );
     }
     return centres;
@@ -177,4 +179,3 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
 }
 
 } // namespace askap
-
