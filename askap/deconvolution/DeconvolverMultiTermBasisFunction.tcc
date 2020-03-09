@@ -768,12 +768,12 @@ namespace askap {
                         uInt ncol = mask.ncolumn();
                         uInt nrow = mask.nrow();
                         // Declare private versions of these
-                        T* pMask;
                         uInt i, j;
                         if  (this->itsSolutionType == "MAXCHISQ") {
                             #pragma omp for schedule(static)
                             for (j = 0; j < ncol; j++ ) {
-                                pMask = &mask(0,j);
+                                Vector<T> maskcol = mask.column(j);
+                                T* pMask = maskcol.getStorage(IsNotCont);
                                 for (i = 0; i < nrow; i++ ) {
                                     pMask[i] = abs(*(pMask+i) * (*(pMask+i)));
                                 }
@@ -811,7 +811,8 @@ namespace askap {
                                         // square weights for MAXCHISQ
                                         #pragma omp for schedule(static)
                                         for (uInt j = 0; j < ncol; j++ ) {
-                                            T* pMask = &mask(0,j);
+                                            Vector<T> maskcol = mask.column(j);
+                                            T* pMask = maskcol.getStorage(IsNotCont);
                                             for (uInt i = 0; i < nrow; i++ ) {
                                                 T val = *(pMask+i) * (*(pMask+i));
                                                 pMask[i] = val;
@@ -822,8 +823,10 @@ namespace askap {
 
                                 #pragma omp for schedule(static)
                                 for (uInt j = 0; j < ncol; j++ ) {
-                                    T* pMask = &mask(0,j);
-                                    T* pMaskBase = &mask_base(0,j);
+                                    Vector<T> maskcol = mask.column(j);
+                                    T* pMask = maskcol.getStorage(IsNotCont);
+                                    Vector<T> maskbasecol = mask_base.column(j);
+                                    T* pMaskBase = maskbasecol.getStorage(IsNotCont);
                                     for (uInt i = 0; i < nrow; i++ ) {
                                         T val = *(pMask+i) * (*(pMaskBase+i));
                                         pMask[i] = val;
@@ -853,7 +856,6 @@ namespace askap {
                             TimerStart[2] = MPI_Wtime();
 
                             res.reference(this->itsResidualBasis(base)(0));
-                            //res = this->itsResidualBasis(base)(0);
 
                             if (haveMask) {
                                 absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,mask);
@@ -971,25 +973,18 @@ namespace askap {
                             } // End of Maxterm0 or Maxchi solver decision
                         } // End of else decision
 
-                        #pragma omp sections
+                        #pragma omp single
                         {
                             // We use the minVal and maxVal to find the optimum base
-                            #pragma omp section
-                            {
-                                if (abs(minVal) > absPeakVal) {
-                                    optimumBase = base;
-                                    absPeakVal = abs(minVal);
-                                    absPeakPos = minPos;
-                                }
+                            if (abs(minVal) > absPeakVal) {
+                                optimumBase = base;
+                                absPeakVal = abs(minVal);
+                                absPeakPos = minPos;
                             }
-
-                            #pragma omp section
-                            {
-                                if (abs(maxVal) > absPeakVal) {
-                                        optimumBase = base;
-                                        absPeakVal = abs(maxVal);
-                                        absPeakPos = maxPos;
-                                }
+                            if (abs(maxVal) > absPeakVal) {
+                                    optimumBase = base;
+                                    absPeakVal = abs(maxVal);
+                                    absPeakPos = maxPos;
                             }
                         }
                     } // End of iteration over number of bases
