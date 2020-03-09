@@ -11,6 +11,13 @@ pipeline {
 
   }
   stages {
+      stage('Clean') {
+      steps {
+        dir(path: '.') {
+        sh '''rm -rf *'''
+        }
+        }
+      }
       stage('Building Dependency (ASKAP)') {
       steps {
         dir(path: '.') {
