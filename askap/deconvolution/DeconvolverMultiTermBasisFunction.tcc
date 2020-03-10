@@ -758,7 +758,7 @@ namespace askap {
                     // =============== Choose Component =======================
 
                     // Section 0
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[0] = MPI_Wtime();
 
                     if (isWeighted) {
@@ -781,13 +781,13 @@ namespace askap {
                         }
                     }
 
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[0] = MPI_Wtime(); Times[0] += (TimerStop[0]-TimerStart[0]); }
 
                     for (uInt base = 0; base < nBases; base++) {
 
                         // Section 1 Timer
-                        #pragma omp single nowait
+                        #pragma omp single
                         TimerStart[1] = MPI_Wtime();
 
                         minPos(0) = 0; minPos(1) = 0; maxPos(0) = 0; maxPos(1) = 0;
@@ -839,7 +839,7 @@ namespace askap {
                             }
                         } // End of deep clean mode
 
-                        #pragma omp single nowait
+                        #pragma omp single
                         { TimerStop[1] = MPI_Wtime(); Times[1] += (TimerStop[1]-TimerStart[1]); }
 
                         #pragma omp single
@@ -852,7 +852,7 @@ namespace askap {
                         if (this->itsSolutionType == "MAXBASE") {
 
                             // Section 2 Timer
-                            #pragma omp single nowait
+                            #pragma omp single
                             TimerStart[2] = MPI_Wtime();
 
                             res.reference(this->itsResidualBasis(base)(0));
@@ -874,13 +874,13 @@ namespace askap {
                             maxVal *= norm;
                             minVal *= norm;
 
-                            #pragma omp single nowait
+                            #pragma omp single
                             { TimerStop[2] = MPI_Wtime(); Times[2] += (TimerStop[2]-TimerStart[2]); }
 
                         } else {  // Some other solver type than maxbase
 
                             // section 3
-                            #pragma omp single nowait
+                            #pragma omp single
                             TimerStart[3] = MPI_Wtime();
 
                             for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
@@ -901,12 +901,12 @@ namespace askap {
                                 }
                             } // End of for loop over terms
 
-                            #pragma omp single nowait
+                            #pragma omp single
                             { TimerStop[3] = MPI_Wtime(); Times[3] += (TimerStop[3]-TimerStart[3]); }
 
                             if (this->itsSolutionType == "MAXTERM0") {
 
-                                #pragma omp single nowait
+                                #pragma omp single
                                 TimerStart[4] = MPI_Wtime();
 
                                 res = coefficients(0);
@@ -923,12 +923,12 @@ namespace askap {
                                     maxValues(term) = coefficients(term)(maxPos);
                                 }
 
-                                #pragma omp single nowait
+                                #pragma omp single
                                 { TimerStop[4] = MPI_Wtime(); Times[4] += (TimerStop[4]-TimerStart[4]); }
 
                             } else {
                                 // MAXCHISQ
-                                #pragma omp single nowait
+                                #pragma omp single
                                 TimerStart[5] = MPI_Wtime();
 
                                 #pragma omp single
@@ -967,7 +967,7 @@ namespace askap {
                                 }
 
                                 // End of section 5
-                                #pragma omp single nowait
+                                #pragma omp single
                                 { TimerStop[5] = MPI_Wtime(); Times[5] += (TimerStop[5]-TimerStart[5]); }
 
                             } // End of Maxterm0 or Maxchi solver decision
@@ -994,7 +994,7 @@ namespace askap {
                     // that we have to decouple the answer
 
                     // Section 6
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[6] = MPI_Wtime();
 
                     #pragma omp single
@@ -1018,7 +1018,7 @@ namespace askap {
                     } // End of omp single section
 
                     // End of section 6
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[6] = MPI_Wtime(); Times[6] += (TimerStop[6]-TimerStart[6]); }
 
                     if (!deepCleanMode() && !decoupled()) {
@@ -1026,7 +1026,7 @@ namespace askap {
                         // **** Compute coupled residual ****
 
                         // Section 7
-                        #pragma omp single nowait
+                        #pragma omp single
                         TimerStart[7] = MPI_Wtime();
 
                         for (uInt term = 0; term < nTerms; term++) {
@@ -1076,7 +1076,7 @@ namespace askap {
                         } // End of loop over terms
 
                         // End of Section 7
-                        #pragma omp single nowait
+                        #pragma omp single
                         { TimerStop[7] = MPI_Wtime(); Times[7] += (TimerStop[7]-TimerStart[7]); }
 
                         #pragma omp single
@@ -1094,7 +1094,7 @@ namespace askap {
                     #pragma omp barrier
 
                     // Section 8
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[8] = MPI_Wtime();
 
                     #pragma omp sections
@@ -1164,11 +1164,11 @@ namespace askap {
                     casa::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
 
                     // End of section 8
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[8] = MPI_Wtime(); Times[8] += (TimerStop[8]-TimerStart[8]); }
 
                     // Section 9
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[9] = MPI_Wtime();
 
                     // that there are some edge cases for which it fails.
@@ -1227,7 +1227,7 @@ namespace askap {
                     } 
 
                     // End of section 9
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[9] = MPI_Wtime(); Times[9] += (TimerStop[9]-TimerStart[9]); }
 
                     //End of all iterations
