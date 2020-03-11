@@ -871,9 +871,12 @@ namespace askap {
                             }
                             // In performing the search for the peak across bases, we want to take into account
                             // the SNR so we normalise out the coupling matrix for term=0 to term=0.
-                            norm = 1.0 / sqrt(this->itsCouplingMatrix(base)(0, 0));
-                            maxVal *= norm;
-                            minVal *= norm;
+                            #pragma omp single
+                            {
+                                norm = 1.0 / sqrt(this->itsCouplingMatrix(base)(0, 0));
+                                maxVal *= norm;
+                                minVal *= norm;
+                            }
 
                             #pragma omp single
                             { TimerStop[2] = MPI_Wtime(); Times[2] += (TimerStop[2]-TimerStart[2]); }
