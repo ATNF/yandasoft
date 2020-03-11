@@ -855,6 +855,7 @@ namespace askap {
                             #pragma omp single
                             TimerStart[2] = MPI_Wtime();
 
+                            #pragma omp single
                             res.reference(this->itsResidualBasis(base)(0));
 
                             if (haveMask) {
