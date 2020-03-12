@@ -1,4 +1,7 @@
-# Run this script using pytest
+# This is to test the script make_docker_images.py.
+# Run this script using pytest.
+# Author: Paulus Lahur <paulus.lahur@csiro.au>
+
 
 import pytest
 import os
