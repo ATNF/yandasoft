@@ -229,6 +229,12 @@ namespace askap {
                 /// @brief Returns True if divergence detection is active
                 casa::Bool detectDivergence() { return itsDetectDivergence; }
 
+                /// @brief Set deep clean mode
+                void setDeepCleanMode() {itsDeepCleanMode = True;}
+
+                /// @brief Returns True if divergence detection is active
+                casa::Bool deepCleanMode() { return itsDeepCleanMode; }
+
             private:
                 casacore::String itsAlgorithm;
                 TerminationCause itsTerminationCause;
@@ -240,7 +246,8 @@ namespace askap {
                 casa::Float itsGain;
                 casa::Float itsTolerance;
                 casa::Int itsPSFWidth;
-		casa::Bool itsDetectDivergence;
+                casa::Bool itsDetectDivergence;
+                casa::Bool itsDeepCleanMode;
                 T itsLambda;
                 askap::SignalCounter itsSignalCounter;
                 askap::ISignalHandler* itsOldHandler;

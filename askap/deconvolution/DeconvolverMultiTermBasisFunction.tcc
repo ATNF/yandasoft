@@ -227,7 +227,7 @@ namespace askap {
                 Vector<Array<T> >& psf,
                 Vector<Array<T> >& psfLong)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There are " << this->itsNumberTerms << " terms to be solved");
 
@@ -245,7 +245,7 @@ namespace askap {
         DeconvolverMultiTermBasisFunction<T, FT>::DeconvolverMultiTermBasisFunction(Array<T>& dirty,
                 Array<T>& psf)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There is only one term to be solved");
             this->itsPsfLongVec.resize(1);
@@ -278,18 +278,6 @@ namespace askap {
         const Bool DeconvolverMultiTermBasisFunction<T, FT>::decoupled()
         {
             return itsDecoupled;
-        };
-
-        template<class T, class FT>
-        void DeconvolverMultiTermBasisFunction<T, FT>::setDeepCleanMode(Bool deep)
-        {
-            itsDeep = deep;
-        };
-
-        template<class T, class FT>
-        const Bool DeconvolverMultiTermBasisFunction<T, FT>::deepCleanMode()
-        {
-            return itsDeep;
         };
 
         template<class T, class FT>
@@ -762,7 +750,9 @@ namespace askap {
                     uInt i, j;
 
                     // Check weights for contiguity
-                    if (!weights.contiguousStorage()) printf("XXX WARNING XXX - weights (sec 0) is not contiguous\n");
+                    if (!weights.contiguousStorage()) {
+                        ASKAPLOG_WARN_STR(decmtbflogger, "weights (sec 0) is not contiguous\n");
+                    }
 
                     if  (this->itsSolutionType == "MAXCHISQ") {
                         // square weights for MAXCHISQ
@@ -777,13 +767,13 @@ namespace askap {
                     }
 
                     // initialise a scratch space if mask needs to be reset each iter, otherwise just point at weights
-                    if (deepCleanMode()) {
+                    if (this->control()->deepCleanMode()) {
                         if (nBases>1) {
                             // needs to be changed in the base loop, so init scratch space
                             mask = Matrix<T>(weights.shape(),0.0);
                             // Check mask base for contiguity
                             if (!mask.contiguousStorage()) {
-                                printf("XXX WARNING XXX - mask (sec 1) is not contiguous\n");
+                                ASKAPLOG_WARN_STR(decmtbflogger, "mask (sec 1) is not contiguous\n");
                             }
                         } else {
                             // only a single base, so multiple weights and mask now.
@@ -831,7 +821,7 @@ namespace askap {
                         minPos(0) = 0; minPos(1) = 0; maxPos(0) = 0; maxPos(1) = 0;
                         minVal = 0.0; maxVal = 0.0;
 
-                        if (deepCleanMode()) {
+                        if (this->control()->deepCleanMode()) {
 
                             // Section 1 Timer
                             #pragma omp single
@@ -865,7 +855,7 @@ namespace askap {
                             #pragma omp single
                             { TimerStop[1] = MPI_Wtime(); Times[1] += (TimerStop[1]-TimerStart[1]); }
 
-                        } // End of deep clean mode
+                        }
 
                         #pragma omp single
                         haveMask = mask.nelements()>0;
@@ -1052,7 +1042,7 @@ namespace askap {
                     #pragma omp single
                     { TimerStop[6] = MPI_Wtime(); Times[6] += (TimerStop[6]-TimerStart[6]); }
 
-                    if (!deepCleanMode() && !decoupled()) {
+                    if (!this->control()->deepCleanMode() && !decoupled()) {
 
                         // **** Compute coupled residual ****
 
@@ -1172,19 +1162,6 @@ namespace askap {
 
                     #pragma omp sections
                     {
-                        #pragma omp section
-                        {
-                            // Check if we should enter deep cleaning mode
-                            if (abs(absPeakVal) < this->control()->targetObjectiveFunction() &&
-                                this->control()->targetObjectiveFunction2()>0 &&
-                                abs(absPeakVal) > this->control()->targetObjectiveFunction2()) {
-                                if (!deepCleanMode()) {
-                                    ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
-                                }
-                                setDeepCleanMode(True);
-                            }
-                        }
-
                         // Now we adjust model and residual for this component
                         #pragma omp section
                         residualShape = this->dirty(0).shape().nonDegenerate();
@@ -1315,7 +1292,7 @@ namespace askap {
             // Report Times
             double sum_time = 0.0;
             for (int i = 0; i < no_timers; i++) {
-                printf("**** Section %d Time: %g\n", i, Times[i]);
+                ASKAPLOG_INFO_STR(decmtbflogger, "Section "<<i<<" Time: "<<Times[i]);
                 sum_time += Times[i];
             }
 
@@ -1341,7 +1318,7 @@ namespace askap {
             this->ManyIterations();
             double end_time = MPI_Wtime();
             this->finalise();
-            printf("==== Time Required: %g\n", end_time - start_time);
+            ASKAPLOG_INFO_STR(decmtbflogger, "Time Required: "<<end_time - start_time);
             return True;
         }
 
@@ -1509,7 +1486,7 @@ namespace askap {
                 int Idx;
                 T minVal(0.0), maxVal(0.0);
 
-                if (deepCleanMode()) {
+                if (this->control()->deepCleanMode()) {
                     if (isWeighted) {
                         // recompute mask*weight for each new base
                         if (base>0) {
@@ -1682,7 +1659,7 @@ namespace askap {
             // be the absolute value of the peak residual
             // For deep cleaning we want to restrict the abspeakval to the mask
             // so we just use the value determined above
-            if (!deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
+            if (!this->control()->deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
 
 
 	    // Update collective time over all iterations
@@ -1731,8 +1708,11 @@ namespace askap {
             if (abs(absPeakVal) < this->control()->targetObjectiveFunction() &&
                 this->control()->targetObjectiveFunction2()>0 &&
                 abs(absPeakVal) > this->control()->targetObjectiveFunction2()) {
-              if (!deepCleanMode()) ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
-              setDeepCleanMode(True);
+                if (!this->control()->deepCleanMode()) {
+                    ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
+                }
+                //setDeepCleanMode(True);
+                this->control()->setDeepCleanMode();
             }
 
             // Now we adjust model and residual for this component
