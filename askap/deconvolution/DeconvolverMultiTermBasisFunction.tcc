@@ -426,8 +426,9 @@ namespace askap {
 
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
 
-            ASKAPLOG_DEBUG_STR(decmtbflogger,
-                               "Calculating convolutions of residual images with basis functions");
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Calculating convolutions of residual images with basis functions");
+            double start_time = MPI_Wtime();
             for (uInt base = 0; base < nBases; base++) {
                 // Calculate transform of residual images [nx,ny,nterms]
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
@@ -459,6 +460,9 @@ namespace askap {
                     this->itsResidualBasis(base)(term) = real(work);
                 }
             }
+            double end_time = MPI_Wtime();
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Time to calculate residual images * basis functions: "<<end_time-start_time<<" sec");
 #ifdef USE_OPENACC
             itsACCManager.nBases = nBases;
             itsACCManager.nTerms = this->itsNumberTerms;
