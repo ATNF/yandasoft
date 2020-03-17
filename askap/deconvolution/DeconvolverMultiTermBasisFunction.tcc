@@ -428,7 +428,8 @@ namespace askap {
 
             ASKAPLOG_INFO_STR(decmtbflogger,
                               "Calculating convolutions of residual images with basis functions");
-            double start_time = MPI_Wtime();
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
             for (uInt base = 0; base < nBases; base++) {
                 // Calculate transform of residual images [nx,ny,nterms]
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
@@ -460,7 +461,8 @@ namespace askap {
                     this->itsResidualBasis(base)(term) = real(work);
                 }
             }
-            double end_time = MPI_Wtime();
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
             ASKAPLOG_INFO_STR(decmtbflogger,
                               "Time to calculate residual images * basis functions: "<<end_time-start_time<<" sec");
 #ifdef USE_OPENACC
@@ -732,6 +734,9 @@ namespace askap {
 			int converged;
 
             if (this->control()->targetIter() != 0) {
+
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
 
             #pragma omp parallel
             {
@@ -1293,6 +1298,11 @@ namespace askap {
 
             } // End of parallel section
 
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Time for minor cycles: "<<end_time-start_time<<" sec");
+
             // Report Times
             double sum_time = 0.0;
             for (int i = 0; i < no_timers; i++) {
@@ -1300,14 +1310,15 @@ namespace askap {
                 sum_time += Times[i];
             }
 
-                ASKAPLOG_INFO_STR(decmtbflogger, "Performed Multi-Term BasisFunction CLEAN for "
-                                      << this->state()->currentIter() << " iterations");
-                ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
+            ASKAPLOG_INFO_STR(decmtbflogger, "Performed Multi-Term BasisFunction CLEAN for "
+                                  << this->state()->currentIter() << " iterations");
+            ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
 
             } else {
-                ASKAPLOG_INFO_STR(decmtbflogger,
-                    "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
+              ASKAPLOG_INFO_STR(decmtbflogger,
+                  "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
             }
+
         } // End of many iterations function
 
 
@@ -1318,9 +1329,11 @@ namespace askap {
             // This is the parallel version of deconvolve using ManyIterations()
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::deconvolve");
             this->initialise();
-            double start_time = MPI_Wtime();
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
             this->ManyIterations();
-            double end_time = MPI_Wtime();
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
             this->finalise();
             ASKAPLOG_INFO_STR(decmtbflogger, "Time Required: "<<end_time - start_time);
             return True;
