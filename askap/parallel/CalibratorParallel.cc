@@ -631,6 +631,8 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
         // no data for the parameter - fix it (full name in case of bandpass, both should be identical in the case of gains/leakages)
         itsModel->fix(*ci);
    }
+   ASKAPLOG_INFO_STR(logger, "Number of model free names: "<< itsModel->freeNames().size());
+   ASKAPLOG_INFO_STR(logger, "Number of model fixed names: "<< itsModel->fixedNames().size());
    //
    itsEquation = preAvgME;
 
@@ -677,6 +679,9 @@ void CalibratorParallel::calcNE()
   }
   boost::shared_ptr<scimath::GenericNormalEquations> gne(new GenericNormalEquations);
   gne->metadata() = tempMetadata;
+  if (itsMatrixIsParallel) {
+      gne->setIndexedNormalMatrixFormat(true);
+  }
   itsNe = gne;
 
   if (itsComms.isWorker()) {
@@ -766,6 +771,8 @@ void CalibratorParallel::solveNE()
                it != namesEq.end(); ++it) {
               const std::string parname = *it;
               localModel.add(parname, itsModel->value(parname));
+              // NOTE: We do not fix model parameters here,
+              //       and thus will be solving for all unknowns (including the flagged data!).
           }
           ASKAPDEBUGASSERT(namesEq.size() == localModel.size());
           ASKAPLOG_INFO_STR(logger, "Added " << namesEq.size() << " local model parameters on worker " << itsComms.rank());

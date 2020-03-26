@@ -210,8 +210,7 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     const bool fdp = isFrequencyDependent();
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-    auto *use_indexed_containers = std::getenv("YANDASOFT_USE_INDEXED_NORMAL_CONTAINERS");
-    if (use_indexed_containers && fdp) {
+    if (ne.useIndexedNormalMatrix()) {
         initIndexedNormalMatrixAndParameterIndex(ne);
     }
 
