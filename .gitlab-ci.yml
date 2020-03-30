@@ -1,6 +1,6 @@
 # GitLab CI script for services
 
-image: sord/devops:30032020
+image: sord/devops:30032020-162000
 
 .common: {tags: [azure]}
 
