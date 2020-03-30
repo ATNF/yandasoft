@@ -38,9 +38,12 @@ ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 #include <askap/AskapUtil.h>
 #include <askap/gridding/DiskIllumination.h>
 #include <askap/gridding/ATCAIllumination.h>
+#include <askap/gridding/SKA_LOWIllumination.h>
+#include <askap/gridding/TableVisGridder.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <profile/AskapProfiler.h>
 
+#include <limits>
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -287,16 +290,21 @@ boost::shared_ptr<IBasicIllumination>
 AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 {
    const std::string illumType = parset.getString("illumination", "disk");
-   const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
-   const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
 
    if (illumType == "disk") {
+
+        const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
+        const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
    	    ASKAPLOG_INFO_STR(logger,
 					"Using disk illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
    
        	return boost::shared_ptr<IBasicIllumination>(new DiskIllumination(diameter,blockage));
+
    } else if (illumType == "ATCA") {
+
+        const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
+        const double blockage=SynthesisParamsHelper::convertQuantity(parset.getString("blockage"),"m");
    	    ASKAPLOG_INFO_STR(logger,
 					"Using ATCA illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
@@ -349,12 +357,38 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 	    } else {
 	       ASKAPLOG_INFO_STR(logger,"Feed legs are not simulated.");
 	    }
+
 	    return illum;
+
+   } else if (illumType == "SKA_LOW") {
+
+   	    ASKAPLOG_INFO_STR(logger, "Using SKA_LOW illumination model");
+
+   	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination()); 
+
+        const double diameter = SynthesisParamsHelper::convertQuantity(
+                                    parset.getString("diameter","35m"), "m" );   
+
+        double ra=std::numeric_limits<float>::quiet_NaN();
+        double dec=std::numeric_limits<float>::quiet_NaN();
+        if ( parset.isDefined("illumination.pointing.ra") && parset.isDefined("illumination.pointing.dec") ) {
+            illum->setPointingToFixed();
+            ra  = SynthesisParamsHelper::convertQuantity(
+                      parset.getString("illumination.pointing.ra"), "rad" );
+            dec = SynthesisParamsHelper::convertQuantity(
+                      parset.getString("illumination.pointing.dec"), "rad" );
+        }
+
+        // was thinking of updating the pointingDir1() data accessor, however this is a temporary beam
+        // model so leave it for now. Accessor-based offsets are still available via MS FEED tables.
+        illum->setPointing(ra,dec,diameter);
+
+	    return illum;
+
    }
    
    ASKAPTHROW(AskapError, "Unknown illumination type "<<illumType);
    return boost::shared_ptr<IBasicIllumination>(); // to keep the compiler happy
 }
-
 
 
