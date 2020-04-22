@@ -41,6 +41,7 @@
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <casacore/scimath/Fitting/LinearFitSVD.h>
 
 
 // logging stuff
@@ -60,7 +61,7 @@ using namespace askap::accessors;
 /// also support construction from a python dictionary (for example).
 /// The command line inputs are needed solely for MPI - currently no
 /// application specific information is passed on the command line.
-/// @param comms communication object 
+/// @param comms communication object
 /// @param parset ParameterSet for inputs
 ContSubtractParallel::ContSubtractParallel(askap::askapparallel::AskapParallel& comms,
       const LOFAR::ParameterSet& parset) : MEParallelApp(comms,parset)
@@ -68,14 +69,22 @@ ContSubtractParallel::ContSubtractParallel(askap::askapparallel::AskapParallel& 
   // the stub allows to reuse MEParallelApp code although we're not solving
   // for the normal equations here
   itsNe.reset(new scimath::NormalEquationsStub);
-  
-  itsModelReadByMaster = parset.getBool("modelReadByMaster", true);  
+
+  itsModelReadByMaster = parset.getBool("modelReadByMaster", true);
+  itsDoUVlin = parset.getBool("doUVlin", false);
+  itsOrder = parset.getInt("order", 1);
+  itsHarmonic = parset.getInt("harmonic", 1);
+  itsWidth = parset.getInt("width",0); // 0 = whole spectrum
+  itsOffset = min(max(0,parset.getInt("offset",0)),itsWidth);
+  if (itsWidth > 0) ASKAPCHECK(itsOffset < itsWidth,"The offset needs to be less than the width");
+  if (itsDoUVlin) ASKAPLOG_INFO_STR(logger, "Doing uvlin operation with order = "
+    << itsOrder<<", harmonic = "<<itsHarmonic<< ", width = "<< itsWidth <<" channels, offset = "<< itsOffset);
 }
 
 /// @brief Initialise continuum subtractor
 /// @details The parameters are taken from the parset file supplied in the constructor.
 /// This method does initialisation which may involve communications in the parallel case
-/// (i.e. distribution of the models between workers). Technically, we could've done this in 
+/// (i.e. distribution of the models between workers). Technically, we could've done this in
 /// the constructor.
 void ContSubtractParallel::init()
 {
@@ -99,17 +108,17 @@ void ContSubtractParallel::init()
 void ContSubtractParallel::initMeasurementEquation()
 {
    ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
-   
+
    // it doesn't matter which iterator to pass to the measurement equations
    // as we're only using accessor-based interface
    IDataSharedIter stubIter(new DataIteratorStub(1));
-   
+
    ASKAPCHECK(itsModel, "Model is not defined");
    ASKAPCHECK(gridder(), "Gridder is not defined");
-   
+
    // a part of the equation defined via image
    askap::scimath::Equation::ShPtr imgEquation;
-   
+
    if (SynthesisParamsHelper::hasImage(itsModel)) {
        ASKAPLOG_INFO_STR(logger, "Sky model contains at least one image, building an image-specific equation");
        // it should ignore parameters which are not applicable (e.g. components)
@@ -140,14 +149,14 @@ void ContSubtractParallel::initMeasurementEquation()
    } else {
        ASKAPTHROW(AskapError, "No sky models are defined");
    }
-   
+
    // we need accessor-based equation for the actual iteration. Make it now, if necessary.
    // Note, that component-based and composite equations are already accessor-based, so no
    // additional fiddling  is needed
-   
+
    boost::shared_ptr<IMeasurementEquation> accessorBasedEquation =
         boost::dynamic_pointer_cast<IMeasurementEquation>(itsEquation);
-   
+
    if (!accessorBasedEquation) {
         // form a replacement equation first
         const boost::shared_ptr<ImagingEquationAdapter> new_equation(new ImagingEquationAdapter);
@@ -157,7 +166,80 @@ void ContSubtractParallel::initMeasurementEquation()
         // replacing the original equation with an accessor-based adapter
         itsEquation = new_equation;
    }
-   
+
+}
+
+void ContSubtractParallel::modelSpectrum(casa::Vector<casa::Float> & model,
+        const casacore::Vector<casa::Float>& spec, const casa::Vector<casa::Bool>& mask) {
+    int nChan= spec.size();
+    int nParams = itsOrder+1+itsHarmonic*2;
+    casa::LSQaips fitter(nParams);
+    casa::Vector<casa::Double> xx(nParams);
+    casa::VectorSTLIterator<casa::Double> it(xx);
+
+     // we are doing the fitting in channel bins
+     if (itsWidth == 0) itsWidth = nChan;
+     for (int binStart=-itsOffset; binStart<nChan; binStart+=itsWidth) {
+         int start = max(0,binStart);
+         int end = min(binStart+itsWidth,nChan);
+         int binWidth = end - start;
+
+         for (int i=start; i < end; i++) {
+             if (mask(i)) {
+                 xx(0) = 1;
+                 for (int j=1; j<itsOrder+1; j++) {
+                     xx(j) = xx(j-1) * (i-start);
+                 }
+                 for (int j=0; j<itsHarmonic; j++) {
+                     xx(itsOrder+1+2*j)   = sin((j+1)*casa::C::pi*(i-start)/binWidth);
+                     xx(itsOrder+1+2*j+1) = cos((j+1)*casa::C::pi*(i-start)/binWidth);
+                     // we could use itsWidth instead of binWidth to keep 'frequency' the same
+                 }
+                 fitter.makeNorm(it,1.0,casa::Double(spec(i)));
+             }
+         }
+
+         casa::uInt nr1;
+         casa::Vector<casa::Double> solution(nParams);
+         fitter.invert(nr1);
+         fitter.solve(solution);
+
+         for (int i=start; i < end; i++) {
+             model(i) = solution(itsOrder);
+             for (int j=itsOrder-1; j>=0; j--) {
+                 model(i) = (i-start) * model(i) + solution(j);
+             }
+             for (int j=0; j<itsHarmonic; j++) {
+                  model(i) += solution(itsOrder+1+2*j)   * sin((j+1)*casa::C::pi*(i-start)/binWidth);
+                  model(i) += solution(itsOrder+1+2*j+1) * cos((j+1)*casa::C::pi*(i-start)/binWidth);
+             }
+         }
+         fitter.reset();
+     }
+}
+
+void ContSubtractParallel::subtractContFit(casacore::Cube<casacore::Complex>& vis,
+        const casacore::Cube<casacore::Bool>& flag) {
+    int nPol = vis.shape()(0);
+    int nChan = vis.shape()(1);
+    int nRow = vis.shape()(2);
+    casa::Vector<casa::Float> visreal(nChan), visimag(nChan), modelreal(nChan), modelimag(nChan);
+    casa::Vector<casa::Bool> mask(nChan);
+    for (int row=0; row<nRow; row++) {
+        for (int pol=0; pol<nPol; pol++) {
+            for (int chan=0; chan<nChan; chan++) {
+                casa::Complex v = vis(pol,chan,row);
+                visreal(chan) = casa::real(v);
+                visimag(chan) = casa::imag(v);
+                mask(chan) = !flag(pol,chan,row);
+            }
+            modelSpectrum(modelreal,visreal,mask);
+            modelSpectrum(modelimag,visimag,mask);
+            for (int chan=0; chan<nChan; chan++) {
+                vis(pol,chan,row) -= casa::Complex(modelreal(chan),modelimag(chan));
+            }
+        }
+    }
 }
 
 /// @brief perform the subtraction for the given dataset
@@ -177,14 +259,14 @@ void ContSubtractParallel::calcOne(const std::string &ms)
    } else {
       ASKAPLOG_INFO_STR(logger, "Reusing measurement equation" );
    }
-  
+
 
    boost::shared_ptr<IMeasurementEquation> accessorBasedEquation =
         boost::dynamic_pointer_cast<IMeasurementEquation>(itsEquation);
    ASKAPDEBUGASSERT(accessorBasedEquation);
- 
+
    TableDataSource ds(ms, TableDataSource::WRITE_PERMITTED, dataColumn());
-   ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());      
+   ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
    IDataSelectorPtr sel=ds.createSelector();
    sel << parset();
    IDataConverterPtr conv=ds.createConverter();
@@ -202,20 +284,23 @@ void ContSubtractParallel::calcOne(const std::string &ms)
         ASKAPDEBUGASSERT(model.ncolumn() == vis.ncolumn());
         ASKAPDEBUGASSERT(model.nplane() == vis.nplane());
         vis -= model;
+        if (itsDoUVlin) {
+            subtractContFit(vis,acc.flag());
+        }
    }
-   
+
    ASKAPLOG_INFO_STR(logger, "Finished continuum subtraction for "<< ms << " in "<< timer.real()
-                   << " seconds "); 
+                   << " seconds ");
 }
 
 
 /// @brief perform the subtraction
-/// @details This method iterates over one or more datasets, predicts visibilities according to 
+/// @details This method iterates over one or more datasets, predicts visibilities according to
 /// the model and subtracts these model visibilities from the original visibilities in the
 /// dataset. The intention is to call this method in a worker.
 void ContSubtractParallel::doSubtraction()
 {
-  if (itsComms.isWorker()) {        
+  if (itsComms.isWorker()) {
       if (itsComms.isParallel()) {
           calcOne(measurementSets()[itsComms.rank()-1]);
       } else {
@@ -225,5 +310,3 @@ void ContSubtractParallel::doSubtraction()
       }
   }
 }
-
-

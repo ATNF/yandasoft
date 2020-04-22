@@ -42,7 +42,7 @@ namespace synthesis {
 /// @details This class does the core operation to subtract continuum by doing visibility
 /// prediction from the given model in parallel.
 /// @ingroup parallel
-class ContSubtractParallel : public MEParallelApp 
+class ContSubtractParallel : public MEParallelApp
 {
 public:
    /// @brief Constructor from ParameterSet
@@ -50,31 +50,31 @@ public:
    /// also support construction from a python dictionary (for example).
    /// The command line inputs are needed solely for MPI - currently no
    /// application specific information is passed on the command line.
-   /// @param comms communication object 
+   /// @param comms communication object
    /// @param parset ParameterSet for inputs
    ContSubtractParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
- 
+
    /// @brief Initialise continuum subtractor
    /// @details The parameters are taken from the parset file supplied in the constructor.
    /// This method does initialisation which may involve communications in the parallel case
-   /// (i.e. distribution of the models between workers). Technically, we could've done this in 
+   /// (i.e. distribution of the models between workers). Technically, we could've done this in
    /// the constructor.
    void init();
-   
+
    /// @brief perform the subtraction
-   /// @details This method iterates over one or more datasets, predicts visibilities according to 
+   /// @details This method iterates over one or more datasets, predicts visibilities according to
    /// the model and subtracts these model visibilities from the original visibilities in the
    /// dataset. The intention is to call this method in a worker.
    void doSubtraction();
- 
+
  protected:
    /// @brief read the models from the parset file
    inline void readModels() const { SynParallel::readModels(itsModel); }
-   
+
    /// @brief initialise measurement equation
    /// @details This method initialises measurement equation
    void initMeasurementEquation();
-   
+
    /// @brief perform the subtraction for the given dataset
    /// @details This method iterates over the given dataset, predicts visibilities according to the
    /// model and subtracts these model visibilities from the original visibilities in the dataset.
@@ -82,23 +82,51 @@ public:
    /// All actual calculations are done inside this helper method.
    /// @param[in] ms measurement set name
    void calcOne(const std::string &ms);
-      
+
    // stubs for pure virtual methods which we don't use
    /// @brief calculate normal equations
    inline void calcNE() {}
-   
+
    /// @brief solve normal equations
    inline void solveNE() {}
-   
+
    /// @brief write results
    inline void writeModel(const std::string&) {}
-      
+
  private:
+   /// @brief generate a model spectrum by fitting the input spectrum where mask is true
+   /// @details Use polynomial fitting to derive a model spectrum from the input spectrum
+   /// @param[in] spec input spectrum
+   /// @param[in] mask input mask
+   /// @param[out] model output model spectrum
+   void modelSpectrum(casa::Vector<casa::Float> & model,
+            const casacore::Vector<casa::Float>& spec, const casa::Vector<casa::Bool>& mask);
+
+   /// @brief subtract continuum fit from the input visibilities
+   /// @details process input visibilities spectrum by spectrum, fitting and subtracting continuum
+   /// @param[in/out] vis the visibilities, will be modified on output
+   /// @param[in] flag the associated flags
+   void subtractContFit(casacore::Cube<casacore::Complex>& vis,
+            const casacore::Cube<casacore::Bool>& flag);
+
    /// @brief model is read by the master and distributed?
    /// @details Depending on the model file name (containing %w or not), the model
    /// can either be read in the master and distributed across the workers or read
    /// by workers directly. This data member is true, if the model is read by the master
-   bool itsModelReadByMaster;    
+   bool itsModelReadByMaster;
+
+   /// @brief do 'uvlin' like fit and subtract of residual continuum emission
+   bool itsDoUVlin;
+   /// @brief order of 'uvlin' like fit and subtract of residual continuum emission
+   int itsOrder;
+   /// @brief number of 'harmonic', i.e., sin and cos terms used in the fit
+   int itsHarmonic;
+   /// @brief number of channels to use for the fit, 0 means all
+   int itsWidth;
+   /// @brief offset of channel bins, first bin will have (width-offset) channels
+   /// @details the askap beamforming intervals can be a multiple of the basic 1 MHz
+   /// interval, but they don't necessarily start at channel 0 in the recorded spectrum
+   int itsOffset;
 };
 
 } // namespace synthesis
@@ -106,5 +134,3 @@ public:
 } // namespace askap
 
 #endif // #ifndef CONT_SUBTRACT_PARALLEL_H
-
-
