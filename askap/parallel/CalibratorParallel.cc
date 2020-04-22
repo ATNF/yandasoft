@@ -413,6 +413,10 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.smoothing.nsteps")) params["smoothingNsteps"] = parset.getString("solver.LSQR.smoothing.nsteps");
     if (parset.isDefined("solver.LSQR.smoothing.type")) params["smoothingType"] = parset.getString("solver.LSQR.smoothing.type");
 
+    if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont")) params["spectralDiscont"] = parset.getString("solver.LSQR.smoothing.spectralDiscont");
+    if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont.step")) params["spectralDiscontStep"] = parset.getString("solver.LSQR.smoothing.spectralDiscont.step");
+
+
     return params;
 }
 
