@@ -74,7 +74,8 @@ namespace askap
   namespace synthesis
   {
     /// @brief image accessor
-    boost::shared_ptr<accessors::IImageAccess<casacore::Float> > SynthesisParamsHelper::theirImageAccessor;
+    // boost::shared_ptr<accessors::IImageAccess<casacore::Float> > SynthesisParamsHelper::theirImageAccessor;
+    boost::shared_ptr<accessors::IImageAccess> SynthesisParamsHelper::theirImageAccessor;
 
     /// @brief default frequency frame
     casacore::MFrequency::Ref SynthesisParamsHelper::theirFreqFrame(casacore::MFrequency::TOPO);
@@ -702,7 +703,8 @@ namespace askap
     /// image handler. This method allows that. An exception is thrown if no image handler has
     /// been previously set up.
     /// @return a reference to image handler
-    accessors::IImageAccess<casacore::Float>& SynthesisParamsHelper::imageHandler()
+    // accessors::IImageAccess<casacore::Float>& SynthesisParamsHelper::imageHandler()
+    static boost::shared_ptr<accessors::IImageAccess>& imageHandler()
     {
       ASKAPCHECK(theirImageAccessor, "setUpImageHandler has to be called before any read/write operation");
       return *theirImageAccessor;

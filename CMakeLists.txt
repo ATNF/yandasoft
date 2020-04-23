@@ -77,13 +77,17 @@ endif(ENABLE_SHARED)
 
 # Yanda Packages
 # YandaSoft dependencies .. in order
-find_package(lofar-common REQUIRED)
-find_package(lofar-blob REQUIRED)
-find_package(askap-askap ${REQUIRED_VERSION} REQUIRED)
-find_package(askap-imagemath ${REQUIRED_VERSION} REQUIRED)
-find_package(askap-scimath ${REQUIRED_VERSION} REQUIRED)
-find_package(askap-parallel ${REQUIRED_VERSION} REQUIRED)
-find_package(askap-accessors ${REQUIRED_VERSION} REQUIRED)
+find_package(LofarCommon REQUIRED)
+find_package(LofarBlob REQUIRED)
+#find_package(askap-askap ${REQUIRED_VERSION} REQUIRED)
+find_package(Askap ${REQUIRED_VERSION} REQUIRED)
+#find_package(askap-imagemath ${REQUIRED_VERSION} REQUIRED)
+find_package(Imagemath ${REQUIRED_VERSION} REQUIRED)
+#find_package(askap-scimath ${REQUIRED_VERSION} REQUIRED)
+find_package(Scimath ${REQUIRED_VERSION} REQUIRED)
+find_package(AskapParallel ${REQUIRED_VERSION} REQUIRED)
+#find_package(askap-accessors ${REQUIRED_VERSION} REQUIRED)
+find_package(Accessors ${REQUIRED_VERSION} REQUIRED)
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(GSL REQUIRED)
@@ -94,7 +98,6 @@ find_package(CPPUnit)
 if (ENABLE_OPENMP)
 	find_package(OpenMP REQUIRED)
 endif()
-
 
 if (CASACORE3 OR CXX11)
 	set(CMAKE_CXX_STANDARD 11)
@@ -128,18 +131,33 @@ set_target_properties(yandasoft PROPERTIES
 add_library(askap::yandasoft ALIAS yandasoft)
 
 target_link_libraries(yandasoft PUBLIC
-	askap::askap
-	askap::scimath
-	askap::imagemath
-	lofar::Common
-	lofar::Blob
-	askap::accessors
-	askap::parallel
+	${ASKAP_LIBRARIES}
+	${SCIMATH_LIBRARIES}
+	${IMAGEMATH_LIBRARIES}
+	${LofarCommon_LIBRARIES}
+	${LofarBlob_LIBRARIES}
+	${ACCESSORS_LIBRARIES}
+	${ASKAPPARALLEL_LIBRARIES}
 	${log4cxx_LIBRARY}
 	${CASACORE_LIBRARIES}
-	${COMPONENTS_LIBRARY}
+	${COMPONENTS_LIBRARIES}
+	# ${COMPONENTS_LIBRARY}
 	${Boost_LIBRARIES}
 )
+
+# target_link_libraries(yandasoft PUBLIC
+# 	askap::askap
+# 	askap::scimath
+# 	askap::imagemath
+# 	lofar::Common
+# 	lofar::Blob
+# 	askap::accessors
+# 	askap::parallel
+# 	${log4cxx_LIBRARY}
+# 	${CASACORE_LIBRARIES}
+# 	${COMPONENTS_LIBRARY}
+# 	${Boost_LIBRARIES}
+# )
 
 target_compile_definitions(yandasoft PUBLIC
     casa=casacore
@@ -147,13 +165,22 @@ target_compile_definitions(yandasoft PUBLIC
     HAVE_LOG4CXX
 )
 
+message("PROJECT_SOURCE_DIR: ${PROJECT_SOURCE_DIR}")
+
 target_include_directories(yandasoft PUBLIC
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-  $<INSTALL_INTERFACE:include>
-  ${Boost_INCLUDE_DIRS}
-  ${COMPONENTS_INCLUDE_DIRS}
-  ${log4cxx_INCLUDE_DIRS}
-  ${CASACORE_INCLUDE_DIRS}
+	$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+	$<INSTALL_INTERFACE:include>
+	${Boost_INCLUDE_DIRS}
+	${COMPONENTS_INCLUDE_DIRS}
+	${log4cxx_INCLUDE_DIRS}
+	${CASACORE_INCLUDE_DIRS}
+	${ASKAP_INCLUDE_DIRS}
+	${SCIMATH_INCLUDE_DIRS}
+	${IMAGEMATH_INCLUDE_DIRS}
+	${LofarCommon_INCLUDE_DIRS}
+	${LofarBlob_INCLUDE_DIRS}
+	${ACCESSORS_INCLUDE_DIRS}
+	${ASKAPPARALLEL_INCLUDE_DIRS}
 )
 
 if (MPI_FOUND)

@@ -359,7 +359,7 @@ build_and_install() {
 		comp_opts="-DCMAKE_SYSTEM_NAME=CrayLinuxEnvironment -DCRAYPE_LINK_TYPE=dynamic -DCMAKE_CXX_COMPILER=CC -DCMAKE_C_COMPILER=cc"
                 export CRAYPE_LINK_TYPE=dynamic
 	else
-		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc"
+		comp_opts="-DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_BUILD_TYPE=RELEASE"
 	fi
 
         cmakeline=" ${cmake} -DCMAKE_INSTALL_PREFIX="$prefix" $comp_opts "$@" .."

@@ -79,7 +79,8 @@ class CubeBuilder {
     private:
 
         
-        boost::shared_ptr<accessors::IImageAccess<T> > itsCube;
+        // boost::shared_ptr<accessors::IImageAccess<T> > itsCube;
+        boost::shared_ptr<accessors::IImageAccess> itsCube;
 
 
     /// Image name from parset - must start with "image."

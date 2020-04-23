@@ -40,7 +40,8 @@ machine_targets = ["generic"]
 # where X, Y and Z are version numbers (major, minor and revision).
 # Our current MPI targets:
 #mpi_targets = ["mpich", "openmpi-4.0.2", "openmpi-3.1.4", "openmpi-2.1.6", "openmpi-1.10.7"]
-mpi_targets = ["mpich"]
+#mpi_targets = ["mpich"]
+mpi_targets = ["openmpi-4.0.2"]
 
 #------------------------------------------------------------------------------
 # TODO: Add logging
@@ -261,6 +262,8 @@ def make_base_image(machine, mpi, prepend, append, actual):
     "WORKDIR /home\n"
     "RUN git clone " + git_repository + "\n"
     "WORKDIR /home/yandasoft\n"
+    "WORKDIR /home/yandasoft/deploy\n"
+    "WORKDIR /home/yandasoft/deploy/general\n"
     "RUN ./build_all.sh -C \"-DDATA_DIR=/usr/local/share/casacore/data\"\n" 
     "RUN ./build_all.sh -r\n")
 
@@ -359,6 +362,8 @@ def make_final_image(machine, mpi, prepend, append, base_image, actual):
     common_bottom_part = (
     "WORKDIR /home/yandasoft\n"
     "RUN git pull " + git_repository + "\n"
+    "WORKDIR /home/yandasoft/deploy\n"
+    "WORKDIR /home/yandasoft/deploy/general\n"
     "RUN ./build_all.sh -a -O \"-DHAVE_MPI=1\"\n"
     "RUN ./build_all.sh -y -O \"-DHAVE_MPI=1\"\n"
     "RUN ./build_all.sh -e -O \"-DHAVE_MPI=1\"\n")
