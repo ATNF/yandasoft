@@ -80,6 +80,8 @@ public:
             }
             float threshold = subset.getFloat("threshold",2.0);
             int order = subset.getInt("order",2);
+            int blocksize = subset.getInt("blocksize",0);
+            int shift = subset.getInt("shift",0);
 
             FitsImageAccessParallel accessor;
 
@@ -98,12 +100,26 @@ public:
             const int iax = 1;
             casa::Cube<casa::Float> arr = accessor.read_all(comms,infile,iax);
 
+            // Are we processing in blocks of channels (to match beamforming intervals)?
+            int nz = arr.shape()(2);
+            if (blocksize==0) {
+                blocksize = nz;
+                shift = 0;
+            }
+
             // Process spectrum by spectrum
             ASKAPLOG_INFO_STR(logger,"Process the spectra");
             for (uint y = 0; y< arr.shape()(1); y++ ) {
                 for (uint x = 0; x < arr.shape()(0); x++ ) {
-                    casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
-                    process_spectrum(spec, threshold, order);
+                    for (int z = 0; z < nz/blocksize; z++) {
+                        int start = -shift + z * blocksize;
+                        int stop = casa::min(start + blocksize, nz);
+                        start = casa::max(0, start);
+                        int length = stop - start;
+                        casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),
+                            casa::Slice(start,length)));
+                        process_spectrum(spec, threshold, order);
+                    }
                 }
             }
 
@@ -130,8 +146,8 @@ public:
 
             // first remove spectral index
 
-            // take every 10th point
-            const int inc = casa::min(n/10,10);
+            // use every 10th point, more for shorter spectra
+            const int inc = casa::max(1,casa::min(n/100,10));
             const int n1 = n/inc;
             casa::Vector<casa::Float> y1(n1);
             for (int i=0; i<n1; i++) y1(i) = vec(i*inc);
@@ -159,7 +175,7 @@ public:
             casa::Float offset = 0;
             casa::Float slope = 0;
 
-            if (ngood > 0) {
+            if (ngood > 1) {
                 xmean = mean(x);
                 x -= xmean;
                 // fit line to spectrum and subtract it
@@ -200,19 +216,6 @@ public:
             // bool ok = fitter.residual(model, x_full, casa::True);
             // vec -= model;
 
-            // using coefficients table - segv
-            // fitter.set(order+1);
-            // casa::Matrix<casa::Float> xx(n, order+1);
-            // for (int i=0; i<n; i++) {
-            //     xx(i,0) = 1;
-            //     for (int j=1; j<order+1; j++) xx(i,j) = xx(i,j-1)*casa::Float(i+1);
-            // }
-            // casa::Vector<casa::Float> solution = fitter.fit(xx, vec, &mask);
-            // casa::Vector<casa::Float> model(n);
-            // // ASKAPLOG_INFO_STR(logger,"Subtracting model");
-            // bool ok = fitter.residual(model, xx, casa::True);
-            // vec -= model;
-
             // using LSQaips - need invert before solve
             // Note: fitter uses double internally, giving float inputs just results in internal copying
             //       and is slower
@@ -227,29 +230,24 @@ public:
                     }
                     //ASKAPLOG_INFO_STR(logger,"makeNorm "<<i<<" "<<vec(i));
                     fitter.makeNorm(it,1.0,casa::Double(vec(i)));
-                    //fitter.makeNorm(it,1.0f,vec(i));
                 }
             }
             casa::uInt nr1;
             //cout << "Invert = " << fitter.invert(nr1);
             //cout << ", rank=" << nr1 << endl;
             casa::Vector<casa::Double> solution(order+1);
-            fitter.invert(nr1);
-            fitter.solve(solution);
-            // cout << "Sol : ";
-            // for (uInt i=0; i<order+1; i++) {
-            //   cout << solution[i] << " ";
-            // }
-            // cout << endl;
+            if (fitter.invert(nr1)) {
+                fitter.solve(solution);
 
-            casa::Vector<casa::Float> model(n);
-            for (int i=0; i<n; i++) {
-                model(i)=solution(order);
-                for (int j=order-1; j>=0; j--) {
-                    model(i) = i * model(i) + solution(j);
+                casa::Vector<casa::Float> model(n);
+                for (int i=0; i<n; i++) {
+                    model(i)=solution(order);
+                    for (int j=order-1; j>=0; j--) {
+                        model(i) = i * model(i) + solution(j);
+                    }
                 }
+                vec -= model;
             }
-            vec -= model;
         }
 
     };
