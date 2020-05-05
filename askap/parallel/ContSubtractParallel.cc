@@ -76,9 +76,11 @@ ContSubtractParallel::ContSubtractParallel(askap::askapparallel::AskapParallel& 
   itsHarmonic = parset.getInt("harmonic", 1);
   itsWidth = parset.getInt("width",0); // 0 = whole spectrum
   itsOffset = min(max(0,parset.getInt("offset",0)),itsWidth);
+  itsThreshold = max(0.0f,parset.getFloat("threshold",2.5));
   if (itsWidth > 0) ASKAPCHECK(itsOffset < itsWidth,"The offset needs to be less than the width");
   if (itsDoUVlin) ASKAPLOG_INFO_STR(logger, "Doing uvlin operation with order = "
-    << itsOrder<<", harmonic = "<<itsHarmonic<< ", width = "<< itsWidth <<" channels, offset = "<< itsOffset);
+    << itsOrder<<", harmonic = "<<itsHarmonic<< ", width = "<< itsWidth
+    <<" channels, offset = "<< itsOffset << " and threshold = "<< itsThreshold);
 }
 
 /// @brief Initialise continuum subtractor
@@ -170,52 +172,173 @@ void ContSubtractParallel::initMeasurementEquation()
 }
 
 void ContSubtractParallel::modelSpectrum(casa::Vector<casa::Float> & model,
-        const casacore::Vector<casa::Float>& spec, const casa::Vector<casa::Bool>& mask) {
+        const casacore::Vector<casa::Float>& spec, const casa::Vector<casa::Bool>& mask)
+{
     int nChan= spec.size();
     int nParams = itsOrder+1+itsHarmonic*2;
     casa::LSQaips fitter(nParams);
     casa::Vector<casa::Double> xx(nParams);
+    casa::Vector<casa::Double> solution(nParams);
     casa::VectorSTLIterator<casa::Double> it(xx);
+    casa::Vector<casa::Bool> tmask(nChan);
 
-     // we are doing the fitting in channel bins
-     if (itsWidth == 0) itsWidth = nChan;
-     for (int binStart=-itsOffset; binStart<nChan; binStart+=itsWidth) {
-         int start = max(0,binStart);
-         int end = min(binStart+itsWidth,nChan);
-         int binWidth = end - start;
+    // If we are doing outlier rejection against the model iterate a few times
+    const int niter = (itsThreshold > 0 ? 3 : 1);
+    // initial mask is the data flags
+    tmask = mask;
+    // initial model is zero
+    model = 0;
 
-         for (int i=start; i < end; i++) {
-             if (mask(i)) {
-                 xx(0) = 1;
-                 for (int j=1; j<itsOrder+1; j++) {
-                     xx(j) = xx(j-1) * (i-start);
-                 }
-                 for (int j=0; j<itsHarmonic; j++) {
-                     xx(itsOrder+1+2*j)   = sin((j+1)*casa::C::pi*(i-start)/binWidth);
-                     xx(itsOrder+1+2*j+1) = cos((j+1)*casa::C::pi*(i-start)/binWidth);
-                     // we could use itsWidth instead of binWidth to keep 'frequency' the same
-                 }
-                 fitter.makeNorm(it,1.0,casa::Double(spec(i)));
-             }
-         }
+    // we are doing the fitting in channel bins
+    if (itsWidth == 0) itsWidth = nChan;
+    casa::Vector<casa::Float> y(itsWidth);
+    casa::Block<casa::Float> tmp;
+    uint lastDof = nParams;
+    for (int binStart=-itsOffset; binStart<nChan; binStart+=itsWidth) {
+        int start = max(0,binStart);
+        int end = min(binStart+itsWidth,nChan);
+        int binWidth = end - start;
+        for (int iter = 0; iter<niter; iter++) {
+            // do thresholding of values before fitting?
+            if (itsThreshold > 0) {
+                // count how many valid values
+                int n = 0;
+                // collect valid values
+                for (int i=start; i < end; i++) {
+                    if (tmask(i)) {
+                        y(n++) = spec(i) - model(i);
+                    }
+                }
+                // work out robust sigma and median
+                if (n>0) {
+                    casa::Float q25 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.25f, casa::False, casa::True);
+                    casa::Float q50 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.50f, casa::False, casa::True);
+                    casa::Float q75 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.75f, casa::False, casa::True);
+                    // if (tmp.nelements()>0) casa::cerr<<"tmp was used!"<<casa::endl;
+                    casa::Float sigma = (q75-q25)/1.35; // robust sigma estimate
+                    int count = 0;
+                    // flag outliers
+                    for (int i=start; i < end; i++) {
+                        if (mask(i) && (abs((spec(i)-model(i)) - q50) > itsThreshold * sigma)) {
+                            tmask(i) = false;
+                            count++;
+                        } else {
+                            tmask(i) = mask(i);
+                        }
+                    }
+                    // extend the mask by a few channels - disabled for now
+                    const int nextend = 0;
+                    if (nextend > 0) {
+                        bool clip = false;
+                        int first = end, last = 0;
+                        int i = start;
+                        while (i < end) {
+                            if (mask(i) && !tmask(i)) {
+                                if (!clip) first = i;
+                                clip = true;
+                                i++;
+                            } else {
+                                if (clip) last = i - 1;
+                                clip = false;
+                                if (last - first > 2) {
+                                    for (int k=0; k<nextend; k++) {
+                                        if (first-1-k >= start) tmask(first-1-k) = false;
+                                        if (i+k < end) tmask(i+k) = false;
+                                    }
+                                    i+=nextend;
+                                    first = end;
+                                } else {
+                                    i++;
+                                }
+                            }
+                        }
+                    }
 
-         casa::uInt nr1;
-         casa::Vector<casa::Double> solution(nParams);
-         fitter.invert(nr1);
-         fitter.solve(solution);
+                    int count2 = 0;
+                    for (int i=start; i<end; i++) if (mask(i) && !tmask(i)) count2++;
+                    //casa::cerr<<"iter="<<iter<<", n="<<n<<", start="<<start<<", median="<<q50<<", rsigma="<<sigma<<", outliers flagged: "<<count<<", extended to "<<count2<<casa::endl;
+                    //casa::cerr<<"model("<<start<<")="<<model(start)<<", model("<<end-1<<")="<<model(end-1)<<
+                    //    ", y(0)="<<y(0)<<", y("<<n-1<<")="<<y(n-1)<<casa::endl;
+                    if (iter > 0 && count2 == 0) break; // no further change expected
+                }
+            }
 
-         for (int i=start; i < end; i++) {
-             model(i) = solution(itsOrder);
-             for (int j=itsOrder-1; j>=0; j--) {
-                 model(i) = (i-start) * model(i) + solution(j);
-             }
-             for (int j=0; j<itsHarmonic; j++) {
-                  model(i) += solution(itsOrder+1+2*j)   * sin((j+1)*casa::C::pi*(i-start)/binWidth);
-                  model(i) += solution(itsOrder+1+2*j+1) * cos((j+1)*casa::C::pi*(i-start)/binWidth);
-             }
-         }
-         fitter.reset();
-     }
+            // apply external mask - would need to read this from file
+            //for (int i=start; i<end; i++) if (i > 40 && i < 60)  tmask(i) = false;
+
+            // We may need to limit #degrees of freedom (like miriad uvlin) if there are large gaps.
+            // Higher orders blow up quicker for given gap size; order<=1 is safest with large gaps.
+            // If valid channels < 60% -> reduce #dof, if valid channels < 5*(#dof) -> reduce dof
+            int valid = 0;
+            for (int i=start; i< end; i++) if (tmask(i)) valid++;
+            int order = itsOrder;
+            int harm = itsHarmonic;
+            if (float(valid) < 0.6*binWidth) {
+                if (order > harm) {
+                    order=max(0,order-1);
+                } else {
+                    harm=max(0,harm-1);
+                }
+            }
+            uint dof = order + 1 + 2 * harm;
+            while (valid < 5 * dof) {
+                if (order > harm) {
+                    order=max(0,order-1);
+                } else {
+                    harm=max(0,harm-1);
+                }
+                dof = order + 1 + 2 * harm;
+                if (dof == 1) break;
+            }
+            // make sure fitter is ready for new fit
+            if (lastDof != dof) {
+                fitter.set(dof);
+                lastDof = dof;
+            } else {
+                fitter.reset();
+            }
+            // set the basis functions: polynomial and sin, cos terms
+            for (int i=start; i < end; i++) {
+                // we could use itsWidth instead of binWidth to keep 'frequency' the same for sine
+                float x = (i-start) / float(binWidth);
+                if (tmask(i)) {
+                    xx(0) = 1;
+                    for (int j=1; j<order+1; j++) {
+                        xx(j) = xx(j-1) * x;
+                    }
+                    for (int j=0; j<harm; j++) {
+                        xx(order+1+2*j)   = sin((j+1)*casa::C::pi*x);
+                        xx(order+1+2*j+1) = cos((j+1)*casa::C::pi*x);
+                    }
+                    fitter.makeNorm(it,1.0,casa::Double(spec(i)));
+                }
+            }
+
+            casa::uInt nr1;
+            casa::Bool ok = fitter.invert(nr1);
+            if (ok) {
+                fitter.solve(solution.data());
+                //casa::Float chisq = fitter.getChi();
+                //casa::Float sd1 = fitter.getSD();
+                //casa::cerr << "Fit="<< ok <<", rank="<<nr1<<", chisq="<<chisq<<", sd="<<sd1<<", sol"<<solution<<casa::endl;
+
+                // evaluate the solution to generate the model
+                for (int i=start; i < end; i++) {
+                    float x = (i-start) / float(binWidth);
+                    model(i) = solution(order);
+                    for (int j=order-1; j>=0; j--) {
+                        model(i) = x * model(i) + solution(j);
+                    }
+                    for (int j=0; j<harm; j++) {
+                        model(i) += solution(order+1+2*j)   * sin((j+1)*casa::C::pi*x);
+                        model(i) += solution(order+1+2*j+1) * cos((j+1)*casa::C::pi*x);
+                    }
+                }
+            } else {
+                break; // no point iterating if the fit failed, keep last model or zero
+            }
+        }
+    }
 }
 
 void ContSubtractParallel::subtractContFit(casacore::Cube<casacore::Complex>& vis,
