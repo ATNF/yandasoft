@@ -59,8 +59,9 @@
 //#include "casacore/tables/DataMan/DataManAccessor.h"
 #include "casacore/ms/MeasurementSets/MeasurementSet.h"
 #include "casacore/ms/MeasurementSets/MSColumns.h"
+#include "casacore/casa/Quanta/MVTime.h"
 
-ASKAP_LOGGER(logger, ".msmerge2");
+ASKAP_LOGGER(logger, ".msmerge");
 
 using namespace casa;
 
@@ -381,155 +382,310 @@ void mergeSpectralWindow(const std::vector< boost::shared_ptr<const ROMSColumns>
     dc.totalBandwidth().put(DEST_ROW, totalBandwidth);
 }
 
+Vector<double> collectTimes(const std::vector< boost::shared_ptr<const ROMSColumns> >& srcMscs) {
+    const int n = srcMscs.size();
+    casa::Vector<casa::Vector<double>> times(n);
+    // work out first and last time present
+    double first = 0, last=0;
+    for (uInt i = 0; i < n; i++) {
+        times(i) = srcMscs[i]->time().getColumn();
+        if (i == 0) {
+            first = min(times(i));
+            last = max(times(i));
+        } else {
+            first = min(first,min(times(i)));
+            last = max(last,max(times(i)));
+        }
+    }
+    // get integration time
+    double interval = 1e10;
+    for (uInt i=1; i < times(0).nelements(); i++) {
+        double diff = times(0)(i)-times(0)(i-1);
+        if (diff > 0) interval = min (interval, diff);
+    }
+
+    // get max number of integrations present
+    uint maxIntegrations = (last - first) / interval + 1;
+    casa::Vector<double> mergedTimes(maxIntegrations);
+
+    // get list of all times present
+    uint count = 0;
+    mergedTimes(0) = first;
+    casa::Vector<uInt> ind(n,0);
+    while (mergedTimes(count) < last) {
+        double nextTime = last;
+        for (uInt i = 0; i < n; i++) {
+            uInt ntimes = times(i).nelements();
+            while(ind(i) < ntimes && times(i)(ind(i)) <= mergedTimes(count)) ind(i)++;
+            if (ind(i) < ntimes) {
+                nextTime = min(times(i)(ind(i)), nextTime);
+            }
+        }
+        mergedTimes(++count) = nextTime;
+    }
+    count++;
+    mergedTimes.resize(count,True);
+
+    return mergedTimes;
+}
+
 void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& srcMscs,
-                    casa::MeasurementSet& dest, const IPosition& tileShape)
+                    boost::shared_ptr<casa::MeasurementSet>& dest, const IPosition& tileShape,
+                    uInt nBaselines, bool dryRun, bool detectMissingIntegrations)
 {
-    MSColumns dc(dest);
-    // Add rows upfront
-    const ROMSColumns& sc = *(srcMscs[0]);
-    const casa::uInt nRows = sc.nrow();
-    dest.addRow(nRows);
-    ASKAPLOG_INFO_STR(logger,  "tileshape="<< tileShape(0) << ","<<tileShape(1)<<","<<tileShape(2) );
+    uInt nMS = srcMscs.size();
+    Vector<double> mergedTimes;
+    uInt nRows = srcMscs[0]->nrow();
+    // nTimes is really the number of tiles in the row direction
+    // unless we are detecting missing integrations
+    uInt nTimes = nRows / tileShape(2);
+    if (nRows % tileShape(2) != 0) nTimes++;
+    // baselines per tile
+    uInt nBase = tileShape(2);
+    // Check for missing integrations
+    // This assumes ASKAP data with fixed number of baselines per integration throughout
+    if (detectMissingIntegrations) {
+        mergedTimes = collectTimes(srcMscs);
+        nTimes = mergedTimes.nelements();
+        nRows = nBaselines * nTimes;
+        // baselines per integration
+        nBase = nBaselines;
+    }
+    boost::shared_ptr<MSColumns> dc;
+    if (!dryRun) {
+        dc = boost::shared_ptr<MSColumns>(new MSColumns(*dest));
+        // Add rows upfront
+        dest->addRow(nRows);
+    }
+    ASKAPLOG_INFO_STR(logger,  "Number of rows in output:"<< nRows<<", tileshape = "<< tileShape);
     // 2: Size the matrix for data and flag
-    const uInt nPol = sc.data()(0).shape()(0);
+    const uInt nPol = srcMscs[0]->data().shape(0)(0);
     uInt nChanTotal = 0;
-    for (uInt i = 0; i < srcMscs.size(); i++) {
-        nChanTotal += srcMscs[i]->data().shape(0)(1);
+    casa::Vector<uInt> nChan(nMS);
+    for (uInt i = 0; i < nMS; i++) {
+        nChan(i) = srcMscs[i]->data().shape(0)(1);
+        nChanTotal += nChan(i);
     }
     casa::Cube<casa::Complex> data(nPol, nChanTotal,tileShape(2));
     casa::Cube<casa::Bool> flag(nPol, nChanTotal,tileShape(2));
 
-    // For each row
     int lastPerc = 0;
-    for (uInt row = 0; row < nRows; row+=tileShape(2)) {
-        int nRowsThisIteration = std::min(nRows-row+0l,tileShape(2));
-        const Slicer rowslicer(IPosition(1, row), IPosition(1, nRowsThisIteration),
-                Slicer::endIsLength);
-        if (10*row/nRows > lastPerc/10) {
-            ASKAPLOG_INFO_STR(logger,  "Merging row " << row << " of " << nRows);
-            lastPerc = 100*row/nRows;
+    uInt nIntperTile = tileShape(2)/nBase;
+    uInt lastTileStart = nTimes - 1;
+    uInt lastTileSize = nRows - lastTileStart * nBase;
+    if (detectMissingIntegrations) {
+        lastTileStart = (nTimes / nIntperTile) * nIntperTile;
+        lastTileSize = (nTimes - lastTileStart) * nBase;
+    }
+    //ASKAPLOG_INFO_STR(logger, "last tile start "<< lastTileStart << ", last tile size = "<<lastTileSize);
+    Vector<uInt> row(nMS,0);
+    uInt dataRow = 0;
+    const double tol = 1.0; // tolerance for comparing timestamps is 1s
+    // For each integration
+    for (uInt j = 0, outRow=0; j < nTimes; j++, outRow+=nBase) {
+        const Slicer destRowSlicer(IPosition(1, outRow), IPosition(1, nBase), Slicer::endIsLength);
+        if (10*outRow/nRows > lastPerc/10) {
+            if (detectMissingIntegrations) {
+                ASKAPLOG_INFO_STR(logger,  "Merging row " <<  outRow<< " of " << nRows <<", Integration "<<j<<"/"<<nTimes);
+            } else {
+                ASKAPLOG_INFO_STR(logger,  "Merging row " <<  outRow<< " of " << nRows);
+            }
+            lastPerc = 100*outRow/nRows;
         }
 
+        // Find first MS that has this timeslot
+        casa::Bool found = False;
+        uInt k = 0;
+        if (detectMissingIntegrations) {
+            for (k = 0; k< srcMscs.size(); k++) {
+                if (abs(srcMscs[k]->time()(row(k)) - mergedTimes(j)) < tol)  break;
+            }
+        }
+        ASKAPCHECK(k<srcMscs.size(),"Logic error in mergeMainTable");
+        const ROMSColumns& sc(*srcMscs[k]);
+        const Slicer srcRowSlicer(IPosition(1,row(k)),IPosition(1,nBase), Slicer::endIsLength);
+        //ASKAPLOG_INFO_STR(logger, "Integration # "<<j << ", outRow = "<<outRow << ", row("<<k<<")="<<row(k));
         // 1: Copy over the simple cells (i.e. those not needing merging)
-        dc.scanNumber().putColumnRange(rowslicer, sc.scanNumber().getColumnRange(rowslicer));
-        dc.fieldId().putColumnRange(rowslicer, sc.fieldId().getColumnRange(rowslicer));
-        dc.dataDescId().putColumnRange(rowslicer, sc.dataDescId().getColumnRange(rowslicer));
-        dc.time().putColumnRange(rowslicer, sc.time().getColumnRange(rowslicer));
-        dc.timeCentroid().putColumnRange(rowslicer, sc.timeCentroid().getColumnRange(rowslicer));
-        dc.arrayId().putColumnRange(rowslicer, sc.arrayId().getColumnRange(rowslicer));
-        dc.processorId().putColumnRange(rowslicer, sc.processorId().getColumnRange(rowslicer));
-        dc.exposure().putColumnRange(rowslicer, sc.exposure().getColumnRange(rowslicer));
-        dc.interval().putColumnRange(rowslicer, sc.interval().getColumnRange(rowslicer));
-        dc.observationId().putColumnRange(rowslicer, sc.observationId().getColumnRange(rowslicer));
-        dc.antenna1().putColumnRange(rowslicer, sc.antenna1().getColumnRange(rowslicer));
-        dc.antenna2().putColumnRange(rowslicer, sc.antenna2().getColumnRange(rowslicer));
-        dc.feed1().putColumnRange(rowslicer, sc.feed1().getColumnRange(rowslicer));
-        dc.feed2().putColumnRange(rowslicer, sc.feed2().getColumnRange(rowslicer));
-        dc.uvw().putColumnRange(rowslicer, sc.uvw().getColumnRange(rowslicer));
-        dc.flagRow().putColumnRange(rowslicer, sc.flagRow().getColumnRange(rowslicer));
-        dc.weight().putColumnRange(rowslicer, sc.weight().getColumnRange(rowslicer));
-        dc.sigma().putColumnRange(rowslicer, sc.sigma().getColumnRange(rowslicer));
-
-        if (nRowsThisIteration!=tileShape(2)) {
-            // for the last set of rows we may need to resize
-            data.resize(nPol,nChanTotal,nRowsThisIteration);
-            flag.resize(nPol,nChanTotal,nRowsThisIteration);
+        if (!dryRun) {
+            dc->scanNumber().putColumnRange(destRowSlicer, sc.scanNumber().getColumnRange(srcRowSlicer));
+            dc->fieldId().putColumnRange(destRowSlicer, sc.fieldId().getColumnRange(srcRowSlicer));
+            dc->dataDescId().putColumnRange(destRowSlicer, sc.dataDescId().getColumnRange(srcRowSlicer));
+            dc->time().putColumnRange(destRowSlicer, sc.time().getColumnRange(srcRowSlicer));
+            dc->timeCentroid().putColumnRange(destRowSlicer, sc.timeCentroid().getColumnRange(srcRowSlicer));
+            dc->arrayId().putColumnRange(destRowSlicer, sc.arrayId().getColumnRange(srcRowSlicer));
+            dc->processorId().putColumnRange(destRowSlicer, sc.processorId().getColumnRange(srcRowSlicer));
+            dc->exposure().putColumnRange(destRowSlicer, sc.exposure().getColumnRange(srcRowSlicer));
+            dc->interval().putColumnRange(destRowSlicer, sc.interval().getColumnRange(srcRowSlicer));
+            dc->observationId().putColumnRange(destRowSlicer, sc.observationId().getColumnRange(srcRowSlicer));
+            dc->antenna1().putColumnRange(destRowSlicer, sc.antenna1().getColumnRange(srcRowSlicer));
+            dc->antenna2().putColumnRange(destRowSlicer, sc.antenna2().getColumnRange(srcRowSlicer));
+            dc->feed1().putColumnRange(destRowSlicer, sc.feed1().getColumnRange(srcRowSlicer));
+            dc->feed2().putColumnRange(destRowSlicer, sc.feed2().getColumnRange(srcRowSlicer));
+            dc->uvw().putColumnRange(destRowSlicer, sc.uvw().getColumnRange(srcRowSlicer));
+            dc->flagRow().putColumnRange(destRowSlicer, sc.flagRow().getColumnRange(srcRowSlicer));
+            dc->weight().putColumnRange(destRowSlicer, sc.weight().getColumnRange(srcRowSlicer));
+            dc->sigma().putColumnRange(destRowSlicer, sc.sigma().getColumnRange(srcRowSlicer));
+        }
+        if (j == lastTileStart) {
+            // for the last set of rows we need to resize
+            data.resize(nPol,nChanTotal,lastTileSize);
+            flag.resize(nPol,nChanTotal,lastTileSize);
         }
 
         // 3: Copy the data from each input into the output matrix
         uInt destChan = 0;
-        for (uInt i = 0; i < srcMscs.size(); ++i) {
-            const casa::Cube<casa::Complex> srcData = srcMscs[i]->data().getColumnRange(rowslicer);
-            const casa::Cube<casa::Bool> srcFlag = srcMscs[i]->flag().getColumnRange(rowslicer);
-            const uInt nChan = srcMscs[i]->data().shape(0)(1);
-            for (uInt irow = 0; irow < nRowsThisIteration; irow++) {
-                data(Slice(), Slice(destChan,nChan), irow) = srcData(Slice(), Slice(), irow);
-                flag(Slice(), Slice(destChan,nChan), irow) = srcFlag(Slice(), Slice(), irow);
+        uInt destRow = (j % nIntperTile) * nBase;
+        for (uInt i = 0; i < nMS; ++i) {
+            // check if data is available
+            if (!detectMissingIntegrations || abs(srcMscs[i]->time()(row(i)) - mergedTimes(j)) < tol) {
+                if (!dryRun) {
+                    const Slicer srcDataSlicer(IPosition(1,row(i)),IPosition(1,nBase), Slicer::endIsLength);
+                    const casa::Cube<casa::Complex> srcData = srcMscs[i]->data().getColumnRange(srcDataSlicer);
+                    const casa::Cube<casa::Bool> srcFlag = srcMscs[i]->flag().getColumnRange(srcDataSlicer);
+                    for (uInt irow = 0, our; irow < nBase; irow++) {
+                        data(Slice(), Slice(destChan,nChan(i)), destRow + irow) = srcData(Slice(), Slice(), irow);
+                        flag(Slice(), Slice(destChan,nChan(i)), destRow + irow) = srcFlag(Slice(), Slice(), irow);
+                    }
+                }
+                row(i) += nBase;
+            } else {
+                // no data for this integration for this MS, set flags
+                if (!dryRun) {
+                    for (uInt irow = 0; irow < nBase; irow++) {
+                        data(Slice(), Slice(destChan,nChan(i)), destRow + irow) = 0;
+                        flag(Slice(), Slice(destChan,nChan(i)), destRow + irow) = True;
+                    }
+                }
+                ASKAPLOG_INFO_STR(logger,  "Missing integration for input file " <<  srcMscs[i]->time().table().tableName()
+                    << " at row " << row(i) << ", "<<MVTime(mergedTimes(j)/C::day).string(MVTime::YMD));
             }
-            destChan += nChan;
+            destChan += nChan(i);
         }
-        // 4: Add those merged cells
-        dc.data().putColumnRange(rowslicer, data);
-        dc.flag().putColumnRange(rowslicer, flag);
+        // 4: Add those merged cells when we've filled a tile or reached the end
+        if ((j+1) % nIntperTile == 0 || j == nTimes - 1) {
+            //ASKAPLOG_INFO_STR(logger, "Writing tile at int# "<<j << "/"<<nTimes<<" data row ="<<
+            //dataRow<< ", data shape = "<<data.shape());
+            if (!dryRun) {
+                const Slicer dataRowSlicer(IPosition(1, dataRow), IPosition(1, data.shape()(2)),
+                        Slicer::endIsLength);
+                dc->data().putColumnRange(dataRowSlicer, data);
+                dc->flag().putColumnRange(dataRowSlicer, flag);
+            }
+            dataRow += nIntperTile * nBase;
+        }
     }
 }
 
 void merge(const std::vector<std::string>& inFiles, const std::string& outFile, casa::uInt tileNcorr = 4,
-    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
+    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0, bool dryRun = false)
 {
     // Open the input measurement sets
     std::vector< boost::shared_ptr<const casa::MeasurementSet> > in;
     std::vector< boost::shared_ptr<const ROMSColumns> > inColumns;
     std::vector<std::string>::const_iterator it;
     uInt nChanOut = 0;
+    uInt nBaselines = 0;
+    uInt nRow = 0;
+    bool sameSize = true;
+    casa::String telescope;
     for (it = inFiles.begin(); it != inFiles.end(); ++it) {
         const boost::shared_ptr<const casa::MeasurementSet> p(new casa::MeasurementSet(*it));
         in.push_back(p);
         inColumns.push_back(boost::shared_ptr<const ROMSColumns>(new ROMSColumns(*p)));
         nChanOut += inColumns.back()->data().shape(0)(1);
+        if (nBaselines ==0) {
+            uInt nAnt = inColumns.back()->antenna().nrow();
+            // number of baselines including autocorrelations
+            nBaselines = nAnt * (nAnt + 1) / 2;
+        }
+        // Check all inputs MSs have same number of rows
+        if (nRow > 0) {
+            sameSize = sameSize && (nRow == p->nrow());
+        } else {
+            nRow = p->nrow();
+            telescope = inColumns.back()->observation().telescopeName()(0);
+        }
     }
+    // We can only deal with missing rows for ASKAP data
+    ASKAPCHECK(sameSize || telescope == "ASKAP",
+        "All input MeasurementSets should have the same number of rows");
+
     if (tileNcorr < 1) tileNcorr = 1;
     if (tileNchan < 1) tileNchan = 1;
     // Set tileNrow large, but not so large that caching takes > 1GB
+    bool detectMissingIntegrations = false;
     if (tileNrow==0) {
         const casa::uInt nTilesPerRow = (nChanOut-1)/tileNchan+1;
         const casa::uInt bucketSize = std::max(8192u,1024*1024*1024/nTilesPerRow);
-        tileNrow = std::max(1u,bucketSize / (8 * tileNcorr * tileNchan));
+        tileNrow = std::min(nRow,std::max(1u,bucketSize / (8 * tileNcorr * tileNchan)));
+        // make it a multiple of the number of rows per integration for ASKAP
+        if (nBaselines > 0 && telescope == "ASKAP") {
+            tileNrow = std::max(1u, (tileNrow / nBaselines)) * nBaselines;
+            detectMissingIntegrations = true;
+        }
         ASKAPLOG_INFO_STR(logger, "Setting tileNrow to " << tileNrow);
-    // Don't allow tiny size buckets
-} else if (tileNcorr * tileNchan * tileNrow * 8 < 8192u) {
+        // Don't allow tiny size buckets
+    } else if (tileNcorr * tileNchan * tileNrow * 8 < 8192u) {
         tileNrow = 1024u / (tileNcorr * tileNchan);
         ASKAPLOG_INFO_STR(logger, "Setting tileNrow to " << tileNrow);
     }
-
-
+    // Refuse to proceed if it would produce corrupted data
+    ASKAPCHECK(detectMissingIntegrations || sameSize,
+        "All input MeasurementSets should have the same number of rows, \n" <<
+        "for ASKAP data leave tileNrow unset to enable missing integration detection");
+    if (detectMissingIntegrations) {
+        ASKAPLOG_INFO_STR(logger,"Missing integration detection active - missing parts of the spectrum will be flagged");
+    }
     // Create the output measurement set
     ASKAPCHECK(!casa::File(outFile).exists(), "File or table "
             << outFile << " already exists!");
-    boost::shared_ptr<casa::MeasurementSet> out(create(outFile,tileNcorr,tileNchan,tileNrow));
+    boost::shared_ptr<casa::MeasurementSet> out;
+    if (!dryRun) {
+        out = boost::shared_ptr<casa::MeasurementSet>(create(outFile,tileNcorr,tileNchan,tileNrow));
 
-    ASKAPLOG_INFO_STR(logger,  "First copy " << inFiles[0]<< " into " << outFile);
+        ASKAPLOG_INFO_STR(logger,  "First copy " << inFiles[0]<< " into " << outFile);
 
-    // Copy ANTENNA
-    ASKAPLOG_INFO_STR(logger,  "Copying ANTENNA table");
-    copyAntenna(**(in.begin()), *out);
+        // Copy ANTENNA
+        ASKAPLOG_INFO_STR(logger,  "Copying ANTENNA table");
+        copyAntenna(**(in.begin()), *out);
 
-    // Copy FEED
-    ASKAPLOG_INFO_STR(logger,  "Copying FEED table");
-    copyFeed(**(in.begin()), *out);
+        // Copy FEED
+        ASKAPLOG_INFO_STR(logger,  "Copying FEED table");
+        copyFeed(**(in.begin()), *out);
 
-    // Copy FIELD
-    ASKAPLOG_INFO_STR(logger,  "Copying FIELD table");
-    copyField(**(in.begin()), *out);
+        // Copy FIELD
+        ASKAPLOG_INFO_STR(logger,  "Copying FIELD table");
+        copyField(**(in.begin()), *out);
 
-    // Copy OBSERVATION
-    ASKAPLOG_INFO_STR(logger,  "Copying OBSERVATION table");
-    copyObservation(**(in.begin()), *out);
+        // Copy OBSERVATION
+        ASKAPLOG_INFO_STR(logger,  "Copying OBSERVATION table");
+        copyObservation(**(in.begin()), *out);
 
-    // Copy POINTING
-    ASKAPLOG_INFO_STR(logger,  "Copying POINTING table");
-    copyPointing(**(in.begin()), *out);
+        // Copy POINTING
+        ASKAPLOG_INFO_STR(logger,  "Copying POINTING table");
+        copyPointing(**(in.begin()), *out);
 
-    // Copy POLARIZATION
-    ASKAPLOG_INFO_STR(logger,  "Copying POLARIZATION table");
-    copyPolarization(**(in.begin()), *out);
+        // Copy POLARIZATION
+        ASKAPLOG_INFO_STR(logger,  "Copying POLARIZATION table");
+        copyPolarization(**(in.begin()), *out);
 
-    // Merge DATA_DESCRIPTION
-    // This actually just creates a single row, for the single spectral window
-    // that will be created in mergeSpectralWindow()
-    ASKAPLOG_INFO_STR(logger,  "Merging DATA_DESCRIPTION table");
-    mergeDataDescription(**(in.begin()), *out);
+        // Merge DATA_DESCRIPTION
+        // This actually just creates a single row, for the single spectral window
+        // that will be created in mergeSpectralWindow()
+        ASKAPLOG_INFO_STR(logger,  "Merging DATA_DESCRIPTION table");
+        mergeDataDescription(**(in.begin()), *out);
 
-    // Merge SPECTRAL_WINDOW
-    ASKAPLOG_INFO_STR(logger,  "Merging SPECTRAL_WINDOW table");
-    mergeSpectralWindow(inColumns, *out);
-
+        // Merge SPECTRAL_WINDOW
+        ASKAPLOG_INFO_STR(logger,  "Merging SPECTRAL_WINDOW table");
+        mergeSpectralWindow(inColumns, *out);
+    }
     // Merge main table
     ASKAPLOG_INFO_STR(logger,  "Merging main table");
-    mergeMainTable(inColumns, *out,IPosition(3,tileNcorr,tileNchan,tileNrow));
+    mergeMainTable(inColumns,out,IPosition(3,tileNcorr,tileNchan,tileNrow), nBaselines, dryRun,
+                    detectMissingIntegrations);
     // Uncomment this to check if the caching is working
     //RODataManAccessor(**(in.begin()), "TiledData", False).showCacheStatistics (cout);
-    //RODataManAccessor(*out, "TiledData", False).showCacheStatistics (cout);
+    //if (!dryRun) RODataManAccessor(*out, "TiledData", False).showCacheStatistics (cout);
 
 }
 
@@ -557,6 +713,7 @@ int main(int argc, const char** argv)
         int tileNcorr;
         int tileNchan;
         int tileNrow;
+        bool dryRun;
         std::string outName;
         std::vector<std::string> inNamesVec;
         std::vector<std::string> inNames;
@@ -568,6 +725,7 @@ int main(int argc, const char** argv)
         ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile")
         ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile")
         ("tileNrow,r", po::value<int>(&tileNrow)->default_value(0), "Number of rows per tile")
+        ("dryrun,d", po::value<bool>(&dryRun)->default_value(false),"Don't produce any output")
         ("input-file,i", po::value< vector<string> >(&inNames), "Input file(s) - you can also just list them after the other options")
         ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output filename");
 
@@ -606,6 +764,10 @@ int main(int argc, const char** argv)
             << vm["tileNrow"].as<int>() << ".\n";
         }
 
+        if (dryRun) {
+            cout << "Dry run only - not producing output\n";
+        }
+
         if (vm.count("input-file"))
         {
             cout << "Input files are: "
@@ -625,7 +787,7 @@ int main(int argc, const char** argv)
                 inNamesVec.push_back(*it);
         }
 
-        merge(inNamesVec, outName, tileNcorr, tileNchan, tileNrow);
+        merge(inNamesVec, outName, tileNcorr, tileNchan, tileNrow, dryRun);
 
         stats.logSummary();
         ///==============================================================================
