@@ -384,7 +384,7 @@ void mergeSpectralWindow(const std::vector< boost::shared_ptr<const ROMSColumns>
 
 Vector<double> collectTimes(const std::vector< boost::shared_ptr<const ROMSColumns> >& srcMscs) {
     const int n = srcMscs.size();
-    casa::Vector<casa::Vector<double>> times(n);
+    casa::Vector<casa::Vector<double> > times(n);
     // work out first and last time present
     double first = 0, last=0;
     for (uInt i = 0; i < n; i++) {
