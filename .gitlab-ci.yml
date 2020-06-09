@@ -78,7 +78,7 @@ success:
         curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=develop https://gitlab.com/api/v4/projects/19044771/trigger/pipeline
       fi
     - >
- when: on_success
+  when: on_success
 
 failure:
   stage: ci_status
