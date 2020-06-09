@@ -127,6 +127,9 @@ public:
    /// @details the askap beamforming intervals can be a multiple of the basic 1 MHz
    /// interval, but they don't necessarily start at channel 0 in the recorded spectrum
    int itsOffset;
+   /// @brief threshold for rejection of channel from the fit, 0 mean no rejection
+   /// @details reject channels if |value - median|>threshold*sigma_IQR (robust sigma estimate)
+   float itsThreshold;
 };
 
 } // namespace synthesis
