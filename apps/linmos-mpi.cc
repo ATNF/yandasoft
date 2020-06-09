@@ -326,7 +326,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
 
-          if (parset.isDefined("removebeam")) {
+          if (parset.getBool("removebeam",false)) {
 
               Array<float> taylor0;
               Array<float> taylor1;
