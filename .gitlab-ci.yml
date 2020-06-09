@@ -1,4 +1,4 @@
-# GitLab CI script for services
+# GitLab CI script for yandasoft
 
 image: registry.gitlab.com/askapsdp/all_yandasoft:latest
 
