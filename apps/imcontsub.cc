@@ -82,12 +82,15 @@ public:
             int order = subset.getInt("order",2);
             int blocksize = subset.getInt("blocksize",0);
             int shift = subset.getInt("shift",0);
+            bool interleave = subset.getBool("interleave",false);
 
             FitsImageAccessParallel accessor;
 
             if (comms.isMaster()) {
                 ASKAPLOG_INFO_STR(logger,"In = "<<infile <<", Out = "<<
-                                      outfile <<", threshold = "<<threshold << ", order = "<< order);
+                                      outfile <<", threshold = "<<threshold << ", order = "<< order <<
+                                      ", blocksize = " << blocksize << ", shift = "<< shift <<
+                                      ", interleave = "<< interleave);
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
                 accessor.copy_header(infile, outfile);
             }
@@ -109,21 +112,48 @@ public:
 
             // Process spectrum by spectrum
             ASKAPLOG_INFO_STR(logger,"Process the spectra");
-            for (uint y = 0; y< arr.shape()(1); y++ ) {
-                for (uint x = 0; x < arr.shape()(0); x++ ) {
-                    for (int z = 0; z < nz/blocksize; z++) {
-                        int start = -shift + z * blocksize;
-                        int stop = casa::min(start + blocksize, nz);
-                        start = casa::max(0, start);
-                        int length = stop - start;
-                        casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),
-                            casa::Slice(start,length)));
-                        process_spectrum(spec, threshold, order);
+            if (!interleave) {
+                for (uint y = 0; y< arr.shape()(1); y++ ) {
+                    for (uint x = 0; x < arr.shape()(0); x++ ) {
+                        for (int z = 0; z < nz/blocksize; z++) {
+                            int start = -shift + z * blocksize;
+                            int stop = casa::min(start + blocksize, nz);
+                            start = casa::max(0, start);
+                            int length = stop - start;
+                            casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),
+                                casa::Slice(start,length)));
+                            process_spectrum(spec, threshold, order);
+                        }
+                    }
+                }
+            } else {
+                // interleaving blocks and using central 50% for subtraction
+                // shift ignored in this case, as we are clearly not handling beam forming discontinuities
+                const uint nblocks = (nz/blocksize) * 2 - 1; // add interleaved blocks
+                const uint step = blocksize/2;
+                // need to work with a copy of the spectrum
+                casa::Vector<casa::Float> workvec(nz);
+                casa::Vector<casa::Float> spec(blocksize);
+                for (uint y = 0; y< arr.shape()(1); y++ ) {
+                    for (uint x = 0; x < arr.shape()(0); x++ ) {
+                        casa::Vector<casa::Float> refvec(arr(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
+                        workvec = refvec;
+                        for (uint z = 0; z < nblocks; z++) {
+                            const uint start = z * step;
+                            spec = workvec(casa::Slice(start,blocksize));
+                            process_spectrum(spec, threshold, order);
+                            uint startsub  = start + step/2;
+                            uint stopsub = startsub + step;
+                            if (z == 0) startsub = start;
+                            if (z == nblocks-1) stopsub = nz;
+                            const uint length = stopsub - startsub;
+                            refvec(casa::Slice(startsub,length)) = spec(casa::Slice(startsub-start,length));
+                        }
                     }
                 }
             }
 
-            // Write results to output file - make sure you use the same axis as for reading
+            // Write results to output file - make sure we use the same axis as for reading
             accessor.write_all(comms,outfile,arr,iax);
             ASKAPLOG_INFO_STR(logger,"Done");
             // Done
