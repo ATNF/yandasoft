@@ -144,7 +144,7 @@ namespace askap {
             IPosition maxPos_private(2,0), minPos_private(2,0);
             const uInt ncol = im.ncolumn();
             const uInt nrow = im.nrow();
-            #pragma omp for schedule(static) nowait
+            #pragma omp for schedule(static)
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 for (uInt i = 0; i < nrow; i++ ) {
@@ -190,7 +190,7 @@ namespace askap {
             const uInt ncol = mask.ncolumn();
             const uInt nrow = mask.nrow();
 
-            #pragma omp for schedule(static) nowait
+            #pragma omp for schedule(static)
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 const T* pMask = &mask(0,j);
