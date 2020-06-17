@@ -9,6 +9,7 @@ cbpcalibrator
 ccalapply
 ccalibrator
 ccontsubtract
+cddcalibrator
 cdeconvolver
 cimager
 cmpgains
