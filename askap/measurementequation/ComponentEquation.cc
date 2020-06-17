@@ -23,6 +23,8 @@
 
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/SharedIter.h>
+// DDCALTAG
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/DesignMatrix.h>
@@ -275,6 +277,16 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
   
   const casacore::Vector<casacore::Double>& freq = chunk.frequency();
   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = chunk.uvw();
+
+  // DDCALTAG
+  const casacore::uInt nDir = 2;
+  try {
+      // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
+      accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
+      //ndAcc.setNDir(nDir);
+  }
+  catch (std::bad_cast&) {}
+
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
          
   // reset all visibility cube to 0

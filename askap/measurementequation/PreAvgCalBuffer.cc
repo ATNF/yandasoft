@@ -37,7 +37,9 @@
 
 #include <askap/measurementequation/PreAvgCalBuffer.h>
 #include <askap/AskapError.h>
-#include <askap/dataaccess/MemBufferDataAccessor.h>
+// DDCALTAG
+//#include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
 
@@ -56,10 +58,10 @@ PreAvgCalBuffer::PreAvgCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now
 /// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
 /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
 /// assuming that measurement equation is frequency-independent
-PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan) : itsAntenna1(nBeam*nAnt*(nAnt-1)/2), 
-      itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2), itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4),
-      // npol=4
-      itsStokes(4), itsPolXProducts(4,casacore::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
+PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan) :
+      itsAntenna1(nBeam*nAnt*(nAnt-1)/2), itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2),
+      itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4), itsStokes(4),
+      itsPolXProducts(4,casacore::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
       itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false)
 {
   initialise(nAnt,nBeam,nChan);
@@ -306,7 +308,12 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
      } 
   }
   ASKAPDEBUGASSERT(itsPolXProducts.nPol() > 0);
-  accessors::MemBufferDataAccessor modelAcc(acc);
+  // DDCALTAG
+  //accessors::MemBufferDataAccessor modelAcc(acc);
+  const casacore::uInt itsNDir = 2;
+  accessors::DDCalBufferDataAccessor modelAcc(acc);
+  //modelAcc.setNDir(itsNDir);
+
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();
   const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();
