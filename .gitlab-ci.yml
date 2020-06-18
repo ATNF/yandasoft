@@ -35,7 +35,7 @@ test:
     - apt update && apt install -y cmake xsltproc 
   script:
     - cd build
-    - ctest -T test --verbose --no-compress-output
+    - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
     - cd build
     - ../askap-cmake/ctest2junit > ctest.xml
