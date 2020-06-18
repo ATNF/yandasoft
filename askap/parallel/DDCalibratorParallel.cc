@@ -74,7 +74,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/MEParsetInterface.h>
 #include <askap/measurementequation/CalibrationME.h>
-#include <askap/measurementequation/PreAvgCalMEBase.h>
+#include <askap/measurementequation/PreAvgDDCalMEBase.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/NoXPolFreqDependentGain.h>
@@ -544,15 +544,15 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    // code with pre-averaging
    // it is handy to have a shared pointer to the base type because it is
    // not templated
-   boost::shared_ptr<PreAvgCalMEBase> preAvgME;
+   boost::shared_ptr<PreAvgDDCalMEBase> preAvgME;
    if (itsSolveGains && !itsSolveLeakage) {
-      preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
+      preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgDDCalMEBase>());
    } else if (itsSolveLeakage && !itsSolveGains) {
-      preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+      preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgDDCalMEBase>());
    } else if (itsSolveLeakage && itsSolveGains) {
-      preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());
+      preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgDDCalMEBase>());
    } else if (itsSolveBandpass) {
-       preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase>());
+       preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgDDCalMEBase>());
    } else {
        ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
    }

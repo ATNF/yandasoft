@@ -35,9 +35,11 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <askap/measurementequation/PreAvgCalBuffer.h>
+#include <askap/measurementequation/PreAvgDDCalBuffer.h>
 #include <askap/AskapError.h>
-#include <askap/dataaccess/MemBufferDataAccessor.h>
+// DDCALTAG
+//#include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
 
@@ -46,43 +48,28 @@ using namespace askap::synthesis;
 
 /// @brief default constructor
 /// @details preaveraging is initialised based on the first encountered accessor
-PreAvgCalBuffer::PreAvgCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now as a proper initialisation is pending
+PreAvgDDCalBuffer::PreAvgDDCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now as a proper initialisation is pending
     itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false) {}
    
 /// @brief constructor with explicit averaging parameters
 /// @details This version of the constructor explicitly defines the number of 
-/// antennas and beams to initialise the buffer appropriately.
+/// antennas and calibrator directions to initialise the buffer appropriately.
 /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-/// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
+/// @param[in] nDir number of beams, indices are expected to run from 0 to nDir-1
 /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
 /// assuming that measurement equation is frequency-independent
-PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan) : itsAntenna1(nBeam*nAnt*(nAnt-1)/2), 
-      itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2), itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4),
-      // npol=4
-      itsStokes(4), itsPolXProducts(4,casacore::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
+PreAvgDDCalBuffer::PreAvgDDCalBuffer(casacore::uInt nAnt, casacore::uInt nDir, casacore::uInt nChan) :
+      itsAntenna1(nDir*nAnt*(nAnt-1)/2), itsAntenna2(nDir*nAnt*(nAnt-1)/2), itsBeam(nDir*nAnt*(nAnt-1)/2),
+      itsFlag(nDir*nAnt*(nAnt-1)/2,casacore::Int(nChan),4), itsStokes(4), itsNDir(1),
+      itsPolXProducts(4,casacore::IPosition(2,int(nDir*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
       itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false)
 {
-  initialise(nAnt,nBeam,nChan);
+  initialise(nAnt,nDir,nChan);
 }  
-
-/// @brief constructor with explicit averaging parameters
-/// @details This version of the constructor explicitly defines the number of 
-/// antennas to initialise the buffer appropriately. Unlike the version with 
-/// explicitly given number of beams with nBeam set to 1, this constructor configures
-/// the buffer to ignore the beam index (i.e. assuming the measurement equation is beam-independent)
-/// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt) : itsAntenna1(nAnt*(nAnt-1)/2), 
-      itsAntenna2(nAnt*(nAnt-1)/2), itsBeam(nAnt*(nAnt-1)/2), itsFlag(nAnt*(nAnt-1)/2,1,4),
-      // npol=4
-      itsStokes(4), itsPolXProducts(4,casacore::IPosition(2,int(nAnt*(nAnt-1)/2),1)),
-      itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(true)
-{
-  initialise(nAnt, 1, 1);
-}
 
 /// @brief configure beam-independent accumulation
 /// @param[in] flag if true, accumulation is beam-independent
-void PreAvgCalBuffer::beamIndependent(bool flag)
+void PreAvgDDCalBuffer::beamIndependent(bool flag)
 {
   itsBeamIndependent = flag;
 }  
@@ -94,7 +81,7 @@ void PreAvgCalBuffer::beamIndependent(bool flag)
 /// @param[in] fdp frequency dependency flag, if true a separate buffer is created for every
 /// presented spectral channel. Otherwise (default), all channels contribute to the same buffer
 /// (which is appropriate for frequency-independent effects)
-void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
+void PreAvgDDCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
 {
   // resize buffers
   const casacore::uInt numberOfRows = acc.nRow();
@@ -138,16 +125,18 @@ void PreAvgCalBuffer::initialise(const IConstDataAccessor &acc, const bool fdp)
    
 /// @brief initialise accumulation explicitly
 /// @details This method resets the buffers and sets the shape to accommodate the given
-/// number of antennas and beams (i.e. the buffer size is nBeams*nAnt*(nAnt-1)/2)
+/// number of antennas and beams (i.e. the buffer size is nDirs*nAnt*(nAnt-1)/2)
 /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-/// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
+/// @param[in] nDir number of beams, indices are expected to run from 0 to nDir-1
 /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
 /// assuming that measurement equation is frequency-independent
-void PreAvgCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan)
+void PreAvgDDCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nDir, casacore::uInt nChan)
 {
   ASKAPDEBUGASSERT(nChan > 0);
   ASKAPASSERT(nAnt > 0);
-  const casacore::uInt numberOfRows = nBeam*nAnt*(nAnt-1)/2;
+  const casacore::uInt numberOfRows = nDir*nAnt*(nAnt-1)/2;
+  // DDCALTAG
+  itsNDir = nDir;
   if (itsFlag.shape() != casacore::IPosition(3,int(numberOfRows),int(nChan),4)) {
      // resizing buffers
      itsAntenna1.resize(numberOfRows);
@@ -162,7 +151,7 @@ void PreAvgCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casa
   itsFlag.set(true); // everything is bad, unless at least one sample is summed into the buffer
   itsPolXProducts.reset();
   
-  for (casacore::uInt beam=0,row=0; beam<nBeam; ++beam) {
+  for (casacore::uInt beam=0,row=0; beam<nDir; ++beam) {
        for (casacore::uInt ant1=0; ant1<nAnt; ++ant1) {
             for (casacore::uInt ant2 = ant1 + 1; ant2<nAnt; ++ant2,++row) {
                  ASKAPDEBUGASSERT(row<numberOfRows);
@@ -189,21 +178,21 @@ void PreAvgCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casa
    
 /// The number of rows in this chunk
 /// @return the number of rows in this chunk
-casacore::uInt PreAvgCalBuffer::nRow() const throw()
+casacore::uInt PreAvgDDCalBuffer::nRow() const throw()
 {
   return itsBeam.nelements();
 }
   	
 /// The number of spectral channels (equal for all rows)
 /// @return the number of spectral channels
-casacore::uInt PreAvgCalBuffer::nChannel() const throw()
+casacore::uInt PreAvgDDCalBuffer::nChannel() const throw()
 {
   return itsFlag.ncolumn();
 }
 
 /// The number of polarization products (equal for all rows)
 /// @return the number of polarization products (can be 1,2 or 4)
-casacore::uInt PreAvgCalBuffer::nPol() const throw()
+casacore::uInt PreAvgDDCalBuffer::nPol() const throw()
 {
   return itsFlag.nplane();
 }
@@ -211,7 +200,7 @@ casacore::uInt PreAvgCalBuffer::nPol() const throw()
 /// First antenna IDs for all rows
 /// @return a vector with IDs of the first antenna corresponding
 /// to each visibility (one for each row)
-const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna1() const
+const casacore::Vector<casacore::uInt>& PreAvgDDCalBuffer::antenna1() const
 {
   return itsAntenna1;
 }
@@ -219,7 +208,7 @@ const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna1() const
 /// Second antenna IDs for all rows
 /// @return a vector with IDs of the second antenna corresponding
 /// to each visibility (one for each row)
-const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna2() const
+const casacore::Vector<casacore::uInt>& PreAvgDDCalBuffer::antenna2() const
 {
   return itsAntenna2;
 }
@@ -227,7 +216,7 @@ const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::antenna2() const
 /// First feed IDs for all rows
 /// @return a vector with IDs of the first feed corresponding
 /// to each visibility (one for each row)
-const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed1() const
+const casacore::Vector<casacore::uInt>& PreAvgDDCalBuffer::feed1() const
 {
   return itsBeam;
 }
@@ -235,7 +224,7 @@ const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed1() const
 /// Second feed IDs for all rows
 /// @return a vector with IDs of the second feed corresponding
 /// to each visibility (one for each row)
-const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed2() const
+const casacore::Vector<casacore::uInt>& PreAvgDDCalBuffer::feed2() const
 {
   return itsBeam;
 }
@@ -243,7 +232,7 @@ const casacore::Vector<casacore::uInt>& PreAvgCalBuffer::feed2() const
 /// Cube of flags corresponding to the output of visibility() 
 /// @return a reference to nRow x nChannel x nPol cube with flag 
 ///         information. If True, the corresponding element is flagged bad.
-const casacore::Cube<casacore::Bool>& PreAvgCalBuffer::flag() const
+const casacore::Cube<casacore::Bool>& PreAvgDDCalBuffer::flag() const
 {
   return itsFlag;
 }
@@ -253,7 +242,7 @@ const casacore::Cube<casacore::Bool>& PreAvgCalBuffer::flag() const
 /// each product in the visibility cube (nPol() elements).
 /// @note All rows of the accessor have the same structure of the visibility
 /// cube, i.e. polarisation types returned by this method are valid for all rows.
-const casacore::Vector<casacore::Stokes::StokesTypes>& PreAvgCalBuffer::stokes() const
+const casacore::Vector<casacore::Stokes::StokesTypes>& PreAvgDDCalBuffer::stokes() const
 {
   return itsStokes;
 }
@@ -266,7 +255,7 @@ const casacore::Vector<casacore::Stokes::StokesTypes>& PreAvgCalBuffer::stokes()
 /// @param[in] beam beam index
 /// @return row number in the buffer corresponding to the given (ant1,ant2,beam) or -1 if 
 /// there is no match
-int PreAvgCalBuffer::findMatch(casacore::uInt ant1, casacore::uInt ant2, casacore::uInt beam)
+int PreAvgDDCalBuffer::findMatch(casacore::uInt ant1, casacore::uInt ant2, casacore::uInt beam)
 {
   ASKAPDEBUGASSERT(itsAntenna1.nelements() == itsAntenna2.nelements());
   ASKAPDEBUGASSERT(itsAntenna1.nelements() == itsBeam.nelements());
@@ -289,7 +278,7 @@ int PreAvgCalBuffer::findMatch(casacore::uInt ant1, casacore::uInt ant2, casacor
 /// @param[in] fdp frequency dependency flag (see initialise). It is used if initialisation from accessor
 /// is required. Otherwise, it is just checked for consistency (i.e. more than one channel is defined, if it is true)
 /// @note only predict method of the measurement equation is used.
-void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::shared_ptr<IMeasurementEquation const> &me, const bool fdp)
+void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::shared_ptr<IMeasurementEquation const> &me, const bool fdp)
 {
   if (acc.nRow() == 0) {
       // nothing to process
@@ -302,11 +291,15 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
   } else {
      if (fdp) {
          ASKAPCHECK(nChannel() == acc.nChannel(), 
-             "Number of channels in the accessor passed to PreAvgCalBuffer::accumulate doesn't match the number of frequency buffers"); 
+             "Number of channels in the accessor passed to PreAvgDDCalBuffer::accumulate doesn't match the number of frequency buffers"); 
      } 
   }
   ASKAPDEBUGASSERT(itsPolXProducts.nPol() > 0);
-  accessors::MemBufferDataAccessor modelAcc(acc);
+  // DDCALTAG
+  const casacore::uInt itsNDir = 1;
+  accessors::DDCalBufferDataAccessor modelAcc(acc);
+  modelAcc.setNDir(itsNDir);
+
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();
   const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();

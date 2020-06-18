@@ -35,8 +35,8 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#ifndef SYNTHESIS_PREAVGCALBUFFER_H
-#define SYNTHESIS_PREAVGCALBUFFER_H
+#ifndef SYNTHESIS_PREAVGDDCALBUFFER_H
+#define SYNTHESIS_PREAVGDDCALBUFFER_H
 
 #include <askap/dataaccess/DataAccessorAdapter.h>
 #include <askap/dataaccess/IConstDataAccessor.h>
@@ -62,30 +62,21 @@ namespace synthesis {
 /// @note At the moment all frequency channels are summed up together. Later we may want
 /// to implement a partial averaging in frequency.
 /// @ingroup measurementequation
-class PreAvgCalBuffer : public accessors::DataAccessorAdapter {
+class PreAvgDDCalBuffer : public accessors::DataAccessorAdapter {
 public:
    /// @brief default constructor
    /// @details preaveraging is initialised based on the first encountered accessor
-   PreAvgCalBuffer();
+   PreAvgDDCalBuffer();
    
    /// @brief constructor with explicit averaging parameters
    /// @details This version of the constructor explicitly defines the number of 
-   /// antennas and beams to initialise the buffer appropriately.
+   /// antennas and calibrator directions to initialise the buffer appropriately.
    /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-   /// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
+   /// @param[in] nDir number of beams, indices are expected to run from 0 to nDir-1
    /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
    /// assuming that measurement equation is frequency-independent
-   PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan = 1);
-   
-   /// @brief constructor with explicit averaging parameters
-   /// @details This version of the constructor explicitly defines the number of 
-   /// antennas to initialise the buffer appropriately. Unlike the version with 
-   /// explicitly given number of beams with nBeam set to 1, this constructor configures
-   /// the buffer to ignore the beam index (i.e. assuming the measurement equation is beam-independent)
-   /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-   /// @note frequency-independent case is implied
-   PreAvgCalBuffer(casacore::uInt nAnt); 
-   
+   PreAvgDDCalBuffer(casacore::uInt nAnt, casacore::uInt nDir, casacore::uInt nChan = 1);
+     
    /// @brief configure beam-independent accumulation
    /// @param[in] flag if true, accumulation is beam-independent
    void beamIndependent(bool flag);
@@ -101,12 +92,12 @@ public:
    
    /// @brief initialise accumulation explicitly
    /// @details This method resets the buffers and sets the shape to accommodate the given
-   /// number of antennas and beams (i.e. the buffer size is nBeams*nAnt*(nAnt-1)/2)
+   /// number of antennas and beams (i.e. the buffer size is nDirs*nAnt*(nAnt-1)/2)
    /// @param[in] nAnt number of antennas, indices are expected to run from 0 to nAnt-1
-   /// @param[in] nBeam number of beams, indices are expected to run from 0 to nBeam-1
+   /// @param[in] nDir number of beams, indices are expected to run from 0 to nDir-1
    /// @param[in] nChan number of channels to buffer, 1 (default) is a special case
    /// assuming that measurement equation is frequency-independent
-   void initialise(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan = 1);
+   void initialise(casacore::uInt nAnt, casacore::uInt nDir, casacore::uInt nChan = 1);
    
    // implemented accessor methods
    
@@ -162,7 +153,7 @@ public:
    /// (and model visibilities alone) using the helper class of
    /// type PolXProducts. This method allows to get a reference
    /// to the buffer class (to be used to construct normal equations)
-   /// managed by this instance of PreAvgCalBuffer.
+   /// managed by this instance of PreAvgDDCalBuffer.
    /// @return const reference to the helper class
    inline const scimath::PolXProducts& polXProducts() const { return itsPolXProducts; }
    
@@ -228,6 +219,10 @@ private:
    /// @brief types of polarisation products
    casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
    
+   /// @brief number of separate calibration directions
+   /// DDCALTAG
+   casacore::uInt itsNDir;     
+ 
    /// @brief buffer for accumulated cross-products
    /// @details This helper object handles two buffers for
    /// cross-products of conj(Vmodel)*Vmodel and conj(Vmodel)*Vmeasured.
@@ -257,5 +252,5 @@ private:
 
 } // namespace askap
 
-#endif // #ifndef SYNTHESIS_PREAVGCALBUFFER_H
+#endif // #ifndef SYNTHESIS_PREAVGDDCALBUFFER_H
 

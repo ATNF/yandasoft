@@ -283,7 +283,7 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
   try {
       // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
       accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
-      ndAcc.setNDir(nDir);
+      ndAcc.setNDir(1);
   }
   catch (std::bad_cast&) {}
 
