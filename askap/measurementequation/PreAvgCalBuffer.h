@@ -228,6 +228,10 @@ private:
    /// @brief types of polarisation products
    casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
    
+   /// @brief number of separate calibration directions
+   /// DDCALTAG
+   casacore::uInt itsNDir;     
+ 
    /// @brief buffer for accumulated cross-products
    /// @details This helper object handles two buffers for
    /// cross-products of conj(Vmodel)*Vmodel and conj(Vmodel)*Vmeasured.

@@ -60,7 +60,7 @@ PreAvgCalBuffer::PreAvgCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now
 /// assuming that measurement equation is frequency-independent
 PreAvgCalBuffer::PreAvgCalBuffer(casacore::uInt nAnt, casacore::uInt nBeam, casacore::uInt nChan) :
       itsAntenna1(nBeam*nAnt*(nAnt-1)/2), itsAntenna2(nBeam*nAnt*(nAnt-1)/2), itsBeam(nBeam*nAnt*(nAnt-1)/2),
-      itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4), itsStokes(4),
+      itsFlag(nBeam*nAnt*(nAnt-1)/2,casacore::Int(nChan),4), itsStokes(4), itsNDir(1),
       itsPolXProducts(4,casacore::IPosition(2,int(nBeam*nAnt*(nAnt-1)/2),casacore::Int(nChan))),
       itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false)
 {
@@ -150,6 +150,8 @@ void PreAvgCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nBeam, casa
   ASKAPDEBUGASSERT(nChan > 0);
   ASKAPASSERT(nAnt > 0);
   const casacore::uInt numberOfRows = nBeam*nAnt*(nAnt-1)/2;
+  // DDCALTAG
+  itsNDir = nBeam;
   if (itsFlag.shape() != casacore::IPosition(3,int(numberOfRows),int(nChan),4)) {
      // resizing buffers
      itsAntenna1.resize(numberOfRows);
@@ -309,10 +311,9 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
   }
   ASKAPDEBUGASSERT(itsPolXProducts.nPol() > 0);
   // DDCALTAG
-  //accessors::MemBufferDataAccessor modelAcc(acc);
   const casacore::uInt itsNDir = 2;
   accessors::DDCalBufferDataAccessor modelAcc(acc);
-  //modelAcc.setNDir(itsNDir);
+  modelAcc.setNDir(itsNDir);
 
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();
