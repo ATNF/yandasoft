@@ -160,7 +160,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
             Array<float> inPix = iacc.read(inImgName);
 
-            if (parset.isDefined("removebeam")) {
+            if (parset.getBool("removebeam",false)) {
 
                 Array<float> taylor0;
                 Array<float> taylor1;

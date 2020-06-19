@@ -413,13 +413,15 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.smoothing.nsteps")) params["smoothingNsteps"] = parset.getString("solver.LSQR.smoothing.nsteps");
     if (parset.isDefined("solver.LSQR.smoothing.type")) params["smoothingType"] = parset.getString("solver.LSQR.smoothing.type");
 
+    if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont")) params["spectralDiscont"] = parset.getString("solver.LSQR.smoothing.spectralDiscont");
+    if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont.step")) params["spectralDiscontStep"] = parset.getString("solver.LSQR.smoothing.spectralDiscont.step");
+
+
     return params;
 }
 
 void CalibratorParallel::calcOne(const std::string& ms, bool discard)
 {
-  casacore::Timer timer;
-  timer.mark();
   ASKAPLOG_INFO_STR(logger, "Calculating normal equations for " << ms );
   // First time around we need to generate the equation
   if ((!itsEquation) || discard) {
@@ -488,6 +490,8 @@ void CalibratorParallel::calcOne(const std::string& ms, bool discard)
       itsEquation->setParameters(*itsModel);
   }
   ASKAPCHECK(itsNe, "NormalEquations are not defined");
+
+  casacore::Timer timer;
   itsEquation->calcEquations(*itsNe);
   ASKAPLOG_INFO_STR(logger, "Calculated normal equations for "<< ms << " in "<< timer.real()
                      << " seconds ");
@@ -588,7 +592,11 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
 
    // this is just an optimisation, should work without this line
    preAvgME->beamIndependent(itsBeamIndependentGains||itsBeamIndependentLeakages);
+
+   casacore::Timer accumulation_timer;
    preAvgME->accumulate(dsi,perfectME);
+   ASKAPLOG_INFO_STR(logger, "Data accumulation in pre-averaging measurement equation took " << accumulation_timer.real() << " seconds");
+
    // fix model parameters for which we don't have data
    const casa::Vector<casa::Stokes::StokesTypes> stokes = preAvgME->stokes();
    const std::vector<std::string> params(itsModel->freeNames());
@@ -627,6 +635,8 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
         // no data for the parameter - fix it (full name in case of bandpass, both should be identical in the case of gains/leakages)
         itsModel->fix(*ci);
    }
+   ASKAPLOG_INFO_STR(logger, "Number of model free names: "<< itsModel->freeNames().size());
+   ASKAPLOG_INFO_STR(logger, "Number of model fixed names: "<< itsModel->fixedNames().size());
    //
    itsEquation = preAvgME;
 
@@ -673,6 +683,9 @@ void CalibratorParallel::calcNE()
   }
   boost::shared_ptr<scimath::GenericNormalEquations> gne(new GenericNormalEquations);
   gne->metadata() = tempMetadata;
+  if (itsMatrixIsParallel) {
+      gne->setIndexedNormalMatrixFormat(true);
+  }
   itsNe = gne;
 
   if (itsComms.isWorker()) {
@@ -762,6 +775,8 @@ void CalibratorParallel::solveNE()
                it != namesEq.end(); ++it) {
               const std::string parname = *it;
               localModel.add(parname, itsModel->value(parname));
+              // NOTE: We do not fix model parameters here,
+              //       and thus will be solving for all unknowns (including the flagged data!).
           }
           ASKAPDEBUGASSERT(namesEq.size() == localModel.size());
           ASKAPLOG_INFO_STR(logger, "Added " << namesEq.size() << " local model parameters on worker " << itsComms.rank());

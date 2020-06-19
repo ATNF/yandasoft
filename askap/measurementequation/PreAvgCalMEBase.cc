@@ -33,6 +33,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <algorithm>
+#include <cstdlib>
 
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/dataaccess/IDataIterator.h>
@@ -47,8 +48,6 @@
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
-
-//#define BUILD_INDEXED_NORMAL_MATRIX
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -211,11 +210,9 @@ void PreAvgCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne) 
     const bool fdp = isFrequencyDependent();
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
-#ifdef BUILD_INDEXED_NORMAL_MATRIX
-    if (fdp) {
+    if (ne.useIndexedNormalMatrix()) {
         initIndexedNormalMatrixAndParameterIndex(ne);
     }
-#endif
 
     ASKAPLOG_INFO_STR(logger, "Building the normal matrix.");
 

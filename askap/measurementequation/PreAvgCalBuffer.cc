@@ -345,16 +345,11 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
        }
        const casacore::uInt bufRow = casacore::uInt(matchRow);
        ASKAPDEBUGASSERT(bufRow < itsFlag.nrow());
-       // making a slice referenced to the full cross-product buffer
-       // in the frequency-independent mode do averaging of all frequency channels together
-       scimath::PolXProducts pxpSlice = itsPolXProducts.slice(bufRow,0);
-       // the code below works with this 1D slice
+
+       // the code below works updates itsPolxProds for a row/channel at a time
        for (casacore::uInt chan = 0; chan<acc.nChannel(); ++chan) {
+            // in the frequency-independent mode do averaging of all frequency channels together
             const casacore::uInt bufChan = fdp ? chan : 0;
-            if (fdp && (chan > 0)) {
-                // update the slice to point to the correct channel of the buffer
-                pxpSlice = itsPolXProducts.slice(bufRow,chan);
-            }
 
             // if any polarisations are flagged, ignore this visibility
             casacore::Bool JonesFlag = casacore::False;
@@ -386,12 +381,12 @@ void PreAvgCalBuffer::accumulate(const IConstDataAccessor &acc, const boost::sha
                           */
                           // different polarisations can have different weight?
                           // ignoring for now
-                          pxpSlice.addModelMeasProduct(pol,pol2,
+                          itsPolXProducts.addModelMeasProduct(bufRow, bufChan, pol, pol2,
                               weight * std::conj(model) * measuredVis(row,chan,pol2));
                           //pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) *
                           //    (pol == pol2 ? measuredVis(row,chan,pol2) : casacore::Complex(0.,0.)));
                           if (pol2<=pol) {
-                              pxpSlice.addModelProduct(pol,pol2,
+                              itsPolXProducts.addModelProduct(bufRow, bufChan, pol, pol2,
                                   weight * std::conj(model) * modelVis(row,chan,pol2));
                           }
                      }

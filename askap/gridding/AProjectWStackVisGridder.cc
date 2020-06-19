@@ -223,6 +223,8 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
     ASKAPDEBUGASSERT(itsIllumination);
     // just to avoid a repeated call to a virtual function from inside the loop
     const bool hasSymmetricIllumination = itsIllumination->isSymmetric();
+    // check whether the output pattern is image based. If so, inverse FFT is not needed
+    const bool imageBasedPattern = itsIllumination->isImageBased();
     const int nSamples = acc.nRow();
 
     validateCFCache(acc, hasSymmetricIllumination);
@@ -268,12 +270,17 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
             for (int chan=0; chan<nChan; chan++) {
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(acc.frequency()[chan], pattern,
-                        rwSlopes()(0, feed, currentField()),
-                        rwSlopes()(1, feed, currentField()), 
-                        parallacticAngle);
+                                            out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
+
+                //itsIllumination->getPattern(acc.frequency()[chan], pattern,
+                //        rwSlopes()(0, feed, currentField()),
+                //        rwSlopes()(1, feed, currentField()), 
+                //        parallacticAngle);
 
                 /// Now convolve the disk with itself using an FFT
-                scimath::fft2d(pattern.pattern(), false);
+                if( !imageBasedPattern ) {
+                    scimath::fft2d(pattern.pattern(), false);
+                }
 
                 double peak=0.0;
                 for (casacore::uInt ix=0; ix<nx; ++ix) {

@@ -1,9 +1,9 @@
 /// @file
 ///
-/// BPCalibratorParallel: part of the specialised tool to do optimised bandpass calibration with
+/// BPCalibratorParallel: part of the specialised tool to do optimised bandpass & leakage calibration with
 /// limited functionality. Unlike CalibratorParallel, this class
 ///
-///      * solves for bandpass only
+///      * solves for bandpass & leakage only
 ///      * works only with preaveraging calibration approach
 ///      * does not support multiple chunks in time (i.e. only one solution is made for the whole dataset)
 ///      * does not support data distribution except per beam
@@ -75,8 +75,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/NoXPolGain.h>
-#include <askap/measurementequation/NoXPolFreqDependentGain.h>
-#include <askap/measurementequation/NoXPolBeamIndependentGain.h>
+#include <askap/measurementequation/LeakageTerm.h>
+#include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/gridding/VisGridderFactory.h>
 #include <askapparallel/AskapParallel.h>
@@ -111,10 +111,22 @@ using askap::operator<<;
 /// @param[in] parset ParameterSet for inputs
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset)),
-      itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false)
+      itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsSolveBandpass(false), itsSolveLeakage(false)
 {
-  ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for using a specialised pipeline");
-  if (itsComms.isMaster()) {
+  ASKAPLOG_INFO_STR(logger, "Bandpass or Leakage will be solved for using a specialised pipeline");
+  const std::string what2solve = parset.getString("solve","bandpass");
+  if (what2solve.find("leakages") != std::string::npos) {
+      ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"')");
+      itsSolveLeakage = true;
+  }
+
+  if (what2solve.find("bandpass") != std::string::npos) {
+      ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for (solve='"<<what2solve<<"')");
+      itsSolveBandpass = true;
+  }
+  ASKAPCHECK(itsSolveLeakage || itsSolveBandpass,"Need to specify solve=leakages or solve=bandpass");
+ if (itsComms.isMaster()) {
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = accessors::CalibAccessFactory::rwCalSolutionSource(parset);
       ASKAPASSERT(itsSolutionSource);
@@ -122,7 +134,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       if (itsComms.isParallel()) {
           ASKAPLOG_INFO_STR(logger, "The work will be distributed between "<<itsComms.nProcs() - 1<<" workers");
       } else {
-          ASKAPLOG_INFO_STR(logger, "The work will be done in the serial by the current process");
+          ASKAPLOG_INFO_STR(logger, "The work will be done in serial by the current process");
       }
 
       // This is sloppy but I need to test whether this is likely to be a service
@@ -177,7 +189,7 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       // optional beam index mapping
       const std::vector<uint> beamIndices = parset.getUintVector("beamindices", std::vector<uint>());
       if (beamIndices.size() != 0) {
-          ASKAPCHECK(beamIndices.size() == nBeam(), 
+          ASKAPCHECK(beamIndices.size() == nBeam(),
                 "The number of explicit beam indices is different from the number of beams to solve for ("<<nBeam()<<")");
           ASKAPLOG_INFO_STR(logger, "Will solve for beams: "<<beamIndices);
           for (size_t index = 0; index < beamIndices.size(); ++index) {
@@ -236,15 +248,25 @@ void BPCalibratorParallel::run()
       for (itsWorkUnitIterator.origin(); itsWorkUnitIterator.hasMore(); itsWorkUnitIterator.next()) {
            // this will force creation of the new measurement equation for this beam/channel pair
            itsEquation.reset();
+           itsModel->reset();
 
            const std::pair<casacore::uInt, casacore::uInt> indices = currentBeamAndChannel();
+           if (itsSolveBandpass) {
+               ASKAPLOG_INFO_STR(logger, "Initialise bandpass (unknowns) for "<<nAnt()<<" antennas for beam="<<indices.first<<
+                                 " and channel="<<indices.second);
+               for (casacore::uInt ant = 0; ant<nAnt(); ++ant) {
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::XX), casacore::Complex(1.,0.));
+                    itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::YY), casacore::Complex(1.,0.));
+               }
+           }
 
-           ASKAPLOG_INFO_STR(logger, "Initialise bandpass (unknowns) for "<<nAnt()<<" antennas for beam="<<indices.first<<
-                             " and channel="<<indices.second);
-           itsModel->reset();
-           for (casacore::uInt ant = 0; ant<nAnt(); ++ant) {
-                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::XX), casacore::Complex(1.,0.));
-                itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casacore::Stokes::YY), casacore::Complex(1.,0.));
+           if (itsSolveLeakage) {
+               ASKAPLOG_INFO_STR(logger, "Initialise leakages (unknowns) for "<<nAnt()<<" antennas for beam="<<indices.first<<
+                " and channel="<<indices.second);
+               for (casa::uInt ant = 0; ant<nAnt(); ++ant) {
+                         itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::XY),casa::Complex(0.,0.));
+                         itsModel->add(accessors::CalParamNameHelper::paramName(ant, indices.first, casa::Stokes::YX),casa::Complex(0.,0.));
+               }
            }
 
            // setup reference gain, if needed
@@ -410,7 +432,7 @@ void BPCalibratorParallel::calcNE()
   calcOne(ms, indices.second, indices.first);
 }
 
-/// @brief helper method to invalidate curremt solution
+/// @brief helper method to invalidate current solution
 void BPCalibratorParallel::invalidateSolution() {
    ASKAPDEBUGASSERT(itsModel);
    itsModel->add("invalid",1.);
@@ -538,7 +560,13 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    // this also opens a possibility to use several (e.g. 54 = coarse resolution) channels to get one gain
    // solution which is then replicated to all channels involved. We can also add frequency-dependent leakage, if
    // tests show it is required (currently it is not in the calibration model)
-   preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
+   if (itsSolveBandpass && !itsSolveLeakage) {
+          preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
+   } else if (itsSolveLeakage && !itsSolveBandpass) {
+          preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+   } else if (itsSolveLeakage && itsSolveBandpass) {
+          preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());
+   }
    ASKAPDEBUGASSERT(preAvgME);
 
    ASKAPDEBUGASSERT(dsi.hasMore());
@@ -551,7 +579,7 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    const std::vector<std::string> params(itsModel->freeNames());
    for (std::vector<std::string>::const_iterator ci = params.begin(); ci != params.end(); ++ci) {
         const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(*ci);
-        casa::uInt pol = 0; 
+        casa::uInt pol = 0;
         for (; pol < stokes.nelements(); ++pol) {
              if (stokes[pol] == parsed.second) {
                  break;

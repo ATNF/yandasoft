@@ -1,6 +1,9 @@
 
 cmake_minimum_required (VERSION 3.12.0)
 include(CheckCXXCompilerFlag)
+option(UPDATE_CMAKE "Update the cmake modules" ON)
+ 
+if (UPDATE_CMAKE)
 
 if (EXISTS ${CMAKE_SOURCE_DIR}/askap-cmake)
     execute_process(COMMAND git pull 
@@ -11,6 +14,8 @@ else ()
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif ()
 
+endif ()
+
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/askap-cmake")
 include(version_utils)
 get_version_string()
@@ -18,11 +23,7 @@ get_version_string()
 project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
 
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/askap_synthesis.h.in
-                ${CMAKE_CURRENT_SOURCE_DIR}/askap/askap_synthesis.h)
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/askap_synthesis.cc.in
-                ${CMAKE_CURRENT_SOURCE_DIR}/askap/askap_synthesis.cc)
+configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 
 # Required Version of ASKAP dependencies is the MAJOR and MINOR version
 # of this package. This allows the PATCH versions to change on everything
@@ -45,9 +46,15 @@ if (CXX11)
     endif()
 endif()
 
+check_cxx_compiler_flag(-fcx-limited-range HAS_FCX)
+if (HAS_FCX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcx-limited-range")
+endif()
+
 option (ENABLE_OPENMP "Build with OPENMP Support" NO)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
+option (ENABLE_GRID_WITH_POINTERS "Grid with pointers" YES)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} $ENV{CPPFLAGS}")
 message(STATUS "CXXFLAGS are ${CMAKE_CXX_FLAGS}")
@@ -91,26 +98,36 @@ find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 find_package(Components REQUIRED)
 find_package(MPI)
 find_package(CPPUnit)
-if (ENABLE_OPENMP)
-	find_package(OpenMP REQUIRED)
-endif()
 
+if (ENABLE_OPENMP)
+	find_package(OpenMP)
+    if (OPENMP_FOUND)
+        if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopenmp")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
+        else( )
+            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        endif( )
+    else (OPENMP_FOUND)
+        message(WARNING "Cannot fullfill USE_OPENMP, compiler does not support it")
+    endif (OPENMP_FOUND)
+endif()
 
 if (CASACORE3 OR CXX11)
 	set(CMAKE_CXX_STANDARD 11)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
-add_library(yandasoft SHARED)
+add_library(yandasoft SHARED
+	${CMAKE_CURRENT_BINARY_DIR}/askap/askap_synthesis.cc
+)
 
 macro(add_sources_to_yandasoft)
 	foreach(arg IN ITEMS ${ARGN})
 		target_sources(yandasoft PRIVATE ${CMAKE_CURRENT_LIST_DIR}/${arg})
 	endforeach()
 endmacro()
-add_sources_to_yandasoft(
-    askap/askap_synthesis.cc
-)
 add_subdirectory(askap/deconvolution)
 add_subdirectory(askap/distributedimager)
 add_subdirectory(askap/gridding)
@@ -171,9 +188,9 @@ if (MPI_FOUND)
 	endif()
 endif (MPI_FOUND)
 
-if (ENABLE_OPENMP)
+if (OPENMP_FOUND)
     target_link_libraries(yandasoft PRIVATE OpenMP::OpenMP_CXX)
-endif (ENABLE_OPENMP)
+endif (OPENMP_FOUND)
 
 if (NOT GSL_VERSION VERSION_LESS 2.0)
 	target_compile_definitions(yandasoft PUBLIC
@@ -186,7 +203,11 @@ if (CASACORE3)
 		HAVE_CASACORE3
 	)
 endif()
-
+if (ENABLE_GRID_WITH_POINTERS)
+    target_compile_definitions(yandasoft PUBLIC
+        ASKAP_GRID_WITH_POINTERS
+    )
+endif()
 
 install (
 TARGETS yandasoft

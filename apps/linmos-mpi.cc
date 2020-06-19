@@ -80,7 +80,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
     }
 
-    if (accumulator.weightType() == FROM_BP_MODEL) {
+    if (accumulator.weightType() == FROM_BP_MODEL|| accumulator.weightType() == COMBINED) {
       accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
     }
 
@@ -326,7 +326,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
 
-          if (parset.isDefined("removebeam")) {
+          if (parset.getBool("removebeam",false)) {
 
               Array<float> taylor0;
               Array<float> taylor1;
@@ -414,7 +414,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               }
 
           }
-            
+
           Array<float> inWgtPix;
           Array<float> inSenPix;
 

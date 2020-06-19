@@ -27,7 +27,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <calweightsolver/IlluminationUtils.h>
+#include <askap/utils/IlluminationUtils.h>
 
 #include <casacore/images/Images/PagedImage.h>
 //#include <casacore/coordinates/Coordinates/StokesCoordinate.h>
@@ -38,14 +38,14 @@
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
-#include <gridding/BasicCompositeIllumination.h>
+#include <askap/gridding/BasicCompositeIllumination.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>
 #include <fft/FFTWrapper.h>
 
 #include <Common/ParameterSet.h>
 
 
-#include <gridding/UVPattern.h>
+#include <askap/gridding/UVPattern.h>
 
 #include <askap/AskapError.h>
 #include <askap/AskapLogging.h>
@@ -56,7 +56,7 @@ namespace askap {
 namespace accessors{}}
 
 // after logger has been initialised
-#include <gridding/AProjectGridderBase.h>
+#include <askap/gridding/AProjectGridderBase.h>
 
 namespace askap {
 namespace synthutils {

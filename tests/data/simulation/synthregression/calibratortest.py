@@ -407,6 +407,12 @@ def runTestsSmoothnessConstraintsGradientCost():
     # Filenames for writing the calibration results (parsets).
     result_nonsmooth = "result_nonsmooth.dat"
     result_smooth = "result_smooth.dat"
+    result_smooth2 = "result_smooth2.dat"
+
+    # Remove old results (if any).
+    os.system("rm %s" % result_nonsmooth)
+    os.system("rm %s" % result_smooth)
+    os.system("rm %s" % result_smooth2)
 
     #------------------------------------------------------------------------------
     print "Bandpass test: without smoothing constraints."
@@ -416,14 +422,26 @@ def runTestsSmoothnessConstraintsGradientCost():
     os.system("mv result.dat %s" % result_nonsmooth)
 
     #------------------------------------------------------------------------------
-    # Switch on the smoothing constraints.
-    spr.addToParset("Ccalibrator.solver.LSQR.smoothing        = true")
+    # Switch on the smoothing constraints (with Gradient smoother).
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing            = true")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.maxWeight  = 3.e+6")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.type       = 0")
 
-    print "Bandpass test: with smoothing constraints."
+    print "Bandpass test: with smoothing constraints (type = 0)."
     spr.runCalibratorParallel(nprocs)
 
     # Store the results.
     os.system("mv result.dat %s" % result_smooth)
+
+    #------------------------------------------------------------------------------
+    # Switch on the smoothing constraints (with Laplacian smoother).
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.type       = 2")
+
+    print "Bandpass test: with smoothing constraints (type = 2)."
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_smooth2)
 
     #------------------------------------------------------------------------------
     # Calcualte the gradient cost.
@@ -431,9 +449,13 @@ def runTestsSmoothnessConstraintsGradientCost():
     nant = 12
     cost_nonsmooth = calculateGradientCost(result_nonsmooth, nchan, nant, True)
     cost_smooth = calculateGradientCost(result_smooth, nchan, nant, True)
+    # Note, for Laplacian case we also calculate gradient here (instead of Laplacian),
+    # just to compare results using a single number, so that the test fails if we break the code.
+    cost_smooth2 = calculateGradientCost(result_smooth2, nchan, nant, True)
 
     print 'cost nonsmooth =', cost_nonsmooth
     print 'cost smooth =', cost_smooth
+    print 'cost smooth2 =', cost_smooth2
 
     #------------------------------------------------------------------------------
     # Verify the gradient cost.
@@ -442,6 +464,7 @@ def runTestsSmoothnessConstraintsGradientCost():
     # due to phase referencing performed in the end of calibration, which does not preserve this type of the gradient.
     expected_cost_nonsmooth = 22.645816
     expected_cost_smooth = 0.078488
+    expected_cost_smooth2 = 0.188401
 
     tol = 1.e-6
     if abs(cost_nonsmooth - expected_cost_nonsmooth) > tol:
@@ -449,6 +472,9 @@ def runTestsSmoothnessConstraintsGradientCost():
 
     if abs(cost_smooth - expected_cost_smooth) > tol:
         raise RuntimeError, "Smooth gradient cost is wrong! cost = %s" % cost_smooth
+
+    if abs(cost_smooth2 - expected_cost_smooth2) > tol:
+        raise RuntimeError, "Smooth gradient2 cost is wrong! cost = %s" % cost_smooth2
 
 def compareGains(file1, file2, tol):
     gains1 = loadParset(file1)

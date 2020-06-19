@@ -43,7 +43,7 @@
 
 
 #include <boost/shared_ptr.hpp>
-#include <gridding/IBasicIllumination.h>
+#include <askap/gridding/IBasicIllumination.h>
 
 class ImplCalWeightSolver {
     casa::MDirection pc; // dish pointing centre

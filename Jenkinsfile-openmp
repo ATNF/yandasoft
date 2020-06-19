@@ -23,7 +23,7 @@ cd base-askap
 git checkout develop
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
 make -j2
 make -j2 install
 '''
@@ -42,7 +42,7 @@ cd base-imagemath
 git checkout develop
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
 make -j2
 make -j2 install
 '''
@@ -62,7 +62,7 @@ cd base-askapparallel
 git checkout develop
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
 make -j2
 make -j2 install
 '''
@@ -81,7 +81,7 @@ cd base-scimath
 git checkout develop
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
 make -j2
 make -j2 install
 '''
@@ -100,7 +100,7 @@ cd base-accessors
 git checkout develop
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} ../
 make -j2
 make -j2 install
 '''
@@ -113,13 +113,9 @@ make -j2 install
       steps {
         dir(path: '.') {
           sh '''git fetch --tags
-if [ -d build ]; then
-echo "build directory already exists"
-rm -rf build
-fi
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" ../
 make 
 '''
         }
@@ -130,13 +126,9 @@ make
       steps {
         dir(path: '.') {
           sh '''git fetch --tags
-if [ -d build-release ]; then
-echo "build-release directory already exists"
-rm -rf build-release
-fi
 mkdir build-release
 cd build-release
-cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Release ../
+cmake -DENABLE_OPENMP=ON -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Release ../
 make 
 '''
         }

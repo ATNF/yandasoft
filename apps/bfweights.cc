@@ -32,10 +32,9 @@
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Exceptions/Error.h>
 #include <casacore/casa/BasicSL/Complex.h>
-#include <calweightsolver/ImplCalWeightSolver.h>
-#include <calweightsolver/EigenSolve.h>
-
-#include <calweightsolver/IlluminationUtils.h>
+#include <askap/utils/ImplCalWeightSolver.h>
+#include <askap/utils/EigenSolve.h>
+#include <askap/utils/IlluminationUtils.h>
 #include <askap/AskapError.h>
 
 #include <fstream>
