@@ -29,7 +29,7 @@
 #include <askap_accessors.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapUtil.h>
-ASKAP_LOGGER(logger, "delaysolver");
+ASKAP_LOGGER(logger, ".delaysolver");
 
 #include <askap/AskapError.h>
 #include <askap/Application.h>

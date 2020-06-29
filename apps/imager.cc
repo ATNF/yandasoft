@@ -53,7 +53,7 @@
 using namespace askap;
 using namespace askap::cp;
 
-ASKAP_LOGGER(logger, ".main");
+ASKAP_LOGGER(logger, ".imager");
 
 class ImagerApp : public askap::Application
 {
