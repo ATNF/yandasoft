@@ -27,10 +27,11 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
+#include <askap/askap_synthesis.h>
 #include <askap/utils/DelaySolverImpl.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapUtil.h>
-ASKAP_LOGGER(logger, ".delaysolver.DelaySolverImpl");
+ASKAP_LOGGER(logger, ".DelaySolverImpl");
 
 #include <askap/AskapError.h>
 #include <casacore/casa/Arrays/MatrixMath.h>

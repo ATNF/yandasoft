@@ -26,7 +26,7 @@
 
 
 #include <dataaccess/TableDataSource.h>
-#include <askap_accessors.h>
+#include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
 #include <askap/AskapUtil.h>
 ASKAP_LOGGER(logger, ".delaysolver");
