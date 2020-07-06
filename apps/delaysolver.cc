@@ -147,7 +147,7 @@ std::vector<double> DelaySolverApp::getCurrentDelays(const LOFAR::ParameterSet &
             ASKAPLOG_WARN_STR(logger, "Antenna specific delay key ("<<delayKey<<") is not found in the ingest's parset, using the default: "<<defaultDelay);
         }
         const double delay = asQuantity(parset.getString(delayKey, defaultDelay)).getValue("ns");
-        ASKAPLOG_INFO_STR(logger, "Initial delay for "<<itsAntennaNames[ant]<<" is "<<std::setprecision(9)<<delay<<" ns");
+        ASKAPLOG_DEBUG_STR(logger, "Initial delay for "<<itsAntennaNames[ant]<<" is "<<std::setprecision(9)<<delay<<" ns");
         delays[ant] = delay;
    }
    return delays;
@@ -160,7 +160,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   sel->chooseCrossCorrelations();
   const int scan = config().getInt32("scan",-1);
   if (scan >= 0) {
-      ASKAPLOG_INFO_STR(logger, "Process only scan "<<scan);
+      ASKAPLOG_DEBUG_STR(logger, "Process only scan "<<scan);
       sel->chooseUserDefinedIndex("SCAN_NUMBER",casa::uInt(scan));
   }
  
@@ -186,7 +186,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   const bool estimateViaLags = config().getBool("uselags", false);
   
   if (estimateViaLags) {
-      ASKAPLOG_INFO_STR(logger, "Initial delay will be estimated via lags using full resolution data");
+      ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
       // the following means no averaging
       solver.setTargetResolution(1.);
       
@@ -211,12 +211,12 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   casa::Vector<double> delays = -solver.solve(false) * 1e9;
   ASKAPLOG_INFO_STR(logger, "Corrections (ns): "<<std::setprecision(9)<<delays);
   if (currentDelays.size() > 0) {
-      ASKAPLOG_INFO_STR(logger, "Old delays (ns): "<< std::setprecision(9) << currentDelays);
+      ASKAPLOG_DEBUG_STR(logger, "Old delays (ns): "<< std::setprecision(9) << currentDelays);
       ASKAPCHECK(currentDelays.size() == delays.nelements(), "Number of antennas differ in fixeddelays (or antXX.delay) parameters and in the dataset");
       for (casa::uInt ant = 0; ant < delays.nelements(); ++ant) {
            delays[ant] += currentDelays[ant];
       }
-      ASKAPLOG_INFO_STR(logger, "New delays (ns): "<< std::setprecision(9)<<delays);
+      ASKAPLOG_DEBUG_STR(logger, "New delays (ns): "<< std::setprecision(9)<<delays);
       const std::string outParset = "corrected_fixeddelay.parset"; 
       {
           std::ofstream os(outParset.c_str());
@@ -227,13 +227,28 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
           } else {
               ASKAPCHECK(itsAntennaNames.size() == delays.size(), 
                     "Number of antennas defined in the ingest parset is different from the number of antennas delays are solved for");
+              double largestCorrection = 0.;
+              casa::uInt largestCorrectionAnt = 0u;
               for (casa::uInt ant = 0; ant < delays.nelements(); ++ant) {
-                   os << "common.antenna."<<itsAntennaNames[ant]<<".delay = " << std::setprecision(9)<<delays[ant] << "ns"<<std::endl;
-                   ASKAPLOG_INFO_STR(logger, "      "<<std::setw(5)<<itsAntennaNames[ant]<< " (index "<<ant<<") ->  "<<std::setprecision(9)<<delays[ant]<<" ns");
+                   const double thisAntDelay = delays[ant];
+                   const double thisAntDelayDiff = delays[ant] - currentDelays[ant];
+                   os << "common.antenna."<<itsAntennaNames[ant]<<".delay = " << std::setprecision(9)<<thisAntDelay << "ns"<<std::endl;
+                   ASKAPLOG_DEBUG_STR(logger, " "<<std::setw(5)<<itsAntennaNames[ant]<< " (index "<<std::setw(2)<<ant<<") -> "
+                                     <<std::setw(12)<<std::setprecision(9)<<thisAntDelay<<" ns (diff: "<<std::setw(8)
+                                     <<std::setprecision(5)<<thisAntDelayDiff<<" ns)");
+                   if (fabs(thisAntDelayDiff) > fabs(largestCorrection)) {
+                       largestCorrection = thisAntDelayDiff;
+                       largestCorrectionAnt = ant;
+                   }
               }
+              ASKAPLOG_INFO_STR(logger, "Largest correction is "<<std::setprecision(6)<<largestCorrection<<" ns for "<<itsAntennaNames[largestCorrectionAnt]<<" (index "<<
+                                largestCorrectionAnt<<")");
+              if (fabs(largestCorrection) > 100.) {
+                  ASKAPLOG_WARN_STR(logger, "Delay corrections are expected to be smaller than 100 ns!");
+              } 
           }
       }
-      ASKAPLOG_INFO_STR(logger, "The new delays are now stored in "<<outParset);       
+      ASKAPLOG_DEBUG_STR(logger, "The new delays are now stored in "<<outParset);       
   } else {
       ASKAPLOG_WARN_STR(logger, "No fixed delays specified in the parset -> no update");
   }
@@ -258,7 +273,7 @@ int DelaySolverApp::run(int, char **) {
          // scheduling block ID is specified, the file name will be taken from SB
          ASKAPCHECK(msName == "", "When the scheduling block ID is specified, the file name is taken from that SB. "
                     "Remove the -f command line parameter or ms keyword in the parset to continue.");
-         casa::Path path2sb(config().getString("sbpath","./"));
+         casa::Path path2sb(parameterExists("sbdir") ? parameter("sbdir") : config().getString("sbpath","./"));
          path2sb.append(sbID);
          const casa::Directory sbDir(path2sb);
          // do not follow symlinks, non-recursive
@@ -266,14 +281,14 @@ int DelaySolverApp::run(int, char **) {
          ASKAPCHECK(dirContent.nelements() > 0, "Unable to find a measurement set file in "<<sbDir.path().absoluteName());
          int fileIndex = -1;
          if (dirContent.nelements() != 1) {
-             ASKAPLOG_INFO_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - assume one file per beam and index == beam");
+             ASKAPLOG_DEBUG_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - assume one file per beam and index == beam");
              casa::uInt beam = config().getUint("beam",0);
              for (casa::uInt i = 0; i<dirContent.nelements(); ++i) {
                   const casa::String nameTemplate = "_"+utility::toString<casa::uInt>(beam)+".ms";
                   const size_t pos = dirContent[i].rfind(nameTemplate);
                   if ((pos != casa::String::npos) && (pos + nameTemplate.size() == dirContent[i].size())) {
                       ASKAPCHECK(fileIndex == -1, "Multiple measurement sets matching beam = "<<beam<<" are present in "<<sbDir.path().absoluteName());
-                      ASKAPLOG_INFO_STR(logger, "Using "<<dirContent[i]);
+                      ASKAPLOG_DEBUG_STR(logger, "Using "<<dirContent[i]);
                       fileIndex = static_cast<int>(i);
                   }
              }
@@ -289,7 +304,7 @@ int DelaySolverApp::run(int, char **) {
          // fixed delays will be taken from cpingest.in in the SB directory
          casa::Path path2cpingest(path2sb);
          path2cpingest.append("cpingest.in");
-         ASKAPLOG_INFO_STR(logger, "Ingest parset: "<<path2cpingest.absoluteName());
+         ASKAPLOG_DEBUG_STR(logger, "Ingest parset: "<<path2cpingest.absoluteName());
          const LOFAR::ParameterSet ingestParset(path2cpingest.absoluteName());
          ASKAPCHECK(currentDelays.size() == 0, "When the scheduling block ID is specified, the current fixed delays are taken "
                     "from the ingest pipeline parset stored with that SB. Remove it from the application's parset to continue.");
@@ -300,7 +315,7 @@ int DelaySolverApp::run(int, char **) {
      }
      timer.mark();
      ASKAPCHECK(msName != "", "Measurement set should be specified explicitly or the scheduling block should be given");
-     ASKAPLOG_INFO_STR(logger, "Processing measurement set "<<msName);
+     ASKAPLOG_DEBUG_STR(logger, "Processing measurement set "<<msName);
      TableDataSource ds(msName,TableDataSource::MEMORY_BUFFERS);     
      std::cerr<<"Initialization: "<<timer.real()<<std::endl;
      timer.mark();
@@ -326,6 +341,7 @@ int main(int argc, char *argv[]) {
   DelaySolverApp app;
   app.addParameter("ms","f", "Measurement set name (optional)","");
   app.addParameter("sb","s", "Scheduling block number (optional)","");  
+  app.addParameter("sbdir","d", "Directory where scheduling blocks are stored (optional)",""); 
   return app.main(argc,argv);
 }
 
