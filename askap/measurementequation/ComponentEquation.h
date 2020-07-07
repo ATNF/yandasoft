@@ -90,6 +90,7 @@ namespace askap
         /// level, outside this class). In the future, I expect that
         /// predict() without parameters will be deprecated.
         /// @param[in] chunk a read-write accessor to work with
+        /// @param[in] nDir number of different directions to predict model vis for
         virtual void predict(accessors::IDataAccessor &chunk) const;
 
         /// @brief Calculate the normal equation for one accessor (chunk).
@@ -103,6 +104,9 @@ namespace askap
         /// @param[in] ne Normal equations
         virtual void calcGenericEquations(const accessors::IConstDataAccessor &chunk,
                               askap::scimath::GenericNormalEquations& ne) const;
+   
+        /// Set the number of DD calibration directions for increased equation size
+        void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
         
         using GenericMultiChunkEquation::predict;
         using askap::scimath::GenericEquation::calcEquations;
@@ -146,10 +150,12 @@ namespace askap
         /// @param[in] freq a vector of frequencies (one for each spectral
         ///            channel) 
         /// @param[in] rwVis a non-const reference to the visibility cube to alter
+        /// @param[in] rowOffset offset for the current model if more than one is present
         void addModelToCube(const IParameterizedComponent& comp,
                const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
                const casacore::Vector<casacore::Double>& freq,
-               casacore::Cube<casacore::Complex> &rwVis) const;
+               casacore::Cube<casacore::Complex> &rwVis,
+               const casacore::uInt rowOffset=0) const;
 
         /// @brief a helper method to populate a visibility cube
         /// @details This is method computes visibilities for the one given
@@ -162,10 +168,12 @@ namespace askap
         /// @param[in] freq a vector of frequencies (one frequency for each 
         ///            spectral channel) 
         /// @param[in] rwVis a non-const reference to the visibility cube to alter
+        /// @param[in] rowOffset offset for the current model if more than one is present
         void addModelToCube(const IUnpolarizedComponent& comp,
                const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
                const casacore::Vector<casacore::Double>& freq,
-               casacore::Cube<casacore::Complex> &rwVis) const;
+               casacore::Cube<casacore::Complex> &rwVis,
+               const casacore::uInt rowOffset=0) const;
         
         /// @brief a helper method to update design matrix and residuals
         /// @details This method iterates over a given number of polarisation 
@@ -209,6 +217,8 @@ namespace askap
         /// @details Components are defined in the Stokes frame, this class converts them
         /// into the measurement frame
         mutable scimath::PolConverter itsPolConverter;
+ 
+        mutable casacore::uInt itsNDir;
     };
 
   }

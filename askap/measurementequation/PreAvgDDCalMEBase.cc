@@ -216,10 +216,18 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
 
     ASKAPLOG_INFO_STR(logger, "Building the normal matrix.");
 
+    // DDCALTAG
+    const casacore::uInt nDir = polXProducts.nDir();
+    const casacore::uInt rowsPerDir = itsBuffer.nRow() / nDir;
+
     for (casacore::uInt row = 0; row < itsBuffer.nRow(); ++row) {
         scimath::ComplexDiffMatrix cdm = buildComplexDiffMatrix(itsBuffer, row);
         ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
         ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
+
+        // DDCALTAG
+        const casacore::uInt dirRow = row % rowsPerDir;
+        const casacore::uInt dir = row / rowsPerDir;
 
         for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
             // take a slice, this takes care of indices along the first two axes (row and channel)
@@ -231,6 +239,29 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
             } else {
                 // cdm is a normal matrix
                 ne.add(cdm, pxpSlice);
+                // DDCALTAG -- subtract contribution from other directions from the data vector product
+                for (casa::uInt dir2 = 0; dir2 < nDir; ++dir2) {
+                    // in the model product buffer, store the nDir self products then the nDir*(nDir-1)/2 cross products
+                    casa::uInt modelBlock, doConj;
+                    if (dir == dir2) {
+                        continue;
+                    }
+                    else if (dir < dir2) {
+                        modelBlock = (nDir-1)*(dir+1) - (dir+1)*dir/2 + dir2;
+                        doConj = 0;
+                    }
+                    else {
+                        modelBlock = (nDir-1)*(dir2+1) - (dir2+1)*dir2/2 + dir;
+                        doConj = 1;
+                    }
+
+                    const casa::uInt blockRow = modelBlock * rowsPerDir + dirRow;
+                    const casa::uInt row2 = dir2 * rowsPerDir + dirRow;
+                    scimath::ComplexDiffMatrix cdm2 = buildComplexDiffMatrix(itsBuffer, row2);
+                    const scimath::PolXProducts pxpSlice2 = polXProducts.roModelSlice(blockRow, chan);
+                    ne.DDupdate(cdm, cdm2, pxpSlice2, doConj);
+
+                }
             }
         }
     }

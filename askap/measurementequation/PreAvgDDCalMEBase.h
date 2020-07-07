@@ -106,9 +106,9 @@ public:
   
   /// @brief initialise accumulation
   /// @details Resets the buffer and configure it to the given number of
-  /// antennas and beams.
+  /// antennas and separate calibration directions.
   /// @param[in] nAnt number of antennas
-  /// @param[in] nDir number of beams
+  /// @param[in] nDir number of separate calibration directions
   /// @param[in] nChan number of channels, 1 channel is a special case of
   /// frequency-independent buffering
   void initialise(casacore::uInt nAnt, casacore::uInt nDir, casacore::uInt nChan = 1);
