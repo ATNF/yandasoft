@@ -38,7 +38,7 @@
 #include <askap/dataaccess/DataAccessorStub.h>
 #include <askap/scimath/fitting/Axes.h>
 
-ASKAP_LOGGER(logger, ".test");
+ASKAP_LOGGER(logger, ".gridderexperiments");
 
 using namespace askap;
 using namespace askap::synthesis;

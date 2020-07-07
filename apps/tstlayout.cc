@@ -37,7 +37,7 @@
 // Askapsoft includes
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
-ASKAP_LOGGER(logger, "");
+ASKAP_LOGGER(logger, ".tstlayout");
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
