@@ -206,6 +206,7 @@ DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& 
       if (parset.isDefined("refantenna") && parset.isDefined("refgain")) {
           ASKAPLOG_WARN_STR(logger,"refantenna and refgain are both defined. refantenna will be used.");
       }
+      // DDCALTAG note: if multiple directions are calibrated, the itsRefGain params will be reset later
       if (parset.isDefined("refantenna")) {
           const int refAntenna = parset.getInt32("refantenna",-1);
           const int refBeam = 0;
@@ -838,21 +839,36 @@ void DDCalibratorParallel::rotatePhases()
            refPhaseTerms(casacore::IPosition(2,chan,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
       }
   } else {
-      ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
-              "` is impossible because this parameter is not present in the model");
-      ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
-              "` is impossible because this parameter is not present in the model");
-      refPhaseTerms.resize(casacore::IPosition(2,1,refPols));
-      refPhaseTerms(casacore::IPosition(2,0,0)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
-      refPhaseTerms(casacore::IPosition(2,0,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
+
+ASKAPLOG_INFO_STR(logger, "DDCALTAG setting up phase referencing for "<<itsMaxNCalForPreAvg<<" directions");
+
+      refPhaseTerms.resize(casacore::IPosition(2,itsMaxNCalForPreAvg,refPols));
+      // DDCALTAG
+      // this will add pol to the "refgain" option, but let's scrap that anyway
+      const casacore::Short refAntenna = accessors::CalParamNameHelper::parseParam(itsRefGainXX).first.antenna();
+      for (casa::uInt dir = 0; dir < itsMaxNCalForPreAvg; ++dir) {
+          // DDCALTAG reset ref antennas for each direction
+          itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, dir, casacore::Stokes::XX);
+          itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, dir, casacore::Stokes::YY);
+          ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<
+                  "` is impossible because this parameter is not present in the model");
+          ASKAPCHECK(itsModel->has(itsRefGainYY), "phase rotation to `"<<itsRefGainYY<<
+                  "` is impossible because this parameter is not present in the model");
+          refPhaseTerms(casacore::IPosition(2,dir,0)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainXX)));
+          refPhaseTerms(casacore::IPosition(2,dir,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(itsRefGainYY)));
+      }
   }
   ASKAPDEBUGASSERT(refPhaseTerms.nelements() > 1);
 
   for (std::vector<std::string>::const_iterator it=names.begin();
                it!=names.end();++it)  {
        const std::string parname = *it;
+
+       // DDCALTAG changes won't work with multi dir and freq, but deal with that later
+       const casacore::Short dir = accessors::CalParamNameHelper::parseParam(parname).first.beam();
        const casacore::uInt index = itsSolveBandpass ?
-           accessors::CalParamNameHelper::extractChannelInfo(parname).first : 0;
+           accessors::CalParamNameHelper::extractChannelInfo(parname).first : dir;
+       
        if (parname.find("gain.g11") != std::string::npos) {
            itsModel->update(parname,
                  itsModel->complexValue(parname)*refPhaseTerms(casacore::IPosition(2,index,0)));
