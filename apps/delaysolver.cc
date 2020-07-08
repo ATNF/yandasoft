@@ -183,6 +183,14 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
              casa::uInt>(1,2)));
   }
   
+  // if true, program will fail if the largest correction exceeds threshold by absolute value
+  const bool checkUpdatesAreBelowThreshold = config().getBool("smallupdates", false);
+
+  // threshold for corrections. If smallupdates is false, there will be just a warning if the largest
+  // correction exceeds this threshold by absolute value. Otherwise the application will fail
+  const double delayUpdatesThreshold = asQuantity(config().getString("delaythreshold", "100ns")).getValue("ns");
+
+
   const bool estimateViaLags = config().getBool("uselags", false);
   
   if (estimateViaLags) {
@@ -241,10 +249,11 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
                        largestCorrectionAnt = ant;
                    }
               }
-              ASKAPLOG_INFO_STR(logger, "Largest correction is "<<std::setprecision(6)<<largestCorrection<<" ns for "<<itsAntennaNames[largestCorrectionAnt]<<" (index "<<
+              ASKAPLOG_INFO_STR(logger, "Largest change is "<<std::setprecision(6)<<largestCorrection<<" ns for "<<itsAntennaNames[largestCorrectionAnt]<<" (index "<<
                                 largestCorrectionAnt<<")");
-              if (fabs(largestCorrection) > 100.) {
-                  ASKAPLOG_WARN_STR(logger, "Delay corrections are expected to be smaller than 100 ns!");
+              if (fabs(largestCorrection) > delayUpdatesThreshold) {
+                  ASKAPCHECK(!checkUpdatesAreBelowThreshold, "Delay corrections are expected to be smaller than "<<delayUpdatesThreshold<<" ns!")
+                  ASKAPLOG_WARN_STR(logger, "Delay corrections are expected to be smaller than "<<delayUpdatesThreshold<<" ns!");
               } 
           }
       }
