@@ -19,8 +19,11 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/askap-cmake")
 include(version_utils)
 get_version_string()
-
-project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
+if (VERSION_SHORT)
+    project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
+else ()
+    project(yandasoft VERSION 0.0.0 LANGUAGES C CXX)
+endif ()
 
 
 configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
