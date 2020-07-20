@@ -707,7 +707,7 @@ namespace askap {
             Vector<T> peakValues(this->itsNumberTerms);
             Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
-            Matrix<T> weights, mask;
+            Matrix<T> weights, mask, maskref;
             IPosition minPos(2, 0);
             IPosition maxPos(2, 0);
             T minVal(0.0), maxVal(0.0);
@@ -732,6 +732,7 @@ namespace askap {
 
 			// Termination
 			int converged;
+            this->control()->maskNeedsResetting(true);
 
             if (this->control()->targetIter() != 0) {
 
@@ -775,37 +776,13 @@ namespace askap {
                         }
                     }
 
-                    // initialise a scratch space if mask needs to be reset each iter, otherwise just point at weights
-                    if (this->control()->deepCleanMode()) {
-                        if (nBases>1) {
-                            // needs to be changed in the base loop, so init scratch space
-                            mask = Matrix<T>(weights.shape(),0.0);
-                            // Check mask base for contiguity
-                            if (!mask.contiguousStorage()) {
-                                ASKAPLOG_WARN_STR(decmtbflogger, "mask (sec 1) is not contiguous\n");
-                            }
-                        } else {
-                            // only a single base, so multiple weights and mask now.
-                            // reference the mask to the mask for base 0
-                            mask.reference(this->itsMask(0));
-                            // multiply weights by the base 0 mask
-                            #pragma omp for schedule(static)
-                            for (j = 0; j < ncol; j++ ) {
-                                Vector<T> weightscol = weights.column(j);
-                                T* pWeights = weightscol.getStorage(IsNotCont);
-                                Vector<T> maskcol = mask.column(j);
-                                T* pMask = maskcol.getStorage(IsNotCont);
-                                for (i = 0; i < nrow; i++ ) {
-                                    T val = *(pWeights+i) * (*(pMask+i));
-                                    pWeights[i] = val;
-                                }
-                            }
-                            // now reference the mask to the updated weigths
-                            mask.reference(weights);
+                    if (nBases>1) {
+                        // init scratch space for mask
+                        mask = Matrix<T>(weights.shape(),0.0);
+                        // Check mask base for contiguity
+                        if (!mask.contiguousStorage()) {
+                            ASKAPLOG_WARN_STR(decmtbflogger, "mask is not contiguous\n");
                         }
-                    } else {
-                        // reference the mask to the weigths
-                        mask.reference(weights);
                     }
 
                 }
@@ -823,6 +800,42 @@ namespace askap {
                     // Reset optimium base
                     optimumBase = 0;
 
+                    // =============== Set up deep cleaning mask =======================
+                    // initialise a scratch space if mask needs to be reset each iter, otherwise just point at weights
+                    if (isWeighted && this->control()->maskNeedsResetting()) {
+                        uInt ncol = weights.ncolumn();
+                        uInt nrow = weights.nrow();
+                        // Declare private versions of these
+                        uInt i, j;
+                        if (this->control()->deepCleanMode()) {
+                            if (nBases>1) {
+                                maskref.reference(mask);
+                            } else {
+                                // only a single base, so multiple weights and mask now.
+                                // reference the mask to the mask for base 0
+                                maskref.reference(this->itsMask(0));
+                                // multiply weights by the base 0 mask
+                                #pragma omp for schedule(static)
+                                for (j = 0; j < ncol; j++ ) {
+                                    Vector<T> weightscol = weights.column(j);
+                                    T* pWeights = weightscol.getStorage(IsNotCont);
+                                    Vector<T> maskcol = maskref.column(j);
+                                    T* pMask = maskcol.getStorage(IsNotCont);
+                                    for (i = 0; i < nrow; i++ ) {
+                                        T val = *(pWeights+i) * (*(pMask+i));
+                                        pWeights[i] = val;
+                                    }
+                                }
+                                // now reference the mask to the updated weigths
+                                maskref.reference(weights);
+                            }
+                        } else {
+                            // reference the mask to the weigths
+                            maskref.reference(weights);
+                        }
+                        this->control()->maskNeedsResetting(false);
+                    }
+
                     // =============== Choose Component =======================
 
                     for (uInt base = 0; base < nBases; base++) {
@@ -838,9 +851,10 @@ namespace askap {
 
                             if (isWeighted) {
                                 // for a single base, the mask has already been set outside this loop
+
                                 if (nBases>1) {
-                                    uInt ncol = mask.ncolumn();
-                                    uInt nrow = mask.nrow();
+                                    uInt ncol = maskref.ncolumn();
+                                    uInt nrow = maskref.nrow();
                                     Matrix<T> maskbase;
                                     maskbase.reference(this->itsMask(base));
                                     #pragma omp for schedule(static)
@@ -849,7 +863,7 @@ namespace askap {
                                         T* pWeights = weightscol.getStorage(IsNotCont);
                                         Vector<T> maskbasecol = maskbase.column(j);
                                         T* pMaskBase = maskbasecol.getStorage(IsNotCont);
-                                        Vector<T> maskcol = mask.column(j);
+                                        Vector<T> maskcol = maskref.column(j);
                                         T* pMask = maskcol.getStorage(IsNotCont);
                                         for (uInt i = 0; i < nrow; i++ ) {
                                             pMask[i] = *(pWeights+i) * (*(pMaskBase+i));
@@ -858,7 +872,7 @@ namespace askap {
                                 }
 
                             } else {
-                                mask.reference(this->itsMask(base));
+                                maskref.reference(this->itsMask(base));
                             }
 
                             #pragma omp single
@@ -867,7 +881,7 @@ namespace askap {
                         }
 
                         #pragma omp single
-                        haveMask = mask.nelements()>0;
+                        haveMask = maskref.nelements()>0;
 
                         // We implement various approaches to finding the peak. The first is the cheapest
                         // and evidently the best (according to Urvashi).
@@ -883,7 +897,7 @@ namespace askap {
                             res.reference(this->itsResidualBasis(base)(0));
 
                             if (haveMask) {
-                                absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,mask);
+                                absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,maskref);
                             } else {
                                 absMinMaxPosOMP(minVal,maxVal,minPos,maxPos,res);
                             }
@@ -941,7 +955,7 @@ namespace askap {
                                 res = coefficients(0);
 
                                 if (haveMask) {
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, mask);
+                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
                                 } else {
                                     absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
                                 }
@@ -980,7 +994,7 @@ namespace askap {
                                     #pragma omp single
                                     res = negchisq;
 
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, mask);
+                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
                                 } else {
                                     #pragma omp single
                                     res = negchisq;

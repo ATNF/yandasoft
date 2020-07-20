@@ -235,6 +235,12 @@ namespace askap {
                 /// @brief Returns True if divergence detection is active
                 casa::Bool deepCleanMode() { return itsDeepCleanMode; }
 
+                /// @brief Returns True if there is a flag to reset the mask
+                casa::Bool maskNeedsResetting() { return itsMaskNeedsResetting; }
+
+                /// @brief Update the flag to reset the mask
+                void maskNeedsResetting(casa::Bool flag) { itsMaskNeedsResetting = flag; }
+
             private:
                 casacore::String itsAlgorithm;
                 TerminationCause itsTerminationCause;
@@ -248,6 +254,7 @@ namespace askap {
                 casa::Int itsPSFWidth;
                 casa::Bool itsDetectDivergence;
                 casa::Bool itsDeepCleanMode;
+                casa::Bool itsMaskNeedsResetting;
                 T itsLambda;
                 askap::SignalCounter itsSignalCounter;
                 askap::ISignalHandler* itsOldHandler;

@@ -75,9 +75,11 @@ namespace askap {
                     if (!itsDeepCleanMode) {
                         ASKAPLOG_INFO_STR(decctllogger, "Starting deep cleaning phase");
                         itsDeepCleanMode = True;
-                        itsTerminationCause = CONVERGED;
-                        return True;
-                    } else if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction2) {
+                        itsMaskNeedsResetting = True;
+                        //itsTerminationCause = CONVERGED;
+                        //return True;
+                    }
+                    if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction2) {
                         ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
                                             << " less than 2nd target " << itsTargetObjectiveFunction2);
                         itsTerminationCause = CONVERGED;
