@@ -203,19 +203,14 @@ DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& 
   }
 
   if (itsComms.isMaster()) {
-      if (parset.isDefined("refantenna") && parset.isDefined("refgain")) {
-          ASKAPLOG_WARN_STR(logger,"refantenna and refgain are both defined. refantenna will be used.");
-      }
-      // DDCALTAG note: if multiple directions are calibrated, the itsRefGain params will be reset later
       if (parset.isDefined("refantenna")) {
+          // Note: if multiple directions are calibrated, the itsRefGain params will be reset later
           const int refAntenna = parset.getInt32("refantenna",-1);
           const int refBeam = 0;
           itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casacore::Stokes::XX);
           itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, refBeam, casacore::Stokes::YY);
       } else if (parset.isDefined("refgain")) {
-          const string refGain = parset.getString("refgain");
-          itsRefGainXX = refGain;
-          itsRefGainYY = refGain;
+          ASKAPLOG_WARN_STR(logger,"parameter refgain is not supported. Use refantenna for phase referencing");
       } else {
           itsRefGainXX = "";
           itsRefGainYY = "";
@@ -782,14 +777,6 @@ void DDCalibratorParallel::doPhaseReferencing()
 {
     if (itsComms.isMaster()) {
         if (itsRefGainXX != "") {
-            if (itsRefGainXX == itsRefGainYY) {
-                ASKAPLOG_INFO_STR(logger, "Rotating phases to have that of "<<
-                    itsRefGainXX<<" equal to 0");
-            } else {
-                ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<
-                    itsRefGainXX<<" equal to 0 and YY phases to have that of "<<
-                    itsRefGainYY<<" equal to 0");
-            }
             rotatePhases();
         }
     }
@@ -812,6 +799,9 @@ void DDCalibratorParallel::rotatePhases()
   casacore::Array<casacore::Complex> refPhaseTerms;
   const casacore::uInt refPols = 2;
   if (itsSolveBandpass) {
+      ASKAPLOG_INFO_STR(logger, "Setting up separate phase referencing for each bandpass channel");
+      ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<itsRefGainXX<<
+          ".chan equal to 0 and YY phases to have that of "<<itsRefGainYY<<".chan equal to 0");
       // first find the required dimensionality
       casacore::uInt maxChan = 0;
       for (std::vector<std::string>::const_iterator it=names.begin();
@@ -839,15 +829,14 @@ void DDCalibratorParallel::rotatePhases()
            refPhaseTerms(casacore::IPosition(2,chan,1)) = casacore::polar(1.f,-arg(itsModel->complexValue(yRefPar)));
       }
   } else {
-
-ASKAPLOG_INFO_STR(logger, "DDCALTAG setting up phase referencing for "<<itsMaxNCalForPreAvg<<" directions");
-
-      refPhaseTerms.resize(casacore::IPosition(2,itsMaxNCalForPreAvg,refPols));
-      // DDCALTAG
-      // this will add pol to the "refgain" option, but let's scrap that anyway
+      // need to change the phase ref param for each direction
       const casacore::Short refAntenna = accessors::CalParamNameHelper::parseParam(itsRefGainXX).first.antenna();
+      ASKAPLOG_INFO_STR(logger, "Setting up separate phase referencing for "<<itsMaxNCalForPreAvg<<" directions");
+      ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of gain.g11."<<refAntenna<<
+          ".dir equal to 0 and YY phases to have that of gain.g22."<<refAntenna<<".dir equal to 0");
+      refPhaseTerms.resize(casacore::IPosition(2,itsMaxNCalForPreAvg,refPols));
       for (casa::uInt dir = 0; dir < itsMaxNCalForPreAvg; ++dir) {
-          // DDCALTAG reset ref antennas for each direction
+          // reset ref antennas for each direction
           itsRefGainXX = accessors::CalParamNameHelper::paramName(refAntenna, dir, casacore::Stokes::XX);
           itsRefGainYY = accessors::CalParamNameHelper::paramName(refAntenna, dir, casacore::Stokes::YY);
           ASKAPCHECK(itsModel->has(itsRefGainXX), "phase rotation to `"<<itsRefGainXX<<

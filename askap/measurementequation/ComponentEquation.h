@@ -106,7 +106,13 @@ namespace askap
                               askap::scimath::GenericNormalEquations& ne) const;
    
         /// Set the number of DD calibration directions for increased equation size
-        void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
+        void setNDir(casacore::uInt nDir) const { itsNDir = nDir; itsIsDD = (nDir>1); }
+   
+        /// Get the number of DD calibration directions
+        casacore::uInt getNDir() const { return itsNDir; }
+   
+        /// Return whether or not this will be treated as a direction dependent equation
+        casacore::Bool getIsDD() const { return itsIsDD; }
         
         using GenericMultiChunkEquation::predict;
         using askap::scimath::GenericEquation::calcEquations;
@@ -219,6 +225,7 @@ namespace askap
         mutable scimath::PolConverter itsPolConverter;
  
         mutable casacore::uInt itsNDir;
+        mutable casacore::Bool itsIsDD;
     };
 
   }

@@ -39,7 +39,6 @@
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/AskapError.h>
-// DDCALTAG
 #include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
@@ -52,7 +51,7 @@ using namespace askap::synthesis;
 /// @brief default constructor
 /// @details preaveraging is initialised based on the first encountered accessor
 PreAvgDDCalBuffer::PreAvgDDCalBuffer() : itsPolXProducts(0), // set nPol = 0 for now as a proper initialisation is pending
-    itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false) {}
+    itsVisTypeIgnored(0), itsNoMatchIgnored(0), itsFlagIgnored(0), itsBeamIndependent(false), itsNDir(1) {}
    
 /// @brief constructor with explicit averaging parameters
 /// @details This version of the constructor explicitly defines the number of 
@@ -139,7 +138,6 @@ void PreAvgDDCalBuffer::initialise(casacore::uInt nAnt, casacore::uInt nDir, cas
   ASKAPDEBUGASSERT(nChan > 0);
   ASKAPASSERT(nAnt > 0);
   const casacore::uInt numberOfRows = nDir*nAnt*(nAnt-1)/2;
-  // DDCALTAG
   itsNDir = nDir;
   if (itsFlag.shape() != casacore::IPosition(3,int(numberOfRows),int(nChan),4)) {
      // resizing buffers
@@ -304,6 +302,7 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
 
   // set up the model vis DataAccessor and let it know how many directions are being calibrated
   accessors::DDCalBufferDataAccessor modelAcc(acc);
+  ASKAPLOG_DEBUG_STR(logger, "calling DDCalBufferDataAccessor::setNDir("<<itsNDir<<")");
   modelAcc.setNDir(itsNDir);
 
   // DDCALTAG
@@ -311,22 +310,18 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
   // Currently only set up for the ComponentEquation class, so try a cast to that
   // Not sure about the commented lines for the ImagingEquationAdapter class. Test when needed
   try {
-      ASKAPLOG_INFO_STR(logger, "DDCALTAG casting MeasEq to CompEq");
+      ASKAPLOG_DEBUG_STR(logger, "casting MeasEq to CompEq to call setNDir("<<itsNDir<<")");
       const boost::shared_ptr<ComponentEquation const>
           &ce = boost::dynamic_pointer_cast<ComponentEquation const>(me);
-      ASKAPLOG_INFO_STR(logger, "DDCALTAG calling ComponentEquation::setNDir()");
       ce->setNDir(itsNDir);
   }
   //catch (const std::bad_cast&) {
-  //    ASKAPLOG_INFO_STR(logger, "DDCALTAG casting MeasEq to ImgEq");
   //    const boost::shared_ptr<ImagingEquationAdapter const>
   //        &ie = boost::dynamic_pointer_cast<ImagingEquationAdapter const>(me);
-  //    ASKAPLOG_INFO_STR(logger, "DDCALTAG calling ImagingEquationAdapter::setNDir()");
   //    ie->setNDir(itsNDir);
   //}
   catch (const std::bad_cast&) {}
 
-  ASKAPLOG_INFO_STR(logger, "DDCALTAG calling predict from PreAvgDDCalBuffer::accumulate()");
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();
   const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();
@@ -339,11 +334,9 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
   ASKAPDEBUGASSERT(measuredVis.shape() == measuredFlag.shape());
   const casacore::uInt bufferNPol = nPol();
   ASKAPDEBUGASSERT(bufferNPol == itsPolXProducts.nPol());
-  // DDCALTAG -- updating these asserts
   ASKAPASSERT(modelVis.nrow() == itsNDir*acc.nRow());
   ASKAPASSERT(modelVis.ncolumn() == acc.nChannel());
   ASKAPASSERT(modelVis.nplane() == acc.nPol());
-  
   
   // references to metadata
   const casacore::Vector<casacore::uInt> &beam1 = acc.feed1();
@@ -389,8 +382,6 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
 
             for (casacore::uInt pol = 0; pol<acc.nPol(); ++pol) {
                  if (pol < bufferNPol) {
-                     // DDCALTAG -- cannot set model upfront if there are more than one (i.e. if itsNDir>1)
-                     //const casacore::Complex model = modelVis(row,chan,pol);
                      const float visNoise =
                          casacore::square(casacore::real(measuredNoise(row,chan,pol)));
                      const float weight = (visNoise > 0.) ? 1./visNoise : 0.;
@@ -405,8 +396,6 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
                                                      measuredVis(row,chan,pol2));
                           }
     
-                          //pxpSlice.addModelMeasProduct(pol,pol2,weight * std::conj(model) *
-                          //    (pol == pol2 ? measuredVis(row,chan,pol2) : casacore::Complex(0.,0.)));
                           if (pol2<=pol) {
                               for (casacore::uInt dir = 0; dir<itsNDir; ++dir) {
                                   itsPolXProducts.addModelProduct(bufRow+dir*acc.nRow(), bufChan, pol, pol2,

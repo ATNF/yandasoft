@@ -216,7 +216,6 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
 
     ASKAPLOG_INFO_STR(logger, "Building the normal matrix.");
 
-    // DDCALTAG
     const casacore::uInt nDir = polXProducts.nDir();
     const casacore::uInt rowsPerDir = itsBuffer.nRow() / nDir;
 
@@ -225,7 +224,6 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
         ASKAPDEBUGASSERT(cdm.nRow() == itsBuffer.nPol());
         ASKAPDEBUGASSERT(cdm.nColumn() == itsBuffer.nPol() * itsBuffer.nChannel());
 
-        // DDCALTAG
         const casacore::uInt dirRow = row % rowsPerDir;
         const casacore::uInt dir = row / rowsPerDir;
 
@@ -239,7 +237,6 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
             } else {
                 // cdm is a normal matrix
                 ne.add(cdm, pxpSlice);
-                // DDCALTAG -- subtract contribution from other directions from the data vector product
                 for (casa::uInt dir2 = 0; dir2 < nDir; ++dir2) {
                     // in the model product buffer, store the nDir self products then the nDir*(nDir-1)/2 cross products
                     casa::uInt modelBlock, doConj;

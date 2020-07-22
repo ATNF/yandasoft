@@ -23,7 +23,7 @@
 
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/SharedIter.h>
-// DDCALTAG
+// DDCALTAG -- make sure changing from CalBuffer to DDCalBuffer doesn't affect any other use cases
 #include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/scimath/fitting/INormalEquations.h>
@@ -59,16 +59,17 @@ namespace askap
   {
 
     ComponentEquation::ComponentEquation(const askap::scimath::Params& ip,
-          const accessors::IDataSharedIter& idi) :  scimath::Equation(ip), MultiChunkEquation(idi),  
-           askap::scimath::GenericEquation(ip), GenericMultiChunkEquation(idi),
-           itsAllComponentsUnpolarised(false), itsNDir(1)
+          const accessors::IDataSharedIter& idi) :
+          scimath::Equation(ip), MultiChunkEquation(idi),  
+          askap::scimath::GenericEquation(ip), GenericMultiChunkEquation(idi),
+          itsAllComponentsUnpolarised(false), itsNDir(1), itsIsDD(false)
     {
       init();
     };
 
     ComponentEquation::ComponentEquation(const accessors::IDataSharedIter& idi) :
            MultiChunkEquation(idi), GenericMultiChunkEquation(idi),
-           itsAllComponentsUnpolarised(false), itsNDir(1)
+           itsAllComponentsUnpolarised(false), itsNDir(1), itsIsDD(false)
     {
       setParameters(defaultParameters());
       init();
@@ -170,8 +171,6 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
   ASKAPDEBUGASSERT(rwVis.nplane() == itsPolConverter.outputPolFrame().nelements());
   
-  ASKAPLOG_INFO_STR(logger, "DDCALTAG - addModelToCube(IParameterizedComponent)");
-
   // flattened buffer for visibilities 
   std::vector<double> vis(2*freq.nelements()); 
  
@@ -227,8 +226,6 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
   ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
   ASKAPDEBUGASSERT(rwVis.nplane() >= 1);
-  
-  ASKAPLOG_INFO_STR(logger, "DDCALTAG - addModelToCube(IUnpolarizedComponent)");
   
   // flattened buffer for visibilities 
   std::vector<double> vis(2*freq.nelements());
@@ -296,7 +293,6 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
 
   // DDCALTAG
   const casacore::uInt nDir = itsNDir;
-  ASKAPLOG_INFO_STR(logger, "DDCALTAG nDir = "<<nDir);
   try {
       // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
       accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
@@ -325,11 +321,13 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
        ASKAPDEBUGASSERT(*compIt); 
        // current component
        const IParameterizedComponent& curComp = *(*compIt);
-ASKAPLOG_INFO_STR(logger, "DDCALTAG Adding model for component "<<curComp.nParameters()<<", ...");
+       //ASKAPLOG_INFO_STR(logger, "DDCALTAG Adding model for component "<<curComp.parameterName(0)<<", ...");
        try {
             const IUnpolarizedComponent &unpolComp = 
               dynamic_cast<const IUnpolarizedComponent&>(curComp);
             // DDCALTAG
+            //ASKAPLOG_INFO_STR(logger, "DDCALTAG  - calling addModelToCube, rowOffset = "<<rowOffset);
+            //ASKAPLOG_INFO_STR(logger, "DDCALTAG     - rwVis.shape() = "<<rwVis.shape());
             addModelToCube(unpolComp,uvw,freq,rwVis,rowOffset);
        }
        catch (const std::bad_cast&) {
@@ -337,7 +335,9 @@ ASKAPLOG_INFO_STR(logger, "DDCALTAG Adding model for component "<<curComp.nParam
             addModelToCube(curComp,uvw,freq,rwVis,rowOffset);
        }
        // DDCALTAG
-       rowOffset += uvw.nelements();
+       if (itsIsDD) {
+           rowOffset += uvw.nelements();
+       }
   }
 }
 
