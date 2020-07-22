@@ -168,7 +168,22 @@ double ATCAIllumination::jamesian(double fractionalRadius)
 /// @param[in] pa parallactic angle, or strictly speaking the angle between 
 /// uv-coordinate system and the system where the pattern is defined (unused)
 void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l, 
-				  double m, double pa) const
+                          double m, double pa) const
+{
+    // zero value of the pattern by default
+    pattern.pattern().set(0.);
+}
+
+/// @param[in] freq frequency in Hz for which an illumination pattern is required
+/// @param[in] pattern a UVPattern object to fill
+/// @param[in] imageCentre ra & dec of the image centre
+/// @param[in] beamCentre ra & dec of the beam pointing centre
+/// @param[in] pa polarisation position angle (in radians)
+/// @param[in] isPSF bool indicting if this gridder is for a PSF
+void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
+                          const casacore::MVDirection &imageCentre,
+                          const casacore::MVDirection &beamCentre,
+                          const double pa, const bool isPSF) const
 {
   ASKAPTRACE("ATCAIllumination::getPattern");
 
@@ -176,11 +191,21 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
   const casacore::uInt oversample = pattern.overSample();
   const double cellU = pattern.uCellSize()/oversample;
   const double cellV = pattern.vCellSize()/oversample;
-  
+ 
   ASKAPCHECK(itsDoFeedLegWedges ? itsDoFeedLegs : true, 
 	     "you can only switch on simulation of feed leg wedges with the simulation of feed legs");
   ASKAPDEBUGASSERT(!itsDoFeedLegWedges || (itsWedgeStartingRadius < itsDiameter/2.));
   ASKAPDEBUGASSERT(!itsDoFeedLegs || (itsFeedLegsHalfWidth < itsDiameter/2.));  
+ 
+  // calculate beam offset
+  double l = 0.0;
+  double m = 0.0;
+  if (!isPSF) {
+      l = sin(beamCentre.getLong() - imageCentre.getLong()) * cos(beamCentre.getLat());
+      m = sin(beamCentre.getLat()) * cos(imageCentre.getLat()) -
+          cos(beamCentre.getLat()) * sin(imageCentre.getLat()) *
+          cos(beamCentre.getLong() - imageCentre.getLong());
+  }
   
   // scaled l and m to take the calculations out of the loop
   // these quantities are effectively dimensionless 
@@ -299,3 +324,14 @@ bool ATCAIllumination::isSymmetric() const
 {
   return !itsDoFeedLegs;
 }
+
+/// @brief check whether the output pattern is image-based, rather than an illumination pattern.
+/// @details Some illumination patterns need to be generated in the image domain, and given
+/// the standard usage (FFT to image-domain for combination with other functions) any image
+/// domain function may as well stay in the image domain. So check the state before doing the FFT.
+/// @return false 
+bool ATCAIllumination::isImageBased() const
+{
+  return false;
+}
+

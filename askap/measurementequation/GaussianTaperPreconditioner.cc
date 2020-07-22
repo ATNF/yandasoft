@@ -112,12 +112,14 @@ bool GaussianTaperPreconditioner::doPreconditioning(casacore::Array<float>& psf,
   casacore::Array<float> origPsf;
   if (itsFitBeam) {
        origPsf = psf;
+       ASKAPLOG_DEBUG_STR(logger, "Tuning taper to achieve final resolution");
   }
   applyTaper(psf);
 
   bool converged = !itsFitBeam;
   int count = 20;
   while (!converged && count-- >0) {
+      ASKAPLOG_DEBUG_STR(logger, "Taper tuning iteration: "<<20-count);
       casacore::Vector<double> beam = fitPsf(psf);
       float tolerance = 0.005; // 0.5% - make parameter?
       converged = tuneTaper(beam,tolerance);

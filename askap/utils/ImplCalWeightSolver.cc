@@ -33,7 +33,7 @@
 //
 //
 
-#include <calweightsolver/ImplCalWeightSolver.h>
+#include <askap/utils/ImplCalWeightSolver.h>
 #include <components/ComponentModels/Flux.h>
 #include <components/ComponentModels/SpectralModel.h>
 #include <components/ComponentModels/ComponentShape.h>
@@ -43,8 +43,8 @@
 #include <casacore/casa/OS/Path.h>
 #include <casacore/casa/BasicMath/Math.h>
 #include <casacore/casa/Utilities/Assert.h>
-#include <calweightsolver/EigenSolve.h>
-#include <calweightsolver/SkyCatalogTabWriter.h>
+#include <askap/utils/EigenSolve.h>
+#include <askap/utils/SkyCatalogTabWriter.h>
 #include <iomanip>
 
 #include <askap/AskapError.h>

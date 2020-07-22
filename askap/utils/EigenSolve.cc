@@ -30,7 +30,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
-#include <calweightsolver/EigenSolve.h>
+#include <askap/utils/EigenSolve.h>
 #include <fstream>
 #include <iomanip>
 #include <vector>

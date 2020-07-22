@@ -80,7 +80,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
     }
 
-    if (accumulator.weightType() == FROM_BP_MODEL) {
+    if (accumulator.weightType() == FROM_BP_MODEL|| accumulator.weightType() == COMBINED) {
       accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
     }
 
@@ -159,8 +159,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
 
 
-
-
+      // clear the lists of input coordinates and shapes
+      inCoordSysVec.clear();
+      inShapeVec.clear();
       for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
 
         ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart << " of input image " << *it << " which is part of output mosaick " << outImgName);
@@ -326,13 +327,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           ASKAPLOG_INFO_STR(logger, "Shapes " << shape << " blc " << blc << " trc " << trc << " inpix " << inPix.shape());
 
-          if (parset.isDefined("removebeam")) {
+          if (parset.getBool("removebeam",false)) {
 
               Array<float> taylor0;
               Array<float> taylor1;
               Array<float> taylor2;
 
-              ASKAPLOG_INFO_STR(linmoslogger, "Scaling Taylor terms -- inImage = " << inImgNames[img]);
+              ASKAPLOG_INFO_STR(logger, "Scaling Taylor terms -- inImage = " << inImgNames[img]);
               // need to get all the taylor terms for this image
               string ImgName = inImgName;
               int inPixIsTaylor = 0;
@@ -342,7 +343,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                   size_t pos0 = ImgName.find(taylorN);
                   if (pos0!=string::npos) {
                       ImgName.replace(pos0, taylorN.length(), accumulator.taylorTag());
-                      ASKAPLOG_INFO_STR(linmoslogger, "This is a Taylor " << n << " image");
+                      ASKAPLOG_INFO_STR(logger, "This is a Taylor " << n << " image");
                       inPixIsTaylor = n;
                       break;
                   }
@@ -352,7 +353,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               }
 
 
-              ASKAPLOG_INFO_STR(linmoslogger, "To avoid altering images on disk re-reading the Taylor terms");
+              ASKAPLOG_INFO_STR(logger, "To avoid altering images on disk re-reading the Taylor terms");
               for (int n = 0; n < accumulator.numTaylorTerms(); ++n) {
 
                   size_t pos0 = ImgName.find(accumulator.taylorTag());
@@ -364,22 +365,22 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                       switch (n)
                       {
                       case 0:
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor0");
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                          ASKAPLOG_INFO_STR(logger, "Reading -- Taylor0");
+                          ASKAPLOG_INFO_STR(logger, "Reading -- inImage = " << ImgName);
                           taylor0 = iacc.read(ImgName,blc,trc);
-                          ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor0.shape());
+                          ASKAPLOG_INFO_STR(logger, "Shape -- " << taylor0.shape());
                           break;
                       case 1:
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor1");
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                          ASKAPLOG_INFO_STR(logger, "Reading -- Taylor1");
+                          ASKAPLOG_INFO_STR(logger, "Reading -- inImage = " << ImgName);
                           taylor1 = iacc.read(ImgName,blc,trc);
-                          ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor1.shape());
+                          ASKAPLOG_INFO_STR(logger, "Shape -- " << taylor1.shape());
                           break;
                       case 2:
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- Taylor2");
-                          ASKAPLOG_INFO_STR(linmoslogger, "Reading -- inImage = " << ImgName);
+                          ASKAPLOG_INFO_STR(logger, "Reading -- Taylor2");
+                          ASKAPLOG_INFO_STR(logger, "Reading -- inImage = " << ImgName);
                           taylor2 = iacc.read(ImgName,blc,trc);
-                          ASKAPLOG_INFO_STR(linmoslogger, "Shape -- " << taylor2.shape());
+                          ASKAPLOG_INFO_STR(logger, "Shape -- " << taylor2.shape());
                           break;
 
                       }
@@ -399,22 +400,23 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               // now we need to set the inPix to be the scaled version
               // Note this means we are reading the Taylor terms 3 times for every
               // read. But I'm not sure this matters.
+              // The .copy is not needed, Array assignment doesn't reference, only the (copy)constructor does
 
               switch (inPixIsTaylor)
               {
               case 0:
-                  inPix = taylor0.copy();
+                  inPix = taylor0;//.copy();
                   break;
               case 1:
-                  inPix = taylor1.copy();
+                  inPix = taylor1;//.copy();
                   break;
               case 2:
-                  inPix = taylor2.copy();
+                  inPix = taylor2;//.copy();
                   break;
               }
 
           }
-            
+
           Array<float> inWgtPix;
           Array<float> inSenPix;
 
@@ -499,7 +501,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             accumulator.regrid();
           }
 
-          // update the accululation arrays for this plane
+          // update the accumulation arrays for this plane
           accumulator.accumulatePlane(outPix, outWgtPix, outSenPix, curpos);
 
         } // over the input images for this
@@ -512,9 +514,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       float itsCutoff = 0.01;
 
       if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
-      Array<bool>::iterator iterMask = outMask.begin();
-      Array<float>::iterator iterWgt = outWgtPix.begin();
-
 
       /// This logic is in addition to the mask in the accumulator
       /// which works on an individual beam weight
@@ -538,17 +537,15 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       ASKAPLOG_INFO_STR(logger, "Maximum pixel weight is " << maxVal);
       ASKAPLOG_INFO_STR(logger, "Power fraction cutoff is " << itsCutoff*itsCutoff);
 
-
       float wgtCutoff = itsCutoff * itsCutoff * maxVal;
-      for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
-        if (*iterWgt >= wgtCutoff) {
-          *iterMask = casa::True;
-        }
-        else {
-          *iterMask = casa::False;
-          setNaN(*iterWgt);
-        }
-        iterMask++;
+
+      for(size_t i=0;i<outMask.size();i++){
+          if (outWgtPix.data()[i] >= wgtCutoff) {
+              outMask.data()[i] = casa::True;
+          } else {
+              outMask.data()[i] = casa::False;
+              setNaN(outWgtPix.data()[i]);
+          }
       }
 
       // deweight the image pixels
@@ -604,8 +601,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       casa::IPosition loc(outShape.nelements(),0);
       loc[3] = myAllocationStart;
       ASKAPLOG_INFO_STR(logger, " - location " << loc);
-      iacc.write(outImgName,outPix,loc);
-      iacc.writeMask(outImgName,outMask,loc);
+      iacc.write(outImgName,outPix,outMask,loc);
       iacc.setUnits(outImgName,units);
 
       if (psf.nelements()>=3)
@@ -616,8 +612,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       }
       else {
 
-        iacc.write(outWgtName,outWgtPix,loc);
-        iacc.writeMask(outWgtName,outMask,loc);
+        iacc.write(outWgtName,outWgtPix,outMask,loc);
         iacc.setUnits(outWgtName,units);
         if (psf.nelements()>=3)
           iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
@@ -625,8 +620,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
       if (accumulator.doSensitivity()) {
 
-        iacc.write(outSenName,outSenPix,loc);
-        iacc.writeMask(outSenName,outMask,loc);
+        iacc.write(outSenName,outSenPix,outMask,loc);
         iacc.setUnits(outSenName,units);
 
       if (psf.nelements()>=3)

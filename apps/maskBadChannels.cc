@@ -74,7 +74,11 @@ public:
                 std::string image = subset.getString("image","");
                 bool editImage = subset.getBool("editImage", false);
                 bool editStats = subset.getBool("editStats", false);
-                float threshold = subset.getFloat("threshold", 10.);
+                bool useSignificance = subset.getBool("useSignificance", false);
+                float threshold = subset.getFloat("significanceLevel", 10.);
+                bool useNoise = subset.getBool("useNoise", true);
+                float badMADFM = subset.getFloat("madfmThreshold", 1000.);
+                bool maskBlank = subset.getBool("maskBlank", true);
                 
                 std::ifstream fin(statsfile.c_str());
                 ASKAPCHECK(fin.is_open(), "Could not open statsFile " << statsfile);
@@ -152,14 +156,23 @@ public:
                                       << madfm[i] << " for ratio of " 
                                       << ratio[i] << " and significance of "
                                       << significance[i]);
-                    if ( ( ! madfm[i] > 0. ) || (abs(significance[i]) > threshold) ) {
-                        if (madfm[i] > 0.) {
+                    bool isBlank = !(madfm[i] > 0.);
+                    bool isHighSig = (abs(significance[i]) > threshold);
+                    bool isBadNoise = (madfm[i] > badMADFM);
+
+                    bool maskChannel = false;
+                    maskChannel = maskChannel || (maskBlank && isBlank);
+                    maskChannel = maskChannel || (useSignificance && isHighSig);
+                    maskChannel = maskChannel || (useNoise && isBadNoise);
+
+                    if ( maskChannel) {
+                        if (isBlank) {
+                            ASKAPLOG_INFO_STR(logger, "Blank Channel #" << i << ": std = "<<std[i]);
+                        } else {
                             ASKAPLOG_INFO_STR(logger, "Bad Channel #" << i 
                                               << ": MADFM = "<< madfm[i] 
                                               << " 1%ile = " << onepc[i] 
                                               << " 1%ile/MADFM = " << ratio[i]);
-                        } else {
-                            ASKAPLOG_INFO_STR(logger, "Blank Channel #" << i << ": std = "<<std[i]);
                         }
                         numBad++;
                         if (editImage) {
@@ -185,27 +198,13 @@ public:
                 if (editStats) {
                     std::string outputStats = subset.getString("outputStats","");
                     ASKAPLOG_INFO_STR(logger, "Writing new stats file to " << outputStats);
-                    // std::ofstream fout(outputStats.c_str());
-                    // fout << title << "\n" << units<<"\n";
                     FILE *fout;
                     fout = fopen(outputStats.c_str(),"w");
                     fprintf(fout, "%s\n%s\n",title.c_str(),units.c_str());
                     for(unsigned int i=0;i<size;i++){
                         fprintf(fout, "%8d %15.6f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n",
                                 i,freq[i],mean[i],std[i],median[i],madfm[i],onepc[i],minval[i],maxval[i]);
-                        // fout << std::setw(8);
-                        // fout << i;
-                        // fout << std::fixed << std::right;
-                        // fout << std::setw(16) << std::setprecision(6) << freq[i];
-                        // fout << std::setw(11) << std::setprecision(3) << mean[i];
-                        // fout << std::setw(11) << std::setprecision(3) << std[i];
-                        // fout << std::setw(11) << std::setprecision(3) << median[i];
-                        // fout << std::setw(11) << std::setprecision(3) << madfm[i];
-                        // fout << std::setw(11) << std::setprecision(3) << onepc[i];
-                        // fout << std::setw(11) << std::setprecision(3) << minval[i];
-                        // fout << std::setw(11) << std::setprecision(3) << maxval[i] << "\n"; 
                     }
-//                    fout.close();
                     fclose(fout);
                 }
                 

@@ -701,7 +701,13 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    // Lookup the portion of grid to be
                    // used for this row, polarisation and channel
                    const int gInd=gIndex(i, pol, chan);
-                   ASKAPCHECK(gInd>-1,"Index into image grid is less than zero");
+                   if (gInd<0) {
+                       // can't use this data - w out of range
+                       wGood = false;
+                       itsVectorsWFlagged +=1;
+                       break;
+                   }
+                   //ASKAPCHECK(gInd>-1,"Index into image grid is less than zero");
                    ASKAPCHECK(gInd<int(itsGrid.size()), "Index into image grid exceeds number of planes");
 
                    // Lookup the convolution function to be

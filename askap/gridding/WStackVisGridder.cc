@@ -51,15 +51,15 @@ namespace askap
            WDependentGridderBase(wmax,nwplanes) {}
 
     WStackVisGridder::~WStackVisGridder() {}
-    
+
     /// @brief copy constructor
     /// @details It is required to decouple internal arrays between
     /// input object and the copy
     /// @param[in] other input object
     WStackVisGridder::WStackVisGridder(const WStackVisGridder &other) :
        IVisGridder(other), WDependentGridderBase(other), itsGMap(other.itsGMap.copy()) {}
-    
-    
+
+
     /// Clone a copy of this Gridder
     IVisGridder::ShPtr WStackVisGridder::clone()
     {
@@ -79,7 +79,7 @@ namespace askap
       const int nPol = acc.nPol();
 
       itsGMap.resize(nSamples, nPol, nChan);
-      const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());      
+      const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
       for (int i=0; i<nSamples; ++i)
       {
         const double w=(rotatedUVW(i)(2))/(casacore::C::c);
@@ -103,7 +103,7 @@ namespace askap
       itsShape=scimath::PaddingUtils::paddedShape(shape,paddingFactor());
 
       initialiseCellSize(axes);
-      
+
       initStokes();
       configureForPSF(dopsf);
       configureForPCF(dopcf);
@@ -120,15 +120,15 @@ namespace askap
         // for a proper PSF calculation
 		initRepresentativeFieldAndFeed();
       }
-            
+
       initialiseSumOfWeights();
-      
-      initialiseFreqMapping();           
-      
+
+      initialiseFreqMapping();
+
       ASKAPLOG_INFO_STR(logger, "Gridding is set up with tangent centre "<<
              printDirection(getTangentPoint())<<" and image centre "<<
-             printDirection(getImageCentre())); 
-      
+             printDirection(getImageCentre()));
+
     }
 
     void WStackVisGridder::multiply(casacore::Array<casacore::DComplex>& scratch, int i)
@@ -188,7 +188,7 @@ namespace askap
       // buffer for the result as doubles
       casacore::Array<double> dBuffer(itsGrid[0].shape());
       ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
-      
+
       /// Loop over all grids Fourier transforming and accumulating
       bool first=true;
       for (unsigned int i=0; i<itsGrid.size(); i++)
@@ -224,8 +224,8 @@ namespace askap
 
       initialiseCellSize(axes);
       initStokes();
-  
-      initialiseFreqMapping();      
+
+      initialiseFreqMapping();
 
       itsGrid.resize(nWPlanes());
       if (casacore::max(casacore::abs(in))>0.0) {
@@ -237,7 +237,7 @@ namespace askap
         correctConvolution(scratch);
         for (int i=0; i<nWPlanes(); ++i)
         {
-          casacore::Array<casacore::DComplex> work(itsShape);          
+          casacore::Array<casacore::DComplex> work(itsShape);
           toComplex(work, scratch);
           multiply(work, i);
           /// Need to conjugate to get sense of w correction correct
@@ -259,25 +259,25 @@ namespace askap
     int WStackVisGridder::gIndex(int row, int pol, int chan)
     {
       const int plane = itsGMap(row, pol, chan);
-      notifyOfWPlaneUse(plane);
+      if (plane >=0) notifyOfWPlaneUse(plane);
       return plane;
     }
 
     /// @brief static method to create gridder
     /// @details Each gridder should have a static factory method, which is
     /// able to create a particular type of the gridder and initialise it with
-    /// the parameters taken form the given parset. It is assumed that the 
+    /// the parameters taken form the given parset. It is assumed that the
     /// method receives a subset of parameters where the gridder name is already
-    /// taken out. 
+    /// taken out.
     /// @param[in] parset input parset file
-    /// @return a shared pointer to the gridder instance					 
+    /// @return a shared pointer to the gridder instance
     IVisGridder::ShPtr WStackVisGridder::createGridder(const LOFAR::ParameterSet& parset)
     {
       double wmax=parset.getDouble("wmax", 35000.0);
       int nwplanes=parset.getInt32("nwplanes", 65);
       ASKAPLOG_INFO_STR(logger, "Gridding using W stacking with "<<nwplanes<<" w-planes in the stack");
-      boost::shared_ptr<WStackVisGridder> gridder(new WStackVisGridder(wmax, nwplanes)); 
-      gridder->configureWSampling(parset);       
+      boost::shared_ptr<WStackVisGridder> gridder(new WStackVisGridder(wmax, nwplanes));
+      gridder->configureWSampling(parset);
       return gridder;
     }
 
@@ -289,7 +289,7 @@ namespace askap
     {
       ASKAPTHROW(AskapError, "This method is not supposed to be called!");
       return *this;
-    }    
+    }
 
   }
 }

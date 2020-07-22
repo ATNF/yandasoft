@@ -113,6 +113,10 @@ make -j2 install
       steps {
         dir(path: '.') {
           sh '''git fetch --tags
+if [ -d build ]; then
+echo "build directory already exists"
+rm -rf build
+fi
 mkdir build
 cd build
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" ../
@@ -126,6 +130,10 @@ make
       steps {
         dir(path: '.') {
           sh '''git fetch --tags
+if [ -d build-release ]; then
+echo "build-release directory already exists"
+rm -rf build-release
+fi
 mkdir build-release
 cd build-release
 cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} -DCMAKE_BUILD_TYPE=Release ../

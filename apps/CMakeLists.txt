@@ -1,4 +1,9 @@
 set (_progs
+delaysolver
+extractdata
+genoffsets
+makescans
+bfweights
 cadvise
 cbpcalibrator
 ccalapply
