@@ -159,8 +159,9 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
 
 
-
-
+      // clear the lists of input coordinates and shapes
+      inCoordSysVec.clear();
+      inShapeVec.clear();
       for (vector<string>::iterator it = inImgNames.begin(); it != inImgNames.end(); ++it) {
 
         ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart << " of input image " << *it << " which is part of output mosaick " << outImgName);

@@ -33,6 +33,7 @@
 
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/IPosition.h>
+using std::abs;
 
 namespace askap {
 
