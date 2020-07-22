@@ -69,22 +69,20 @@ namespace askap
     class CalibrationDDTest : public CppUnit::TestFixture
     {
       CPPUNIT_TEST_SUITE(CalibrationDDTest);
-      //CPPUNIT_TEST(testSolveNoPreAvg);
-      CPPUNIT_TEST(testSolvePreAvg);      
-      //CPPUNIT_TEST(testSolvePreAvg2);
+      CPPUNIT_TEST(testSolveAmp);      
+      CPPUNIT_TEST(testSolvePhase);
       CPPUNIT_TEST_SUITE_END();
       
       private:
         typedef CalibrationME<Sum<Product<NoXPolGain, IdentityComponent,
                   IdentityComponent>, ZeroComponent>> METype;
-        boost::shared_ptr<ComponentEquation> p1, p2;
-        boost::shared_ptr<METype> eq1,eq2;
-        boost::shared_ptr<Params> params1, params2;
+        boost::shared_ptr<ComponentEquation> p1, p2, p3;
+        boost::shared_ptr<METype> eq1;
+        boost::shared_ptr<Params> params1, params2, params3;
         accessors::SharedIter<accessors::DataIteratorStub> idi;
+        casacore::Vector<casa::Float> ampError, lOffset, mOffset;
         const casacore::uInt nAnt = 30;
         const casacore::uInt nDir = 2;
-        casacore::Vector<casa::Float> trueRatio;
-        casacore::Vector<casa::Float> trueOffset;
 
       protected:        
         
@@ -119,7 +117,33 @@ namespace askap
                }
           }
         }
-        
+          
+        /// @brief reset amplitudes
+        /// @details This method resets the amplitude of params3 gains to the params1 values
+        /// This is a simple hack to force phase-only solutions.
+        void resetAmplitudes(const boost::shared_ptr<Params> &params) {
+          CPPUNIT_ASSERT(params1);
+          CPPUNIT_ASSERT(params);
+          const std::string baseName = "gain";
+          
+          std::vector<std::string> completions(params->completions(baseName));
+          for (std::vector<std::string>::const_iterator it=completions.begin();
+                                                it!=completions.end();++it)  {
+               const std::string parname = baseName+*it;                                 
+               const JonesIndex Jindex = accessors::CalParamNameHelper::parseParam(parname).first;
+
+               if (it->find(".g22") == 0) {
+                   CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params->scalarValue(parname),3e-7);
+               } else if (it->find(".g11") == 0) {
+                   const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
+                   params->update(parname, params->complexValue(parname) *
+                        abs(params1->complexValue(refname)) / abs(params->complexValue(parname)));
+               } else {
+                 ASKAPTHROW(AskapError, "an invalid gain parameter "<<parname<<" has been detected");
+               }
+          }
+        }
+      
         /// @brief check amplitudes
         /// @details This method checks that the amplitude of gain parameters in params2
         /// relative to params1 is consistent with the multiplicative model error.
@@ -128,7 +152,6 @@ namespace askap
           CPPUNIT_ASSERT(params2);
           const std::string baseName = "gain";
           
-          // 
           std::vector<std::string> completions(params2->completions(baseName));
           for (std::vector<std::string>::const_iterator it=completions.begin();
                                                 it!=completions.end();++it)  {
@@ -138,14 +161,14 @@ namespace askap
                if (it->find(".g22") == 0) {
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params2->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
-               const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
-                   const casacore::Complex gainRatio = abs(params1->complexValue(refname)) /
-                                                       abs(params2->complexValue(parname));
+                   const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
+                   const casacore::Float gainRatio =
+                        abs(params1->complexValue(refname)) / abs(params2->complexValue(parname));
                    //std::cout<<parname<<" (abs("<<params1->complexValue(refname)<<") / "<<
                    //                      "abs("<<params2->complexValue(parname)<<"))^2 = "<<
                    //                      gainRatio*gainRatio<<" => "<<
-                   //                      abs(gainRatio*gainRatio-trueRatio[Jindex.beam()])<<std::endl;
-                   CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,abs(gainRatio*gainRatio-trueRatio[Jindex.beam()]),1e-4);
+                   //                      gainRatio*gainRatio - (1.+ampError[Jindex.beam()])<<std::endl;
+                   CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,abs(gainRatio*gainRatio - (1.+ampError[Jindex.beam()])),1e-5);
                } else {
                  ASKAPTHROW(AskapError, "an invalid gain parameter "<<parname<<" has been detected");
                }
@@ -153,31 +176,30 @@ namespace askap
         }
        
         /// @brief check phases
-        /// @details This method checks that the phase of gain parameters in params2
+        /// @details This method checks that the phase of gain parameters in params3
         /// relative to params1 is consistent with the position error in the model.
         void checkPhases() {
           CPPUNIT_ASSERT(params1);
-          CPPUNIT_ASSERT(params2);
+          CPPUNIT_ASSERT(params3);
           const std::string baseName = "gain";
           
           // 
-          std::vector<std::string> completions(params2->completions(baseName));
+          std::vector<std::string> completions(params3->completions(baseName));
           for (std::vector<std::string>::const_iterator it=completions.begin();
                                                 it!=completions.end();++it)  {
                const std::string parname = baseName+*it;                                 
                const JonesIndex Jindex = accessors::CalParamNameHelper::parseParam(parname).first;
 
                if (it->find(".g22") == 0) {
-                   CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params2->scalarValue(parname),3e-7);
+                   CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params3->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
-               const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
-                   const casacore::Complex gainRatio = abs(params1->complexValue(refname)) /
-                                                       abs(params2->complexValue(parname));
-                   //std::cout<<parname<<" (abs("<<params1->complexValue(refname)<<") / "<<
-                   //                      "abs("<<params2->complexValue(parname)<<"))^2 = "<<
-                   //                      gainRatio*gainRatio<<" => "<<
-                   //                      abs(gainRatio*gainRatio-trueRatio[Jindex.beam()])<<std::endl;
-                   CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,abs(gainRatio*gainRatio-trueRatio[Jindex.beam()]),1e-4);
+                   const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
+                   const casacore::Float gainRatio =
+                        abs(params1->complexValue(refname)) / abs(params3->complexValue(parname));
+                   //std::cout<<parname<<" abs("<<params1->complexValue(refname)<<") / "<<
+                   //                     "abs("<<params3->complexValue(parname)<<") = "<< gainRatio<<std::endl;
+                   // ensure that the amplitudes have been correctly normalised
+                   CPPUNIT_ASSERT_DOUBLES_EQUAL(gainRatio,1.,3e-7);
                } else {
                  ASKAPTHROW(AskapError, "an invalid gain parameter "<<parname<<" has been detected");
                }
@@ -196,6 +218,7 @@ namespace askap
                 it!=freeNames.end();++it) {
                 if (it->find("gain") != 0) {
                     params2->fix(*it);
+                    params3->fix(*it);
                 }
            }         
         }
@@ -244,25 +267,18 @@ namespace askap
           eq1.reset(new METype(*params1,idi,p1));
 
           // multiplicative gain errors, e.g. from a primary beam model error
-          // beam is 
-          trueRatio.resize(nDir);
-          trueRatio[0] = 1.1;
-          trueRatio[1] = 0.9;
-
-          // additive position errors, e.g. an ionospheric shift at a single frequency
-          // synthesised beam is about 25", so set offset based on this
-          trueOffset.resize(nDir);
-          trueOffset[0] =  2.0*casacore::C::arcsec;
-          trueOffset[1] = -5.0*casacore::C::arcsec;
+          ampError.resize(nDir);
+          ampError[0] =  0.1;
+          ampError[1] = -0.1;
 
           params2.reset(new Params);
-          params2->add("flux.i.src1", 100.*trueRatio[0]);
+          params2->add("flux.i.src1", 100.*(1.0 + ampError[0]));
           params2->add("direction.ra.src1", 5.0*casacore::C::arcmin);
           params2->add("direction.dec.src1", -13.0*casacore::C::arcmin);
           params2->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
           params2->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
           params2->add("shape.bpa.src1", -55*casacore::C::degree);
-          params2->add("flux.i.src2", 100.*trueRatio[1]);
+          params2->add("flux.i.src2", 100.*(1.0 + ampError[1]));
           params2->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params2->add("direction.dec.src2", 32.0*casacore::C::arcmin);
           for (casacore::uInt dir=0; dir<nDir; ++dir) {
@@ -276,11 +292,41 @@ namespace askap
           }
        
           p2.reset(new ComponentEquation(*params2, idi));
-          //eq2.reset(new METype(*params2,idi,p2));
+
+          // additive position errors, e.g. an ionospheric shift at a single frequency
+          // synthesised beam is about 25", so set offset based on this
+          lOffset.resize(nDir);
+          mOffset.resize(nDir);
+          lOffset[0] =  0.0*casacore::C::arcsec;
+          mOffset[0] =  0.0*casacore::C::arcsec;
+          lOffset[1] =  2.0*casacore::C::arcsec;
+          mOffset[1] = -5.0*casacore::C::arcsec;
+
+          params3.reset(new Params);
+          params3->add("flux.i.src1", 100.);
+          params3->add("direction.ra.src1", 5.0*casacore::C::arcmin + lOffset[0]);
+          params3->add("direction.dec.src1", -13.0*casacore::C::arcmin + mOffset[0]);
+          params3->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
+          params3->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
+          params3->add("shape.bpa.src1", -55*casacore::C::degree);
+          params3->add("flux.i.src2", 100.);
+          params3->add("direction.ra.src2", -126.0*casacore::C::arcmin + lOffset[1]);
+          params3->add("direction.dec.src2", 32.0*casacore::C::arcmin + mOffset[1]);
+          for (casacore::uInt dir=0; dir<nDir; ++dir) {
+              for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+                  //params3->add("gain.g11."+toString(ant)+"."+toString(dir),casacore::Complex(1.0,0.0));
+                  params3->add("gain.g11."+toString(ant)+"."+toString(dir),
+                               casacore::Complex(realGains[ant],imagGains[ant]));
+                  params3->add("gain.g22."+toString(ant)+"."+toString(dir),1.0);
+                  params3->fix("gain.g22."+toString(ant)+"."+toString(dir));
+              }
+          }
+       
+          p3.reset(new ComponentEquation(*params3, idi));
 
         }
         
-        void testSolvePreAvg() 
+        void testSolveAmp() 
         {
 
           initDataAndParameters();
@@ -307,58 +353,40 @@ namespace askap
           }
           params2 = preAvgEq->parameters().clone();
           checkAmplitudes();
+
         }
 
         /// @brief another way to handle parameters in major cycle
-        /// @note Actual calculations are supposed to be identical to testSolvePreAvg2
-        void testSolvePreAvg2() 
+        /// @note Actual calculations are supposed to be identical to testSolvePhase
+        void testSolvePhase() 
         {
+
           initDataAndParameters();
-          typedef CalibrationME<NoXPolGain, PreAvgCalMEBase> PreAvgMEType;
-          // preaverage and iterate over the data
-          boost::shared_ptr<PreAvgMEType> preAvgEq(new PreAvgMEType());
+          boost::shared_ptr<PreAvgDDCalMEBase> preAvgEq;
+          preAvgEq.reset(new CalibrationME<NoXPolGain, PreAvgDDCalMEBase>(*params3));
+          preAvgEq->initialise(nAnt, nDir, 1);
           CPPUNIT_ASSERT(preAvgEq);
           idi.init();
-          preAvgEq->accumulate(idi,p2);
+          p3->setNDir(nDir);
+          preAvgEq->accumulate(idi,p3);
           // major cycles detached from iteration over data
-          for (size_t iter=0; iter<5; ++iter) {
+          for (size_t iter=0; iter<10; ++iter) {
                // Calculate gradients using "imperfect" parameters"
                GenericNormalEquations ne;
-               preAvgEq->setParameters(*params2);
                preAvgEq->calcEquations(ne);
                Quality q;
                LinearSolver solver; 
                solver.addNormalEquations(ne);
                solver.setAlgorithm("LSQR");
-               solver.solveNormalEquations(*params2,q);  
-               rotatePhase(params2);
-               //std::cout<<iter<<" "<<params2->complexValue("gain.g11.0.0")<<std::endl;
+               const boost::shared_ptr<Params> params = preAvgEq->rwParameters();
+               CPPUNIT_ASSERT(params);
+               solver.solveNormalEquations(*params,q);  
+               //rotatePhase(params);
+               resetAmplitudes(params);
           }
-          checkAmplitudes();
-        }
+          params3 = preAvgEq->parameters().clone();
+          checkPhases();
 
-        void testSolveNoPreAvg()
-        {
-          initDataAndParameters();
-          for (size_t iter=0; iter<5; ++iter) {
-               // Calculate gradients using "imperfect" parameters"
-               GenericNormalEquations ne;
-            
-               eq2.reset(new METype(*params2,idi,p2));
-            
-               eq2->calcEquations(ne);
-               Quality q;
-               LinearSolver solver1;
-               solver1.addNormalEquations(ne);
-               solver1.setAlgorithm("LSQR");
-               solver1.solveNormalEquations(*params2,q);  
-               //std::cout<<q<<std::endl;               
-                              
-               // taking care of the absolute phase uncertainty
-               rotatePhase(params2);
-          //std::cout<<*params2<<std::endl;
-          }
-          checkAmplitudes();        
         }
 
       private:
