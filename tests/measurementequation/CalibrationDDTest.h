@@ -53,6 +53,7 @@
 #include <askap/calibaccess/CalParamNameHelper.h>
 
 #include <cppunit/extensions/HelperMacros.h>
+#include <complex>
 
 #include <askap/AskapError.h>
 #include <askap/AskapUtil.h>
@@ -80,7 +81,7 @@ namespace askap
         boost::shared_ptr<METype> eq1;
         boost::shared_ptr<Params> params1, params2, params3;
         accessors::SharedIter<accessors::DataIteratorStub> idi;
-        casacore::Vector<casa::Float> ampError, lOffset, mOffset;
+        casacore::Vector<casa::Double> ampError, lOffset, mOffset;
         const casacore::uInt nAnt = 30;
         const casacore::uInt nDir = 2;
 
@@ -95,17 +96,20 @@ namespace askap
           const std::string baseName = (chan >= 0 ? accessors::CalParamNameHelper::bpPrefix() : std::string()) + "gain";
           // taking care of the absolute phase uncertainty
           const casacore::uInt refAnt = 0;
-          const std::string refParamName = baseName + ".g11."+toString(refAnt)+".0" + (chan < 0 ? std::string() :
-                      std::string(".") + toString(chan));
-          const casacore::Complex refPhaseTerm = casacore::polar(1.f, 
-                  -arg(params->complexValue(refParamName)));
                        
           std::vector<std::string> freeNames(params->freeNames());
           for (std::vector<std::string>::const_iterator it=freeNames.begin();
                                               it!=freeNames.end();++it)  {
                const std::string parname = *it;
+
+               const casacore::uInt dir = accessors::CalParamNameHelper::parseParam(parname).first.beam();
+               const std::string refParamName = baseName + ".g11."+toString(refAnt)+"."+toString(dir) +
+                   (chan < 0 ? std::string() : std::string(".") + toString(chan));
+               const casacore::Complex refPhaseTerm = casacore::polar(1.f,-arg(params->complexValue(refParamName)));
+
                if (parname.find("gain") == 0) {
                    CPPUNIT_ASSERT(params->has(parname));                    
+
                    params->update(parname,
                         params->complexValue(parname)*refPhaseTerm);                                 
                } else if (parname.find("bp.gain") == 0) {
@@ -162,7 +166,7 @@ namespace askap
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params2->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
                    const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
-                   const casacore::Float gainRatio =
+                   const casacore::Double gainRatio =
                         abs(params1->complexValue(refname)) / abs(params2->complexValue(parname));
                    //std::cout<<parname<<" (abs("<<params1->complexValue(refname)<<") / "<<
                    //                      "abs("<<params2->complexValue(parname)<<"))^2 = "<<
@@ -182,24 +186,73 @@ namespace askap
           CPPUNIT_ASSERT(params1);
           CPPUNIT_ASSERT(params3);
           const std::string baseName = "gain";
-          
-          // 
+
+          // a cube is nRow x nChannel x nPol
+          const casacore::Cube<casacore::Complex> &vis = idi->visibility();
+          const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = idi->uvw();
+          casacore::Vector<casacore::Double> l1(nDir), m1(nDir), n1(nDir), l3(nDir), m3(nDir), n3(nDir);
+          casacore::Vector<casacore::Double> flux1(nDir), flux3(nDir);
+          const casacore::Double scale = casacore::C::_2pi*idi->frequency()[0]/casacore::C::c;
+          l1[0] = params1->scalarValue("direction.ra.src1");
+          m1[0] = params1->scalarValue("direction.dec.src1");
+          n1[0] = sqrt(1. - l1[0]*l1[0] - m1[0]*m1[0]);
+          flux1[0] = params1->scalarValue("flux.i.src1")/2.0;
+          l3[0] = params3->scalarValue("direction.ra.src1");
+          m3[0] = params3->scalarValue("direction.dec.src1");
+          n3[0] = sqrt(1. - l3[0]*l3[0] - m3[0]*m3[0]);
+          flux3[0] = params3->scalarValue("flux.i.src1")/2.0;
+          l1[1] = params1->scalarValue("direction.ra.src2");
+          m1[1] = params1->scalarValue("direction.dec.src2");
+          n1[1] = sqrt(1. - l1[1]*l1[1] - m1[1]*m1[1]);
+          flux1[1] = params1->scalarValue("flux.i.src2")/2.0;
+          l3[1] = params3->scalarValue("direction.ra.src2");
+          m3[1] = params3->scalarValue("direction.dec.src2");
+          n3[1] = sqrt(1. - l3[1]*l3[1] - m3[1]*m3[1]);
+          flux3[1] = params3->scalarValue("flux.i.src2")/2.0;
+          casacore::Matrix<casacore::DComplex> g1(nAnt,1), g3(nAnt,nDir);
+          for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+              g1(ant,0) = params1->complexValue("gain.g11."+toString(ant)+".0");
+              for (casacore::uInt dir=0; dir<nDir; ++dir) {
+                  g3(ant,dir) = params3->complexValue("gain.g11."+toString(ant)+"."+toString(dir));
+              }
+          }
+
           std::vector<std::string> completions(params3->completions(baseName));
           for (std::vector<std::string>::const_iterator it=completions.begin();
                                                 it!=completions.end();++it)  {
                const std::string parname = baseName+*it;                                 
                const JonesIndex Jindex = accessors::CalParamNameHelper::parseParam(parname).first;
+               const casacore::uInt dir = Jindex.beam();
+               const casacore::uInt ant = Jindex.antenna();
 
                if (it->find(".g22") == 0) {
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params3->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
-                   const std::string refname = "gain.g11."+toString(Jindex.antenna())+".0";
+                   const std::string refname = "gain.g11."+toString(ant)+".0";
                    const casacore::Float gainRatio =
                         abs(params1->complexValue(refname)) / abs(params3->complexValue(parname));
-                   //std::cout<<parname<<" abs("<<params1->complexValue(refname)<<") / "<<
-                   //                     "abs("<<params3->complexValue(parname)<<") = "<< gainRatio<<std::endl;
                    // ensure that the amplitudes have been correctly normalised
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(gainRatio,1.,3e-7);
+
+                   if (ant==0) continue;
+
+                   // Calculate vis change in two ways and compare them. The fitted gains should absorb the
+                   // multiplicative difference between the observed and model skies.
+                   // The first N-1 visibilities contain visibilities for the first antenna and the other N-1
+                   // visibilities, so checking those models will confirm that the gains have converged.
+                   // number 1: using the fitted gains
+                   const casacore::DComplex ratio1 = (g1(0,0)*conj(g1(ant,0))) / (g3(0,dir)*conj(g3(ant,dir)));
+                   // number 2: using vis models
+                   const casacore::DComplex ratio2 =
+                       casacore::polar(flux3[0]/n3[dir], casacore::C::_2pi*idi->frequency()[0]/casacore::C::c*
+                                           (l3[dir]*uvw[ant-1](0)+m3[dir]*uvw[ant-1](1)+(n3[dir]-1.)*uvw[ant-1](2))) / 
+                       casacore::polar(flux1[0]/n1[dir], casacore::C::_2pi*idi->frequency()[0]/casacore::C::c*
+                                           (l1[dir]*uvw[ant-1](0)+m1[dir]*uvw[ant-1](1)+(n1[dir]-1.)*uvw[ant-1](2)));
+                   //std::cout<<parname<<" abs("<<params1->complexValue(refname)<<") / "<<
+                   //                     "abs("<<params3->complexValue(parname)<<") = "<< gainRatio<<
+                   //    " ... "<<ratio1<<" & "<<ratio2<<" -> "<<ratio1-ratio2<<
+                   //    " ... "<<arg(ratio1)<<" & "<<arg(ratio2)<<" -> "<<arg(ratio1)-arg(ratio2)<<std::endl;
+                   CPPUNIT_ASSERT_DOUBLES_EQUAL(abs(arg(ratio1)-arg(ratio2)),0.,3e-2);
                } else {
                  ASKAPTHROW(AskapError, "an invalid gain parameter "<<parname<<" has been detected");
                }
@@ -248,11 +301,11 @@ namespace askap
           
           params1.reset(new Params);
           params1->add("flux.i.src1", 100.);
-          params1->add("direction.ra.src1", 5.0*casacore::C::arcmin);
-          params1->add("direction.dec.src1", -13.0*casacore::C::arcmin);
-          params1->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
-          params1->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
-          params1->add("shape.bpa.src1", -55*casacore::C::degree);
+          params1->add("direction.ra.src1", 0.0*casacore::C::arcmin);
+          params1->add("direction.dec.src1", -90.0*casacore::C::arcmin);
+          //params1->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
+          //params1->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
+          //params1->add("shape.bpa.src1", -55*casacore::C::degree);
           params1->add("flux.i.src2", 100.);
           params1->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params1->add("direction.dec.src2", 32.0*casacore::C::arcmin);
@@ -273,11 +326,11 @@ namespace askap
 
           params2.reset(new Params);
           params2->add("flux.i.src1", 100.*(1.0 + ampError[0]));
-          params2->add("direction.ra.src1", 5.0*casacore::C::arcmin);
-          params2->add("direction.dec.src1", -13.0*casacore::C::arcmin);
-          params2->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
-          params2->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
-          params2->add("shape.bpa.src1", -55*casacore::C::degree);
+          params2->add("direction.ra.src1", 0.0*casacore::C::arcmin);
+          params2->add("direction.dec.src1", -90.0*casacore::C::arcmin);
+          //params2->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
+          //params2->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
+          //params2->add("shape.bpa.src1", -55*casacore::C::degree);
           params2->add("flux.i.src2", 100.*(1.0 + ampError[1]));
           params2->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params2->add("direction.dec.src2", 32.0*casacore::C::arcmin);
@@ -297,18 +350,18 @@ namespace askap
           // synthesised beam is about 25", so set offset based on this
           lOffset.resize(nDir);
           mOffset.resize(nDir);
-          lOffset[0] =  0.0*casacore::C::arcsec;
-          mOffset[0] =  0.0*casacore::C::arcsec;
+          lOffset[0] = -1.0*casacore::C::arcsec;
+          mOffset[0] = -2.0*casacore::C::arcsec;
           lOffset[1] =  2.0*casacore::C::arcsec;
-          mOffset[1] = -5.0*casacore::C::arcsec;
+          mOffset[1] = -1.0*casacore::C::arcsec;
 
           params3.reset(new Params);
           params3->add("flux.i.src1", 100.);
-          params3->add("direction.ra.src1", 5.0*casacore::C::arcmin + lOffset[0]);
-          params3->add("direction.dec.src1", -13.0*casacore::C::arcmin + mOffset[0]);
-          params3->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
-          params3->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
-          params3->add("shape.bpa.src1", -55*casacore::C::degree);
+          params3->add("direction.ra.src1", 0.0*casacore::C::arcmin + lOffset[0]);
+          params3->add("direction.dec.src1", -90.0*casacore::C::arcmin + mOffset[0]);
+          //params3->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
+          //params3->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
+          //params3->add("shape.bpa.src1", -55*casacore::C::degree);
           params3->add("flux.i.src2", 100.);
           params3->add("direction.ra.src2", -126.0*casacore::C::arcmin + lOffset[1]);
           params3->add("direction.dec.src2", 32.0*casacore::C::arcmin + mOffset[1]);
@@ -370,7 +423,7 @@ namespace askap
           p3->setNDir(nDir);
           preAvgEq->accumulate(idi,p3);
           // major cycles detached from iteration over data
-          for (size_t iter=0; iter<10; ++iter) {
+          for (size_t iter=0; iter<50; ++iter) {
                // Calculate gradients using "imperfect" parameters"
                GenericNormalEquations ne;
                preAvgEq->calcEquations(ne);
@@ -381,7 +434,7 @@ namespace askap
                const boost::shared_ptr<Params> params = preAvgEq->rwParameters();
                CPPUNIT_ASSERT(params);
                solver.solveNormalEquations(*params,q);  
-               //rotatePhase(params);
+               rotatePhase(params);
                resetAmplitudes(params);
           }
           params3 = preAvgEq->parameters().clone();

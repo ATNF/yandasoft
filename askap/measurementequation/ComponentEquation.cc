@@ -237,6 +237,12 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
   // DDCALTAG -- changed rwVis.nrow() to uvw.nelements()
   for (casacore::uInt row=0;row<uvw.nelements();++row) {
        comp.calculate(uvw[row],freq,vis);
+if (row == 0) {
+    ASKAPLOG_INFO_STR(logger, "DDCALTAG called comp.calculate()");
+    ASKAPLOG_INFO_STR(logger, "DDCALTAG  - uvw = "<<uvw[0](0)<<", "<<uvw[0](1)<<", "<<uvw[0](2));
+    ASKAPLOG_INFO_STR(logger, "DDCALTAG  - freq = "<<freq[0]);
+    ASKAPLOG_INFO_STR(logger, "DDCALTAG  - vis = "<<vis[0]/2.<<", "<<vis[1]/2.);
+}
        //
        casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
        
