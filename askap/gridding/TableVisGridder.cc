@@ -385,16 +385,8 @@ void TableVisGridder::save(const std::string& name) {
                                continue;
                           }
                           imgBuffer(x,y,plane) = casacore::abs(thisCF(x - xOff,y - yOff));
-                          if (peakVal < imgBuffer(x,y,plane)) {
-                               //peakX = x;
-                               //peakY = y;
-                               peakVal = imgBuffer(x,y,plane);
-                          }
-                          imgBuffer(x,y,plane) = casacore::real(thisCF(x - xOff,y - yOff));
                      }
                 }
-                //ASKAPLOG_DEBUG_STR(logger, "CF plane "<<plane<<
-                //    " peak of "<<peakVal<<" at "<<peakX<<" , "<<peakY);
             }
             scimath::saveAsCasaImage(imgName,imgBuffer);
         }
@@ -457,7 +449,7 @@ void TableVisGridder::logCFCacheStats() const
 /// This is a generic grid/degrid
 void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGTRACE("TableVisGridder::generic");
-   if (forward&&itsModelIsEmpty)
+  if (forward&&itsModelIsEmpty)
         return;
 
    if (forward && isPSFGridder()) {
@@ -606,7 +598,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
        }
 
        for (uint chan=0; chan<nChan; ++chan) {
-
            const double reciprocalToWavelength = frequencyList[chan]/casacore::C::c;
            if (chan == 0) {
               // check for ridiculous frequency to pick up a possible error with input file,
@@ -726,7 +717,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    ASKAPCHECK(cInd>-1,"Index into convolution functions is less than zero");
                    ASKAPCHECK(cInd<int(itsConvFunc.size()),
                            "Index into convolution functions exceeds number of planes");
-
                    casacore::Matrix<casacore::Complex> & convFunc(itsConvFunc[cInd]);
 
                    // support only square convolution functions at the moment
@@ -804,7 +794,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                if (itsVisWeight) {
                                    rVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
                                }
-
                                GridKernel::grid(its2dGrid, convFunc, rVis, iuOffset, ivOffset, support);
 
                                itsSamplesGridded+=1.0;

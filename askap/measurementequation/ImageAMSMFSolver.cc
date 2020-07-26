@@ -247,7 +247,7 @@ namespace askap
 	  casacore::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
 	  // Setup the preconditioner function vector, if it has been defined
 	  ASKAPCHECK(normalEquations().preconditionerSlice().count(zeroOrderParam)>0,
-          "Preconditioner fuction Slice not present for " << zeroOrderParam);
+          "Preconditioner function Slice not present for " << zeroOrderParam);
 	  casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(zeroOrderParam)->second);
 
 	  ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
