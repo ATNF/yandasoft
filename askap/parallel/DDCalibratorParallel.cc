@@ -430,6 +430,7 @@ void DDCalibratorParallel::calcOne(const std::string& ms, bool discard)
 
       ASKAPCHECK(itsModel, "Initial assumption of parameters is not defined");
 
+      // DDCALTAG COMPTAG
       if (!itsPerfectME) {
           ASKAPLOG_INFO_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
           ASKAPCHECK(itsPerfectModel, "Uncorrupted model not defined");

@@ -105,11 +105,14 @@ void ComponentEquation::fillComponentCache(
   if (!in.size()) {
      return;
   }
-
+  
   // we will need to change this variable to false in the loop below, when
   // at least one polarised component is implemented.
   itsAllComponentsUnpolarised = true;
   
+  int nSources = 0;
+  std::vector<string> sources;
+
   // This loop is over all strings that complete the flux.i.* pattern
   // correctly. An exception will be throw if the parameters are not
   // consistent
@@ -117,6 +120,7 @@ void ComponentEquation::fillComponentCache(
   for (std::vector<std::string>::const_iterator it=completions.begin();
         it!=completions.end();++it,++compIt)  {
           const std::string &cur = *it;
+
           const double ra=parameters().scalarValue("direction.ra"+cur);
           const double dec=parameters().scalarValue("direction.dec"+cur);
           const double fluxi=parameters().scalarValue("flux.i"+cur);
@@ -311,9 +315,10 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
       // this is the first use. The converter will be used inside addModelToCube shortly      
       itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);    
   }
-         
+
   // loop over components
-  // DDCALTAG -- number of components must equal Cddcalibrator.nCal parameter for now (will change in YAN-326)
+  // DDCALTAG COMPTAG -- number of sources must equal Cddcalibrator.nCal parameter.
+  // DDCALTAG COMPTAG -- Need to add a check or remove Cddcalibrator.nCal
   casacore::uInt rowOffset = 0;
   for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
        compList.begin(); compIt!=compList.end();++compIt) {
@@ -321,22 +326,32 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
        ASKAPDEBUGASSERT(*compIt); 
        // current component
        const IParameterizedComponent& curComp = *(*compIt);
-       //ASKAPLOG_INFO_STR(logger, "DDCALTAG Adding model for component "<<curComp.parameterName(0)<<", ...");
+
+       // DDCALTAG COMPTAG -- get current component name
+       // using the "flux.i." parameter since it must be there, as required in fillComponentCache
+       int srcID = 0;
+       for (int idx=0; idx<curComp.nParameters(); ++idx) {
+           if (curComp.parameterName(idx).find("flux.i.") == 0) {
+               const std::string &compName = curComp.parameterName(idx).substr(7);
+               srcID = parameters().scalarValue("source."+compName);
+               //ASKAPLOG_INFO_STR(logger, "DDCALTAG  - adding component "<< compName<<" model to buffer "<<srcID);
+               break;
+           }
+       }
+       // DDCALTAG -- set the appropriate row offset for this source
+       if (itsIsDD) {
+           rowOffset = srcID * uvw.nelements();
+       }
+
        try {
             const IUnpolarizedComponent &unpolComp = 
               dynamic_cast<const IUnpolarizedComponent&>(curComp);
             // DDCALTAG
-            //ASKAPLOG_INFO_STR(logger, "DDCALTAG  - calling addModelToCube, rowOffset = "<<rowOffset);
-            //ASKAPLOG_INFO_STR(logger, "DDCALTAG     - rwVis.shape() = "<<rwVis.shape());
             addModelToCube(unpolComp,uvw,freq,rwVis,rowOffset);
        }
        catch (const std::bad_cast&) {
             // DDCALTAG
             addModelToCube(curComp,uvw,freq,rwVis,rowOffset);
-       }
-       // DDCALTAG
-       if (itsIsDD) {
-           rowOffset += uvw.nelements();
        }
   }
 }

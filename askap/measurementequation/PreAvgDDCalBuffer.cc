@@ -305,7 +305,7 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
   ASKAPLOG_DEBUG_STR(logger, "calling DDCalBufferDataAccessor::setNDir("<<itsNDir<<")");
   modelAcc.setNDir(itsNDir);
 
-  // DDCALTAG
+  // DDCALTAG COMPTAG
   // also let the MeasurementEquation know how many directions are being calibrated
   // Currently only set up for the ComponentEquation class, so try a cast to that
   // Not sure about the commented lines for the ImagingEquationAdapter class. Test when needed

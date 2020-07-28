@@ -423,11 +423,10 @@ namespace askap
                }
            } else {
                // loop through components
-               ASKAPLOG_INFO_STR(logger, "Adding components as model for "<< sources[i] );
                const vector<string> compList = parset.getStringVector(compPar);
                for (vector<string>::const_iterator cmp = compList.begin(); cmp != compList.end(); ++cmp) {
                     ASKAPLOG_INFO_STR(logger, "Loading component " << *cmp << " as part of the model for " << sources[i]);
-                    SynthesisParamsHelper::copyComponent(pModel, parset,*cmp,"sources.");
+                    SynthesisParamsHelper::copyComponent(pModel, parset, sources[i], *cmp, "sources.");
                 }
            }
       }
