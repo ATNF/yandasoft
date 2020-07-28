@@ -552,17 +552,17 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGASSERT(casa::uInt(nChan) <= frequencyList.nelements());
    ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
    const casa::Cube<casa::Bool>& flagCube = acc.flag();
-   // we want these for either gridding or degridding and
-   // want to avoid calling them in the loop due to virtual function overheads
-   // don't like the pointers, but can't use references without initialising
-   casa::Cube<casa::Complex>* visCube = 0;
-   const casa::Cube<casa::Complex> *roVisCube = 0;
-   const casa::Cube<casa::Complex> *roVisNoise = 0;
+   // We want these for either gridding or degridding and
+   // want to avoid calling them in the loop due to virtual function overheads.
+   // Use shared_ptr without delete to hold the pointers.
+   boost::shared_ptr<casa::Cube<casa::Complex> > visCube;
+   boost::shared_ptr<const casa::Cube<casa::Complex> > roVisCube;
+   boost::shared_ptr<const casa::Cube<casa::Complex> > roVisNoise;
    if (forward) {
-       visCube = &acc.rwVisibility();
+       visCube.reset(&acc.rwVisibility(), utility::NullDeleter());
    } else {
-       roVisCube = &acc.visibility();
-       roVisNoise = &acc.noise();
+       roVisCube.reset(&acc.visibility(), utility::NullDeleter());
+       roVisNoise.reset(&acc.noise(), utility::NullDeleter());
    }
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
