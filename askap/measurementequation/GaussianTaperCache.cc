@@ -159,6 +159,7 @@ bool GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleran
     //ASKAPLOG_DEBUG_STR(logger,"Actual beam poly parameters : "<< a);
     casacore::Vector<double> b = beam2Poly(beam);
     casacore::Vector<double> c = beam2Poly(cbeam);
+    // Could use a better root finding algorithm here if needed
     a += 0.5 * (c - b);
     abeam = poly2Beam(a);
     // Avoid division by zero - minimum convolving beam size of 0.01 pixels
