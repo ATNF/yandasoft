@@ -90,7 +90,6 @@ namespace askap
         /// level, outside this class). In the future, I expect that
         /// predict() without parameters will be deprecated.
         /// @param[in] chunk a read-write accessor to work with
-        /// @param[in] nDir number of different directions to predict model vis for
         virtual void predict(accessors::IDataAccessor &chunk) const;
 
         /// @brief Calculate the normal equation for one accessor (chunk).

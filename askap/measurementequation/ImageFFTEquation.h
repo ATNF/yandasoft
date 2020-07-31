@@ -158,6 +158,10 @@ namespace askap
             return itsResidualGridders[name];
         };
 
+// DDCALTAG
+        /// Set the number of DD calibration directions
+        void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
+
       private:
 
       /// Pointer to prototype gridder
@@ -180,6 +184,10 @@ namespace askap
 
         /// Iterator giving access to the data
         mutable accessors::IDataSharedIter itsIdi;
+
+// DDCALTAG
+        /// The number of separate directions (equations)
+        mutable casacore::uInt itsNDir;
 
         /// @brief change monitors per image parameter
         /// @details This objects are used to determine whether a new

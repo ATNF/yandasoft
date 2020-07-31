@@ -86,6 +86,7 @@ void deepCopyOfSTDVector(const std::vector<T> &in,
 /// @brief required to mediate thread safety issues of the casa cube
 utility::CasaSyncHelper syncHelper;
 
+// DDCALTAG -- itsSourceIndex added to all of the constructors
 TableVisGridder::TableVisGridder() : itsSumWeights(),
     itsSupport(-1), itsOverSample(-1),
     itsModelIsEmpty(false), itsSamplesGridded(0), itsSamplesDegridded(0),
@@ -96,7 +97,7 @@ TableVisGridder::TableVisGridder() : itsSumWeights(),
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
     itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
     its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
-    itsPolVector(),itsImageChan(-1),itsGridIndex(-1)
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
 {
 }
 
@@ -111,7 +112,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
     itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
     its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
-    itsPolVector(),itsImageChan(-1),itsGridIndex(-1)
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
 {
    ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
    ASKAPCHECK(support>0, "Maximum support must be greater than 0");
@@ -154,7 +155,7 @@ TableVisGridder::TableVisGridder(const TableVisGridder &other) :
      its2dGrid(other.its2dGrid.copy()),itsVisPols(other.itsVisPols.copy()),
      itsPolConv(other.itsPolConv),itsImagePolFrameVis(other.itsImagePolFrameVis.copy()),
      itsImagePolFrameNoise(other.itsImagePolFrameNoise.copy()),itsPolVector(other.itsPolVector.copy()),
-     itsImageChan(other.itsImageChan),itsGridIndex(other.itsGridIndex)
+     itsImageChan(other.itsImageChan),itsGridIndex(other.itsGridIndex),itsSourceIndex(other.itsSourceIndex)
 {
    deepCopyOfSTDVector(other.itsConvFunc,itsConvFunc);
    deepCopyOfSTDVector(other.itsGrid, itsGrid);
@@ -572,6 +573,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
        roVisCube = &acc.visibility();
        roVisNoise = &acc.noise();
    }
+
+   const uint iDDOffset = itsSourceIndex * nSamples;
+
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
            // need to reject samples, if too far from the image centre
@@ -865,7 +869,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    if (forward) {
                        ASKAPDEBUGASSERT(visCube!=0)
                        itsPolConv.convert(itsPolVector,itsImagePolFrameVis);
-                       for (uint pol=0; pol<nPol; pol++) (*visCube)(i,chan,pol) += itsPolVector(pol);
+                       for (uint pol=0; pol<nPol; pol++) (*visCube)(iDDOffset+i,chan,pol) += itsPolVector(pol);
                        // visibilities with w out of range are left unchanged during prediction
                        // as long as subsequent imaging uses the same wmax this should work ok
                        // we may want to flag these data to be sure

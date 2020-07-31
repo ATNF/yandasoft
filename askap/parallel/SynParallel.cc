@@ -422,10 +422,11 @@ namespace askap
                     }
                }
            } else {
+// DDCALTAG COMPTAG
                // loop through components
                const vector<string> compList = parset.getStringVector(compPar);
                for (vector<string>::const_iterator cmp = compList.begin(); cmp != compList.end(); ++cmp) {
-                    ASKAPLOG_INFO_STR(logger, "Loading component " << *cmp << " as part of the model for " << sources[i]);
+                    ASKAPLOG_INFO_STR(logger, "Loading component " <<*cmp<<" as part of the model for "<<sources[i]);
                     SynthesisParamsHelper::copyComponent(pModel, parset, sources[i], *cmp, "sources.");
                 }
            }

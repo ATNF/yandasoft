@@ -295,14 +295,15 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
   const casacore::Vector<casacore::Double>& freq = chunk.frequency();
   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = chunk.uvw();
 
-  // DDCALTAG
-  const casacore::uInt nDir = itsNDir;
-  try {
-      // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
-      accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
-      ndAcc.setNDir(nDir);
+  // DDCALTAG -- pass along DD cal info if need be
+  if (itsNDir > 1) {
+      try {
+          // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
+          accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
+          ndAcc.setNDir(itsNDir);
+      }
+      catch (std::bad_cast&) {}
   }
-  catch (std::bad_cast&) {}
 
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
          
@@ -339,7 +340,7 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
            }
        }
        // DDCALTAG -- set the appropriate row offset for this source
-       if (itsIsDD) {
+       if (itsNDir > 1) {
            rowOffset = srcID * uvw.nelements();
        }
 

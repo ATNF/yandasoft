@@ -435,7 +435,7 @@ void DDCalibratorParallel::calcOne(const std::string& ms, bool discard)
           ASKAPLOG_INFO_STR(logger, "Constructing measurement equation corresponding to the uncorrupted model");
           ASKAPCHECK(itsPerfectModel, "Uncorrupted model not defined");
           if (SynthesisParamsHelper::hasImage(itsPerfectModel)) {
-              ASKAPCHECK(!SynthesisParamsHelper::hasComponent(itsPerfectModel),
+             ASKAPCHECK(!SynthesisParamsHelper::hasComponent(itsPerfectModel),
                          "Image + component case has not yet been implemented");
               // have to create an image-specific equation
               boost::shared_ptr<ImagingEquationAdapter> ieAdapter(new ImagingEquationAdapter);

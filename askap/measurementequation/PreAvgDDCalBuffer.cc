@@ -295,32 +295,40 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
   } else {
      if (fdp) {
          ASKAPCHECK(nChannel() == acc.nChannel(), 
-             "Number of channels in the accessor passed to PreAvgDDCalBuffer::accumulate doesn't match the number of frequency buffers"); 
+             "Number of channels in the accessor passed to PreAvgDDCalBuffer::accumulate "
+             "doesn't match the number of frequency buffers"); 
      } 
   }
   ASKAPDEBUGASSERT(itsPolXProducts.nPol() > 0);
 
-  // set up the model vis DataAccessor and let it know how many directions are being calibrated
+  // set up the model vis DataAccessor
   accessors::DDCalBufferDataAccessor modelAcc(acc);
-  ASKAPLOG_DEBUG_STR(logger, "calling DDCalBufferDataAccessor::setNDir("<<itsNDir<<")");
-  modelAcc.setNDir(itsNDir);
 
-  // DDCALTAG COMPTAG
-  // also let the MeasurementEquation know how many directions are being calibrated
-  // Currently only set up for the ComponentEquation class, so try a cast to that
-  // Not sure about the commented lines for the ImagingEquationAdapter class. Test when needed
-  try {
-      ASKAPLOG_DEBUG_STR(logger, "casting MeasEq to CompEq to call setNDir("<<itsNDir<<")");
-      const boost::shared_ptr<ComponentEquation const>
-          &ce = boost::dynamic_pointer_cast<ComponentEquation const>(me);
-      ce->setNDir(itsNDir);
+  // DDCALTAG
+  // let the DataAccessor and MeasurementEquation know how many directions are being calibrated
+  if (itsNDir > 1) {
+      ASKAPLOG_DEBUG_STR(logger, "DDCalBufferDataAccessor::setNDir("<<itsNDir<<")");
+      modelAcc.setNDir(itsNDir);
+  
+      // Currently only set up for the ComponentEquation and ImagingEquationAdapter classes
+      if (typeid(*me) == typeid(ComponentEquation)) {
+          try {
+              ASKAPLOG_DEBUG_STR(logger, "Casting MeasEq to CompEq to call setNDir("<<itsNDir<<")");
+              const boost::shared_ptr<ComponentEquation const>
+                  &ce = boost::dynamic_pointer_cast<ComponentEquation const>(me);
+              ce->setNDir(itsNDir);
+          }
+          catch (const std::bad_cast&) {}
+      } else if (typeid(*me) == typeid(ImagingEquationAdapter)) {
+          try {
+              ASKAPLOG_DEBUG_STR(logger, "Casting MeasEq to CompEq to call setNDir("<<itsNDir<<")");
+              const boost::shared_ptr<ImagingEquationAdapter const>
+                  &ie = boost::dynamic_pointer_cast<ImagingEquationAdapter const>(me);
+              ie->setNDir(itsNDir);
+          }
+          catch (const std::bad_cast&) {}
+      }
   }
-  //catch (const std::bad_cast&) {
-  //    const boost::shared_ptr<ImagingEquationAdapter const>
-  //        &ie = boost::dynamic_pointer_cast<ImagingEquationAdapter const>(me);
-  //    ie->setNDir(itsNDir);
-  //}
-  catch (const std::bad_cast&) {}
 
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();
