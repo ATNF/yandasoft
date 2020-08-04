@@ -1477,9 +1477,11 @@ namespace askap
        // if the value of the map is true, the parameter is mandatory
        // (in the future we may have a more flexible code here filling this map)
        std::map<std::string, bool>  parameterList;
-       parameterList["flux.i"] = true;
        parameterList["direction.ra"] = true;
        parameterList["direction.dec"] = true;
+       parameterList["flux.i"] = true;
+       parameterList["flux.spectral_index"] = false;
+       parameterList["flux.ref_freq"] = false;
        parameterList["shape.bmaj"] = false;
        parameterList["shape.bmin"] = false;
        parameterList["shape.bpa"] = false;
@@ -1490,9 +1492,9 @@ namespace askap
            params->add("sourceID."+srcName, sourceList.size());
        }
 
-       // DDCALTAG COMPTAG -- link this component to its source ID
-       ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
-           " to source "<<params->scalarValue("sourceID."+srcName));
+       // DDCALTAG COMPTAG -- link this component to its source ID 
+       //ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
+       //    " to source "<<params->scalarValue("sourceID."+srcName));
        params->add("source."+compName, params->scalarValue("sourceID."+srcName));
 
        // now iterate through all parameters

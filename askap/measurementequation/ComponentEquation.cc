@@ -85,6 +85,8 @@ askap::scimath::Params ComponentEquation::defaultParameters()
 // parameters. Shell pattern matching rules apply.
       askap::scimath::Params ip;
       ip.add("flux.i");
+      ip.add("flux.spectral_index");
+      ip.add("flux.ref_freq");
       ip.add("direction.ra");
       ip.add("direction.dec");
       ip.add("shape.bmaj");
@@ -124,6 +126,10 @@ void ComponentEquation::fillComponentCache(
           const double ra=parameters().scalarValue("direction.ra"+cur);
           const double dec=parameters().scalarValue("direction.dec"+cur);
           const double fluxi=parameters().scalarValue("flux.i"+cur);
+          const double spectral_index = parameters().has("flux.spectral_index"+cur) ? 
+                   parameters().scalarValue("flux.spectral_index"+cur) : 0.;
+          const double ref_freq = parameters().has("flux.ref_freq"+cur) ? 
+                   parameters().scalarValue("flux.ref_freq"+cur) : 0.;
           const double bmaj = parameters().has("shape.bmaj"+cur) ? 
                    parameters().scalarValue("shape.bmaj"+cur) : 0.;
           const double bmin = parameters().has("shape.bmin"+cur) ? 
@@ -133,11 +139,12 @@ void ComponentEquation::fillComponentCache(
           
           if((bmaj>0.0)&&(bmin>0.0)) {
              // this is a gaussian
-             compIt->reset(new UnpolarizedGaussianSource(cur,fluxi,ra,dec,bmaj,
-                            bmin,bpa));
+             compIt->reset(new UnpolarizedGaussianSource(cur,fluxi,ra,dec,
+                            bmaj,bmin,bpa,spectral_index,ref_freq));
           } else {
              // this is a point source
-             compIt->reset(new UnpolarizedPointSource(cur,fluxi,ra,dec));
+             compIt->reset(new UnpolarizedPointSource(cur,fluxi,ra,dec,
+                            spectral_index,ref_freq));
           }
   }
   
