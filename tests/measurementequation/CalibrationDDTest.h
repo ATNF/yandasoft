@@ -300,12 +300,14 @@ namespace askap
                                          -0.9, 0.72, -0.04, 0.05, -0.1}; 
           
           params1.reset(new Params);
+          params1->add("source.src1", 0);
           params1->add("flux.i.src1", 100.);
           params1->add("direction.ra.src1", 0.0*casacore::C::arcmin);
           params1->add("direction.dec.src1", -90.0*casacore::C::arcmin);
           //params1->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
           //params1->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
           //params1->add("shape.bpa.src1", -55*casacore::C::degree);
+          params1->add("source.src2", 1);
           params1->add("flux.i.src2", 100.);
           params1->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params1->add("direction.dec.src2", 32.0*casacore::C::arcmin);
@@ -325,12 +327,14 @@ namespace askap
           ampError[1] = -0.1;
 
           params2.reset(new Params);
+          params2->add("source.src1", 0);
           params2->add("flux.i.src1", 100.*(1.0 + ampError[0]));
           params2->add("direction.ra.src1", 0.0*casacore::C::arcmin);
           params2->add("direction.dec.src1", -90.0*casacore::C::arcmin);
           //params2->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
           //params2->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
           //params2->add("shape.bpa.src1", -55*casacore::C::degree);
+          params2->add("source.src2", 1);
           params2->add("flux.i.src2", 100.*(1.0 + ampError[1]));
           params2->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params2->add("direction.dec.src2", 32.0*casacore::C::arcmin);
@@ -356,12 +360,14 @@ namespace askap
           mOffset[1] = -1.0*casacore::C::arcsec;
 
           params3.reset(new Params);
+          params3->add("source.src1", 0);
           params3->add("flux.i.src1", 100.);
           params3->add("direction.ra.src1", 0.0*casacore::C::arcmin + lOffset[0]);
           params3->add("direction.dec.src1", -90.0*casacore::C::arcmin + mOffset[0]);
           //params3->add("shape.bmaj.src1", 3.0e-3*casacore::C::arcsec);
           //params3->add("shape.bmin.src1", 2.0e-3*casacore::C::arcsec);
           //params3->add("shape.bpa.src1", -55*casacore::C::degree);
+          params3->add("source.src2", 1);
           params3->add("flux.i.src2", 100.);
           params3->add("direction.ra.src2", -126.0*casacore::C::arcmin + lOffset[1]);
           params3->add("direction.dec.src2", 32.0*casacore::C::arcmin + mOffset[1]);
