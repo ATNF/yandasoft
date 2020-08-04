@@ -514,7 +514,10 @@ void ContinuumWorker::processChannels()
     std::string grid_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
 
-
+    root = "pcf";
+    std::string pcf_name = root + std::string(".wr.") \
+    + utility::toString(itsComms.rank());
+      
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
@@ -522,6 +525,7 @@ void ContinuumWorker::processChannels()
       residual_name = "residual";
       weights_name = "weights";
       grid_name = "grid";
+      pcf_name = "pcf";
     }
 
     ASKAPLOG_DEBUG_STR(logger, "Configuring Spectral Cube");
@@ -537,11 +541,11 @@ void ContinuumWorker::processChannels()
       
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
       }
       
 
     }
-
 
 
     if (!itsComms.isCubeCreator()) {
@@ -553,6 +557,8 @@ void ContinuumWorker::processChannels()
  
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
+
       }
       
     }
