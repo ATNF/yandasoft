@@ -71,8 +71,9 @@ UnpolarizedGaussianSource::UnpolarizedGaussianSource(const std::string &name,
   params(7)=ref_freq;
   
   casacore::RigidVector<std::string, 8> &names = parameterNames();
-  const char *nameTemplates[] = {"flux.i","direction.ra","direction.dec",
-                 "shape.bmaj","shape.bmin","shape.bpa"};
+ const char *nameTemplates[] = {"flux.i","direction.ra","direction.dec",
+                 "shape.bmaj","shape.bmin","shape.bpa",
+                 "flux.spectral_index","flux.ref_freq"};
   for (size_t i=0;i<8;++i) {
        names(i)=std::string(nameTemplates[i])+name;
   }               

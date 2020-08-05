@@ -85,13 +85,13 @@ askap::scimath::Params ComponentEquation::defaultParameters()
 // parameters. Shell pattern matching rules apply.
       askap::scimath::Params ip;
       ip.add("flux.i");
-      ip.add("flux.spectral_index");
-      ip.add("flux.ref_freq");
       ip.add("direction.ra");
       ip.add("direction.dec");
       ip.add("shape.bmaj");
       ip.add("shape.bmin");
       ip.add("shape.bpa");
+      ip.add("flux.spectral_index");
+      ip.add("flux.ref_freq");
       return ip;
 }
 
@@ -341,7 +341,12 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
        for (int idx=0; idx<curComp.nParameters(); ++idx) {
            if (curComp.parameterName(idx).find("flux.i.") == 0) {
                const std::string &compName = curComp.parameterName(idx).substr(7);
-               srcID = parameters().scalarValue("source."+compName);
+               if (parameters().has("source."+compName)) {
+                   srcID = parameters().scalarValue("source."+compName);
+               }
+               else {
+                   srcID = 0;
+               }
                //ASKAPLOG_INFO_STR(logger, "DDCALTAG  - adding component "<< compName<<" model to buffer "<<srcID);
                break;
            }

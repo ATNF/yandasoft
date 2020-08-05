@@ -1477,14 +1477,14 @@ namespace askap
        // if the value of the map is true, the parameter is mandatory
        // (in the future we may have a more flexible code here filling this map)
        std::map<std::string, bool>  parameterList;
+       parameterList["flux.i"] = true;
        parameterList["direction.ra"] = true;
        parameterList["direction.dec"] = true;
-       parameterList["flux.i"] = true;
-       parameterList["flux.spectral_index"] = false;
-       parameterList["flux.ref_freq"] = false;
        parameterList["shape.bmaj"] = false;
        parameterList["shape.bmin"] = false;
        parameterList["shape.bpa"] = false;
+       parameterList["flux.spectral_index"] = false;
+       parameterList["flux.ref_freq"] = false;
 
        // DDCALTAG COMPTAG -- keep a list of the sources and give each a unique ID
        const std::vector<std::string> sourceList = params->completions("sourceID.");

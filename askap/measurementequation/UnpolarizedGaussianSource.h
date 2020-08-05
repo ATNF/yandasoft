@@ -69,7 +69,7 @@ struct UnpolarizedGaussianSource : public UnpolarizedComponent<8> {
   /// @param[in] ref_freq referece frequency for parameter "flux"
   UnpolarizedGaussianSource(const std::string &name, double flux, double ra, 
            double dec, double maj, double min, double pa,
-           double spectral_index=0, double ref_freq=0);
+           double spectral_index, double ref_freq);
   
   /// @brief calculate stokes I visibilities for this component
   /// @details This variant of the method calculates just the visibilities
