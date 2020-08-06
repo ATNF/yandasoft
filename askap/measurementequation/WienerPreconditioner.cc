@@ -214,7 +214,7 @@ namespace askap
           }
 
           // for debugging - to export kernel widths
-          //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthMatrix;
+          //scimath::saveAsCasaImage("kernelwidths.uv",kernelWidthMatrix);
           //throw 1;
 
           // Build the filter as follows:
@@ -243,12 +243,11 @@ namespace askap
           // set pcf to to contain the new weights, so they don't have to be regenerated.
           // note that it is going from the image domain to the uv domain.
           itsPcf = 0.0;
-
           for (int y=extra*boxWidth/2; y<shape[1]-extra*boxWidth/2; ++y) {
+              int boxStart1 = y - boxWidth/2;
               for (int x=extra*boxWidth/2; x<shape[0]-extra*boxWidth/2; ++x) {
 
                 int boxStart0 = x - boxWidth/2;
-                int boxStart1 = y - boxWidth/2;
 
                 int localCount = 0;
                 // double localSum = 0.0;

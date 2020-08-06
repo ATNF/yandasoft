@@ -386,16 +386,8 @@ void TableVisGridder::save(const std::string& name) {
                                continue;
                           }
                           imgBuffer(x,y,plane) = casacore::abs(thisCF(x - xOff,y - yOff));
-                          if (peakVal < imgBuffer(x,y,plane)) {
-                               //peakX = x;
-                               //peakY = y;
-                               peakVal = imgBuffer(x,y,plane);
-                          }
-                          imgBuffer(x,y,plane) = casacore::real(thisCF(x - xOff,y - yOff));
                      }
                 }
-                //ASKAPLOG_DEBUG_STR(logger, "CF plane "<<plane<<
-                //    " peak of "<<peakVal<<" at "<<peakX<<" , "<<peakY);
             }
             scimath::saveAsCasaImage(imgName,imgBuffer);
         }
@@ -458,7 +450,7 @@ void TableVisGridder::logCFCacheStats() const
 /// This is a generic grid/degrid
 void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGTRACE("TableVisGridder::generic");
-   if (forward&&itsModelIsEmpty)
+  if (forward&&itsModelIsEmpty)
         return;
 
    if (forward && isPSFGridder()) {
@@ -561,17 +553,17 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    ASKAPDEBUGASSERT(casa::uInt(nChan) <= frequencyList.nelements());
    ASKAPDEBUGASSERT(casa::uInt(nSamples) == acc.uvw().nelements());
    const casa::Cube<casa::Bool>& flagCube = acc.flag();
-   // we want these for either gridding or degridding and
-   // want to avoid calling them in the loop due to virtual function overheads
-   // don't like the pointers, but can't use references without initialising
-   casa::Cube<casa::Complex>* visCube = 0;
-   const casa::Cube<casa::Complex> *roVisCube = 0;
-   const casa::Cube<casa::Complex> *roVisNoise = 0;
+   // We want these for either gridding or degridding and
+   // want to avoid calling them in the loop due to virtual function overheads.
+   // Use shared_ptr without delete to hold the pointers.
+   boost::shared_ptr<casa::Cube<casa::Complex> > visCube;
+   boost::shared_ptr<const casa::Cube<casa::Complex> > roVisCube;
+   boost::shared_ptr<const casa::Cube<casa::Complex> > roVisNoise;
    if (forward) {
-       visCube = &acc.rwVisibility();
+       visCube.reset(&acc.rwVisibility(), utility::NullDeleter());
    } else {
-       roVisCube = &acc.visibility();
-       roVisNoise = &acc.noise();
+       roVisCube.reset(&acc.visibility(), utility::NullDeleter());
+       roVisNoise.reset(&acc.noise(), utility::NullDeleter());
    }
 
    const uint iDDOffset = itsSourceIndex * nSamples;
@@ -610,7 +602,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
        }
 
        for (uint chan=0; chan<nChan; ++chan) {
-
            const double reciprocalToWavelength = frequencyList[chan]/casacore::C::c;
            if (chan == 0) {
               // check for ridiculous frequency to pick up a possible error with input file,
@@ -730,7 +721,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    ASKAPCHECK(cInd>-1,"Index into convolution functions is less than zero");
                    ASKAPCHECK(cInd<int(itsConvFunc.size()),
                            "Index into convolution functions exceeds number of planes");
-
                    casacore::Matrix<casacore::Complex> & convFunc(itsConvFunc[cInd]);
 
                    // support only square convolution functions at the moment
@@ -808,7 +798,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                if (itsVisWeight) {
                                    rVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
                                }
-
                                GridKernel::grid(its2dGrid, convFunc, rVis, iuOffset, ivOffset, support);
 
                                itsSamplesGridded+=1.0;
