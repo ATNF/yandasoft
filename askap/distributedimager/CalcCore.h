@@ -93,7 +93,10 @@ namespace cp {
 
         askap::synthesis::IVisGridder::ShPtr gridder() { return itsGridder_p;};
 
+        /// @brief return the residual grid
         casacore::Array<casacore::Complex> getGrid();
+        /// @brief return the PCF grid
+        casacore::Array<casacore::Complex> getPCFGrid();
 
     private:
 

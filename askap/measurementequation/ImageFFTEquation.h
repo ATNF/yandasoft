@@ -157,7 +157,11 @@ namespace askap
         IVisGridder::ShPtr getResidualGridder(std::string name) const {
             return itsResidualGridders[name];
         };
-
+        
+        IVisGridder::ShPtr getPreconGridder(std::string name) const {
+            return itsPreconGridders[name];
+        };
+ 
       private:
 
       /// Pointer to prototype gridder
