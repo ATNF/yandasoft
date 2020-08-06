@@ -29,6 +29,7 @@
 
 // Test includes
 #include "ComponentEquationTest.h"
+#include "ComponentEquationSpectralTest.h"
 #include "Calibrator1934Test.h"
 #include "VectorOperationsTest.h"
 #include "ImageDFTEquationTest.h"
@@ -54,21 +55,22 @@ int main( int argc, char **argv)
 
     // DDCALTAG -- for now, just run the DD unit test
 
-    // runner.addTest(askap::synthesis::VectorOperationsTest::suite());
-    // runner.addTest(askap::synthesis::ComponentEquationTest::suite());
-    // runner.addTest(askap::synthesis::Calibrator1934Test::suite());
-    // runner.addTest(askap::synthesis::PreAvgCalBufferTest::suite());
-    // runner.addTest(askap::synthesis::CalibrationMETest::suite());
+    runner.addTest(askap::synthesis::VectorOperationsTest::suite());
+    runner.addTest(askap::synthesis::ComponentEquationTest::suite());
+    runner.addTest(askap::synthesis::ComponentEquationSpectralTest::suite());
+    runner.addTest(askap::synthesis::Calibrator1934Test::suite());
+    runner.addTest(askap::synthesis::PreAvgCalBufferTest::suite());
+    runner.addTest(askap::synthesis::CalibrationMETest::suite());
     runner.addTest(askap::synthesis::CalibrationDDTest::suite());
     // runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
-    // runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
-    // runner.addTest(askap::synthesis::PreconditionerTests::suite());
-    // runner.addTest(askap::synthesis::SynthesisParamsHelperTest::suite());
-    // runner.addTest(askap::synthesis::ImageParamsHelperTest::suite());
-    // runner.addTest(askap::synthesis::GaussianNoiseMETest::suite());
-    // runner.addTest(askap::synthesis::PolLeakageTest::suite());
-    // runner.addTest(askap::synthesis::RestoringBeamHelperTest::suite());
-    // runner.addTest(askap::synthesis::VisMetaDataStatsTest::suite());
+    runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
+    runner.addTest(askap::synthesis::PreconditionerTests::suite());
+    runner.addTest(askap::synthesis::SynthesisParamsHelperTest::suite());
+    runner.addTest(askap::synthesis::ImageParamsHelperTest::suite());
+    runner.addTest(askap::synthesis::GaussianNoiseMETest::suite());
+    runner.addTest(askap::synthesis::PolLeakageTest::suite());
+    runner.addTest(askap::synthesis::RestoringBeamHelperTest::suite());
+    runner.addTest(askap::synthesis::VisMetaDataStatsTest::suite());
 
     const bool wasSucessful = runner.run();
 

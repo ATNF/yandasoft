@@ -129,7 +129,7 @@ void ComponentEquation::fillComponentCache(
           const double spectral_index = parameters().has("flux.spectral_index"+cur) ? 
                    parameters().scalarValue("flux.spectral_index"+cur) : 0.;
           const double ref_freq = parameters().has("flux.ref_freq"+cur) ? 
-                   parameters().scalarValue("flux.ref_freq"+cur) : 0.;
+                   parameters().scalarValue("flux.ref_freq"+cur) : 1e9;
           const double bmaj = parameters().has("shape.bmaj"+cur) ? 
                    parameters().scalarValue("shape.bmaj"+cur) : 0.;
           const double bmin = parameters().has("shape.bmin"+cur) ? 
@@ -248,6 +248,7 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
   // DDCALTAG -- changed rwVis.nrow() to uvw.nelements()
   for (casacore::uInt row=0;row<uvw.nelements();++row) {
        comp.calculate(uvw[row],freq,vis);
+
        //
        casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
        
@@ -394,6 +395,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
                    const casacore::Vector<casacore::Double>& freq,
                    scimath::DesignMatrix &dm, casacore::Vector<casacore::Double> &residual) const
 {
+
   const size_t nParameters = comp.nParameters();
   // the number of polarisations in the visibility cube
   const casacore::uInt nPol = itsPolConverter.outputPolFrame().nelements();
@@ -416,7 +418,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
   std::vector<std::vector<casacore::AutoDiff<double> > > visDerivBuffer(nPol);
                             
   casacore::Array<casacore::Double> derivatives(casacore::IPosition(2,nData, nParameters));
-           
+
   for (casacore::uInt row=0,offset=0; row<uvw.nelements(); ++row) {
        
        const casacore::RigidVector<casacore::Double, 3> &thisRowUVW = uvw[row];
@@ -475,6 +477,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
                   residual(casacore::Slice(offset,2*freq.nelements())));
        }
   }
+
   // Now we can add the design matrix, residual, and weights
   for (casacore::uInt par=0; par<nParameters; ++par) {
        dm.addDerivative(comp.parameterName(par), 
@@ -535,6 +538,7 @@ void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor
   for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
             compList.begin(); compIt!=compList.end();++compIt) {
        ASKAPDEBUGASSERT(*compIt); 
+           
        updateDesignMatrixAndResiduals(*(*compIt),uvw,freq,designmatrix,
                            residual);
   }

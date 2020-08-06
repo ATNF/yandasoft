@@ -47,31 +47,60 @@ namespace synthesis {
 /// @param[in] freq vector of frequencies to do calculations for
 /// @param[in] params RigidVector with parameters
 /// @param[out] result an output buffer used to store values
-template<typename T>
+//template<typename T>
 void UnpolarizedPointSource::calcPoint(
                     const casacore::RigidVector<casacore::Double, 3> &uvw,
                     const casacore::Vector<casacore::Double> &freq,
-                    const casacore::RigidVector<T, 5> &params,
-                    std::vector<T> &result)
+                    const casacore::RigidVector<casacore::AutoDiff<double>, 5> &params,
+                    std::vector<casacore::AutoDiff<double>> &result)
 {
-  const T flux0=params(0);
-  const T ra=params(1);
-  const T dec=params(2);
-  const T spectral_index=params(3);
-  const T ref_freq=params(4);
+  const casacore::AutoDiff<double> flux0=params(0);
+  const casacore::AutoDiff<double> ra=params(1);
+  const casacore::AutoDiff<double> dec=params(2);
+  const casacore::AutoDiff<double> spectral_index=params(3);
+  const casacore::AutoDiff<double> ref_freq=params(4);
   
-  const T n =  casacore::sqrt(T(1.0) - (ra*ra+dec*dec));
-  const T delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
-                                   (n-T(1.0)) * uvw(2))/casacore::C::c;
-  typename std::vector<T>::iterator it=result.begin();
+  const casacore::AutoDiff<double> n =  casacore::sqrt(casacore::AutoDiff<double>(1.0) - (ra*ra+dec*dec));
+  const casacore::AutoDiff<double> delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
+                                   (n-casacore::AutoDiff<double>(1.0)) * uvw(2))/casacore::C::c;
+  typename std::vector<casacore::AutoDiff<double>>::iterator it=result.begin();
   for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin(); 
        ci!=freq.end();++ci,++it)
       {
         const casacore::Double f = *ci;
         // cannot use the spectral_index==0 conditional because templated type casacore::AutoDiff doesn't like it
-        //const T flux = spectral_index==0 ? flux0 : flux0 * pow(f/ref_freq,spectral_index);
-        const T flux = flux0 * pow(f/ref_freq,spectral_index);
-        const T phase = delay * (*ci);
+        //const casacore::AutoDiff<double> flux = spectral_index==0 ? flux0 : flux0 * pow(f/ref_freq,spectral_index);
+        //const casacore::AutoDiff<double> flux = flux0 * pow(f/ref_freq,spectral_index);
+        const casacore::AutoDiff<double> flux = flux0;
+        const casacore::AutoDiff<double> phase = delay * (*ci);
+        *it = flux * cos(phase)/n;
+        *(++it) = flux * sin(phase)/n;
+      }
+}
+void UnpolarizedPointSource::calcPoint(
+                    const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    const casacore::RigidVector<double, 5> &params,
+                    std::vector<double> &result)
+{
+  const double flux0=params(0);
+  const double ra=params(1);
+  const double dec=params(2);
+  const double spectral_index=params(3);
+  const double ref_freq=params(4);
+  
+  const double n =  casacore::sqrt(double(1.0) - (ra*ra+dec*dec));
+  const double delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
+                                   (n-double(1.0)) * uvw(2))/casacore::C::c;
+  typename std::vector<double>::iterator it=result.begin();
+  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin(); 
+       ci!=freq.end();++ci,++it)
+      {
+        const casacore::Double f = *ci;
+        // cannot use the spectral_index==0 conditional because templated type casacore::AutoDiff doesn't like it
+        //const double flux = spectral_index==0 ? flux0 : flux0 * pow(f/ref_freq,spectral_index);
+        const double flux = flux0 * pow(f/ref_freq,spectral_index);
+        const double phase = delay * (*ci);
         *it = flux * cos(phase)/n;
         *(++it) = flux * sin(phase)/n;
       }
@@ -128,12 +157,10 @@ void UnpolarizedPointSource::calculate(
                     std::vector<casacore::AutoDiff<double> > &result) const
 {
   const casacore::RigidVector<double, 5> &params = parameters();
-  const casacore::RigidVector<casacore::AutoDiff<double>, 5>  paramsAutoDiff(
-                              casacore::AutoDiff<double>(params(0),3, 0),
-                              casacore::AutoDiff<double>(params(1),3, 1),
-                              casacore::AutoDiff<double>(params(2),3, 2),
-                              casacore::AutoDiff<double>(params(1),3, 3),
-                              casacore::AutoDiff<double>(params(2),3, 4));
+  casacore::RigidVector<casacore::AutoDiff<double>, 5>  paramsAutoDiff;
+  for (casacore::uInt i=0; i<5; ++i) {
+       paramsAutoDiff(i)=casacore::AutoDiff<double>(params(i), 5, i);
+  }
   calcPoint(uvw,freq,paramsAutoDiff,result);
 }
 

@@ -110,7 +110,7 @@ void UnpolarizedGaussianSource::calculate(const casacore::RigidVector<casacore::
   const casacore::RigidVector<double, 8> &params = parameters();
   casacore::RigidVector<casacore::AutoDiff<double>, 8>  paramsAutoDiff;
   for (casacore::uInt i=0; i<8; ++i) {
-       paramsAutoDiff(i)=casacore::AutoDiff<double>(params(i),8, i);
+       paramsAutoDiff(i)=casacore::AutoDiff<double>(params(i), 8, i);
   }
   calcGaussian(uvw,freq,paramsAutoDiff,result);
 }

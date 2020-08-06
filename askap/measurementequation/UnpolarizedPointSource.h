@@ -98,11 +98,15 @@ private:
   /// @param[in] freq vector of frequencies to do calculations for
   /// @param[in] params RigidVector with parameters
   /// @param[out] result an output buffer used to store values
-  template<typename T>
+  //template<typename T>
   static void calcPoint(const casacore::RigidVector<casacore::Double, 3> &uvw,
                     const casacore::Vector<casacore::Double> &freq,
-                    const casacore::RigidVector<T, 5> &params,
-                    std::vector<T> &result);
+                    const casacore::RigidVector<casacore::AutoDiff<double>, 5> &params,
+                    std::vector<casacore::AutoDiff<double>> &result);
+  static void calcPoint(const casacore::RigidVector<casacore::Double, 3> &uvw,
+                    const casacore::Vector<casacore::Double> &freq,
+                    const casacore::RigidVector<double, 5> &params,
+                    std::vector<double> &result);
 };
 
 } // namespace synthesis
