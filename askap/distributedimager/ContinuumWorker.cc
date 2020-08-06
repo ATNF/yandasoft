@@ -541,7 +541,7 @@ void ContinuumWorker::processChannels()
       
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
-        itsPCFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
       }
       
 
@@ -557,7 +557,7 @@ void ContinuumWorker::processChannels()
  
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
-        itsPCFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcf_name));
 
       }
       
@@ -1099,7 +1099,7 @@ void ContinuumWorker::processChannels()
         rootImager.params()->addComplexVector("grid.slice",garrVec);
         ASKAPLOG_INFO_STR(logger,"Adding pcf.slice");
         casacore::Array<casacore::Complex> pcfarr = rootImager.getPCFGrid();
-        casacore::Vector<casacore::Complex> pcfVec(garr.reform(IPosition(1,pcfarr.nelements())));
+        casacore::Vector<casacore::Complex> pcfVec(pcfarr.reform(IPosition(1,pcfarr.nelements())));
         rootImager.params()->addComplexVector("pcf.slice",pcfVec);
       } 
 
@@ -1382,7 +1382,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
       const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
       casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
-      itsGriddedVis->writeSlice(grid,chan);
+      itsPCFCube->writeSlice(grid,chan);
   }
 
   if (itsParset.getBool("restore", false)) {

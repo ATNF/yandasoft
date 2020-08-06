@@ -220,6 +220,8 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
     boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getPreconGridder(imageName));
+    ASKAPCHECK(tvg,"PreconGridder not defined, make sure preservecf is set to true")
+   
     return tvg->getGrid();
 }
 void CalcCore::calcNE()

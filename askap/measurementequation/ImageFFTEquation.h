@@ -160,7 +160,7 @@ namespace askap
         
         IVisGridder::ShPtr getPreconGridder(std::string name) const {
             return itsPreconGridders[name];
-        }
+        };
  
       private:
 

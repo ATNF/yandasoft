@@ -299,6 +299,7 @@ namespace askap
     void ImageFFTEquation::calcImagingEquations(askap::scimath::ImagingNormalEquations& ne) const
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
+     
 
       // We will need to loop over all completions i.e. all sources
       const std::vector<std::string> completions(parameters().completions("image"));
