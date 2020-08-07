@@ -134,6 +134,25 @@ class CdeconvolverApp : public askap::Application
             if (comms.nProcs() >= nchanCube) {
               myFullAllocationSize = 1;
             }
+            else {
+              myFullAllocationSize = nchanCube/comms.nProcs();
+            }
+            myFullAllocationStart = comms.rank()*myFullAllocationSize;
+            myFullAllocationStop = myFullAllocationStart + myFullAllocationSize;
+
+            // unless last rank
+            if (comms.rank() == comms.nProcs()-1) {
+              myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
+            }
+
+            ASKAPLOG_INFO_STR(logger,"FullAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
+            // So the plan is to iterate over each channel ...
+            // Calculate the inShapes for each channel and file ....
+
+            for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
+                
+                ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
+            }
 
             // output Model cube
             // this->itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, freqinc, "model"));
