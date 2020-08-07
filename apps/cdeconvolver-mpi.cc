@@ -4,7 +4,7 @@
 ///
 /// Control parameters are passed in from a LOFAR ParameterSet file.
 ///
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2007, 2020 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -27,6 +27,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
+/// @author Stephen Ord <stephen.ord@csiro.au>
 
 // Package level header file
 #include <askap/askap_synthesis.h>
@@ -42,9 +43,12 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/AskapError.h>
 #include <askap/Application.h>
 #include <askap/StatReporter.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/deconvolution/DeconvolverBase.h>
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>
+#include <askap/distributedimager/CubeBuilder.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -68,31 +72,87 @@ static std::string getNodeName(void)
 class CdeconvolverApp : public askap::Application
 {
     public:
+    
+        boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsModelCube;
+        boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsResidualCube;
+        boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
+    
+        
         virtual int run(int argc, char* argv[])
         {
             StatReporter stats;
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
+            
+            // This class must have scope outside the main try/catch block
+            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+            
+            ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
+            // Need some metadata for the output cube constructions
+            
+            // Lets get the grid,pcf and psf cube names from the parset
+            
+            const std::string gridCubeName = subset.getString("grid");
+            const std::string pcfCubeName = subset.getString("pcf");
+            const std::string psfCubeName = subset.getString("psf");
+            
+            // Lets check the dimensions
+            // initialise an image accessor
+            // set up image handler, needed for both master and worker
+            SynthesisParamsHelper::setUpImageHandler(subset);
+            accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
+            
+            // Lets load in a cube
+            casacore::PagedImage<casacore::Complex> grid(gridCubeName);
+            const casa::IPosition shape = grid.shape();
+            
+            // lets calculate the allocations ...
 
-            const std::string hostname = getNodeName();
-            ASKAPLOG_REMOVECONTEXT("hostname");
-            ASKAPLOG_PUTCONTEXT("hostname", hostname.c_str());
+            casa::IPosition blc(shape.nelements(),0);
+            casa::IPosition trc(shape);
+            int nchanCube = trc[3];
+            
+            vector<IPosition> inShapeVec;
+            vector<CoordinateSystem> inCoordSysVec;
+            // What fraction of the full problem does this rank
+            // THe units here are channels - not polarisations.
+            int myFullAllocationSize = 0;
+            int myFullAllocationStart = 0;
+            int myFullAllocationStop = 0;
+            // Where a rank is in its allocation
+            int myAllocationSize = 1;
+            int myAllocationStart = 0;
+            int myAllocationStop = myAllocationStart + myAllocationSize;
+            
+            if (comms.rank() >= nchanCube) {
+              ASKAPLOG_WARN_STR(logger,"Rank " << comms.rank() << " has no work to merge");
+              return MPIX_ERR_PROC_FAILED;
+            }
+            if (nchanCube % comms.nProcs() != 0) {
+              ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
+            }
+            if (comms.nProcs() >= nchanCube) {
+              myFullAllocationSize = 1;
+            }
 
-            ASKAPLOG_INFO_STR(logger, "ASKAP image deconvolver " << ASKAP_PACKAGE_VERSION);
-
-            boost::shared_ptr<DeconvolverBase<Float, Complex> > deconvolver(DeconvolverFactory::make(subset));
-            deconvolver->deconvolve();
+            // output Model cube
+            // this->itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, freqinc, "model"));
+            // output Residual cube
+            // this->itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, freqinc,"residual"));
+            // boost::shared_ptr<DeconvolverBase<casacore::Float, casacore::Complex> > deconvolver(DeconvolverFactory::make(subset));
+            
+            // deconvolver->deconvolve();
 
             // Now write the model and residual to disk using the names specified in the 
             // parset. We simply copy the dirty image and then write the array into 
             // the resulting image. 
-            DeconvolverHelpers::putArrayToImage(deconvolver->model(), "model", "dirty", subset);
-            DeconvolverHelpers::putArrayToImage(deconvolver->dirty(), "residual", "dirty", subset);
+            // DeconvolverHelpers::putArrayToImage(deconvolver->model(), "model", "dirty", subset);
+            // DeconvolverHelpers::putArrayToImage(deconvolver->dirty(), "residual", "dirty", subset);
 
-            Vector<Array<float> > restored(1);
-            if(deconvolver->restore(restored)) {
-                DeconvolverHelpers::putArrayToImage(restored(0), "restored", "dirty", subset);
-            }
+            // Vector<Array<float> > restored(1);
+            // if(deconvolver->restore(restored)) {
+            //    DeconvolverHelpers::putArrayToImage(restored(0), "restored", "dirty", subset);
+            // }
 
             stats.logSummary();
             return 0;
