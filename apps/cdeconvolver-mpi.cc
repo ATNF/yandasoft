@@ -126,7 +126,7 @@ class CdeconvolverApp : public askap::Application
             
             if (comms.rank() >= nchanCube) {
               ASKAPLOG_WARN_STR(logger,"Rank " << comms.rank() << " has no work to merge");
-              return MPIX_ERR_PROC_FAILED;
+                return -1;
             }
             if (nchanCube % comms.nProcs() != 0) {
               ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
