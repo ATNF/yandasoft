@@ -54,11 +54,13 @@ public:
    /// @param[in] pa position angle in radians
    /// @param[in] isPsfSize the specified taper size is the required fitted beam size of the output
    /// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
+   /// @param[in] tolerance, the fractional tolerance in fitted beam size when using isPsfSize=true
    /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
    /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
    /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
    /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
-   GaussianTaperPreconditioner(double majFWHM, double minFWHM, double pa, bool isPsfSize = false, double cutoff = 0.5);
+   GaussianTaperPreconditioner(double majFWHM, double minFWHM, double pa, bool isPsfSize = false,
+       double cutoff = 0.5, double tolerance = 0.005);
 
    /// @brief set up the preconditioner for the circularly symmetric taper
    /// @details This constructor just sets the taper size, same for both axis.
@@ -67,11 +69,13 @@ public:
    /// (given as a fraction of the uv-cell size).
    /// @param[in] isPsfSize the specified taper size is the required fitted beam size of the output
    /// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
+   /// @param[in] tolerance, the fractional tolerance in fitted beam size when using isPsfSize=true
    /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
    /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
    /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
    /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
-   GaussianTaperPreconditioner(double fwhm, bool isPsfSize = false, double cutoff = 0.5);
+   GaussianTaperPreconditioner(double fwhm, bool isPsfSize = false, double cutoff = 0.5,
+        double tolerance = 0.005);
 
    /// @brief Clone this object
    /// @return shared pointer to a cloned copy
@@ -101,6 +105,7 @@ public:
 private:
     mutable bool itsFitBeam;
     double itsCutoff;
+    double itsTolerance;
 };
 
 } // namespace synthesis

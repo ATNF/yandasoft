@@ -1,6 +1,6 @@
 /// @file AWProjectVisGridder.h
 ///
-/// AWProjectVisGridder: Grids visibility data using the self-convolution of 
+/// AWProjectVisGridder: Grids visibility data using the self-convolution of
 /// the antenna illumination pattern.
 ///
 /// @copyright (c) 2007 CSIRO
@@ -43,7 +43,7 @@ namespace askap
 {
     namespace synthesis
     {
-        /// @brief Gridder that is appropriate for mosaicing. 
+        /// @brief Gridder that is appropriate for mosaicing.
         ///
         /// @details The visibilities are gridded using a convolution
         /// function derived from the antenna illumination pattern,
@@ -51,7 +51,7 @@ namespace askap
         /// incorporating the Fresnel term needed to correct for the
         /// w-term in the full measurement equation.
         ///
-        /// The scaling is slow in data points, slow in w planes 
+        /// The scaling is slow in data points, slow in w planes
         /// (since the calculation of the convolution function
         /// usually dominates).
         ///
@@ -72,8 +72,8 @@ namespace askap
                 /// @param maxFields Maximum number of fields allowed
                 /// @param pointingTol Pointing tolerance in radians
                 /// @param paTol Parallactic angle tolerance in radians
-                /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value 
-                ///        means the frequency axis is ignored       
+                /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value
+                ///        means the frequency axis is ignored
                 /// @param frequencyDependent Frequency dependent gridding?
                 /// @param name Name of table to save convolution function into
                 AWProjectVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
@@ -81,8 +81,8 @@ namespace askap
                         const int overSample, const int maxSupport, const int limitSupport,
                         const int maxFeeds=1, const int maxFields=1, const double pointingTol=0.0001,
                         const double paTol=0.01,
-                        const double freqTol = 1e-6,          
-                        const bool frequencyDependent=true, 
+                        const double freqTol = 1e-6,
+                        const bool frequencyDependent=true,
                         const std::string& name=std::string(""));
 
                 /// @brief copy constructor
@@ -124,16 +124,16 @@ namespace askap
                 /// @details We specify parameters per gridder type in the parset file.
                 /// This method returns the gridder name which should be used to extract
                 /// a subset of parameters for createGridder method.
-                static inline std::string gridderName() { return "AWProject";}				
+                static inline std::string gridderName() { return "AWProject";}
 
                 /// @brief static method to create gridder
                 /// @details Each gridder should have a static factory method, which is
                 /// able to create a particular type of the gridder and initialise it with
-                /// the parameters taken form the given parset. It is assumed that the 
+                /// the parameters taken form the given parset. It is assumed that the
                 /// method receives a subset of parameters where the gridder name is already
-                /// taken out. 
+                /// taken out.
                 /// @param[in] parset input parset file
-                /// @return a shared pointer to the gridder instance					 
+                /// @return a shared pointer to the gridder instance
                 static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
             protected:
@@ -169,7 +169,7 @@ namespace askap
                 /// @param[in] other input object
                 AWProjectVisGridder& operator=(const AWProjectVisGridder &other);
 
-                /// Reference frequency for illumination pattern. 
+                /// Reference frequency for illumination pattern.
                 double itsReferenceFrequency;
 
                 /// Antenna illumination model
@@ -184,8 +184,6 @@ namespace askap
                 /// Maximum number of fields
                 int itsMaxFields;
 
-                /// Cube of slopes
-                casacore::Cube<double> itsSlopes;
         };
 
     } // end namespace synthesis

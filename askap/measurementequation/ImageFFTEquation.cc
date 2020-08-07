@@ -299,6 +299,7 @@ namespace askap
     void ImageFFTEquation::calcImagingEquations(askap::scimath::ImagingNormalEquations& ne) const
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
+     
 
       // We will need to loop over all completions i.e. all sources
       const std::vector<std::string> completions(parameters().completions("image"));
@@ -449,14 +450,14 @@ namespace askap
         casacore::Array<double> imageDeriv(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
 
-        
+
         // for debugging/research, store grid prior to FFT
         // boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(itsResidualGridders[imageName]);
         // if (tvg) {
         //    tvg->storeGrid("uvcoverage"+(*it),0);
         //}
         // end debugging code
-        
+
 
 
 

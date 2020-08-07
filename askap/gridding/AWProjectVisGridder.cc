@@ -55,6 +55,30 @@ ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 namespace askap {
 namespace synthesis {
 
+//std::vector<casa::Matrix<casa::Complex> > AWProjectVisGridder::theirCFCache;
+//std::vector<std::pair<int,int> > AWProjectVisGridder::theirConvFuncOffsets;
+
+/// @brief a helper method for a ref copy of casa arrays held in
+/// stl vector
+/// @param[in] in input array
+/// @param[out] out output array (will be resized)
+/// @return size of the cache in bytes (assuming Complex array elements)
+template<typename T>
+size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
+                            std::vector<T> &out)
+{
+   out.resize(in.size());
+   size_t total = 0;
+   const typename std::vector<T>::const_iterator inEnd = in.end();
+   typename std::vector<T>::iterator outIt = out.begin();
+   for (typename std::vector<T>::const_iterator inIt = in.begin();
+       inIt != inEnd; ++inIt,++outIt) {
+       outIt->reference(*inIt);
+       total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
+   }
+   return total;
+}
+
 AWProjectVisGridder::AWProjectVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
         const double wmax, const int nwplanes,
         const double cutoff, const int overSample,
@@ -96,7 +120,7 @@ IVisGridder::ShPtr AWProjectVisGridder::clone()
 /// Initialize the indices into the cube.
 void AWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
 {
-    ASKAPTRACE("AWProjectVisGridder::initIndices");    
+    ASKAPTRACE("AWProjectVisGridder::initIndices");
     // calculate currentField
     indexField(acc);
 
@@ -111,6 +135,7 @@ void AWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
     itsCMap.set(0);
 
     const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
+    const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
 
     for (int i = 0; i < nSamples; ++i) {
         const int feed = acc.feed1()(i);
@@ -120,21 +145,24 @@ void AWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
         const double w = (rotatedUVW(i)(2)) / (casacore::C::c);
 
         for (int chan = 0; chan < nChan; ++chan) {
-            const double freq = acc.frequency()[chan];
+            const double freq = chanFreq[chan];
             const int iw = getWPlane(w * freq);
 
             for (int pol = 0; pol < nPol; ++pol) {
                 /// Order is (iw, chan, feed)
-                if (itsFreqDep) {
-                    itsCMap(i, pol, chan) = iw + nWPlanes() * (chan + nChan * (feed + itsMaxFeeds * currentField()));
-                    ASKAPCHECK(itsCMap(i, pol, chan) < nWPlanes()*itsMaxFeeds*itsMaxFields*nChan,
-                               "CMap index too large");
-                    ASKAPCHECK(itsCMap(i, pol, chan) > -1, "CMap index less than zero");
-                } else {
-                    itsCMap(i, pol, chan) = iw + nWPlanes() * (feed + itsMaxFeeds * currentField());
-                    ASKAPCHECK(itsCMap(i, pol, chan) < nWPlanes()*itsMaxFeeds*itsMaxFields,
-                               "CMap index too large");
-                    ASKAPCHECK(itsCMap(i, pol, chan) > -1, "CMap index less than zero");
+                itsCMap(i, pol, chan) = iw;
+                if (iw >= 0) {
+                    if (itsFreqDep) {
+                        itsCMap(i, pol, chan) += nWPlanes() * (chan + nChan * (feed + itsMaxFeeds * currentField()));
+                        ASKAPCHECK(itsCMap(i, pol, chan) < nWPlanes()*itsMaxFeeds*itsMaxFields*nChan,
+                                   "CMap index too large");
+                        //ASKAPCHECK(itsCMap(i, pol, chan) > -1, "CMap index less than zero");
+                    } else {
+                        itsCMap(i, pol, chan) += nWPlanes() * (feed + itsMaxFeeds * currentField());
+                        ASKAPCHECK(itsCMap(i, pol, chan) < nWPlanes()*itsMaxFeeds*itsMaxFields,
+                                   "CMap index too large");
+                        //ASKAPCHECK(itsCMap(i, pol, chan) > -1, "CMap index less than zero");
+                    }
                 }
             }
         }
@@ -228,18 +256,10 @@ void AWProjectVisGridder::initialiseDegrid(const scimath::Axes& axes,
 /// @todo Make initConvolutionFunction more robust
 void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAccessor& acc)
 {
-    ASKAPTRACE("AWProjectVisGridder::initConvolutionFunction");    
-    casacore::MVDirection out = getImageCentre();
-    const int nSamples = acc.nRow();
+    ASKAPTRACE("AWProjectVisGridder::initConvolutionFunction");
 
-    ASKAPDEBUGASSERT(itsIllumination);
-    // just to avoid a repeated call to a virtual function from inside the loop
-    const bool hasSymmetricIllumination = itsIllumination->isSymmetric();
-
-    // check whether the output pattern is image based. If so, inverse FFT is not needed
-    const bool imageBasedPattern = itsIllumination->isImageBased();
-
-    validateCFCache(acc, hasSymmetricIllumination);
+    // sharecf assumes frequencies and feedpa stay constant throughout the data
+    if (itsShareCF && itsSupport > 0 && !isPSFGridder()) return;
 
     /// We have to calculate the lookup function converting from
     /// row and channel to plane of the w-dependent convolution
@@ -255,6 +275,44 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             initConvFuncOffsets(nWPlanes()*itsMaxFeeds*itsMaxFields*nChan);
         }
     }
+
+    // Note the Image and PSF CF differ (no phase slope for PSF), so we need to recalculate for PSF
+    if (itsShareCF && theirCFCache.size()>0 && !isPSFGridder()) {
+        itsSupport = 3;
+        // we already have what we need for the image case, for PCF we can create it here
+        if (isPCFGridder()) {
+            size_t nplane = theirCFCache.size();
+            ASKAPLOG_INFO_STR(logger,"Setting PCF gridder support from shared cache");
+            for (size_t plane = 0; plane < nplane; plane++) {
+                itsConvFunc[plane].resize(3,3);
+                itsConvFunc[plane].set(0.0);
+                int support = theirCFCache[plane].shape()(0);
+                itsConvFunc[plane](1,1) = casacore::Complex(1.0,support);
+            }
+        } else {
+            // residual or model gridder
+            size_t size = deepRefCopyOfSTDVector(theirCFCache,itsConvFunc)/1024/1024;
+            ASKAPLOG_INFO_STR(logger, "Using cached convolution functions ("<<size<<" MB)");
+            if (isOffsetSupportAllowed()) {
+                for (size_t i=0; i<theirConvFuncOffsets.size(); i++) {
+                    setConvFuncOffset(i,theirConvFuncOffsets[i].first,theirConvFuncOffsets[i].second);
+                }
+            }
+        }
+        return;
+    }
+
+    casacore::MVDirection out = getImageCentre();
+    const int nSamples = acc.nRow();
+
+    ASKAPDEBUGASSERT(itsIllumination);
+    // just to avoid a repeated call to a virtual function from inside the loop
+    const bool hasSymmetricIllumination = itsIllumination->isSymmetric();
+
+    // check whether the output pattern is image based. If so, inverse FFT is not needed
+    const bool imageBasedPattern = itsIllumination->isImageBased();
+
+    validateCFCache(acc, hasSymmetricIllumination);
 
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
@@ -287,6 +345,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     casacore::Matrix<casacore::DComplex> thisPlane = getCFBuffer();
     ASKAPDEBUGASSERT(thisPlane.nrow() == nx);
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == ny);
+    const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
 
     int nDone = 0;
 
@@ -297,25 +356,18 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             makeCFValid(feed, currentField());
             nDone++;
             casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
-            rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
-                                                  - out.getLong()) * cos(offset.getLat());
-            rwSlopes()(1, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
-                                                  * cos(out.getLat()) - cos(offset.getLat()) * sin(out.getLat())
-                                                  * cos(offset.getLong() - out.getLong());
 
             const double parallacticAngle = hasSymmetricIllumination ? 0. : acc.feed1PA()(row);
 
             for (int chan = 0; chan < nChan; ++chan) {
 
                 /// Extract illumination pattern for this channel
-                itsIllumination->getPattern(acc.frequency()[chan], pattern,
-                                            out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
-
+                itsIllumination->getPattern(chanFreq[chan], pattern, out, offset,
+                                            parallacticAngle, isPSFGridder() || isPCFGridder());
                 // If the pattern is in the Fourier domain, FFT to the image domain
                 if( !imageBasedPattern ) {
                     scimath::fft2d(pattern.pattern(), false);
                 }
-
                 /// Calculate the total convolution function including
                 /// the w term and the antenna convolution function
 
@@ -351,8 +403,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                     ASKAPCHECK(maxCF > 0.0, "Convolution function is empty");
 
-
-                    // At this point, we have the phase screen multiplied by the spheroidal
+                    // At this point, we have the phase screen multiplied by the illumination
                     // function, sampled on larger cellsize (itsOverSample larger) in image
                     // space. Only the inner qnx, qny pixels have a non-zero value
 
@@ -421,6 +472,12 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                             const int plane = fracu + itsOverSample * (fracv + itsOverSample
                                               * zIndex);
                             ASKAPDEBUGASSERT(plane >= 0 && plane < int(itsConvFunc.size()));
+                            if (isPCFGridder()) {
+                                itsConvFunc[plane].resize(3,3);
+                                itsConvFunc[plane].set(0.0);
+                                itsConvFunc[plane](1,1) = casacore::Complex(1.0,support);
+                                continue;
+                            }
                             itsConvFunc[plane].resize(cSize, cSize);
                             itsConvFunc[plane].set(0.0);
 
@@ -459,11 +516,39 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                 } // w loop
             } // chan loop
 
-        } // row of the accessor
-    }
+            if (isPSFGridder() && itsShareCF) {
+                // All illumination patterns are identical across feeds for the PSF gridder,
+                // so copy CFs across and make valid
+                // If we implement feed specific illumination patterns this will need to be bypassed
+                // but at the moment this class takes a single pattern with variable offset
+                // Use sharecf=false to bypass all CF optimizations
+                ASKAPLOG_INFO_STR(logger,"Using feed "<<feed<<" for all PSF gridding convolution functions");
+                for (int ifeed = 0; ifeed< itsMaxFeeds; ifeed++) {
+                    if (ifeed == feed) continue;
+                    makeCFValid(ifeed, currentField());
+                    for (int chan = 0; chan < nChan; chan++) {
+                        for (int iw = 0; iw < nWPlanes(); ++iw) {
+                            const int zIndex = iw + nWPlanes() * (chan + nChan * (ifeed +
+                                itsMaxFeeds * currentField()));
+                            const int refzIndex = iw + nWPlanes() * (chan + nChan * (feed +
+                                itsMaxFeeds * currentField()));
+                            for (int fracu = 0; fracu < itsOverSample; fracu++) {
+                                for (int fracv = 0; fracv < itsOverSample; fracv++) {
+                                    const int plane = fracu + itsOverSample * (fracv +
+                                        itsOverSample * zIndex);
+                                    const int refPlane = fracu + itsOverSample * (fracv +
+                                        itsOverSample * refzIndex);
+                                    itsConvFunc[plane].reference(itsConvFunc[refPlane]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } // isCFValid
+    } // row of the accessor
 
-
-    if (nDone == itsMaxFeeds*itsMaxFields*nWPlanes()) {
+    if (nDone == itsMaxFeeds*itsMaxFields) {
         if (isSupportPlaneDependent()) {
             ASKAPLOG_INFO_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
             ASKAPLOG_INFO_STR(logger, "Maximum kernel size is " << itsConvFunc[0].shape());
@@ -482,6 +567,18 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
     ASKAPCHECK(itsSupport > 0, "Support not calculated correctly");
     updateStats(nDone);
+
+    // Save the CF to the cache
+    if (itsShareCF && !(isPSFGridder() || isPCFGridder())) {
+        deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
+        if (isOffsetSupportAllowed()) {
+            theirConvFuncOffsets.resize(nWPlanes()*itsMaxFeeds*itsMaxFields*nChan);
+            for (int nw=0; nw<theirConvFuncOffsets.size(); nw++) {
+                theirConvFuncOffsets[nw]=getConvFuncOffset(nw);
+            }
+        }
+    }
+
 }
 
 
@@ -727,8 +824,7 @@ AWProjectVisGridder& AWProjectVisGridder::operator=(const AWProjectVisGridder &)
 IVisGridder::ShPtr AWProjectVisGridder::createGridder(const LOFAR::ParameterSet& parset)
 {
     boost::shared_ptr<AWProjectVisGridder> gridder = createAProjectGridder<AWProjectVisGridder>(parset);
-    gridder->configureGridder(parset);
-
+    gridder->configureGridder(parset); // this calls WProjectVisGridder
     return gridder;
 }
 

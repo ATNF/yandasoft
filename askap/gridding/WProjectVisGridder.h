@@ -93,7 +93,7 @@ namespace askap
                 /// @brief static method to create gridder
                 /// @details Each gridder should have a static factory method, which is
                 /// able to create a particular type of the gridder and initialise it with
-                /// the parameters taken form the given parset. It is assumed that the
+                /// the parameters taken from the given parset. It is assumed that the
                 /// method receives a subset of parameters where the gridder name is already
                 /// taken out.
                 /// @param[in] parset input parset file
@@ -211,9 +211,27 @@ namespace askap
                 /// @return true if itsCutoff is an absolute cutoff rather than relative to the peak
                 inline bool isCutoffAbsolute() const { return itsCutoffAbs;}
 
-                /// @bnrief set absolute cutoff flag
+                /// @brief set absolute cutoff flag
                 /// @param[in] flag true, if cutoff should be treated as an absolute value
                 inline void setAbsCutoffFlag(const bool flag) { itsCutoffAbs = flag; }
+
+                /// @brief Are we using the shared CF cache?
+                /// @return true if the shared cache is used
+                inline bool shareCF() const { return itsShareCF; }
+
+                /// @brief Specify if we are using the shared CF cache
+                /// @param[in] true if the shared cache is used
+                inline void setShareCF(bool flag) { itsShareCF = flag; }
+
+                /// @brief Are we using the shared CF cache?
+                bool itsShareCF;
+
+                /// @brief cached CF
+                static std::vector<casa::Matrix<casa::Complex> > theirCFCache;
+
+                /// @brief cached CF offsets
+                static std::vector<std::pair<int,int> > theirConvFuncOffsets;
+
 
             private:
                 /// @brief assignment operator
@@ -256,15 +274,6 @@ namespace askap
 
                 /// @brief Are we using a double precision CF Buffer?
                 bool itsDoubleCF;
-
-                /// @brief Are we using the shared CF cache?
-                bool itsShareCF;
-
-                /// @brief cached CF
-                static std::vector<casa::Matrix<casa::Complex> > theirCFCache;
-
-                /// @brief cached CF offsets
-                static std::vector<std::pair<int,int> > theirConvFuncOffsets;
 
         };
     }
