@@ -50,6 +50,7 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/distributedimager/CubeBuilder.h>
 #include <askap/askapparallel/AskapParallel.h>
 
+
 using namespace askap;
 using namespace askap::synthesis;
 
@@ -150,8 +151,29 @@ class CdeconvolverApp : public askap::Application
             // Calculate the inShapes for each channel and file ....
 
             for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
-                
+                ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
                 ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
+                
+                casa::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
+                casa::IPosition intrc(shape); // get the top right
+                myAllocationStop = myAllocationStart + myAllocationSize;
+                inblc[3] = myAllocationStart;
+                intrc[0] = intrc[0]-1;
+                intrc[1] = intrc[1]-1;
+                intrc[2] = intrc[2]-1;
+                intrc[3] = myAllocationStart + myAllocationSize-1;
+                
+                const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
+                ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
+                
+                // My RANK allocation of GRID
+                casacore::Array<casacore::Complex> tempSlice = grid.getSlice(slicer);
+                const casa::IPosition newshape = tempSlice.shape();
+                ASKAPLOG_INFO_STR(logger,"Allocation Shape " << newshape);
+                
+                // ok we now have the current allocation for this rank in
+                
+                
             }
 
             // output Model cube
