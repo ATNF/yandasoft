@@ -53,6 +53,7 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/scimath/fft/FFTWrapper.h>
 #include <askap/scimath/utils/SpheroidalFunction.h>
 #include <askap/gridding/VisGridderFactory.h>
+#include <askap/gridding/SphFuncVisGridder.h>
 
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/images/Images/PagedImage.h>
@@ -71,6 +72,10 @@ class CdeconvolverApp : public askap::Application
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsModelCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
+    
+        boost::shared_ptr<IVisGridder> itsGridder;
+    
+        static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
     
        
         
@@ -107,7 +112,7 @@ class CdeconvolverApp : public askap::Application
             casa::IPosition trc(shape);
             int nchanCube = trc[3];
                            
-            if (comms.isMaster()) {
+            if (comms.isMaster()) { // only the master makes the output
                 Int pixelAxis,worldAxis,coordinate;
                 CoordinateUtil::findSpectralAxis(pixelAxis,worldAxis,coordinate,grid.coordinates());
                 const SpectralCoordinate &sc = grid.coordinates().spectralCoordinate(coordinate);
@@ -124,12 +129,11 @@ class CdeconvolverApp : public askap::Application
                 
                 ASKAPLOG_INFO_STR(logger,"Base Freq " << f0);
                 ASKAPLOG_INFO_STR(logger,"Freq inc (CDELT) " << cdelt);
-                
-                //Hopefully these are always in Hz so
             
-               
-                // create the output cube
+                // create the output cubes
                 itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outModelCubeName));
+                itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outResidCubeName));
+                itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outRestoredCubeName));
                 
             }
             
@@ -172,10 +176,11 @@ class CdeconvolverApp : public askap::Application
                 myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
             }
             
-            
             ASKAPLOG_INFO_STR(logger,"RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
-                    
-             
+            
+            int support = 3;
+            int alpha = 1;
+              // this is private to an inherited class so have to make a new one
                     
             for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
                     
@@ -197,9 +202,15 @@ class CdeconvolverApp : public askap::Application
                     
                 casacore::Array<casacore::Complex> buffer;
                 grid.doGetSlice(buffer, slicer);
-                    
+                
                 askap::scimath::fft2d(buffer,false);
-                itsModelCube->writeSlice(real(buffer),myAllocationStart);
+                casacore::Array<casacore::Double> dBuffer(buffer.shape());
+                casacore::Array<casacore::Float> fBuffer(buffer.shape());
+                casacore::convertArray<casacore::Double, casacore::Float> (dBuffer,real(buffer));
+                // template this
+                correctConvolution(dBuffer,support,alpha,true);
+                casacore::convertArray<casacore::Float, casacore::Double>(fBuffer,dBuffer);
+                itsModelCube->writeSlice(fBuffer,myAllocationStart);
                 
             
                 
@@ -228,7 +239,103 @@ class CdeconvolverApp : public askap::Application
             return 0;
         }
 };
+void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int support=3, int alpha = 1, bool itsInterp = true)
+{
+    casacore::IPosition itsShape = grid.shape();
+    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
+    const casacore::Int xHalfSize = itsShape(0)/2;
+    const casacore::Int yHalfSize = itsShape(1)/2;
+    casacore::Vector<double> ccfx(itsShape(0));
+    casacore::Vector<double> ccfy(itsShape(1));
+    ASKAPDEBUGASSERT(itsShape(0)>1);
+    ASKAPDEBUGASSERT(itsShape(1)>1);
 
+    scimath::SpheroidalFunction itsSphFunc(casacore::C::pi*support, alpha);
+  
+    // initialise buffers to enable a filtering of the correction
+    // function in Fourier space.
+    casacore::Vector<casacore::DComplex> bufx(itsShape(0));
+    casacore::Vector<casacore::DComplex> bufy(itsShape(1));
+
+    // note grdsf(1)=0.
+    for (int ix=0; ix<itsShape(0); ++ix)
+    {
+        const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
+        const double val = itsSphFunc(nux);
+        bufx(ix) = casacore::DComplex(val,0.0);
+    }
+
+    for (int iy=0; iy<itsShape(1); ++iy)
+    {
+        const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
+        const double val = itsSphFunc(nuy);
+        bufy(iy) = casacore::DComplex(val,0.0);
+    }
+/*
+    if (itsInterp) {
+    // The spheroidal is undefined and set to zero at nu=1, but that
+    // is not the numerical limit. Estimate it from its neighbours.
+        interpolateEdgeValues(bufx);
+        interpolateEdgeValues(bufy);
+    }
+*/
+    // Fourier filter the spheroidal (crop in Fourier space in line with
+    // gridding kernel support size)
+    const bool doFiltering = true;
+    if (doFiltering) {
+     // Some more advanced gridders have support>3 (e.g. w-proj).
+     //
+        int support = 3;
+        const casacore::DComplex maxBefore = bufx(itsShape(0)/2);
+        scimath::fft(bufx, true);
+        scimath::fft(bufy, true);
+        for (int ix=0; ix<itsShape(0)/2-support; ++ix) {
+            bufx(ix) = 0.0;
+        }
+        for (int ix=itsShape(0)/2+support+1; ix<itsShape(0); ++ix) {
+            bufx(ix) = 0.0;
+        }
+        for (int iy=0; iy<itsShape(1)/2-support; ++iy) {
+            bufy(iy) = 0.0;
+        }
+        for (int iy=itsShape(1)/2+support+1; iy<itsShape(1); ++iy) {
+            bufy(iy) = 0.0;
+        }
+        scimath::fft(bufx, false);
+        scimath::fft(bufy, false);
+        // Normalise after filtering.
+        const casacore::DComplex normalisation = maxBefore / bufx(itsShape(0)/2);
+        bufx *= normalisation;
+        bufy *= normalisation;
+    }
+
+    for (int ix=0; ix<itsShape(0); ++ix) {
+        double val = real(bufx(ix));
+        ccfx(ix) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
+    }
+    for (int iy=0; iy<itsShape(1); ++iy) {
+        double val = real(bufy(iy));
+        ccfy(iy) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
+    }
+
+    casacore::ArrayIterator<double> it(grid, 2);
+    while (!it.pastEnd())
+    {
+        casacore::Matrix<double> mat(it.array());
+        ASKAPDEBUGASSERT(int(mat.nrow()) <= itsShape(0));
+        ASKAPDEBUGASSERT(int(mat.ncolumn()) <= itsShape(1));
+        for (int ix=0; ix<itsShape(0); ix++)
+        {
+            for (int iy=0; iy<itsShape(1); iy++)
+            {
+                mat(ix, iy)*=ccfx(ix)*ccfy(iy);
+            }
+        }
+        it.next();
+    }
+
+    
+}
 // Main function
 int main(int argc, char* argv[])
 {
