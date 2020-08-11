@@ -49,26 +49,20 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/deconvolution/DeconvolverHelpers.h>
 #include <askap/distributedimager/CubeBuilder.h>
 #include <askap/askapparallel/AskapParallel.h>
+#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/utils/SpheroidalFunction.h>
+#include <askap/gridding/VisGridderFactory.h>
+
+#include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/images/Images/PagedImage.h>
+#include <casacore/images/Images/ImageSummary.h>
+
 
 
 using namespace askap;
 using namespace askap::synthesis;
 
-static std::string getNodeName(void)
-{
-    const int HOST_NAME_MAXLEN = 256;
-    char name[HOST_NAME_MAXLEN];
-    gethostname(name, HOST_NAME_MAXLEN);
-    std::string nodename(name);
-
-    std::string::size_type idx = nodename.find_first_of('.');
-    if (idx != std::string::npos) {
-        // Extract just the hostname part
-        nodename = nodename.substr(0, idx);
-    }
-
-    return nodename;
-}
 
 class CdeconvolverApp : public askap::Application
 {
@@ -78,6 +72,7 @@ class CdeconvolverApp : public askap::Application
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
     
+       
         
         virtual int run(int argc, char* argv[])
         {
@@ -97,25 +92,57 @@ class CdeconvolverApp : public askap::Application
             const std::string pcfCubeName = subset.getString("pcf");
             const std::string psfCubeName = subset.getString("psf");
             
-            // Lets check the dimensions
-            // initialise an image accessor
-            // set up image handler, needed for both master and worker
-            SynthesisParamsHelper::setUpImageHandler(subset);
-            accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
+            // ok lets set up some output cubes
+            const std::string outModelCubeName = subset.getString("model","model");
+            const std::string outResidCubeName = subset.getString("residual","residual");
+            const std::string outRestoredCubeName = subset.getString("restored","restored");
+            
+           
             
             // Lets load in a cube
             casacore::PagedImage<casacore::Complex> grid(gridCubeName);
+       
             const casa::IPosition shape = grid.shape();
-            
-            // lets calculate the allocations ...
-
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
             int nchanCube = trc[3];
+                           
+            if (comms.isMaster()) {
+                Int pixelAxis,worldAxis,coordinate;
+                CoordinateUtil::findSpectralAxis(pixelAxis,worldAxis,coordinate,grid.coordinates());
+                const SpectralCoordinate &sc = grid.coordinates().spectralCoordinate(coordinate);
+                casacore::Double baseFreq, nextFreq, freqInc;
+                casacore::Double pixelVal=0;
+                
+                sc.toWorld(baseFreq,pixelVal);
+                sc.toWorld(nextFreq,pixelVal+1);
+                
+                freqInc = nextFreq-baseFreq;
+                
+                Quantity f0(baseFreq, "Hz");
+                Quantity cdelt(freqInc, "Hz");
+                
+                ASKAPLOG_INFO_STR(logger,"Base Freq " << f0);
+                ASKAPLOG_INFO_STR(logger,"Freq inc (CDELT) " << cdelt);
+                
+                //Hopefully these are always in Hz so
+            
+               
+                // create the output cube
+                itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outModelCubeName));
+                
+            }
+            
+              
+            
+            
+            // lets calculate the allocations ...
+
+           
             
             vector<IPosition> inShapeVec;
             vector<CoordinateSystem> inCoordSysVec;
-            // What fraction of the full problem does this rank
+            // What fraction of the full problem does a rank have
             // THe units here are channels - not polarisations.
             int myFullAllocationSize = 0;
             int myFullAllocationStart = 0;
@@ -125,54 +152,55 @@ class CdeconvolverApp : public askap::Application
             int myAllocationStart = 0;
             int myAllocationStop = myAllocationStart + myAllocationSize;
             
-            if (comms.rank() >= nchanCube) {
-              ASKAPLOG_WARN_STR(logger,"Rank " << comms.rank() << " has no work to merge");
-                return -1;
-            }
             if (nchanCube % comms.nProcs() != 0) {
-              ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
+                    ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
             }
+            
             if (comms.nProcs() >= nchanCube) {
-              myFullAllocationSize = 1;
+                myFullAllocationSize = 1;
             }
             else {
-              myFullAllocationSize = nchanCube/comms.nProcs();
+                myFullAllocationSize = nchanCube/comms.nProcs();
             }
+                
+                    
             myFullAllocationStart = comms.rank()*myFullAllocationSize;
             myFullAllocationStop = myFullAllocationStart + myFullAllocationSize;
 
             // unless last rank
             if (comms.rank() == comms.nProcs()-1) {
-              myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
+                myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
             }
-
-            ASKAPLOG_INFO_STR(logger,"FullAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
-            // So the plan is to iterate over each channel ...
-            // Calculate the inShapes for each channel and file ....
-
+            
+            
+            ASKAPLOG_INFO_STR(logger,"RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
+                    
+             
+                    
             for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
+                    
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
                 ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
-                
+                    
                 casa::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
                 casa::IPosition intrc(shape); // get the top right
                 myAllocationStop = myAllocationStart + myAllocationSize;
+                
                 inblc[3] = myAllocationStart;
                 intrc[0] = intrc[0]-1;
                 intrc[1] = intrc[1]-1;
                 intrc[2] = intrc[2]-1;
                 intrc[3] = myAllocationStart + myAllocationSize-1;
-                
+                    
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
+                    
+                casacore::Array<casacore::Complex> buffer;
+                grid.doGetSlice(buffer, slicer);
+                    
+                askap::scimath::fft2d(buffer,false);
                 
-                // My RANK allocation of GRID
-                casacore::Array<casacore::Complex> tempSlice = grid.getSlice(slicer);
-                const casa::IPosition newshape = tempSlice.shape();
-                ASKAPLOG_INFO_STR(logger,"Allocation Shape " << newshape);
-                
-                // ok we now have the current allocation for this rank in
-                
+            
                 
             }
 
@@ -180,7 +208,7 @@ class CdeconvolverApp : public askap::Application
             // this->itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, freqinc, "model"));
             // output Residual cube
             // this->itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, freqinc,"residual"));
-            // boost::shared_ptr<DeconvolverBase<casacore::Float, casacore::Complex> > deconvolver(DeconvolverFactory::make(subset));
+            // boost::shared_ptr<DeconvolverBase<casacore::Float, casacore::Complex> > deconvolver::make(subset));
             
             // deconvolver->deconvolve();
 
