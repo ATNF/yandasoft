@@ -199,6 +199,7 @@ class CdeconvolverApp : public askap::Application
                 grid.doGetSlice(buffer, slicer);
                     
                 askap::scimath::fft2d(buffer,false);
+                itsModelCube->writeSlice(real(buffer),myAllocationStart);
                 
             
                 
