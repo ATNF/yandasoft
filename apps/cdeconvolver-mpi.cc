@@ -48,6 +48,9 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/deconvolution/DeconvolverBase.h>
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>
+#include <askap/deconvolution/DeconvolverBasisFunction.h>
+#include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
+#include <askap/deconvolution/DeconvolverHogbom.h>
 #include <askap/distributedimager/CubeBuilder.h>
 #include <askap/askapparallel/AskapParallel.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
@@ -204,39 +207,74 @@ class CdeconvolverApp : public askap::Application
                     
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
+                
+                casacore::Array<casacore::Float> psfArray;
+                psf.getSlice(psfArray,slicer);
+                               
+                casacore::Array<casacore::Complex> pcfArray;
+                pcf.getSlice(pcfArray,slicer);
                     
                 casacore::Array<casacore::Complex> buffer;
                 grid.doGetSlice(buffer, slicer);
                 
+                double norm = buffer.nelements()/max(psfArray);
+                
                 askap::scimath::fft2d(buffer,false);
+                buffer = buffer * norm;
+                ASKAPLOG_INFO_STR(logger,"Normalisation Factor is " << norm);
+                
                 casacore::Array<casacore::Double> dBuffer(buffer.shape());
                 casacore::Array<casacore::Float> fBuffer(buffer.shape());
                 casacore::convertArray<casacore::Double, casacore::Float> (dBuffer,real(buffer));
-                // template this
+
+                // Convolution correction probably should pull the support from the PARSET
                 correctConvolution(dBuffer,support,alpha,true);
                 casacore::convertArray<casacore::Float, casacore::Double>(fBuffer,dBuffer);
             
-                
+                // Preconditioning Assuming they only want Wiener.
                 boost::shared_ptr<WienerPreconditioner> wp = WienerPreconditioner::createPreconditioner(subset_wiener_precon);
                 ASKAPASSERT(wp);
                 
-                //WienerPreconditioner wp(-1);
-                //RobustPreconditioner wp(-1);
-               
-                casacore::Array<casacore::Float> psfArray;
-                psf.getSlice(psfArray,slicer);
+                // The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
+                // I'm not normalising it as I dont think I need to.
                 
-                casacore::Array<casacore::Complex> pcfArray;
-                pcf.getSlice(pcfArray,slicer);
-                
-// The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
                 askap::scimath::fft2d(pcfArray,false);
                 casacore::Array<casacore::Float> pcfReal = real(pcfArray);
                 
                 wp->doPreconditioning(psfArray,fBuffer,pcfReal);
                 
+                // Now Deconvolution
+                // We have a normalised corrected preconditioned image
+                DeconvolverBase<Float, Complex>::ShPtr deconvolver;
+                string algorithm = subset.getString("solver.Clean.algorithm", "Basisfunction");
+
+                if (algorithm == "Basisfunction") {
+                    ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver");
+                    deconvolver.reset(new DeconvolverBasisFunction<Float, Complex>(fBuffer, psfArray));
+                    ASKAPASSERT(deconvolver);
+                } else if (algorithm == "MultiTermBasisfunction") {
+                    ASKAPLOG_INFO_STR(logger, "Constructing MultiTermBasisfunction Clean solver");
+                    deconvolver.reset(new DeconvolverMultiTermBasisFunction<Float, Complex>(fBuffer, psfArray));
+                    ASKAPASSERT(deconvolver);
+                } else if (algorithm == "Hogbom") {
+                    ASKAPLOG_INFO_STR(logger, "Constructing Hogbom Clean deconvolver");
+                    deconvolver.reset(new DeconvolverHogbom<Float, Complex>(fBuffer, psfArray));
+                    ASKAPASSERT(deconvolver);
+                } else {
+                    ASKAPTHROW(AskapError, "Unknown Clean algorithm " << algorithm);
+                }
+                deconvolver->configure(subset.makeSubset("solver.Clean."));
+              
+                deconvolver->deconvolve();
                 
-                itsModelCube->writeSlice(fBuffer,myAllocationStart);
+                // Now we need to deconvolve
+                itsModelCube->writeSlice(deconvolver->model(),myAllocationStart);
+                itsResidualCube->writeSlice(deconvolver->dirty(),myAllocationStart);
+                casacore::Vector<casacore::Array<casacore::Float> > restored(1);
+                
+                if(deconvolver->restore(restored))
+                    itsRestoredCube->writeSlice(restored(0),myAllocationStart);
+                
                 
             
                 
