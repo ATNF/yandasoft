@@ -1337,13 +1337,13 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
   else {
     // Write PSF
-
-    ASKAPLOG_INFO_STR(logger, "Writing PSF");
-    const casacore::Array<double> imagePixels(params->value("psf.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsPSFCube->writeSlice(floatImagePixels, chan);
-
+      if (!itsParset.getBool("dumpgrids",false)) {
+          ASKAPLOG_INFO_STR(logger, "Writing PSF");
+          const casacore::Array<double> imagePixels(params->value("psf.slice"));
+          casacore::Array<float> floatImagePixels(imagePixels.shape());
+          casacore::convertArray<float, double>(floatImagePixels, imagePixels);
+          itsPSFCube->writeSlice(floatImagePixels, chan);
+      }
   }
   if (!params->has("residual.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
@@ -1384,7 +1384,16 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
       itsPCFCube->writeSlice(grid,chan);
   }
-
+  if (params->has("psf.raw.slice"))
+  {
+      if (itsParset.getBool("dumpgrids", false)) {
+        ASKAPLOG_INFO_STR(logger, "Writing un-normalised PSF");
+        const casacore::Array<double> imagePixels(params->value("psf.raw.slice"));
+        casacore::Array<float> floatImagePixels(imagePixels.shape());
+        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
+        itsPSFCube->writeSlice(floatImagePixels, chan);
+      }
+  }
   if (itsParset.getBool("restore", false)) {
     ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
     if (itsDoingPreconditioning) {

@@ -44,6 +44,7 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/Application.h>
 #include <askap/StatReporter.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/WienerPreconditioner.h>
 #include <askap/deconvolution/DeconvolverBase.h>
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>
@@ -84,7 +85,8 @@ class CdeconvolverApp : public askap::Application
             StatReporter stats;
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
-            
+            const LOFAR::ParameterSet subset_wiener_precon(subset.makeSubset("preconditioner.Wiener."));
+           
             // This class must have scope outside the main try/catch block
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
             
@@ -106,6 +108,9 @@ class CdeconvolverApp : public askap::Application
             
             // Lets load in a cube
             casacore::PagedImage<casacore::Complex> grid(gridCubeName);
+            casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
+            casacore::PagedImage<casacore::Float> psf(psfCubeName);
+            
        
             const casa::IPosition shape = grid.shape();
             casa::IPosition blc(shape.nelements(),0);
@@ -210,6 +215,27 @@ class CdeconvolverApp : public askap::Application
                 // template this
                 correctConvolution(dBuffer,support,alpha,true);
                 casacore::convertArray<casacore::Float, casacore::Double>(fBuffer,dBuffer);
+            
+                
+                boost::shared_ptr<WienerPreconditioner> wp = WienerPreconditioner::createPreconditioner(subset_wiener_precon);
+                ASKAPASSERT(wp);
+                
+                //WienerPreconditioner wp(-1);
+                //RobustPreconditioner wp(-1);
+               
+                casacore::Array<casacore::Float> psfArray;
+                psf.getSlice(psfArray,slicer);
+                
+                casacore::Array<casacore::Complex> pcfArray;
+                pcf.getSlice(pcfArray,slicer);
+                
+// The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
+                askap::scimath::fft2d(pcfArray,false);
+                casacore::Array<casacore::Float> pcfReal = real(pcfArray);
+                
+                wp->doPreconditioning(psfArray,fBuffer,pcfReal);
+                
+                
                 itsModelCube->writeSlice(fBuffer,myAllocationStart);
                 
             
