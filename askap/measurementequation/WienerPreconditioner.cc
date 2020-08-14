@@ -47,6 +47,8 @@ ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 // for debugging - to export intermediate images
 #include <askap/scimath/utils/ImageUtils.h>
 
+#include <Common/OpenMP.h>
+
 using namespace casa;
 
 #include <iostream>
@@ -181,7 +183,7 @@ namespace askap
         // The filter is rescaling Fourier components of dirty and psf based on
         // the value of non-zero Fourier components of pcf. So set small
         // erroneous components to zero.
-        float scratchThreshold = pcfThreshold(scratch);
+        const float scratchThreshold = pcfThreshold(scratch);
         if (scratchThreshold > 0.0) {
           // "storage order is the same as in FORTRAN, i.e. memory varies most rapidly with the first index"
           for (int y=0; y<shape(1); ++y) {
@@ -243,6 +245,15 @@ namespace askap
           // set pcf to to contain the new weights, so they don't have to be regenerated.
           // note that it is going from the image domain to the uv domain.
           itsPcf = 0.0;
+          double timerStart = MPI_Wtime();
+          #pragma omp parallel
+          {
+          #pragma omp master
+          {
+              uint nthreads = LOFAR::OpenMP::numThreads();
+              if (nthreads>1) ASKAPLOG_INFO_STR(logger, "Computing Wiener filter using "<<nthreads<< " threads");
+          }
+          #pragma omp for
           for (int y=extra*boxWidth/2; y<shape[1]-extra*boxWidth/2; ++y) {
               int boxStart1 = y - boxWidth/2;
               for (int x=extra*boxWidth/2; x<shape[0]-extra*boxWidth/2; ++x) {
@@ -305,6 +316,10 @@ namespace askap
 
               } // x
           } // y
+          } // parallel
+          double timerStop = MPI_Wtime();
+          ASKAPLOG_INFO_STR(logger,"Wiener filter calculation took "<< timerStop-timerStart<<"s");
+
           // Calc ave SNR weight-sum *over visibilities* (not pixels).
           // const casacore::Array<float> wgts(real(scratch.asArray()));
           casacore::Array<double> wgts(shape);

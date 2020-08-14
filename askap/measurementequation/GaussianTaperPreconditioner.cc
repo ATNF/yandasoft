@@ -172,8 +172,9 @@ casacore::Vector<double> GaussianTaperPreconditioner::fitPsf(casacore::Array<flo
          ASKAPCHECK(psf.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
                     psf.shape());
     }
-    //
-    casacore::Matrix<float> psfSub = scimath::PaddingUtils::centeredSubArray(psf,newShape);
+    // avoid making a reference copy since we rescale in next step
+    casacore::Matrix<float> psfSub;
+    psfSub = scimath::PaddingUtils::centeredSubArray(psf,newShape);
 
     // normalise to 1
     const float maxPSF = casacore::max(psfSub);
