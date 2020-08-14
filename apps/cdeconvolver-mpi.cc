@@ -191,7 +191,7 @@ class CdeconvolverApp : public askap::Application
         virtual int run(int argc, char* argv[])
         {
             StatReporter stats;
-            sleep(20);
+           
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
            
