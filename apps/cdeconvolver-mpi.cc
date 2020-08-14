@@ -63,12 +63,84 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/ImageSummary.h>
 
-
+#include <Blob/BlobArray.h>
+#include <Blob/BlobSTL.h>
+#include <Blob/BlobIStream.h>
+#include <Blob/BlobIBufVector.h>
+#include <Blob/BlobOStream.h>
+#include <Blob/BlobOBufVector.h>
 
 using namespace askap;
 using namespace askap::synthesis;
 
 
+// Serialiser
+
+template <class T>
+void writeToBlob(LOFAR::BlobOStream& os, casacore::Array< T > &writeFrom) {
+    // first lets write the shape
+    casacore::IPosition shape = writeFrom.shape();
+    T nx = shape[0];
+    T ny = shape[1];
+    os << nx;
+    os << ny;
+    
+    // now write the array
+    os << writeFrom;
+}
+template <class T>
+void readFromBlob(LOFAR::BlobIStream &is, casacore::Array< T > &readTo) {
+    
+    T nx;
+    T ny;
+    is >> nx;
+    is >> ny;
+    casacore::IPosition shape(2);
+    shape[0] = nx;
+    shape[1] = ny;
+    readTo.resize(shape);
+    is >> readTo;
+
+}
+template <class T>
+void sendArray(int target, askapparallel::AskapParallel& comm, casacore::Array< T > &toSend) {
+    size_t communicator = MPI_COMM_WORLD; //default
+    int messageType = 0;
+    std::vector<T> buf;
+    LOFAR::BlobOBufVector<T> bv(buf);
+    LOFAR::BlobOStream out(bv);
+    writeToBlob(out,toSend);
+    out.putEnd();
+    // First send the size of the buffer
+    const unsigned long size = buf.size();
+    comm.send(&size,sizeof(long),target,messageType,communicator);
+    
+    // Now send the actual byte stream
+    comm.send(&buf[0], size * sizeof( T ), target, messageType,communicator);
+}
+template < class T>
+void receiveArrayFrom(int id, askapparallel::AskapParallel& comm, casacore::Array< T > &from) {
+    unsigned long size = 0;
+    size_t communicator = MPI_COMM_WORLD; //default
+    int messageType=0;
+    // this gets the size
+    comm.receive(&size, sizeof(long), id, messageType, communicator);
+
+    // Receive the byte stream
+    std::vector<T> buf;
+    buf.resize(size);
+
+    ASKAPCHECK(buf.size() == size,
+                             "receiveArray buf is too small");
+
+    comm.receive(&buf[0], size * sizeof(char), id, messageType, communicator);
+
+                  // Decode
+    LOFAR::BlobIBufVector< T > bv(buf);
+    LOFAR::BlobIStream in(bv);
+    
+    readFromBlob(in, from);
+}
 class CdeconvolverApp : public askap::Application
 {
     public:
@@ -77,7 +149,6 @@ class CdeconvolverApp : public askap::Application
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
     
-        boost::shared_ptr<IVisGridder> itsGridder;
     
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
     
@@ -152,14 +223,9 @@ class CdeconvolverApp : public askap::Application
                 itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outResidCubeName));
                 itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outRestoredCubeName));
                 
-            
-                // lets calculate the allocations ...
-
-            
-                vector<IPosition> inShapeVec;
-                vector<CoordinateSystem> inCoordSysVec;
+    
                 // What fraction of the full problem does a rank have
-                // THe units here are channels - not polarisations.
+                
                 int myFullAllocationSize = 0;
                 int myFullAllocationStart = 0;
                 int myFullAllocationStop = 0;
@@ -192,7 +258,6 @@ class CdeconvolverApp : public askap::Application
             
                     ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
             
-                    // this is private to an inherited class so have to make a new one
                     
                     for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
                     
@@ -246,6 +311,7 @@ class CdeconvolverApp : public askap::Application
                                 itsModelCube->writeSlice(model,myAllocationStart);
                                 itsResidualCube->writeSlice(dirty,myAllocationStart);
                                 itsRestoredCube->writeSlice(restored,myAllocationStart);
+                                
                             }
                         
                             
