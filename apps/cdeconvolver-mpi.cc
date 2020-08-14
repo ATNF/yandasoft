@@ -96,17 +96,21 @@ void readFromBlob(LOFAR::BlobIStream &is, casacore::Array< T > &readTo) {
     is >> nx;
     is >> ny;
     casacore::IPosition shape(2);
-    shape[0] = nx;
-    shape[1] = ny;
+    shape[0] = real(nx);
+    shape[1] = real(ny);
     readTo.resize(shape);
     is >> readTo;
 
 }
 template <class T>
 void sendArray(int target, askapparallel::AskapParallel& comm, casacore::Array< T > &toSend) {
-    size_t communicator = MPI_COMM_WORLD; //default
+    size_t communicator = 0; //default
     int messageType = 0;
     std::vector<T> buf;
+    
+    if (sizeof(T) != 1 ) {
+        ASKAPLOG_WARN_STR(logger, "Complex data type not supported: size == " << sizeof(T));
+    }
     LOFAR::BlobOBufVector<T> bv(buf);
     LOFAR::BlobOStream out(bv);
     writeToBlob(out,toSend);
@@ -121,7 +125,7 @@ void sendArray(int target, askapparallel::AskapParallel& comm, casacore::Array< 
 template < class T>
 void receiveArrayFrom(int id, askapparallel::AskapParallel& comm, casacore::Array< T > &from) {
     unsigned long size = 0;
-    size_t communicator = MPI_COMM_WORLD; //default
+    size_t communicator = 0; //default
     int messageType=0;
     // this gets the size
     comm.receive(&size, sizeof(long), id, messageType, communicator);
@@ -132,6 +136,7 @@ void receiveArrayFrom(int id, askapparallel::AskapParallel& comm, casacore::Arra
 
     ASKAPCHECK(buf.size() == size,
                              "receiveArray buf is too small");
+    ASKAPLOG_INFO_STR(logger, "Array to receive is " << size << " bytes in size");
 
     comm.receive(&buf[0], size * sizeof(char), id, messageType, communicator);
 
@@ -140,6 +145,35 @@ void receiveArrayFrom(int id, askapparallel::AskapParallel& comm, casacore::Arra
     LOFAR::BlobIStream in(bv);
     
     readFromBlob(in, from);
+    
+    ASKAPLOG_INFO_STR(logger, "Received array ");
+}
+
+template < class T>
+void receiveArray(int &id, askapparallel::AskapParallel& comm, casacore::Array< T > &from) {
+    unsigned long size = 0;
+    size_t communicator = 0; //default
+    int messageType=0;
+    // this gets the size
+    id = comm.receiveAnySrc(&size, sizeof(long), messageType, communicator);
+    ASKAPLOG_INFO_STR(logger, "Received from " << id);
+    // Receive the byte stream
+    std::vector<T> buf;
+    buf.resize(size);
+
+    ASKAPCHECK(buf.size() == size,
+                             "receiveArray buf is too small");
+    ASKAPLOG_INFO_STR(logger, "Array to receive is " << size << " bytes in size");
+
+    comm.receive(&buf[0], size * sizeof(char), id, messageType, communicator);
+
+                  // Decode
+    LOFAR::BlobIBufVector< T > bv(buf);
+    LOFAR::BlobIStream in(bv);
+    
+    readFromBlob(in, from);
+    
+    ASKAPLOG_INFO_STR(logger, "Received array ");
 }
 class CdeconvolverApp : public askap::Application
 {
@@ -157,6 +191,7 @@ class CdeconvolverApp : public askap::Application
         virtual int run(int argc, char* argv[])
         {
             StatReporter stats;
+            sleep(20);
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
            
@@ -165,7 +200,7 @@ class CdeconvolverApp : public askap::Application
             
             ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
             
-            ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
+            // ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
                 
             
             // Need some metadata for the output cube constructions
@@ -182,16 +217,7 @@ class CdeconvolverApp : public askap::Application
             const std::string outRestoredCubeName = subset.getString("restored","restored");
             
             
-            // Lets load in a cube
-            casacore::PagedImage<casacore::Complex> grid(gridCubeName);
-            casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
-            casacore::PagedImage<casacore::Float> psf(psfCubeName);
-            
-       
-            const casa::IPosition shape = grid.shape();
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
-            int nchanCube = trc[3];
+           
             
             // WorkArrays
             casacore::Array<casacore::Float> psfArray;
@@ -200,6 +226,17 @@ class CdeconvolverApp : public askap::Application
             
                            
             if (comms.isMaster()) { // only the master makes the output
+                
+                // Lets load in a cube
+                casacore::PagedImage<casacore::Complex> grid(gridCubeName);
+                casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
+                casacore::PagedImage<casacore::Float> psf(psfCubeName);
+                
+                
+                const casa::IPosition shape = grid.shape();
+                casa::IPosition blc(shape.nelements(),0);
+                casa::IPosition trc(shape);
+                int nchanCube = trc[3];
                 
                 Int pixelAxis,worldAxis,coordinate;
                 CoordinateUtil::findSpectralAxis(pixelAxis,worldAxis,coordinate,grid.coordinates());
@@ -259,8 +296,10 @@ class CdeconvolverApp : public askap::Application
                     ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
             
                     
-                    for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart +  myAllocationSize) {
+                    for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart + 1) {
                     
+                        //FIXME: this is just looping over each channel of the allocation
+                        
                         ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
                         ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
                     
@@ -282,16 +321,29 @@ class CdeconvolverApp : public askap::Application
                         pcf.getSlice(pcfArray,slicer);
                         grid.doGetSlice(buffer, slicer);
                         
-                        if (comms.nProcs() > 1) {
-                            ASKAPLOG_INFO_STR(logger, "Sending Allocation to Worker");
+                        if (comms.nProcs() > 1 && theRank > 0) {
+                            try {
+                                ASKAPLOG_INFO_STR(logger, "Sending Allocation to Worker");
+                                sendArray(theRank,comms,buffer);
+                                ASKAPLOG_INFO_STR(logger, "Sent Buffer");
+                                sendArray(theRank,comms,pcfArray);
+                                ASKAPLOG_INFO_STR(logger, "Sent PCF");
+                                sendArray(theRank,comms,psfArray);
+                                ASKAPLOG_INFO_STR(logger, "Sent PSF");
+                            }
+                            catch (...) {
+                                ASKAPLOG_WARN_STR(logger,"Exception thrown in send");
+                                comms.abort();
+                            }
                         }
                         else {
                             // do the work
                             scimath::MultiDimArrayPlaneIter planeIter(buffer.shape());
                             
                             
-                            for (; planeIter.hasMore(); planeIter.next()) { // this is a loop over the polarisations as well as channels
-                                
+                            for ( ; planeIter.hasMore(); planeIter.next()) {
+                                /// FIXME: this is supposed to loop over the polarisations as well as channels
+                                /// FIXME: but i have not sorted out the output indexes for this to work
                                 casacore::IPosition curpos = planeIter.position();
                                 // the inputs
                                 casacore::Array<casacore::Complex> thisBuffer = planeIter.getPlane(buffer, curpos);
@@ -323,8 +375,22 @@ class CdeconvolverApp : public askap::Application
                 }
                 
             }
+            else {
+                // Receive from master
+                ASKAPLOG_INFO_STR(logger,"Receiving Arrays from master");
+                int id = 0;
+                receiveArrayFrom(id, comms, buffer);
+                
+                receiveArrayFrom(id, comms, pcfArray);
+
+                receiveArrayFrom(id, comms, psfArray);
+                
+                ASKAPLOG_INFO_STR(logger,"Received Arrays from master");
+                
+            }
 
             stats.logSummary();
+            comms.barrier();
             return 0;
         }
 };
