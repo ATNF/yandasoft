@@ -809,10 +809,12 @@ namespace askap {
                         uInt i, j;
                         if (this->control()->deepCleanMode()) {
                             if (nBases>1) {
+                                #pragma omp single
                                 maskref.reference(mask);
                             } else {
                                 // only a single base, so multiple weights and mask now.
                                 // reference the mask to the mask for base 0
+                                #pragma omp single
                                 maskref.reference(this->itsMask(0));
                                 // multiply weights by the base 0 mask
                                 #pragma omp for schedule(static)
@@ -827,10 +829,12 @@ namespace askap {
                                     }
                                 }
                                 // now reference the mask to the updated weigths
+                                #pragma omp single
                                 maskref.reference(weights);
                             }
                         } else {
                             // reference the mask to the weigths
+                            #pragma omp single
                             maskref.reference(weights);
                         }
                         this->control()->maskNeedsResetting(false);
@@ -1226,6 +1230,21 @@ namespace askap {
                     casa::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
                     casa::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
 
+                    // Add to model
+                    // We loop over all terms for the optimum base and ignore those terms with no flux
+                    #pragma omp single
+                    {
+                        for (uInt term = 0; term < this->itsNumberTerms; ++term) {
+                            if (abs(peakValues(term)) > 0.0) {
+                                casa::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
+                                slice += this->control()->gain() * peakValues(term) *
+                                        Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                                this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
+                            }
+                        }
+                    }
+
+/*
                     const uInt ni = residualEnd(0) - residualStart(0);
                     const uInt nj = residualEnd(1) - residualStart(1);
                     const uInt ri0 = residualStart(0);
@@ -1256,7 +1275,27 @@ namespace askap {
 
                         }
                     }
+*/
 
+                    #pragma omp single
+                    {
+                        // Subtract PSFs, including base-base crossterms
+                        for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
+                            for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
+                                if (abs(peakValues(term2)) > 0.0) {
+                                    for (uInt base = 0; base < nBases; base++) {
+                                        // This can be done in parallel, but isnt worth it.
+                                        this->itsResidualBasis(base)(term1)(residualSlicer) =
+                                            this->itsResidualBasis(base)(term1)(residualSlicer)
+                                            - this->control()->gain() * peakValues(term2) *
+                                            this->itsPSFCrossTerms(base, optimumBase)(term1, term2)(psfSlicer);
+                                    }
+                                }
+                            }
+                        }
+                    } 
+
+/*
                     // Subtract PSFs, including base-base crossterms
                     for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
                         for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
@@ -1289,6 +1328,7 @@ namespace askap {
                             }
                         }
                     }
+*/
 
                     #pragma omp single
                     {
