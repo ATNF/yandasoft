@@ -74,107 +74,7 @@ using namespace askap;
 using namespace askap::synthesis;
 
 
-// Serialiser
 
-template <class T>
-void writeToBlob(LOFAR::BlobOStream& os, casacore::Array< T > &writeFrom) {
-    // first lets write the shape
-    casacore::IPosition shape = writeFrom.shape();
-    T nx = shape[0];
-    T ny = shape[1];
-    os << nx;
-    os << ny;
-    
-    // now write the array
-    os << writeFrom;
-}
-template <class T>
-void readFromBlob(LOFAR::BlobIStream &is, casacore::Array< T > &readTo) {
-    
-    T nx;
-    T ny;
-    is >> nx;
-    is >> ny;
-    casacore::IPosition shape(2);
-    shape[0] = real(nx);
-    shape[1] = real(ny);
-    readTo.resize(shape);
-    is >> readTo;
-
-}
-template <class T>
-void sendArray(int target, askapparallel::AskapParallel& comm, casacore::Array< T > &toSend) {
-    size_t communicator = 0; //default
-    int messageType = 0;
-    std::vector<T> buf;
-    
-    if (sizeof(T) != 1 ) {
-        ASKAPLOG_WARN_STR(logger, "Complex data type not supported: size == " << sizeof(T));
-    }
-    LOFAR::BlobOBufVector<T> bv(buf);
-    LOFAR::BlobOStream out(bv);
-    writeToBlob(out,toSend);
-    out.putEnd();
-    // First send the size of the buffer
-    const unsigned long size = buf.size();
-    comm.send(&size,sizeof(long),target,messageType,communicator);
-    
-    // Now send the actual byte stream
-    comm.send(&buf[0], size * sizeof( T ), target, messageType,communicator);
-}
-template < class T>
-void receiveArrayFrom(int id, askapparallel::AskapParallel& comm, casacore::Array< T > &from) {
-    unsigned long size = 0;
-    size_t communicator = 0; //default
-    int messageType=0;
-    // this gets the size
-    comm.receive(&size, sizeof(long), id, messageType, communicator);
-
-    // Receive the byte stream
-    std::vector<T> buf;
-    buf.resize(size);
-
-    ASKAPCHECK(buf.size() == size,
-                             "receiveArray buf is too small");
-    ASKAPLOG_INFO_STR(logger, "Array to receive is " << size << " bytes in size");
-
-    comm.receive(&buf[0], size * sizeof(char), id, messageType, communicator);
-
-                  // Decode
-    LOFAR::BlobIBufVector< T > bv(buf);
-    LOFAR::BlobIStream in(bv);
-    
-    readFromBlob(in, from);
-    
-    ASKAPLOG_INFO_STR(logger, "Received array ");
-}
-
-template < class T>
-void receiveArray(int &id, askapparallel::AskapParallel& comm, casacore::Array< T > &from) {
-    unsigned long size = 0;
-    size_t communicator = 0; //default
-    int messageType=0;
-    // this gets the size
-    id = comm.receiveAnySrc(&size, sizeof(long), messageType, communicator);
-    ASKAPLOG_INFO_STR(logger, "Received from " << id);
-    // Receive the byte stream
-    std::vector<T> buf;
-    buf.resize(size);
-
-    ASKAPCHECK(buf.size() == size,
-                             "receiveArray buf is too small");
-    ASKAPLOG_INFO_STR(logger, "Array to receive is " << size << " bytes in size");
-
-    comm.receive(&buf[0], size * sizeof(char), id, messageType, communicator);
-
-                  // Decode
-    LOFAR::BlobIBufVector< T > bv(buf);
-    LOFAR::BlobIStream in(bv);
-    
-    readFromBlob(in, from);
-    
-    ASKAPLOG_INFO_STR(logger, "Received array ");
-}
 class CdeconvolverApp : public askap::Application
 {
     public:
@@ -339,7 +239,10 @@ class CdeconvolverApp : public askap::Application
                 for ( ; planeIter.hasMore(); planeIter.next()) {
                     /// FIXME: this is supposed to loop over the polarisations as well as channels
                     /// FIXME: but i have not sorted out the output indexes for this to work
+                    
+                    
                     casacore::IPosition curpos = planeIter.position();
+                    ASKAPLOG_INFO_STR(logger, "Processing from position: " << curpos);
                     // the inputs
                     casacore::Array<casacore::Complex> thisBuffer = planeIter.getPlane(buffer, curpos);
                     casacore::Array<casacore::Complex> thisPCFBUffer = planeIter.getPlane(pcfArray, curpos);
