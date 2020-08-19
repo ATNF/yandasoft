@@ -173,8 +173,6 @@ class CdeconvolverApp : public askap::Application
             int myFullAllocationSize = 0;
             int myFullAllocationStart = 0;
             int myFullAllocationStop = 0;
-            // Where a rank is in its allocation
-            int myAllocationStart = 0;
             
             if (nchanCube % comms.nProcs() != 0) {
                 ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
@@ -202,21 +200,21 @@ class CdeconvolverApp : public askap::Application
             ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
             
                     
-            for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart + 1) {
+            for (int channel = myFullAllocationStart; channel < myFullAllocationStop; channel++) {
                 
                 //FIXME: this is just looping over each channel of the allocation
                 
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
-                ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
+                ASKAPLOG_INFO_STR(logger,"Processing Channel " << channel);
                 
                 casacore::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
                 casacore::IPosition intrc(shape); // get the top right
                 
-                inblc[3] = myAllocationStart;
+                inblc[3] = channel;
                 intrc[0] = intrc[0]-1;
                 intrc[1] = intrc[1]-1;
                 intrc[2] = intrc[2]-1;
-                intrc[3] = myAllocationStart;
+                intrc[3] = channel;
                 
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
@@ -273,9 +271,9 @@ class CdeconvolverApp : public askap::Application
                     
                     
                     
-                    itsModelCube->writeSlice(model,myAllocationStart);
-                    itsResidualCube->writeSlice(dirty,myAllocationStart);
-                    itsRestoredCube->writeSlice(restored,myAllocationStart);
+                    itsModelCube->writeSlice(model, channel);
+                    itsResidualCube->writeSlice(dirty, channel);
+                    itsRestoredCube->writeSlice(restored, channel);
 
                     if (comms.rank() < comms.nProcs()-1) { // last rank doesnot use this method
                       int buf;
