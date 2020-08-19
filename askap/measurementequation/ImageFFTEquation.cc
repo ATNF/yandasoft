@@ -236,7 +236,7 @@ namespace askap
          ASKAPLOG_DEBUG_STR(logger, "calling accBuffer.setNDir("<<itsNDir<<")");
          accBuffer.setNDir(itsNDir); 
       }
-      int dirIndex = 0;
+      int dirIndex = itsNDir > 1 ? -1 : 0;
 
       ASKAPLOG_DEBUG_STR(logger, "Initialising for model degridding");
       for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
@@ -260,6 +260,18 @@ namespace askap
         // DDCALTAG -- set parameter for increased buffer size
         // could alternatively pass dirIndex * itsIdi->nRow(). See if one is better than the other
         if (itsNDir > 1) {
+            if ( imageName.find(".taylor.") != std::string::npos ) {
+                // Taylor terms are used, so only increment dirIndex if this is taylor.0
+                if ( imageName.find(".taylor.0") != std::string::npos ) {
+                    ASKAPLOG_DEBUG_STR(logger, imageName<<" is taylor 0, so incrementing DD-cal buffer index");
+                    dirIndex++;
+                } else {
+                    ASKAPLOG_DEBUG_STR(logger, imageName<<" is not taylor 0 -- not incrementing DD-cal buffer index");
+                }
+            } else {
+                // Taylor terms are not used, so increment dirIndex
+                dirIndex++;
+            }
             ASKAPLOG_DEBUG_STR(logger, "degridding "<<imageName<<" into buffer "<<dirIndex);
             try {
                 // Only possible in DDCalBufferDataAccessor, so cast first
@@ -268,7 +280,6 @@ namespace askap
                 tGridder->setSourceIndex(dirIndex);
             }
             catch (std::bad_cast&) {}
-            dirIndex++;
             ASKAPCHECK(dirIndex <= itsNDir,
                 "The number of specified calibration directions is less than the number calibration image fields");
         }
