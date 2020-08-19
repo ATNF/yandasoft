@@ -517,6 +517,10 @@ void ContinuumWorker::processChannels()
     root = "pcf";
     std::string pcf_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
+    
+    root = "psfgrid";
+    std::string psfgrid_name = root + std::string(".wr.") \
+      + utility::toString(itsComms.rank());
       
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
@@ -542,6 +546,7 @@ void ContinuumWorker::processChannels()
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
         itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
+        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
       }
       
 
@@ -558,6 +563,7 @@ void ContinuumWorker::processChannels()
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
         itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcf_name));
+        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
 
       }
       
@@ -1101,6 +1107,9 @@ void ContinuumWorker::processChannels()
         casacore::Array<casacore::Complex> pcfarr = rootImager.getPCFGrid();
         casacore::Vector<casacore::Complex> pcfVec(pcfarr.reform(IPosition(1,pcfarr.nelements())));
         rootImager.params()->addComplexVector("pcf.slice",pcfVec);
+        casacore::Array<casacore::Complex> psfarr = rootImager.getPSFGrid();
+        casacore::Vector<casacore::Complex> psfVec(psfarr.reform(IPosition(1,psfarr.nelements())));
+        rootImager.params()->addComplexVector("psfgrid.slice",psfVec);
       } 
 
       rootImager.check();
@@ -1383,6 +1392,12 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
       casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
       itsPCFCube->writeSlice(grid,chan);
+  }
+  if (params->has("psfgrid.slice")) {
+        ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
+        const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
+        casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+        itsPSFGridCube->writeSlice(grid,chan);
   }
   if (params->has("psf.raw.slice"))
   {

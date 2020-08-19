@@ -138,6 +138,7 @@ class ContinuumWorker
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsImageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPCFCube;
+        boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPSFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;

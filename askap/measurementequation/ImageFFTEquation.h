@@ -161,6 +161,10 @@ namespace askap
         IVisGridder::ShPtr getPreconGridder(std::string name) const {
             return itsPreconGridders[name];
         };
+        
+        IVisGridder::ShPtr getPSFGridder(std::string name) const {
+            return itsPSFGridders[name];
+        };
  
       private:
 

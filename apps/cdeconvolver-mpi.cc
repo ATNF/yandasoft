@@ -88,6 +88,8 @@ class CdeconvolverApp : public askap::Application
     
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
     
+        void getPSF(casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &buffer );
+    
         void doTheWork(const LOFAR::ParameterSet, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &dirty,casacore::Array<casacore::Float> &restored);
 
         std::pair<int, int> get_channel_allocation(askap::askapparallel::AskapParallel &comms, int nchannels)
@@ -142,7 +144,7 @@ class CdeconvolverApp : public askap::Application
             
             const std::string gridCubeName = subset.getString("grid");
             const std::string pcfCubeName = subset.getString("pcf");
-            const std::string psfCubeName = subset.getString("psf");
+            const std::string psfGridCubeName = subset.getString("psfgrid");
             
             // ok lets set up some output cubes
             const std::string outModelCubeName = subset.getString("model","model");
@@ -155,13 +157,15 @@ class CdeconvolverApp : public askap::Application
             // WorkArrays
             casacore::Array<casacore::Float> psfArray;
             casacore::Array<casacore::Complex> pcfArray;
+            casacore::Array<casacore::Complex> psfGridBuffer;
             casacore::Array<casacore::Complex> buffer;
+            
             
             
             // Lets load in a cube
             casacore::PagedImage<casacore::Complex> grid(gridCubeName);
             casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
-            casacore::PagedImage<casacore::Float> psf(psfCubeName);
+            casacore::PagedImage<casacore::Complex> psfgrid(psfGridCubeName);
             
             const casacore::IPosition shape = grid.shape();
             casacore::IPosition blc(shape.nelements(),0);
@@ -226,7 +230,8 @@ class CdeconvolverApp : public askap::Application
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
                 
                 
-                psf.getSlice(psfArray,slicer);
+                
+                psfgrid.getSlice(psfGridBuffer,slicer);
                 pcf.getSlice(pcfArray,slicer);
                 grid.doGetSlice(buffer, slicer);
                         
@@ -246,8 +251,9 @@ class CdeconvolverApp : public askap::Application
                     ASKAPLOG_INFO_STR(logger, "Processing from position: " << curpos);
                     // the inputs
                     casacore::Array<casacore::Complex> thisBuffer = planeIter.getPlane(buffer, curpos);
-                    casacore::Array<casacore::Complex> thisPCFBUffer = planeIter.getPlane(pcfArray, curpos);
-                    casacore::Array<casacore::Float> thisPSFBuffer = planeIter.getPlane(psfArray, curpos);
+                    casacore::Array<casacore::Complex> thisPCFBuffer = planeIter.getPlane(pcfArray, curpos);
+                    casacore::Array<casacore::Complex> thisPSFGridBuffer = planeIter.getPlane(psfGridBuffer, curpos);
+                    casacore::Array<casacore::Float> thisPSFBuffer(psfGridBuffer.shape());
                     
                     
                     // the outputs
@@ -256,7 +262,8 @@ class CdeconvolverApp : public askap::Application
                     casacore::Array<casacore::Float> restored;
                     
                     
-                    doTheWork(subset, thisBuffer, thisPSFBuffer, thisPCFBUffer, model, dirty, restored);
+                    getPSF(thisPSFBuffer,thisPSFGridBuffer);
+                    doTheWork(subset, thisBuffer, thisPSFBuffer, thisPCFBuffer, model, dirty, restored);
                     
                     if (comms.isMaster()) {
 
@@ -299,8 +306,20 @@ class CdeconvolverApp : public askap::Application
         }
 };
             
-
+void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &buffer ) {
+    
+    askap::scimath::fft2d(buffer,false);
+    
+    casacore::convertArray<casacore::Float, casacore::Float>(psfArray,real(buffer));
+    psfArray = psfArray * psfArray.nelements();
+    ASKAPLOG_INFO_STR(logger,"Max PSF array:" << max(psfArray));
+    
+    
+}
 void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &dirty, casacore::Array<casacore::Float> &restored) {
+    
+    
+    
     
     ASKAPLOG_INFO_STR(logger,"Array Shape: " << buffer.shape());
     double norm = buffer.nelements()/max(psfArray);
