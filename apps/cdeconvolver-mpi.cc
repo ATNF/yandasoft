@@ -130,9 +130,9 @@ class CdeconvolverApp : public askap::Application
             casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
             casacore::PagedImage<casacore::Float> psf(psfCubeName);
             
-            const casa::IPosition shape = grid.shape();
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
+            const casacore::IPosition shape = grid.shape();
+            casacore::IPosition blc(shape.nelements(),0);
+            casacore::IPosition trc(shape);
             int nchanCube = trc[3];
             
             if (comms.isMaster()) { // only the master makes the output
@@ -211,8 +211,8 @@ class CdeconvolverApp : public askap::Application
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
                 ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
                 
-                casa::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
-                casa::IPosition intrc(shape); // get the top right
+                casacore::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
+                casacore::IPosition intrc(shape); // get the top right
                 myAllocationStop = myAllocationStart + myAllocationSize;
                 
                 inblc[3] = myAllocationStart;
