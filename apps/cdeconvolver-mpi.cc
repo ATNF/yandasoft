@@ -36,6 +36,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <string>
+#include <tuple>
+#include <utility>
 
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>
@@ -87,17 +89,48 @@ class CdeconvolverApp : public askap::Application
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
     
         void doTheWork(const LOFAR::ParameterSet, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &dirty,casacore::Array<casacore::Float> &restored);
-        
+
+        std::pair<int, int> get_channel_allocation(askap::askapparallel::AskapParallel &comms, int nchannels)
+        {
+            auto rank = comms.rank();
+            auto nranks = comms.nProcs();
+            auto div = nchannels / nranks;
+            auto rem = nchannels % nranks;
+
+            if (rem > 0) {
+                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << nranks << " not a factor of number of channels: "<< nchannels);
+            }
+            // Simple round-robin: the first `rem` ranks receive an extra item
+            // when rem > 0. That means that:
+            //  if rank < rem:  first_chan = (div + 1) * rank
+            //                  num_chans = div + 1
+            //  if rank >= rem: first_chan = (div + 1) * rem + (div * (rank - rem))
+            //                  num_chans = div
+            // and that reduces to what's below
+            auto first_chan = rank * div + (rank < rem ? div : rem);
+            auto num_chans = div + (rank < rem);
+            return std::make_pair(first_chan, num_chans);
+        }
+
         virtual int run(int argc, char* argv[])
+        {
+            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+            try {
+                return _run(argc, argv, comms);
+            } catch (const std::exception &e) {
+                ASKAPLOG_FATAL_STR(logger, "Unexpected error: " << e.what());
+                comms.abort();
+                return 1;
+            }
+        }
+
+        int _run(int argc, char *argv[], askap::askapparallel::AskapParallel &comms)
         {
             StatReporter stats;
            
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
            
-            // This class must have scope outside the main try/catch block
-            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
-            
             ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
             
             // ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
@@ -130,9 +163,9 @@ class CdeconvolverApp : public askap::Application
             casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
             casacore::PagedImage<casacore::Float> psf(psfCubeName);
             
-            const casa::IPosition shape = grid.shape();
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
+            const casacore::IPosition shape = grid.shape();
+            casacore::IPosition blc(shape.nelements(),0);
+            casacore::IPosition trc(shape);
             int nchanCube = trc[3];
             
             if (comms.isMaster()) { // only the master makes the output
@@ -167,59 +200,27 @@ class CdeconvolverApp : public askap::Application
                 itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,outResidCubeName));
                 itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,outRestoredCubeName));
             }
-            
-            // What fraction of the full problem does a rank have
-            
-            int myFullAllocationSize = 0;
-            int myFullAllocationStart = 0;
-            int myFullAllocationStop = 0;
-            // Where a rank is in its allocation
-            int myAllocationSize = 1;
-            int myAllocationStart = 0;
-            int myAllocationStop = myAllocationStart + myAllocationSize;
-            
-            if (nchanCube % comms.nProcs() != 0) {
-                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
-            }
-            
-            if (comms.nProcs() >= nchanCube) {
-                myFullAllocationSize = 1;
-            }
-            else {
-                myFullAllocationSize = nchanCube/comms.nProcs();
-            }
-            
-            // lets loop over ranks
-               
-            int theRank = comms.rank();
-            
-            myFullAllocationStart = theRank*myFullAllocationSize;
-            myFullAllocationStop = myFullAllocationStart + myFullAllocationSize;
 
-            // unless last rank
-            if (theRank == comms.nProcs()-1) {
-                myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
-            }
-            
-            ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
-            
-                    
-            for (myAllocationStart = myFullAllocationStart; myAllocationStart < myFullAllocationStop; myAllocationStart = myAllocationStart + 1) {
-                
+            // What fraction of the full problem does a rank have
+            int firstChannel, numChannelsLocal;
+            std::tie(firstChannel, numChannelsLocal) = get_channel_allocation(comms, nchanCube);
+            ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
+
+            for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
+
                 //FIXME: this is just looping over each channel of the allocation
                 
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
-                ASKAPLOG_INFO_STR(logger,"Processing Channel " << myAllocationStart);
+                ASKAPLOG_INFO_STR(logger,"Processing Channel " << channel);
                 
-                casa::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
-                casa::IPosition intrc(shape); // get the top right
-                myAllocationStop = myAllocationStart + myAllocationSize;
+                casacore::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
+                casacore::IPosition intrc(shape); // get the top right
                 
-                inblc[3] = myAllocationStart;
+                inblc[3] = channel;
                 intrc[0] = intrc[0]-1;
                 intrc[1] = intrc[1]-1;
                 intrc[2] = intrc[2]-1;
-                intrc[3] = myAllocationStart + myAllocationSize-1;
+                intrc[3] = channel;
                 
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
@@ -276,9 +277,9 @@ class CdeconvolverApp : public askap::Application
                     
                     
                     
-                    itsModelCube->writeSlice(model,myAllocationStart);
-                    itsResidualCube->writeSlice(dirty,myAllocationStart);
-                    itsRestoredCube->writeSlice(restored,myAllocationStart);
+                    itsModelCube->writeSlice(model, channel);
+                    itsResidualCube->writeSlice(dirty, channel);
+                    itsRestoredCube->writeSlice(restored, channel);
 
                     if (comms.rank() < comms.nProcs()-1) { // last rank doesnot use this method
                       int buf;
