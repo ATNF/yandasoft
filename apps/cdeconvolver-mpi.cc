@@ -36,6 +36,8 @@
 #include <stdexcept>
 #include <iostream>
 #include <string>
+#include <tuple>
+#include <utility>
 
 // ASKAPsoft includes
 #include <askap/AskapLogging.h>
@@ -87,7 +89,29 @@ class CdeconvolverApp : public askap::Application
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
     
         void doTheWork(const LOFAR::ParameterSet, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &dirty,casacore::Array<casacore::Float> &restored);
-        
+
+        std::pair<int, int> get_channel_allocation(askap::askapparallel::AskapParallel &comms, int nchannels)
+        {
+            auto rank = comms.rank();
+            auto nranks = comms.nProcs();
+            auto div = nchannels / nranks;
+            auto rem = nchannels % nranks;
+
+            if (rem > 0) {
+                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << nranks << " not a factor of number of channels: "<< nchannels);
+            }
+            // Simple round-robin: the first `rem` ranks receive an extra item
+            // when rem > 0. That means that:
+            //  if rank < rem:  first_chan = (div + 1) * rank
+            //                  num_chans = div + 1
+            //  if rank >= rem: first_chan = (div + 1) * rem + (div * (rank - rem))
+            //                  num_chans = div
+            // and that reduces to what's below
+            auto first_chan = rank * div + (rank < rem ? div : rem);
+            auto num_chans = div + (rank < rem);
+            return std::make_pair(first_chan, num_chans);
+        }
+
         virtual int run(int argc, char* argv[])
         {
             StatReporter stats;
@@ -167,41 +191,14 @@ class CdeconvolverApp : public askap::Application
                 itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,outResidCubeName));
                 itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,outRestoredCubeName));
             }
-            
-            // What fraction of the full problem does a rank have
-            
-            int numChannelsLocal = 0;
-            int firstChannel = 0;
-            int myFullAllocationStop = 0;
-            
-            if (nchanCube % comms.nProcs() != 0) {
-                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
-            }
-            
-            if (comms.nProcs() >= nchanCube) {
-                numChannelsLocal = 1;
-            }
-            else {
-                numChannelsLocal = nchanCube/comms.nProcs();
-            }
-            
-            // lets loop over ranks
-               
-            int theRank = comms.rank();
-            
-            firstChannel = theRank * numChannelsLocal;
-            myFullAllocationStop = firstChannel + numChannelsLocal;
 
-            // unless last rank
-            if (theRank == comms.nProcs()-1) {
-                numChannelsLocal = nchanCube - firstChannel; // we are using End is Last
-            }
-            
-            ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
-            
-                    
-            for (int channel = firstChannel; channel < myFullAllocationStop; channel++) {
-                
+            // What fraction of the full problem does a rank have
+            int firstChannel, numChannelsLocal;
+            std::tie(firstChannel, numChannelsLocal) = get_channel_allocation(comms, nchanCube);
+            ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
+
+            for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
+
                 //FIXME: this is just looping over each channel of the allocation
                 
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
