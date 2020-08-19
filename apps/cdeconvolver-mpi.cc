@@ -114,14 +114,23 @@ class CdeconvolverApp : public askap::Application
 
         virtual int run(int argc, char* argv[])
         {
+            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
+            try {
+                return _run(argc, argv, comms);
+            } catch (const std::exception &e) {
+                ASKAPLOG_FATAL_STR(logger, "Unexpected error: " << e.what());
+                comms.abort();
+                return 1;
+            }
+        }
+
+        int _run(int argc, char *argv[], askap::askapparallel::AskapParallel &comms)
+        {
             StatReporter stats;
            
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
            
-            // This class must have scope outside the main try/catch block
-            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
-            
             ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
             
             // ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
