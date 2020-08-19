@@ -171,7 +171,7 @@ class CdeconvolverApp : public askap::Application
             // What fraction of the full problem does a rank have
             
             int myFullAllocationSize = 0;
-            int myFullAllocationStart = 0;
+            int firstChannel = 0;
             int myFullAllocationStop = 0;
             
             if (nchanCube % comms.nProcs() != 0) {
@@ -189,18 +189,18 @@ class CdeconvolverApp : public askap::Application
                
             int theRank = comms.rank();
             
-            myFullAllocationStart = theRank*myFullAllocationSize;
-            myFullAllocationStop = myFullAllocationStart + myFullAllocationSize;
+            firstChannel = theRank*myFullAllocationSize;
+            myFullAllocationStop = firstChannel + myFullAllocationSize;
 
             // unless last rank
             if (theRank == comms.nProcs()-1) {
-                myFullAllocationSize = nchanCube - myFullAllocationStart; // we are using End is Last
+                myFullAllocationSize = nchanCube - firstChannel; // we are using End is Last
             }
             
-            ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
+            ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << firstChannel << " and is " << myFullAllocationSize << " in size");
             
                     
-            for (int channel = myFullAllocationStart; channel < myFullAllocationStop; channel++) {
+            for (int channel = firstChannel; channel < myFullAllocationStop; channel++) {
                 
                 //FIXME: this is just looping over each channel of the allocation
                 
