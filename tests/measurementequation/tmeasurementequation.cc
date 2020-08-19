@@ -36,6 +36,7 @@
 #include "ImageFFTEquationTest.h"
 #include "CalibrationMETest.h"
 #include "CalibrationDDTest.h"
+#include "CalibrationIonoTest.h"
 #include "PreconditionerTests.h"
 #include "SynthesisParamsHelperTest.h"
 #include "ImageParamsHelperTest.h"
@@ -62,6 +63,7 @@ int main( int argc, char **argv)
     runner.addTest(askap::synthesis::PreAvgCalBufferTest::suite());
     runner.addTest(askap::synthesis::CalibrationMETest::suite());
     runner.addTest(askap::synthesis::CalibrationDDTest::suite());
+    runner.addTest(askap::synthesis::CalibrationIonoTest::suite());
     // runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
     runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
     runner.addTest(askap::synthesis::PreconditionerTests::suite());

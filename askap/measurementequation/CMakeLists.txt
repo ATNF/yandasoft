@@ -93,6 +93,8 @@ ImageSolver.h
 ImageSolverFactory.h
 ImagingEquationAdapter.h
 ImagingMultiChunkEquation.h
+IonosphericTerm.h
+IonosphericTerm.tcc
 LeakageTerm.h
 LeakageTerm.tcc
 MEComponent.h
