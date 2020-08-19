@@ -194,7 +194,7 @@ class CdeconvolverApp : public askap::Application
 
             // unless last rank
             if (theRank == comms.nProcs()-1) {
-                myFullAllocationSize = trc[3] - myFullAllocationStart; // we are using End is Last
+                myFullAllocationSize = nchanCube - myFullAllocationStart; // we are using End is Last
             }
             
             ASKAPLOG_INFO_STR(logger,"Rank " << theRank << " - RankAllocation starts at " << myFullAllocationStart << " and is " << myFullAllocationSize << " in size");
