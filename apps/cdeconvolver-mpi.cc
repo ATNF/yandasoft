@@ -176,7 +176,6 @@ class CdeconvolverApp : public askap::Application
             // Where a rank is in its allocation
             int myAllocationSize = 1;
             int myAllocationStart = 0;
-            int myAllocationStop = myAllocationStart + myAllocationSize;
             
             if (nchanCube % comms.nProcs() != 0) {
                 ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< nchanCube);
@@ -213,7 +212,6 @@ class CdeconvolverApp : public askap::Application
                 
                 casacore::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
                 casacore::IPosition intrc(shape); // get the top right
-                myAllocationStop = myAllocationStart + myAllocationSize;
                 
                 inblc[3] = myAllocationStart;
                 intrc[0] = intrc[0]-1;
