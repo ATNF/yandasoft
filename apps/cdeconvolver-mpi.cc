@@ -174,7 +174,6 @@ class CdeconvolverApp : public askap::Application
             int myFullAllocationStart = 0;
             int myFullAllocationStop = 0;
             // Where a rank is in its allocation
-            int myAllocationSize = 1;
             int myAllocationStart = 0;
             
             if (nchanCube % comms.nProcs() != 0) {
@@ -217,7 +216,7 @@ class CdeconvolverApp : public askap::Application
                 intrc[0] = intrc[0]-1;
                 intrc[1] = intrc[1]-1;
                 intrc[2] = intrc[2]-1;
-                intrc[3] = myAllocationStart + myAllocationSize-1;
+                intrc[3] = myAllocationStart;
                 
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
