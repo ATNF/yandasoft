@@ -82,7 +82,9 @@ namespace askap
         boost::shared_ptr<Params> params1, params2;
         accessors::SharedIter<accessors::DataIteratorStub> idi;
         const casacore::uInt nAnt = 30;
+        const casacore::uInt nChan = 8;
         const casacore::uInt nDir = 2;
+        const bool printSolutionUpdates = false;
 
       protected:        
           
@@ -99,17 +101,23 @@ namespace askap
             for (std::vector<std::string>::const_iterator it=completions.begin(); it!=completions.end();++it)  {
                  const std::string parname = baseName+*it;                                 
            
-                 std::cout <<parname<<" "<<params1->complexValue(parname)/float(casacore::C::arcmin)<<" - "<<
-                                           params2->complexValue(parname)/float(casacore::C::arcmin)<<" = "<<
-                                           params1->complexValue(parname)/float(casacore::C::arcmin) - 
-                                           params2->complexValue(parname)/float(casacore::C::arcmin) << std::endl;
+                 //std::cout <<parname<<" "<<params1->complexValue(parname)/float(casacore::C::arcmin)<<" - "<<
+                 //                          params2->complexValue(parname)/float(casacore::C::arcmin)<<" = "<<
+                 //                          params1->complexValue(parname)/float(casacore::C::arcmin) - 
+                 //                          params2->complexValue(parname)/float(casacore::C::arcmin) << std::endl;
            
                  // check that the real parts are equal
-                 CPPUNIT_ASSERT_DOUBLES_EQUAL(params2->complexValue(parname).real(),
+                 CPPUNIT_ASSERT_DOUBLES_EQUAL(params1->complexValue(parname).real(),
                                               params2->complexValue(parname).real(),1e-9);
                  // check that the imaginary parts are equal (should be zero)
-                 CPPUNIT_ASSERT_DOUBLES_EQUAL(params2->complexValue(parname).imag(),
+                 CPPUNIT_ASSERT_DOUBLES_EQUAL(params1->complexValue(parname).imag(),
                                               params2->complexValue(parname).imag(),1e-9);
+                 // check that the real parts are equal
+                 CPPUNIT_ASSERT_DOUBLES_EQUAL(abs(params1->complexValue(parname).real()-
+                                                  params2->complexValue(parname).real()),0.0,1e-9);
+                 // check that the imaginary parts are equal (should be zero)
+                 CPPUNIT_ASSERT_DOUBLES_EQUAL(abs(params1->complexValue(parname).imag()-
+                                                  params2->complexValue(parname).imag()),0.0,1e-9);
             }
         }
 
@@ -152,9 +160,12 @@ namespace askap
                                           0.2, 0.9, 1.1, 0.3, -0.1,
                                          -0.9, 0.72, -0.04, 0.05, -0.1}; 
 
+          // get metadata from the data accessor
           boost::shared_ptr<IonosphericTerm> iono;
-          casacore::Vector<casacore::RigidVector<double,3> > xyz = iono->getAntennaPositions(da);
+          const casacore::Vector<casacore::RigidVector<double,3> > xyz = iono->getAntennaPositions(da);
           CPPUNIT_ASSERT(xyz.shape()==nAnt);
+          const casacore::Vector<double> frequency = da.frequency();
+          CPPUNIT_ASSERT(nChan==da.nChannel());
 
           params1.reset(new Params);
           params1->add("source.src1", 0);
@@ -168,8 +179,9 @@ namespace askap
           params1->add("flux.i.src2", 100.);
           params1->add("direction.ra.src2", -126.0*casacore::C::arcmin);
           params1->add("direction.dec.src2", 32.0*casacore::C::arcmin);
-          // antenna-dependent fixed parameters
+          // antenna-dependent fixed parameters (as vectors or series of parameters?)
           for (casacore::uInt ant=0; ant<nAnt; ++ant) {
+               // probably better to send these as an array (like frequency)
                params1->add("antenna.position.x."+toString(ant), xyz(ant)(0));
                params1->add("antenna.position.y."+toString(ant), xyz(ant)(1));
                params1->add("antenna.position.z."+toString(ant), xyz(ant)(2));
@@ -177,23 +189,25 @@ namespace askap
                             casacore::Complex(realGains[ant],imagGains[ant]));
                params1->add("gain.g22."+toString(ant)+".0",1.);
           }
+          // frequency-dependent fixed parameters
+          params1->add("frequency", frequency);
           // free parameters. work in lambda^2 once the basic setup is established
           for (casacore::uInt dir=0; dir<nDir; ++dir) {
                params1->add("ionosphere.coeff.l."+toString(dir), 1.0*casacore::C::arcmin);
                params1->add("ionosphere.coeff.m."+toString(dir), 2.0*casacore::C::arcmin);
           }
 
-// uvw info is not always available in IonosphericTerm, and eventually xyz staton position data will be needed.
-// Add that now as parameters?
-// uij = Xi - Xj
-// one option:
-//  - take the first N-1 visibilities
-//  - call station 0 the reference and then add: X0' = 0; Xj' = u0j
-//  - then go through and subtract the average
-//  - however, that will all be relative to the phase centre at the first time step
-//  - just do it like this for now and fix later
-// could also require that array lat,long are supplied and calculate rotatedUVW for that plane
-//  - 
+          // uvw info is not always available in IonosphericTerm, and eventually xyz staton position data will be needed.
+          // Add that now as parameters?
+          // uij = Xi - Xj
+          // one option:
+          //  - take the first N-1 visibilities
+          //  - call station 0 the reference and then add: X0' = 0; Xj' = u0j
+          //  - then go through and subtract the average
+          //  - however, that will all be relative to the phase centre at the first time step
+          //  - just do it like this for now and fix later
+          // should be OK for short calibration intervals, as long as the xyz parameters are updated each time
+          // could also require that array lat,long are supplied and calculate rotatedUVW for that plane
 
           p1.reset(new ComponentEquation(*params1, idi));
           eq1.reset(new METype(*params1,idi,p1));
@@ -221,6 +235,8 @@ namespace askap
               params2->add("antenna.position.y."+toString(ant), xyz(ant)(1));
               params2->add("antenna.position.z."+toString(ant), xyz(ant)(2));
           }
+          // frequency-dependent fixed parameters
+          params2->add("frequency", frequency);
           // free parameters. work in lambda^2 once the basic setup is established
           for (casacore::uInt dir=0; dir<nDir; ++dir) {
               params2->add("ionosphere.coeff.l."+toString(dir), 0.0*casacore::C::arcmin);
@@ -239,7 +255,9 @@ namespace askap
           initDataAndParameters();
           boost::shared_ptr<PreAvgDDCalMEBase> preAvgEq;
           preAvgEq.reset(new CalibrationME<IonosphericTerm, PreAvgDDCalMEBase>(*params2));
-          preAvgEq->initialise(nAnt, nDir, 1);
+          // this could probably be done inside the reset, or when IonosphericTerm is initialised
+          preAvgEq->isIonospheric(true);
+          preAvgEq->initialise(nAnt, nDir, nChan);
           CPPUNIT_ASSERT(preAvgEq);
           idi.init();
           p2->setNDir(nDir);
@@ -255,6 +273,18 @@ namespace askap
                const boost::shared_ptr<Params> params = preAvgEq->rwParameters();
                CPPUNIT_ASSERT(params);
                solver.solveNormalEquations(*params,q);  
+               if (printSolutionUpdates) {
+                   const std::string baseName = "ionosphere";
+                   std::vector<std::string> completions(params2->completions(baseName));
+                   for (std::vector<std::string>::const_iterator it=completions.begin(); it!=completions.end();++it)  {
+                        const std::string parname = baseName+*it;                                 
+                        std::cout <<parname<<" "<<
+                            params1->complexValue(parname)/float(casacore::C::arcmin)<<" - "<<
+                            preAvgEq->parameters().complexValue(parname)/float(casacore::C::arcmin)<<" = "<<
+                            params1->complexValue(parname)/float(casacore::C::arcmin) - 
+                            preAvgEq->parameters().complexValue(parname)/float(casacore::C::arcmin) << std::endl;
+                   }
+               }
           }
           params2 = preAvgEq->parameters().clone();
           checkOffsets();

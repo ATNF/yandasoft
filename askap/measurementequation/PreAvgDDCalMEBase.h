@@ -134,6 +134,12 @@ public:
   /// @return true, if the effect is frequency-dependent
   virtual bool isFrequencyDependent() const = 0;
 
+  /// @brief check whether the measurement equation is ionospheric
+  bool isIonospheric() const { return itsIsIonospheric; }
+ 
+  /// @brief set whether or not the measurement equation is ionospheric
+  void isIonospheric(bool status) const { itsIsIonospheric = status; }
+
   /// @brief check that some data were accumulated for the given antenna, beam and channel
   ////@details check flags in the buffer that at least one element is unflagged for the 
   /// given antenna, beam and channel. This allows us to fix parameters for which we don't have
@@ -193,6 +199,9 @@ private:
   
   /// @brief true if no data have been accumulated
   bool itsNoDataProcessedFlag;
+ 
+  /// @brief true if the ME is ionospheric
+  mutable bool itsIsIonospheric;
   
   /// @brief minimal time encountered in the data
   /// @details (the units are the same as returned by time() method of the data accessor).

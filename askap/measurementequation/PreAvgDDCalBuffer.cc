@@ -284,6 +284,7 @@ int PreAvgDDCalBuffer::findMatch(casacore::uInt ant1, casacore::uInt ant2, casac
 void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
          const boost::shared_ptr<IMeasurementEquation const> &me, const bool fdp)
 {
+
   if (acc.nRow() == 0) {
       // nothing to process
       return;
@@ -329,7 +330,7 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
           catch (const std::bad_cast&) {}
       }
   }
-
+  
   me->predict(modelAcc);
   const casacore::Cube<casacore::Complex> &modelVis = modelAcc.visibility();
   const casacore::Cube<casacore::Complex> &measuredVis = acc.visibility();

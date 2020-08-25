@@ -52,12 +52,12 @@ namespace synthesis {
 /// @details This is a simple effect which can be used in conjunction
 /// with the CalibrationME template (as its template argument)
 /// @ingroup measurementequation
-struct IonosphericTerm : public ParameterizedMEComponent<false> {
+struct IonosphericTerm : public ParameterizedMEComponent<true> {
    
    /// @brief constructor, store reference to paramters
    /// @param[in] par shared pointer to parameters
    inline explicit IonosphericTerm(const scimath::Params::ShPtr &par) : 
-                              ParameterizedMEComponent<false>(par) {}
+                              ParameterizedMEComponent<true>(par) {}
    
    /// @brief main method returning Mueller matrix and derivatives
    /// @details This method has to be overloaded (in the template sense) for
@@ -70,9 +70,15 @@ struct IonosphericTerm : public ParameterizedMEComponent<false> {
    inline scimath::ComplexDiffMatrix get(const accessors::IConstDataAccessor &chunk, 
                                 casacore::uInt row) const;   
                                 
+   /// @brief set antenna locations
+   /// @details return xyz locations for ionospheric fits. Currently just the
+   /// difference between the first set of uvw coordinates and the average.
+   /// This is OK for short calibration intervals, but should be reset for each.
+   /// @param[in] acc accessor to work with
+   /// @return vector of 3-element rigidvector containing the xyz locations
    inline casacore::Vector<casacore::RigidVector<double,3> >
        getAntennaPositions(const accessors::IConstDataAccessor &acc) const;   
-                                
+
 };
 
 } // namespace synthesis

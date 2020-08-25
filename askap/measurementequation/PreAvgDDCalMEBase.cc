@@ -47,6 +47,7 @@
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
 #include <askap/AskapLogging.h>
+#include <askap/measurementequation/IonosphericTerm.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgddcalmebase");
 
 using namespace askap;
@@ -55,7 +56,8 @@ using namespace askap::synthesis;
 /// @brief constructor setting up only parameters
 /// @param[in] ip Parameters
 PreAvgDDCalMEBase::PreAvgDDCalMEBase(const askap::scimath::Params& ip) :
-    scimath::GenericEquation(ip), itsNoDataProcessedFlag(true), itsMinTime(0.), itsMaxTime(0.)
+    scimath::GenericEquation(ip), itsNoDataProcessedFlag(true),
+    itsIsIonospheric(false), itsMinTime(0.), itsMaxTime(0.)
      {}
 
 /// @brief Standard constructor using the parameters and the
@@ -68,7 +70,7 @@ PreAvgDDCalMEBase::PreAvgDDCalMEBase(const askap::scimath::Params& ip,
         const accessors::IDataSharedIter& idi, 
         const boost::shared_ptr<IMeasurementEquation const> &ime) :
         scimath::GenericEquation(ip), itsNoDataProcessedFlag(true), 
-        itsMinTime(0.), itsMaxTime(0.)
+        itsIsIonospheric(false), itsMinTime(0.), itsMaxTime(0.)
 {
   accumulate(idi,ime);
 }
@@ -207,7 +209,6 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
     ASKAPLOG_INFO_STR(logger, "Calculating Generic Equations.");
 
     const scimath::PolXProducts &polXProducts = itsBuffer.polXProducts();
-    const bool fdp = isFrequencyDependent();
     ASKAPDEBUGASSERT(itsBuffer.nChannel() > 0);
 
     if (ne.useIndexedNormalMatrix()) {
@@ -228,37 +229,51 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
         const casacore::uInt dir = row / rowsPerDir;
 
         for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+
             // take a slice, this takes care of indices along the first two axes (row and channel)
             const scimath::PolXProducts pxpSlice = polXProducts.roSlice(row, chan);
-            if (fdp) {
+            if (isFrequencyDependent()) {
                 // cdm is a block matrix
-                size_t columnOffset = chan * itsBuffer.nPol();
-                ne.add(cdm, pxpSlice, columnOffset, chan);
+                const size_t columnOffset = chan * itsBuffer.nPol();
+                const size_t neChan = isIonospheric() ? 1 : chan;
+                ne.add(cdm, pxpSlice, columnOffset, neChan);
             } else {
                 // cdm is a normal matrix
                 ne.add(cdm, pxpSlice);
-                for (casa::uInt dir2 = 0; dir2 < nDir; ++dir2) {
-                    // in the model product buffer, store the nDir self products then the nDir*(nDir-1)/2 cross products
-                    casa::uInt modelBlock, doConj;
-                    if (dir == dir2) {
-                        continue;
-                    }
-                    else if (dir < dir2) {
-                        modelBlock = (nDir-1)*(dir+1) - (dir+1)*dir/2 + dir2;
-                        doConj = 0;
-                    }
-                    else {
-                        modelBlock = (nDir-1)*(dir2+1) - (dir2+1)*dir2/2 + dir;
-                        doConj = 1;
-                    }
+            }
+        }
+        for (casa::uInt dir2 = 0; dir2 < nDir; ++dir2) {
 
-                    const casa::uInt blockRow = modelBlock * rowsPerDir + dirRow;
-                    const casa::uInt row2 = dir2 * rowsPerDir + dirRow;
-                    scimath::ComplexDiffMatrix cdm2 = buildComplexDiffMatrix(itsBuffer, row2);
-                    const scimath::PolXProducts pxpSlice2 = polXProducts.roModelSlice(blockRow, chan);
+            // in the model product buffer, store the nDir self products then the nDir*(nDir-1)/2 cross products
+            casa::uInt modelBlock, doConj;
+            if (dir == dir2) {
+                continue;
+            }
+            else if (dir < dir2) {
+                modelBlock = (nDir-1)*(dir+1) - (dir+1)*dir/2 + dir2;
+                doConj = 0;
+            }
+            else {
+                modelBlock = (nDir-1)*(dir2+1) - (dir2+1)*dir2/2 + dir;
+                doConj = 1;
+            }
+            const casa::uInt blockRow = modelBlock * rowsPerDir + dirRow;
+            const casa::uInt row2 = dir2 * rowsPerDir + dirRow;
+
+            scimath::ComplexDiffMatrix cdm2 = buildComplexDiffMatrix(itsBuffer, row2);
+
+            for (casa::uInt chan = 0; chan < itsBuffer.nChannel(); ++chan) {
+                const scimath::PolXProducts pxpSlice2 = polXProducts.roModelSlice(blockRow, chan);
+                if (isFrequencyDependent()) {
+                    // cdm is a block matrix
+                    const size_t columnOffset = chan * itsBuffer.nPol();
+                    const size_t neChan = isIonospheric() ? 1 : chan;
+                    ne.DDupdate(cdm, cdm2, pxpSlice2, doConj, columnOffset, neChan);
+                } else {
+                    // cdm is a normal matrix
                     ne.DDupdate(cdm, cdm2, pxpSlice2, doConj);
-
                 }
+
             }
         }
     }

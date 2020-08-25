@@ -49,7 +49,6 @@
 #include <askap/scimath/fitting/ComplexDiff.h>
 #include <askap/scimath/fitting/ComplexDiffMatrix.h>
 
-
 // std includes
 //#include <algorithm>
 //#include <functional>
@@ -93,7 +92,7 @@ void CalibrationMEBase::predict(IDataAccessor &chunk) const
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
   ASKAPDEBUGASSERT(rwVis.nelements());
   ASKAPCHECK(itsPerfectVisME, "Perfect ME should be defined before calling CalibrationMEBase::predict");
- 
+
   itsPerfectVisME->predict(chunk);
   if (isFrequencyDependent()) {
       for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
@@ -111,9 +110,9 @@ void CalibrationMEBase::predict(IDataAccessor &chunk) const
       } 
   } else {
      for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
-        ComplexDiffMatrix cdm = buildComplexDiffMatrix(chunk, row) * 
-             ComplexDiffMatrix(casacore::transpose(chunk.visibility().yzPlane(row)));
-       
+         ComplexDiffMatrix cdm = buildComplexDiffMatrix(chunk, row) *
+              ComplexDiffMatrix(casacore::transpose(chunk.visibility().yzPlane(row)));
+
          for (casacore::uInt chan = 0; chan < chunk.nChannel(); ++chan) {
              for (casacore::uInt pol = 0; pol < chunk.nPol(); ++pol) {
                 // cdm is transposed! because we need a vector for

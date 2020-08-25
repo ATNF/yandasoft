@@ -190,7 +190,7 @@ public:
    /// by the buffer.
    /// @return number of visibilities ignored due to flags
    inline casacore::uInt ignoredDueToFlags() const { return itsFlagIgnored;}
-    
+   
 protected:
    /// @brief helper method to find a match row in the buffer
    /// @details It goes over antenna and beam indices and finds a buffer row which 
@@ -222,7 +222,7 @@ private:
    /// @brief number of separate calibration directions
    /// DDCALTAG
    casacore::uInt itsNDir;     
- 
+   
    /// @brief buffer for accumulated cross-products
    /// @details This helper object handles two buffers for
    /// cross-products of conj(Vmodel)*Vmodel and conj(Vmodel)*Vmeasured.

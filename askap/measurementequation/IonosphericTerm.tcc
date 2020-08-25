@@ -61,6 +61,7 @@ inline scimath::ComplexDiffMatrix IonosphericTerm::get(const accessors::IConstDa
 {
    const casacore::uInt nPol = chunk.nPol();
    ASKAPDEBUGASSERT(nPol != 0);   
+   const casacore::uInt nChan = chunk.nChannel();
    const casacore::Vector<casacore::Stokes::StokesTypes> stokes = chunk.stokes();   
    ASKAPDEBUGASSERT(stokes.nelements() == nPol);
    ASKAPDEBUGASSERT(!scimath::PolConverter::isStokes(stokes));
@@ -79,53 +80,60 @@ inline scimath::ComplexDiffMatrix IonosphericTerm::get(const accessors::IConstDa
    const std::string u2name = "antenna.position.x."+toString(ant2);
    const std::string v2name = "antenna.position.y."+toString(ant2);
 
-   // ionospheric offset in the l and m directions
+   // ionospheric parameters: dl/lambda^2 and dm/lambda_2
    const std::string lname = "ionosphere.coeff.l."+toString(dir1);
    const std::string mname = "ionosphere.coeff.m."+toString(dir2);
 
-   // IONOCAL -- still need to set lambda^2
-   // wavelength squared
-   const casacore::Float lambda_sq = 1.0;
-   const casacore::Complex u = getParameter(u1name).value().real() - getParameter(u2name).value().real();
-   const casacore::Complex v = getParameter(v1name).value().real() - getParameter(v2name).value().real();
-   const askap::scimath::ComplexDiff phase = - casacore::C::_2pi * lambda_sq *
-                                               ( u * getParameter(lname) + v * getParameter(mname) );
+   const casacore::Complex u = parameters()->scalarValue(u1name) - parameters()->scalarValue(u2name);
+   const casacore::Complex v = parameters()->scalarValue(v1name) - parameters()->scalarValue(v2name);
+   const scimath::ComplexDiff phase_const = -casacore::C::_2pi * ( u*getParameter(lname) + v*getParameter(mname) );
 
+   const casacore::Vector<casacore::Double>& frequency = parameters()->value("frequency");
 
-   scimath::ComplexDiffMatrix calFactor(nPol, nPol, 0.);
+   scimath::ComplexDiffMatrix calFactor(nPol, nPol * nChan, 0.);
 
-   for (casacore::uInt pol=0; pol<nPol; ++pol) {
-        
-        const casacore::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
-        // polIndex is index in the polarisation frame, i.e.
-        // XX is 0, XY is 1, YX is 2 and YY is 3
-        // we need an index into matrix 
+   for (casacore::uInt chan = 0; chan < nChan; ++chan) {
 
-        // gains for antenna 1, polarisation X if XX or XY, or Y if YX or YY
-        const std::string g1name = accessors::CalParamNameHelper::paramName(ant1, dir1,
-                      polIndex / 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
+       const casacore::Float lambda = casacore::C::c / frequency[chan];
+       const askap::scimath::ComplexDiff phase = phase_const * lambda*lambda;
 
-        // gains for antenna 2, polarisation X if XX or YX, or Y if XY or YY
-        const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, dir2,
-                      polIndex % 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
+       for (casacore::uInt pol=0; pol<nPol; ++pol) {
+       
+            const casacore::uInt polIndex = scimath::PolConverter::getIndex(stokes[pol]);
+            // polIndex is index in the polarisation frame, i.e.
+            // XX is 0, XY is 1, YX is 2 and YY is 3
+            // we need an index into matrix 
+         
+            // gains for antenna 1, polarisation X if XX or XY, or Y if YX or YY
+            const std::string g1name = accessors::CalParamNameHelper::paramName(ant1, dir1,
+                          polIndex / 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
+         
+            // gains for antenna 2, polarisation X if XX or YX, or Y if XY or YY
+            const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, dir2,
+                          polIndex % 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
+         
+            /*
+            if (row == 0 && pol == 0) {
+                std::cout << "IONOCAL IonosphericTerm (npol = "<<nPol<<"): row = "<<row<<
+                                 ", ant1 = "<<ant1<<", ant2 = "<<ant2<<
+                                 ", dir1 = "<<dir1<<", dir2 = "<<dir2<<
+                                 ", exp(-i*2pi * ("<<u<<"*"<<getParameter(lname).value()<<
+                                             " +  "<<v<<"*"<<getParameter(mname).value()<<")" << std::endl;
+            }
+            */
 
-        //calFactor(pol,pol) = getParameter(g1name)*conj(getParameter(g2name));
+            // we need to think of how to deal with distributed problem on the cluster (i.e. adding
+            // some base to the channel number and propagating it through the framework)    
+            // exp( j * phase ) ~ 1 + j * phase
+            // could also include gains as free ComplexDiff parameters here, but just use their values for now
+            calFactor(pol, pol + chan * nPol) = getParameter(g1name).value() * conj(getParameter(g2name).value()) *
+                                                ( 1.0 + casacore::Complex(0.0,1.0) * phase );
 
-        if (row == 0 && pol == 0 && false) {
-            std::cout << "IONOCAL IonosphericTerm (npol = "<<nPol<<"): row = "<<row<<
-                             ", ant1 = "<<ant1<<", ant2 = "<<ant2<<
-                             ", dir1 = "<<dir1<<", dir2 = "<<dir2<<
-                             ", exp(-i*2pi * ("<<u<<"*"<<getParameter(lname).value()<<
-                                         " +  "<<v<<"*"<<getParameter(mname).value()<<")" << std::endl;
-        }
+       }
 
-// IONOCAL -- do we need to multiple by gain values? I think so. All the other params are already in the model
-// calFactor(pol,pol) = getParameter(g1name).value() * conj(getParameter(g2name).value()) * (1.0 - i*phase);
-        // exp( j * phase ) ~ 1 - j * phase
-        calFactor(pol,pol) = getParameter(g1name).value() * conj(getParameter(g2name).value()) *
-                             ( 1.0 + casacore::Complex(0.0,1.0) * phase );
 
    }
+
    return calFactor;
 }
 
