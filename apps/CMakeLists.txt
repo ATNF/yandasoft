@@ -10,6 +10,7 @@ ccalapply
 ccalibrator
 ccontsubtract
 cdeconvolver
+cdeconvolver-mpi
 cimager
 cmpgains
 correctdelay
