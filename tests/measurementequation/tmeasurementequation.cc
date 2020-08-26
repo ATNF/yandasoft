@@ -54,8 +54,6 @@ int main( int argc, char **argv)
 
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
-    // DDCALTAG -- for now, just run the DD unit test
-
     runner.addTest(askap::synthesis::VectorOperationsTest::suite());
     runner.addTest(askap::synthesis::ComponentEquationTest::suite());
     runner.addTest(askap::synthesis::ComponentEquationSpectralTest::suite());

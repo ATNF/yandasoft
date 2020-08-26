@@ -271,7 +271,7 @@ void PreAvgDDCalMEBase::calcGenericEquations(scimath::GenericNormalEquations &ne
                     ne.DDupdate(cdm, cdm2, pxpSlice2, doConj, columnOffset, neChan);
                 } else {
                     // cdm is a normal matrix
-                    ne.DDupdate(cdm, cdm2, pxpSlice2, doConj);
+                    ne.DDupdate(cdm, cdm2, pxpSlice2, doConj, 0, 0);
                 }
 
             }
