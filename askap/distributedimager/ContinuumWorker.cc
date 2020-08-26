@@ -514,7 +514,10 @@ void ContinuumWorker::processChannels()
     std::string grid_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
 
-
+    root = "pcf";
+    std::string pcf_name = root + std::string(".wr.") \
+    + utility::toString(itsComms.rank());
+      
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
@@ -522,6 +525,7 @@ void ContinuumWorker::processChannels()
       residual_name = "residual";
       weights_name = "weights";
       grid_name = "grid";
+      pcf_name = "pcf";
     }
 
     ASKAPLOG_DEBUG_STR(logger, "Configuring Spectral Cube");
@@ -537,11 +541,11 @@ void ContinuumWorker::processChannels()
       
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
       }
       
 
     }
-
 
 
     if (!itsComms.isCubeCreator()) {
@@ -553,6 +557,8 @@ void ContinuumWorker::processChannels()
  
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
+        itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcf_name));
+
       }
       
     }
@@ -1091,6 +1097,10 @@ void ContinuumWorker::processChannels()
         casacore::Array<casacore::Complex> garr = rootImager.getGrid();
         casacore::Vector<casacore::Complex> garrVec(garr.reform(IPosition(1,garr.nelements())));
         rootImager.params()->addComplexVector("grid.slice",garrVec);
+        ASKAPLOG_INFO_STR(logger,"Adding pcf.slice");
+        casacore::Array<casacore::Complex> pcfarr = rootImager.getPCFGrid();
+        casacore::Vector<casacore::Complex> pcfVec(pcfarr.reform(IPosition(1,pcfarr.nelements())));
+        rootImager.params()->addComplexVector("pcf.slice",pcfVec);
       } 
 
       rootImager.check();
@@ -1327,13 +1337,13 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
   else {
     // Write PSF
-
-    ASKAPLOG_INFO_STR(logger, "Writing PSF");
-    const casacore::Array<double> imagePixels(params->value("psf.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsPSFCube->writeSlice(floatImagePixels, chan);
-
+      if (!itsParset.getBool("dumpgrids",false)) {
+          ASKAPLOG_INFO_STR(logger, "Writing PSF");
+          const casacore::Array<double> imagePixels(params->value("psf.slice"));
+          casacore::Array<float> floatImagePixels(imagePixels.shape());
+          casacore::convertArray<float, double>(floatImagePixels, imagePixels);
+          itsPSFCube->writeSlice(floatImagePixels, chan);
+      }
   }
   if (!params->has("residual.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
@@ -1368,7 +1378,22 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
     itsGriddedVis->writeSlice(grid,chan);
   }
-
+  if (params->has("pcf.slice")) {
+      ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
+      const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
+      casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+      itsPCFCube->writeSlice(grid,chan);
+  }
+  if (params->has("psf.raw.slice"))
+  {
+      if (itsParset.getBool("dumpgrids", false)) {
+        ASKAPLOG_INFO_STR(logger, "Writing un-normalised PSF");
+        const casacore::Array<double> imagePixels(params->value("psf.raw.slice"));
+        casacore::Array<float> floatImagePixels(imagePixels.shape());
+        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
+        itsPSFCube->writeSlice(floatImagePixels, chan);
+      }
+  }
   if (itsParset.getBool("restore", false)) {
     ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
     if (itsDoingPreconditioning) {
