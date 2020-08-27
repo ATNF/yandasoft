@@ -162,6 +162,7 @@ namespace askap
 
           // get metadata from the data accessor
           boost::shared_ptr<IonosphericTerm> iono;
+          iono.reset(new IonosphericTerm(params1));
           const casacore::Vector<casacore::RigidVector<double,3> > xyz = iono->getAntennaPositions(da);
           CPPUNIT_ASSERT(xyz.shape()==nAnt);
           const casacore::Vector<double> frequency = da.frequency();
