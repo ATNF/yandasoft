@@ -84,7 +84,7 @@ public:
             int shift = subset.getInt("shift",0);
             bool interleave = subset.getBool("interleave",false);
 
-            FitsImageAccessParallel accessor;
+            FitsImageAccessParallel accessor(comms);
 
             if (comms.isMaster()) {
                 ASKAPLOG_INFO_STR(logger,"In = "<<infile <<", Out = "<<
@@ -101,10 +101,13 @@ public:
             // Now process the rest of the file in parallel
             // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
             const int iax = 1;
-            casa::Cube<casa::Float> arr = accessor.read_all(comms,infile,iax);
-
+            casa::Array<casa::Float> arr = accessor.read_all(infile,iax);
+            // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
+            arr.removeDegenerate();
+            ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
+            casa::Cube<casa::Float> cube(arr);
             // Are we processing in blocks of channels (to match beamforming intervals)?
-            int nz = arr.shape()(2);
+            int nz = cube.shape()(2);
             if (blocksize==0) {
                 blocksize = nz;
                 shift = 0;
@@ -113,14 +116,14 @@ public:
             // Process spectrum by spectrum
             ASKAPLOG_INFO_STR(logger,"Process the spectra");
             if (!interleave) {
-                for (uint y = 0; y< arr.shape()(1); y++ ) {
-                    for (uint x = 0; x < arr.shape()(0); x++ ) {
+                for (uint y = 0; y< cube.shape()(1); y++ ) {
+                    for (uint x = 0; x < cube.shape()(0); x++ ) {
                         for (int z = 0; z < nz/blocksize; z++) {
                             int start = -shift + z * blocksize;
                             int stop = casa::min(start + blocksize, nz);
                             start = casa::max(0, start);
                             int length = stop - start;
-                            casa::Vector<casa::Float> spec(arr(casa::Slice(x,1),casa::Slice(y,1),
+                            casa::Vector<casa::Float> spec(cube(casa::Slice(x,1),casa::Slice(y,1),
                                 casa::Slice(start,length)));
                             process_spectrum(spec, threshold, order);
                         }
@@ -134,9 +137,9 @@ public:
                 // need to work with a copy of the spectrum
                 casa::Vector<casa::Float> workvec(nz);
                 casa::Vector<casa::Float> spec(blocksize);
-                for (uint y = 0; y< arr.shape()(1); y++ ) {
-                    for (uint x = 0; x < arr.shape()(0); x++ ) {
-                        casa::Vector<casa::Float> refvec(arr(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
+                for (uint y = 0; y< cube.shape()(1); y++ ) {
+                    for (uint x = 0; x < cube.shape()(0); x++ ) {
+                        casa::Vector<casa::Float> refvec(cube(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
                         workvec = refvec;
                         for (uint z = 0; z < nblocks; z++) {
                             const uint start = z * step;
@@ -154,7 +157,7 @@ public:
             }
 
             // Write results to output file - make sure we use the same axis as for reading
-            accessor.write_all(comms,outfile,arr,iax);
+            accessor.write_all(outfile,arr,iax);
             ASKAPLOG_INFO_STR(logger,"Done");
             // Done
             stats.logSummary();
@@ -171,7 +174,7 @@ public:
         }
 
 
-        void process_spectrum(casa::Vector<casa::Float>& vec, float threshold, int order) {
+        void process_spectrum(casa::Vector<casa::Float>& vec, float threshold, int order, bool log=false) {
             size_t n = vec.nelements();
 
             // first remove spectral index
@@ -182,24 +185,27 @@ public:
             casa::Vector<casa::Float> y1(n1);
             for (int i=0; i<n1; i++) y1(i) = vec(i*inc);
 
-            // mask out NaNs and extreme outliers
+            // mask out NaNs and extreme outliers and count how many points we have left
+            // Note: fractile partially sorts the array!
             casa::Float q5 = casa::fractile(y1,0.05f);
             casa::Float q95 = casa::fractile(y1,0.95f);
-            casa::Vector<casa::Bool> mask1(n1);
             int ngood = 0;
             for (int i=0; i<n1; i++) {
-                mask1(i) = !casa::isNaN(y1(i)) & (y1(i) >= q5) & (y1(i) <= q95);
-                if (mask1(i)) ngood++;
+                if (!casa::isNaN(y1(i)) && (y1(i) >= q5) && (y1(i) <= q95)) ngood++;
             }
-            //ASKAPLOG_INFO_STR(logger,"q5="<<q5<<", q95="<<q95<< ", y1="<< y1);
-            //ASKAPLOG_INFO_STR(logger,"n1="<<n1<<", ngood="<<ngood);
+            if (log) {
+                ASKAPLOG_INFO_STR(logger,"q5="<<q5<<", q95="<<q95<< ", y1="<< y1);
+                ASKAPLOG_INFO_STR(logger,"n1="<<n1<<", ngood="<<ngood);
+            }
             casa::Vector<casa::Float> x(ngood), y(ngood);
             for (int i=0, j=0; i<n1; i++) {
-                if (mask1(i)) {
-                    y(j) = vec(i*inc);
+                casa::Float s = vec(i*inc);
+                if (!casa::isNaN(s) && (s >= q5) && (s <= q95)) {
+                    y(j) = s;
                     x(j++) = i*inc;
                 }
             }
+            if (log) ASKAPLOG_INFO_STR(logger,"y="<<y);
 
             casa::Float xmean = 0;
             casa::Float offset = 0;
@@ -217,17 +223,18 @@ public:
             indgen(x_full);
             x_full -= xmean;
             for (int i = 0; i<n; i++) y_full(i) = vec(i) - (offset + slope * x_full(i));
-            //y_full = x_full;
-            //y_full *= -slope;
-            //y_full -= offset;
-            //y_full += vec;
-            //ASKAPLOG_INFO_STR(logger," offset = "<<offset<<", slope = "<<slope);
+            if (log) ASKAPLOG_INFO_STR(logger,"offset = "<<offset<<", slope = "<<slope);
 
             // now select data within threshold of median
-            casa::Float q15 = casa::fractile(y_full, 0.15f);
-            casa::Float q50 = casa::fractile(y_full, 0.50f);
+            // Copy required because fractile does partial sort
+            casa::Vector<casa::Float> tmp(y_full.copy());
+            casa::Float q15 = casa::fractile(tmp, 0.15f);
+            casa::Float q50 = casa::fractile(tmp, 0.50f);
             casa::Float iqr = (1/1.35)*2*(q50-q15); // just copying python version - iqr should really be 2*(q50-q25)
             casa::Vector<casa::Bool> mask = (y_full >= q50 - threshold * iqr ) & ( y_full <= q50 + threshold * iqr);
+            if (log) {
+                ASKAPLOG_INFO_STR(logger,"q15="<<q15<<", q50="<<q50<< ", iqr="<< iqr);
+            }
 
             // fit polynomial of given order
             //casa::LinearFitSVD<casa::Float> fitter;
@@ -276,6 +283,7 @@ public:
                         model(i) = i * model(i) + solution(j);
                     }
                 }
+                if (log) ASKAPLOG_INFO_STR(logger,"solution="<<solution<<", model(10)="<<model(10));
                 vec -= model;
             }
         }
