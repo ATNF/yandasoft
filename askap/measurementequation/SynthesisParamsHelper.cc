@@ -730,6 +730,20 @@ namespace askap
       theirImageAccessor = accessors::imageAccessFactory(parset);
     }
 
+    /// @brief setup image handler
+    /// @details This method uses the factory to setup a helper class handling the
+    /// operations with images (default is casa). It is necessary to call this method
+    /// at least once before any read or write operation can happen.
+    /// @param[in] parset a parset file containing parameters describing which image handler to use
+    /// @param[in] comms, MPI communicator
+    /// @note The key parameter describing the image handler is "imagetype". By default, the
+    /// casa image handler is created (however, a call to this method is still required)
+    void SynthesisParamsHelper::setUpImageHandler(const LOFAR::ParameterSet &parset,
+                                                  askap::askapparallel::AskapParallel &comms)
+    {
+      theirImageAccessor = accessors::imageAccessFactory(parset, comms);
+    }
+
 
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
 						 const string& imagename)
@@ -1345,7 +1359,7 @@ namespace askap
 
            // actual fitting
            // the beam fitter fails at times - producing no or a bad solution
-           // We've tried a few approaches: 
+           // We've tried a few approaches:
            //  - retry with different support - often works, but still some failures
            //  - use setIncludeRange to exclude pixels below the cutoff - works sometimes, but worse at times
            //  - use estimate to set the initial guess - this seems the best solution so far
