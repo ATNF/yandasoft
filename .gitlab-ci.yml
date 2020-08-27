@@ -37,6 +37,7 @@ test:
     - cd build
     - rm CMakeCache.txt
     - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"
+    - cmake --build . -j $n_cpus
     - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
     - cd build
