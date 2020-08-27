@@ -133,12 +133,22 @@ struct ImagingEquationAdapter : virtual public IMeasurementEquation,
    /// @param[in] ne normal equations to update
    virtual void calcEquations(const accessors::IConstDataAccessor &chunk,
              scimath::INormalEquations &ne) const;
+    
+// DDCALTAG
+   /// Set the number of DD calibration directions for increased equation size
+   void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
+   
+   /// Get the number of DD calibration directions
+   casacore::uInt getNDir() const { return itsNDir; }
    
 private:
    /// @brief iterator adapter
    accessors::IDataSharedIter itsIterAdapter;
    /// @brief actual measurement equation 
    scimath::Equation::ShPtr itsActualEquation;
+ 
+// DDCALTAG
+   mutable casacore::uInt itsNDir;
 };
 
 

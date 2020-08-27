@@ -35,6 +35,8 @@ NormWienerPreconditioner.cc
 NormalEquationsTypeError.cc
 PreAvgCalBuffer.cc
 PreAvgCalMEBase.cc
+PreAvgDDCalBuffer.cc
+PreAvgDDCalMEBase.cc
 RestoringBeamHelper.cc
 RobustPreconditioner.cc
 SumOfTwoMEs.cc
@@ -91,6 +93,8 @@ ImageSolver.h
 ImageSolverFactory.h
 ImagingEquationAdapter.h
 ImagingMultiChunkEquation.h
+IonosphericTerm.h
+IonosphericTerm.tcc
 LeakageTerm.h
 LeakageTerm.tcc
 MEComponent.h
@@ -109,6 +113,8 @@ ParameterizedMEComponent.h
 ParameterizedMEComponent.tcc
 PreAvgCalBuffer.h
 PreAvgCalMEBase.h
+PreAvgDDCalBuffer.h
+PreAvgDDCalMEBase.h
 Product.h
 RestoringBeamHelper.h
 RobustPreconditioner.h

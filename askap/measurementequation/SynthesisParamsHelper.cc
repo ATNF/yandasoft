@@ -1454,15 +1454,16 @@ namespace askap
     /// @param[in] params a shared pointer to the parameter container
     /// @param[in] parset a parset object to read the data from
     /// @param[in] srcName name of the source
+    /// @param[in] compName name of the component
     /// @param[in] baseKey a prefix added to parset parameter names (default
     /// is "sources.", wich matches the current layout of the parset file)
     void SynthesisParamsHelper::copyComponent(const askap::scimath::Params::ShPtr &params,
-           const LOFAR::ParameterSet &parset,
-           const std::string &srcName, const std::string &baseKey)
+           const LOFAR::ParameterSet &parset, const std::string &srcName,
+           const std::string &compName, const std::string &baseKey)
     {
        ASKAPDEBUGASSERT(params);
        // check the special case of predefined calibrators
-       const std::string calParamName = baseKey + srcName + ".calibrator";
+       const std::string calParamName = baseKey + compName + ".calibrator";
        if (parset.isDefined(calParamName)) {
            params->add("calibrator."+parset.getString(calParamName));
            ASKAPCHECK(params->completions("calibrator.").size() == 1,
@@ -1482,19 +1483,32 @@ namespace askap
        parameterList["shape.bmaj"] = false;
        parameterList["shape.bmin"] = false;
        parameterList["shape.bpa"] = false;
+       parameterList["flux.spectral_index"] = false;
+       parameterList["flux.ref_freq"] = false;
+
+       // DDCALTAG COMPTAG -- keep a list of the sources and give each a unique ID
+       const std::vector<std::string> sourceList = params->completions("sourceID.");
+       if (std::find(sourceList.begin(), sourceList.end(), srcName) == sourceList.end()) {
+           params->add("sourceID."+srcName, sourceList.size());
+       }
+
+       // DDCALTAG COMPTAG -- link this component to its source ID 
+       //ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
+       //    " to source "<<params->scalarValue("sourceID."+srcName));
+       params->add("source."+compName, params->scalarValue("sourceID."+srcName));
 
        // now iterate through all parameters
        for (std::map<std::string, bool>::const_iterator ci = parameterList.begin();
             ci!=parameterList.end(); ++ci) {
-            const std::string parName = baseKey+srcName+"."+ci->first;
+            const std::string parName = baseKey+compName+"."+ci->first;
             if (parset.isDefined(parName)) {
                 const double val = parset.getDouble(parName);
-                params->add(ci->first+"."+srcName, val);
+                params->add(ci->first+"."+compName, val);
             } else {
                 if (ci->second) {
                     ASKAPTHROW(AskapError, "Parameter "<<parName<<
-                           " is required to define the source "<<srcName<<
-                           ", baseKey="<<baseKey<<" or "<<baseKey + srcName +".calibrator parameter should be present");
+                           " is required to define the source "<<compName<<
+                           ", baseKey="<<baseKey<<" or "<<baseKey + compName +".calibrator parameter should be present");
                 }
             }
        }

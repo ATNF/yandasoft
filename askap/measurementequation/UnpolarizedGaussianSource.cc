@@ -45,7 +45,7 @@ namespace synthesis {
 /// @details 
 /// @param[in] name a name of the component. Will be added to all parameter
 ///            names (e.g. after direction.ra) 
-/// @param[in] flux flux density in Jy
+/// @param[in] flux flux density in Jy at ref_freq
 /// @param[in] ra offset in right ascension w.r.t. the current phase 
 /// centre (in radians)
 /// @param[in] dec offset in declination w.r.t. the current phase
@@ -53,23 +53,28 @@ namespace synthesis {
 /// @param[in] maj major axis in radians
 /// @param[in] min minor axis in radians
 /// @param[in] pa  position angle in radians
+/// @param[in] spectral_index spectral index in Hz
+/// @param[in] ref_freq referece frequency for parameter "flux"
 UnpolarizedGaussianSource::UnpolarizedGaussianSource(const std::string &name,
-        double flux, double ra, 
-        double dec, double maj, double min, double pa)  : 
-          UnpolarizedComponent<6>(casacore::RigidVector<double, 6>()) 
+        double flux, double ra,  double dec,
+        double maj, double min, double pa, double spectral_index, double ref_freq)  : 
+          UnpolarizedComponent<8>(casacore::RigidVector<double, 8>()) 
 {
-  casacore::RigidVector<double, 6> &params = parameters();
+  casacore::RigidVector<double, 8> &params = parameters();
   params(0)=flux;
   params(1)=ra;
   params(2)=dec;
   params(3)=maj;
   params(4)=min;
   params(5)=pa;
+  params(6)=spectral_index;
+  params(7)=ref_freq;
   
-  casacore::RigidVector<std::string, 6> &names = parameterNames();
-  const char *nameTemplates[] = {"flux.i","direction.ra","direction.dec",
-                 "shape.bmaj","shape.bmin","shape.bpa"};
-  for (size_t i=0;i<6;++i) {
+  casacore::RigidVector<std::string, 8> &names = parameterNames();
+ const char *nameTemplates[] = {"flux.i","direction.ra","direction.dec",
+                 "shape.bmaj","shape.bmin","shape.bpa",
+                 "flux.spectral_index","flux.ref_freq"};
+  for (size_t i=0;i<8;++i) {
        names(i)=std::string(nameTemplates[i])+name;
   }               
 }
@@ -102,10 +107,10 @@ void UnpolarizedGaussianSource::calculate(const casacore::RigidVector<casacore::
                     const casacore::Vector<casacore::Double> &freq,
                     std::vector<casacore::AutoDiff<double> > &result) const
 {
-  const casacore::RigidVector<double, 6> &params = parameters();
-  casacore::RigidVector<casacore::AutoDiff<double>, 6>  paramsAutoDiff;
-  for (casacore::uInt i=0; i<6; ++i) {
-       paramsAutoDiff(i)=casacore::AutoDiff<double>(params(i),6, i);
+  const casacore::RigidVector<double, 8> &params = parameters();
+  casacore::RigidVector<casacore::AutoDiff<double>, 8>  paramsAutoDiff;
+  for (casacore::uInt i=0; i<8; ++i) {
+       paramsAutoDiff(i)=casacore::AutoDiff<double>(params(i), 8, i);
   }
   calcGaussian(uvw,freq,paramsAutoDiff,result);
 }
@@ -121,15 +126,17 @@ template<typename T>
 void UnpolarizedGaussianSource::calcGaussian(
                     const casacore::RigidVector<casacore::Double, 3> &uvw,
                     const casacore::Vector<casacore::Double> &freq,
-                    const casacore::RigidVector<T, 6> &params,
+                    const casacore::RigidVector<T, 8> &params,
                     std::vector<T> &result)
 {
   const T ra=params(1);
   const T dec=params(2);
-  const T flux=params(0);
+  const T flux0=params(0);
   const T bmaj=params(3);
   const T bmin=params(4);
   const T bpa=params(5);
+  const T spectral_index=params(6);
+  const T ref_freq=params(7);
   const T n =  casacore::sqrt(T(1.0) - (ra*ra+dec*dec));
   const T delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
                                    (n-T(1.0)) * uvw(2))/casacore::C::c;
@@ -145,6 +152,9 @@ void UnpolarizedGaussianSource::calcGaussian(
        ci!=freq.end();++ci,++it)
       {
         const casacore::Double currentFreq = *ci;
+        // cannot use the spectral_index==0 conditional because templated type casacore::AutoDiff doesn't like it
+        //const T flux = spectral_index==0 ? flux0 : flux0 * pow(currentFreq/ref_freq,spectral_index);
+        const T flux = flux0 * pow(currentFreq/ref_freq,spectral_index);
         const T phase = delay * currentFreq;
         const T decorr = exp( - r * currentFreq * currentFreq);
         *it = flux * decorr * cos(phase);

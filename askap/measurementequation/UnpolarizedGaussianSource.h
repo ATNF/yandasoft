@@ -51,13 +51,13 @@ namespace synthesis {
 ///     The source is assumed unpolarized with a flat spectrum
 ///     (i.e. spectral index 0).
 /// @ingroup measurementequation  
-struct UnpolarizedGaussianSource : public UnpolarizedComponent<6> {
+struct UnpolarizedGaussianSource : public UnpolarizedComponent<8> {
 
   /// @brief construct the point source component
   /// @details 
   /// @param[in] name a name of the component. Will be added to all parameter
   ///            names (e.g. after direction.ra) 
-  /// @param[in] flux flux density in Jy
+  /// @param[in] flux flux density in Jy at ref_freq
   /// @param[in] ra offset in right ascension w.r.t. the current phase 
   /// centre (in radians)
   /// @param[in] dec offset in declination w.r.t. the current phase
@@ -65,8 +65,11 @@ struct UnpolarizedGaussianSource : public UnpolarizedComponent<6> {
   /// @param[in] maj major axis in radians
   /// @param[in] min minor axis in radians
   /// @param[in] pa  position angle in radians
+  /// @param[in] spectral_index spectral index in Hz
+  /// @param[in] ref_freq referece frequency for parameter "flux"
   UnpolarizedGaussianSource(const std::string &name, double flux, double ra, 
-           double dec, double maj, double min, double pa);
+           double dec, double maj, double min, double pa,
+           double spectral_index, double ref_freq);
   
   /// @brief calculate stokes I visibilities for this component
   /// @details This variant of the method calculates just the visibilities
@@ -92,7 +95,7 @@ struct UnpolarizedGaussianSource : public UnpolarizedComponent<6> {
                     const casacore::Vector<casacore::Double> &freq,
                     std::vector<casacore::AutoDiff<double> > &result) const; 
 
-  using UnpolarizedComponent<6>::calculate;
+  using UnpolarizedComponent<8>::calculate;
 private:
   
   /// @brief actual calculations
@@ -105,7 +108,7 @@ private:
   template<typename T>
   static void calcGaussian(const casacore::RigidVector<casacore::Double, 3> &uvw,
                     const casacore::Vector<casacore::Double> &freq,
-                    const casacore::RigidVector<T, 6> &params,
+                    const casacore::RigidVector<T, 8> &params,
                     std::vector<T> &result);
 };
 

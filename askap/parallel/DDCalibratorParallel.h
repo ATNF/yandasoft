@@ -1,12 +1,10 @@
-/// @file
+/// @file DDCalibratorParallel.cc
 ///
-/// CalibratorParallel: Support for parallel applications using the measurement
-/// equation classes. This code applies to calibration. I expect that this part
-/// will be redesigned in the future for a better separation of the algorithm
-/// from the parallel framework middleware. Current version is basically an
-/// adapted ImagerParallel clas
+/// DDCalibratorParallel: part of the specialised tool to do direction-dependent
+/// calibration. It is closely based on CalibratorParallel, with support for
+/// parallel applications using the measurement equation classes.
 ///
-/// @copyright (c) 2007 CSIRO
+/// @copyright (c) 2019 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -29,9 +27,10 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
+/// @author Daniel Mitchell <daniel.mitchell@csiro.au>
 ///
-#ifndef CALIBRATOR_PARALLEL_H
-#define CALIBRATOR_PARALLEL_H
+#ifndef DD_CALIBRATOR_PARALLEL_H
+#define DD_CALIBRATOR_PARALLEL_H
 
 // own includes
 #include <askapparallel/AskapParallel.h>
@@ -62,23 +61,23 @@ namespace askap
     ///
     /// The control parameters are specified in a parset file. For example:
     /// @code
-    ///  	Ccalibrator.datacolumnset           = DATACOL     # default is DATA
-    ///  	Ccalibrator.dataset                 = [data/spw_1/sim.ms]
-    ///  	#Feed                           = 5
-    ///
-    ///  	Ccalibrator.sources.names                =       [10uJy]
-    ///  	Ccalibrator.sources.10uJy.direction       =       [12h30m00.000, -45.00.00.000, J2000]
-    ///  	Ccalibrator.sources.10uJy.model   =       10uJy.model
-    ///
-    ///  	Ccalibrator.gridder                          = WProject
-    ///  	Ccalibrator.gridder.WProject.wmax            = 8000
-    ///  	Ccalibrator.gridder.WProject.nwplanes        = 64
-    ///  	Ccalibrator.gridder.WProject.oversample     = 1
-    ///  	Ccalibrator.gridder.WProject.cutoff         = 0.001
+    ///    Cddcalibrator.datacolumnset                = DATACOL     # default is DATA
+    ///    Cddcalibrator.dataset                      = [data/spw_1/sim.ms]
+    ///    #Feed                                      = 5
+    ///    
+    ///    Cddcalibrator.sources.names                = [10uJy]
+    ///    Cddcalibrator.sources.10uJy.direction      = [12h30m00.000, -45.00.00.000, J2000]
+    ///    Cddcalibrator.sources.10uJy.model          = 10uJy.model
+    ///    
+    ///    Cddcalibrator.gridder                      = WProject
+    ///    Cddcalibrator.gridder.WProject.wmax        = 8000
+    ///    Cddcalibrator.gridder.WProject.nwplanes    = 64
+    ///    Cddcalibrator.gridder.WProject.oversample  = 1
+    ///    Cddcalibrator.gridder.WProject.cutoff      = 0.001
     ///
     /// @endcode
     /// @ingroup parallel
-    class CalibratorParallel : public MEParallelApp
+    class DDCalibratorParallel : public MEParallelApp
     {
   public:
 
@@ -89,7 +88,7 @@ namespace askap
       /// application specific information is passed on the command line.
       /// @param[in] comms communication object
       /// @param[in] parset ParameterSet for inputs
-      CalibratorParallel(askap::askapparallel::AskapParallel& comms,
+      DDCalibratorParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset);
 
       /// @brief Calculate the normal equations (runs in the prediffers)
@@ -107,7 +106,7 @@ namespace askap
       /// @details The solution (calibration parameters) is written into
       /// an external file in the parset file format.
       /// @param[in] postfix a string to be added to the file name
-	  virtual void writeModel(const std::string &postfix = std::string());
+      virtual void writeModel(const std::string &postfix = std::string());
 
       /// @brief helper method to extract next chunk flag
       /// @details This method is a reverse operation to that of setNextChunkFlag. It
@@ -128,13 +127,6 @@ namespace askap
       /// is sufficient.
       /// @param[in] parset ParameterSet for inputs
       void init(const LOFAR::ParameterSet& parset);
-
-      /// @brief Generates a map with LSQR solver parameters, from a given parset.
-      /// @param[in] parset Input parset.
-      /// @note This static method is also called from BPCalibratorParallel and DDCalibratorParallel,
-      /// thus introducing horizontal dependency.
-      /// @return Map with LSQR solver parameters.
-      static std::map<std::string, std::string> getLSQRSolverParameters(const LOFAR::ParameterSet& parset);
 
       /// @brief Performs phase rotation.
       /// @note To be called after all cycles completed in the major loop.
@@ -240,12 +232,6 @@ namespace askap
       /// is positive. It is expected to be used with substitution
       casacore::uInt itsStartChan;
 
-      /// @brief flag to treat gains as beam-independent
-      bool itsBeamIndependentGains;
-
-      /// @brief flag to treat leakages as beam-independent
-      bool itsBeamIndependentLeakages;
-
       /// @brief flag to set gain amplitudes to unity before output to file
       bool itsNormaliseGains;
 
@@ -277,9 +263,9 @@ namespace askap
       /// avoid code dublication as well as for the case if we ever decide to trim the pre-aveaging buffer
       /// to exclude fixed parameters.
       /// @param[in] nAnt currently expected number of antennas in the buffer
-      /// @param[in] nBeam currently expected number of beams in the buffer
+      /// @param[in] nCal currently expected number of separate calibrators in the buffer -- same as nBeam in cCal
       /// @param[in] nChan currently expected number of frequency channels in the buffer
-      void updatePreAvgBufferEstimates(const casacore::uInt nAnt, const casacore::uInt nBeam, const casacore::uInt nChan = 1);
+      void updatePreAvgBufferEstimates(const casacore::uInt nAnt, const casacore::uInt nCal, const casacore::uInt nChan = 1);
 
       /// @brief maximum number of antennas for pre-averging
       /// @details It is handy to cache the number of antennas expected to be dealt with in pre-averaging.
@@ -287,11 +273,11 @@ namespace askap
       /// change from integration to integration.
       casacore::uInt itsMaxNAntForPreAvg;
 
-      /// @brief maximum number of beams for pre-averging
-      /// @details It is handy to cache the number of beams expected to be dealt with in pre-averaging.
+      /// @brief maximum number of separate calibrators for pre-averging
+      /// @details It is handy to cache the number of separate calibrators expected to be dealt with in pre-averaging.
       /// Deducing it from the data on the fly works too, but does not account for the case when the number of rows
       /// change from integration to integration.
-      casacore::uInt itsMaxNBeamForPreAvg;
+      casacore::uInt itsMaxNCalForPreAvg;
 
       /// @brief maximum number of channels for pre-averging
       /// @details It is handy to cache the number of channels expected to be dealt with in pre-averaging.
@@ -318,4 +304,4 @@ namespace askap
 
   }
 }
-#endif // #ifndef CALIBRATOR_PARALLEL_H
+#endif // #ifndef DD_CALIBRATOR_PARALLEL_H
