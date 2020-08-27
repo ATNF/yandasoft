@@ -30,8 +30,8 @@
 // System includes
 #include <stdexcept>
 #include <iostream>
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <askap/utils/CommandLineParser.h>
 
 #include <askap/gridding/SphFuncVisGridder.h>

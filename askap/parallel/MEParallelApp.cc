@@ -32,12 +32,12 @@
 
 // logging stuff
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
 // own includes
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/parallel/MEParallelApp.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/gridding/VisGridderFactory.h>

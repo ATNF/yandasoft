@@ -32,7 +32,7 @@
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>
 #include <askap/scimath/fitting/Params.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 namespace askap {
     namespace cp {

@@ -35,14 +35,14 @@
 
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <vector>
 #include <map>

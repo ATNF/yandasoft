@@ -30,21 +30,20 @@
 #include <cmath>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Constants.h>
-#include <fft/FFTWrapper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 //ASKAPSoft package includes
 #include <askap/gridding/WProjectVisGridder.h>
 #include <askap/gridding/SupportSearcher.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/scimath/utils/ImageUtils.h>
-#include <fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 // Local package includes
 #include "AltWProjectVisGridder.h"
 #include <boost/lexical_cast.hpp>

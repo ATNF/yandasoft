@@ -25,9 +25,9 @@
 #include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 #include <askap/gridding/AWProjectVisGridder.h>
 #include <askap/scimath/fft/FFTWrapper.h>

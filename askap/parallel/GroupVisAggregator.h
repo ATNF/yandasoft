@@ -33,7 +33,7 @@
 #define GROUP_VIS_AGGREGATOR_H
 
 #include <askap/measurementequation/IVisCubeUpdate.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 #include <boost/shared_ptr.hpp>
 

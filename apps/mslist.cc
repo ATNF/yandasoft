@@ -34,7 +34,7 @@
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 //#include <casacore/ms/MSOper/MSSummary.h>
 #include <casacore/ms/MSOper/MSLister.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // include our copy of MSSummary.cc here until we can convince casacore to allow longer field names
 //# MSSummary.cc:  Helper class for applications listing a MeasurementSet

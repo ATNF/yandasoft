@@ -44,7 +44,7 @@
 #define ASKAP_SYNTHESIS_BP_CALIBRATOR_PARALLEL_H
 
 // own includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/parallel/MEParallelApp.h>
 #include <Common/ParameterSet.h>
 #include <askap/gridding/IVisGridder.h>
@@ -52,7 +52,7 @@
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/calibaccess/ICalSolutionSource.h>
 #include <askap/scimath/utils/MultiDimPosIter.h>
-#include <askap/IndexConverter.h>
+#include <askap/askap/IndexConverter.h>
 
 
 // std includes

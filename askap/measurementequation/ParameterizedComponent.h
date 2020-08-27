@@ -36,7 +36,7 @@
 
 // own includes
 #include <askap/measurementequation/IParameterizedComponent.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // std includes
 #include <string>

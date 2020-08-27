@@ -35,8 +35,8 @@
 
 #include <askap/measurementequation/ImageParamsHelper.h>
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 
 namespace askap {
 

@@ -38,18 +38,18 @@
 #include "askap/askap_synthesis.h"
 
 // ASKAPsoft includes
-#include "askap/AskapLogging.h"
-#include "askap/AskapError.h"
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/fitting/Params.h>
-#include "askap/StatReporter.h"
+#include <askap/askap/StatReporter.h>
 #include <casacore/casa/Logging/LogIO.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/Log4cxxLogSink.h>
 #include <askap/utils/CommandLineParser.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>

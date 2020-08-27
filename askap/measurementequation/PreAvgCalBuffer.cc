@@ -36,7 +36,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/measurementequation/PreAvgCalBuffer.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 

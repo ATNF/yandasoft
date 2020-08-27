@@ -37,7 +37,7 @@
 #include <askap/gridding/IVisGridder.h>
 
 
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <casacore/measures/Measures/MFrequency.h>
 
 namespace askap

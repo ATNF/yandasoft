@@ -38,15 +38,15 @@
 
 
 // own includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapUtil.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
 #include <Common/ParameterSet.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/Log4cxxLogSink.h>
 #include <askap/gridding/UVPattern.h>
 #include <askap/scimath/utils/ImageUtils.h>
 // just for logging
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 // command line parser
 #include <askap/utils/CommandLineParser.h>

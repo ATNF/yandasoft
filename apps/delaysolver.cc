@@ -25,18 +25,18 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 
-#include <dataaccess/TableDataSource.h>
-#include <askap_accessors.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapUtil.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/askap_accessors.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
 ASKAP_LOGGER(logger, "");
 
-#include <askap/AskapError.h>
-#include <askap/Application.h>
-#include <dataaccess/SharedIter.h>
-#include <dataaccess/TableManager.h>
-#include <dataaccess/IDataConverterImpl.h>
-#include <utils/PolConverter.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/Application.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/TableManager.h>
+#include <askap/dataaccess/IDataConverterImpl.h>
+#include <askap/scimath/utils/PolConverter.h>
 
 
 #include <casacore/measures/Measures/MFrequency.h>

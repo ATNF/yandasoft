@@ -37,8 +37,8 @@
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/STLIO.h>
 
-#include <fft/FFTWrapper.h>
-#include <askap/AskapLogging.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(decfistalogger, ".deconvolution.fista");
 
 #include <askap/deconvolution/DeconvolverFista.h>

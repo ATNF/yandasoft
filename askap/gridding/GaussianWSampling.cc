@@ -41,10 +41,10 @@
 ///
 
 #include <askap/gridding/GaussianWSampling.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.gaussianwsampling");
 
 

@@ -30,14 +30,14 @@
 #include <cmath>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Constants.h>
-#include <fft/FFTWrapper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/profile/AskapProfiler.h>
 
 // Local package includes
 #include <askap/gridding/WProjectVisGridder.h>

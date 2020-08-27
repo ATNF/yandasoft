@@ -34,7 +34,7 @@
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/parallel/SynParallel.h>
 #include <askap/simulation/Simulator.h>
 #include <askap/calibaccess/ICalSolutionConstSource.h>

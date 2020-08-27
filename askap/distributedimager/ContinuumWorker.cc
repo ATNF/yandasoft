@@ -43,8 +43,8 @@
 #include "boost/shared_ptr.hpp"
 #include "boost/filesystem.hpp"
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/fitting/Equation.h>
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/ImagingNormalEquations.h>

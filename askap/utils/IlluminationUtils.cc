@@ -40,17 +40,17 @@
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <askap/gridding/BasicCompositeIllumination.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>
-#include <fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 
 #include <Common/ParameterSet.h>
 
 
 #include <askap/gridding/UVPattern.h>
 
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
 #include <casacore/casa/Logging/LogIO.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/Log4cxxLogSink.h>
 
 namespace askap {
 namespace accessors{}}

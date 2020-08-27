@@ -35,7 +35,7 @@
 #include <askap/messages/IMessage.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobIStream.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 // casacore
 #include <casacore/casa/Quanta/MVDirection.h>

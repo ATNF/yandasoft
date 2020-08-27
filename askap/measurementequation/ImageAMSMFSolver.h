@@ -30,7 +30,7 @@
 #ifndef SYNIMAGEAMSMFSSOLVER_H_
 #define SYNIMAGEAMSMFSSOLVER_H_
 
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <boost/shared_ptr.hpp>
 

@@ -49,17 +49,17 @@
 
 // logging stuff
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
 // own includes
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
-#include <askapparallel/BlobIBufMW.h>
-#include <askapparallel/BlobOBufMW.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askapparallel/BlobIBufMW.h>
+#include <askap/askapparallel/BlobOBufMW.h>
 #include <Blob/BlobIStream.h>
 #include <Blob/BlobOStream.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
@@ -79,7 +79,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/gridding/VisGridderFactory.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <askap/calibaccess/CalParamNameHelper.h>
 #include <askap/calibaccess/CalibAccessFactory.h>

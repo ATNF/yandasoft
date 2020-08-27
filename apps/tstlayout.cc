@@ -36,14 +36,14 @@
 
 // Askapsoft includes
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/utils/CommandLineParser.h>
 #include <askap/simulation/Simulator.h>
-#include <askapparallel/MPIComms.h>
+#include <askap/askapparallel/MPIComms.h>
 #include <casacore/casa/Quanta/MVDirection.h>
 #include <casacore/casa/Quanta/MVAngle.h>
 #include <casacore/casa/Arrays/Vector.h>
@@ -55,7 +55,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/measures/Measures/MPosition.h>
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
-#include <utils/EigenDecompose.h>
+#include <askap/scimath/utils/EigenDecompose.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 
 using namespace askap;

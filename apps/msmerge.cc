@@ -38,28 +38,28 @@
 #include <iterator>
 
 // ASKAPsoft includes
-#include "askap/AskapError.h"
-#include "askap/AskapLogging.h"
-#include "askap/StatReporter.h"
-#include "askap/Log4cxxLogSink.h"
-#include "boost/shared_ptr.hpp"
-#include "boost/exception/all.hpp"
-#include "boost/program_options.hpp"
-#include "casacore/casa/OS/File.h"
-#include "casacore/casa/aips.h"
-#include "casacore/casa/Quanta.h"
-#include "casacore/casa/Arrays/Vector.h"
-#include "casacore/casa/Arrays/Cube.h"
-#include "casacore/casa/Arrays/MatrixMath.h"
-#include "casacore/tables/Tables/TableDesc.h"
-#include "casacore/tables/Tables/SetupNewTab.h"
-#include "casacore/tables/DataMan/IncrementalStMan.h"
-#include "casacore/tables/DataMan/StandardStMan.h"
-#include "casacore/tables/DataMan/TiledShapeStMan.h"
-//#include "casacore/tables/DataMan/DataManAccessor.h"
-#include "casacore/ms/MeasurementSets/MeasurementSet.h"
-#include "casacore/ms/MeasurementSets/MSColumns.h"
-#include "casacore/casa/Quanta/MVTime.h"
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/StatReporter.h>
+#include <askap/askap/Log4cxxLogSink.h>
+#include <boost/shared_ptr.hpp>
+#include <boost/exception/all.hpp>
+#include <boost/program_options.hpp>
+#include <casacore/casa/OS/File.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Quanta.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/tables/Tables/TableDesc.h>
+#include <casacore/tables/Tables/SetupNewTab.h>
+#include <casacore/tables/DataMan/IncrementalStMan.h>
+#include <casacore/tables/DataMan/StandardStMan.h>
+#include <casacore/tables/DataMan/TiledShapeStMan.h>
+//#include <casacore/tables/DataMan/DataManAccessor.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MeasurementSets/MSColumns.h>
+#include <casacore/casa/Quanta/MVTime.h>
 
 ASKAP_LOGGER(logger, ".msmerge");
 

@@ -33,7 +33,7 @@
 #include <askap/askap_synthesis.h>
 
 #include <casacore/casa/aips.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(decmonlogger, ".deconvolution.monitor");
 
 #include <askap/deconvolution/DeconvolverMonitor.h>

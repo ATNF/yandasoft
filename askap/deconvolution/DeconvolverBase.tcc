@@ -36,8 +36,8 @@
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
-#include <fft/FFTWrapper.h>
-#include <askap/AskapLogging.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(decbaselogger, ".deconvolution.base");
 
 #include <askap/deconvolution/DeconvolverBase.h>

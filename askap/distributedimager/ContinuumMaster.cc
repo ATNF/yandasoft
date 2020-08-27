@@ -34,9 +34,9 @@
 #include <vector>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/Params.h>

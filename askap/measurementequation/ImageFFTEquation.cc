@@ -22,10 +22,10 @@
 ///
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 //#include <fft/FFTWrapper.h>
 
 #include <askap/dataaccess/SharedIter.h>
@@ -38,7 +38,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 #include <askap/scimath/fitting/ImagingNormalEquations.h>
 #include <askap/scimath/fitting/DesignMatrix.h>
 #include <askap/scimath/fitting/Axes.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <casacore/scimath/Mathematics/RigidVector.h>
 

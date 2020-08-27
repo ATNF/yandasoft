@@ -24,19 +24,19 @@
 ///
 
 
-#include <dataaccess/TableDataSource.h>
-#include <askap_accessors.h>
-#include <askap/AskapLogging.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/askap_accessors.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, "");
 
-#include <askap/AskapError.h>
-#include <dataaccess/SharedIter.h>
-#include <utils/PolConverter.h>
+#include <askap/askap/AskapError.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/scimath/utils/PolConverter.h>
 
-#include <dataaccess/TableManager.h>
-#include <dataaccess/IDataConverterImpl.h>
-#include <dataaccess/ParsetInterface.h>
-#include <fft/FFTWrapper.h>
+#include <askap/dataaccess/TableManager.h>
+#include <askap/dataaccess/IDataConverterImpl.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 #include <casacore/images/Images/ImageFITSConverter.h>
 #include <casacore/images/Images/PagedImage.h>
 
@@ -46,7 +46,7 @@ ASKAP_LOGGER(logger, "");
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
-#include <utils/ImageUtils.h>
+#include <askap/scimath/utils/ImageUtils.h>
 #include <casacore/casa/Arrays/Cube.h>
 
 #include <Common/ParameterSet.h>

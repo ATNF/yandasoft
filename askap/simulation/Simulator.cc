@@ -33,11 +33,11 @@
 
 // ASKAPsoft includes
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <casacore/ms/MSOper/MSDerivedValues.h>
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>

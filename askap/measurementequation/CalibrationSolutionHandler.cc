@@ -30,7 +30,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/measurementequation/CalibrationSolutionHandler.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 namespace askap {
 

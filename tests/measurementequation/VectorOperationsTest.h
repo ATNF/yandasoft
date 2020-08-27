@@ -37,7 +37,7 @@
 #include <casacore/scimath/Mathematics/AutoDiff.h>
 #include <casacore/casa/BasicSL/Complex.h>
 #include <cppunit/extensions/HelperMacros.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/fitting/ComplexDiff.h>
 
 

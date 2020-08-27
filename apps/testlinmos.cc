@@ -44,13 +44,13 @@
 
 
 // ASKAPsoft includes
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/Log4cxxLogSink.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/Params.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/imageaccess/IImageAccess.h>
 #include <boost/shared_ptr.hpp>
 

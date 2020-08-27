@@ -42,7 +42,7 @@ using namespace askap::accessors;
 #include <askap/dataaccess/FakeSingleStepIterator.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 /// @brief constructor
 /// @details This constructor initializes a fake iterator. Actual measurement

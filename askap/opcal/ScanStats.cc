@@ -40,8 +40,8 @@
 #include <askap/dataaccess/IConstDataIterator.h>
 #include <askap/dataaccess/TableConstDataIterator.h>
 
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 
 ASKAP_LOGGER(logger, ".ScanStats");
 

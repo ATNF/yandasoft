@@ -43,7 +43,7 @@
 #include "RestoringBeamHelperTest.h"
 #include "VisMetaDataStatsTest.h"
 
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 int main( int argc, char **argv)
 {

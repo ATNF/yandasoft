@@ -39,14 +39,14 @@
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <casacore/scimath/Fitting/LinearFitSVD.h>
 
 
 // logging stuff
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
 #include <casacore/casa/OS/Timer.h>

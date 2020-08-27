@@ -41,7 +41,7 @@
 #include <askap/dataaccess/IDataIterator.h>
 #include <askap/parallel/ParallelAccessor.h>
 #include <askap/dataaccess/SharedIter.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 namespace askap {
 

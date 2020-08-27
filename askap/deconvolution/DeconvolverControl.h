@@ -40,8 +40,8 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <boost/shared_ptr.hpp>
 #include <Common/ParameterSet.h>
-#include <askap/ISignalHandler.h>
-#include <askap/SignalCounter.h>
+#include <askap/askap/ISignalHandler.h>
+#include <askap/askap/SignalCounter.h>
 
 #include <askap/deconvolution/DeconvolverState.h>
 

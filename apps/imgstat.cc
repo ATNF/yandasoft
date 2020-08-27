@@ -32,7 +32,7 @@
 #include <casacore/images/Images/SubImage.h>
 #include <casacore/images/Images/ImageStatistics.h>
 #include <askap/utils/CommandLineParser.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>

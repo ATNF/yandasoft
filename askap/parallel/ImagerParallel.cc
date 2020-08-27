@@ -36,14 +36,14 @@
 #include <askap/parallel/ImagerParallel.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 // need it just for null deleter
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/dataaccess/DataAccessError.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
@@ -62,7 +62,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/ImageCleaningSolver.h>
 #include <askap/calibaccess/CalibAccessFactory.h>
 #include <askap/measurementequation/CalibrationApplicatorME.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 #include <askap/parallel/GroupVisAggregator.h>
 #include <askap/parallel/AdviseParallel.h>
 

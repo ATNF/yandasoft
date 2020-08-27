@@ -35,7 +35,7 @@
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
 
 // Package level header file
-#include "askap/askap_synthesis.h"
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <stdexcept>
@@ -43,18 +43,18 @@
 #include <csignal>
 
 // ASKAPsoft includes
-#include "askap/Application.h"
-#include "askap/AskapLogging.h"
-#include "askap/AskapError.h"
-#include "askap/SignalManagerSingleton.h"
-#include "askap/SignalCounter.h"
-#include "askap/StatReporter.h"
-#include "boost/scoped_ptr.hpp"
+#include <askap/askap/Application.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/SignalManagerSingleton.h>
+#include <askap/askap/SignalCounter.h>
+#include <askap/askap/StatReporter.h>
+#include <boost/scoped_ptr.hpp>
 #include <askap/parallel/ImagerParallel.h>
 #include <askap/measurementequation/MEParsetInterface.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/fitting/Params.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 
 ASKAP_LOGGER(logger, ".cimager");
