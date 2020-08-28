@@ -27,7 +27,7 @@
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/askap_accessors.h>
 #include <askap/askap/AskapLogging.h>
-ASKAP_LOGGER(logger, "");
+ASKAP_LOGGER(logger, ".extractdata");
 
 #include <askap/askap/AskapError.h>
 #include <askap/dataaccess/SharedIter.h>

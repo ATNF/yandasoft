@@ -384,7 +384,10 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger,
                         "Restored image will have primary beam corrected noise (no equalisation)");
                 }
-         
+                // Save unnormalised PSF
+                saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
+                planeIter.position());
+                
                 // Do the preconditioning
                 psfWorkArray = psfZeroArray;
                 doPreconditioning(psfWorkArray,dirtyArray,pcfArray);

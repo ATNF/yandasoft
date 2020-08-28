@@ -63,25 +63,31 @@ namespace synthesis {
 /// @param[in] minFWHM full width at half maximum of the minor axis in the uv-plane
 /// (given as a fraction of the uv-cell size).
 /// @param[in] pa position angle in radians
+/// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
+/// @param[in] tolerance, the fractional tolerance in fitted beam size when using isPsfSize=true
 /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
 /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
 /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
 /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
 GaussianTaperPreconditioner::GaussianTaperPreconditioner(double majFWHM,
-    double minFWHM, double pa, bool isPsfSize, double cutoff) :
-     GaussianTaperCache(majFWHM, minFWHM, pa),itsFitBeam(isPsfSize),itsCutoff(cutoff) {}
+    double minFWHM, double pa, bool isPsfSize, double cutoff, double tolerance) :
+     GaussianTaperCache(majFWHM, minFWHM, pa),itsFitBeam(isPsfSize),itsCutoff(cutoff),
+     itsTolerance(tolerance) {}
 
 /// @brief set up the preconditioner for the circularly symmetric taper
 /// @details This constructor just sets the taper size, same for both axis.
 /// The size is full width at half maximum expressed in the units of uv-cell.
 /// @param[in] fwhm full width at half maximum of the taper in the uv-plane
 /// (given as a fraction of the uv-cell size).
+/// @param[in] cutoff, the cutoff used to determine the support area for beam fitting
+/// @param[in] tolerance, the fractional tolerance in fitted beam size when using isPsfSize=true
 /// @note Gaussian taper is set up in the uv-space. Constructors accept sizes given as FWHM expressed
 /// as fractions of uv-cell size. The relation between FWHMs in fourier and image plane is
 /// uvFWHM = (Npix*cellsize / FWHM) * (4*log(2)/pi), where Npix is the number of pixels
 /// cellsize and FWHM are image-plane cell size and FWHM in angular units.
-GaussianTaperPreconditioner::GaussianTaperPreconditioner(double fwhm, bool isPsfSize, double cutoff) :
-     GaussianTaperCache(fwhm),itsFitBeam(isPsfSize),itsCutoff(cutoff) { }
+GaussianTaperPreconditioner::GaussianTaperPreconditioner(double fwhm, bool isPsfSize,
+    double cutoff, double tolerance) :
+     GaussianTaperCache(fwhm),itsFitBeam(isPsfSize),itsCutoff(cutoff),itsTolerance(tolerance) { }
 
 /// @brief Clone this object
 /// @return shared pointer to a cloned copy
@@ -112,14 +118,16 @@ bool GaussianTaperPreconditioner::doPreconditioning(casacore::Array<float>& psf,
   casacore::Array<float> origPsf;
   if (itsFitBeam) {
        origPsf = psf;
+       ASKAPLOG_DEBUG_STR(logger, "Tuning taper to achieve final resolution");
   }
   applyTaper(psf);
 
   bool converged = !itsFitBeam;
   int count = 20;
   while (!converged && count-- >0) {
+      ASKAPLOG_DEBUG_STR(logger, "Taper tuning iteration: "<<20-count);
       casacore::Vector<double> beam = fitPsf(psf);
-      float tolerance = 0.005; // 0.5% - make parameter?
+      float tolerance = itsTolerance;
       converged = tuneTaper(beam,tolerance);
       if (!converged) {
           psf = origPsf;
@@ -164,8 +172,9 @@ casacore::Vector<double> GaussianTaperPreconditioner::fitPsf(casacore::Array<flo
          ASKAPCHECK(psf.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
                     psf.shape());
     }
-    //
-    casacore::Matrix<float> psfSub = scimath::PaddingUtils::centeredSubArray(psf,newShape);
+    // avoid making a reference copy since we rescale in next step
+    casacore::Matrix<float> psfSub;
+    psfSub = scimath::PaddingUtils::centeredSubArray(psf,newShape);
 
     // normalise to 1
     const float maxPSF = casacore::max(psfSub);

@@ -46,6 +46,7 @@
 
 
 #include <askap/imageaccess/IImageAccess.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <boost/shared_ptr.hpp>
 
 namespace askap
@@ -66,6 +67,17 @@ namespace askap
         /// @note The key parameter describing the image handler is "imagetype". By default, the
         /// casa image handler is created (however, a call to this method is still required)
         static void setUpImageHandler(const LOFAR::ParameterSet &parset);
+
+        /// @brief setup image handler
+        /// @details This method uses the factory to setup a helper class handling the
+        /// operations with images (default is casa). It is necessary to call this method
+        /// at least once before any read or write operation can happen.
+        /// @param[in] parset a parset file containing parameters describing which image handler to use
+        /// @param[in] comms MPI communicator, required when collective I/O is specified in parset
+        /// @note The key parameter describing the image handler is "imagetype". By default, the
+        /// casa image handler is created (however, a call to this method is still required)
+        static void setUpImageHandler(const LOFAR::ParameterSet &parset,
+                                        askap::askapparallel::AskapParallel &comms);
 
         /// @brief configure default frequency frame
         /// @details All code workes in a single frequency frame (convertions are done, if
@@ -115,11 +127,12 @@ namespace askap
         /// @param[in] params a shared pointer to the parameter container
         /// @param[in] parset a parset object to read the data from
         /// @param[in] srcName name of the source
+        /// @param[in] compName name of the component
         /// @param[in] baseKey a prefix added to parset parameter names (default
         /// is "sources.", wich matches the current layout of the parset file)
         static void copyComponent(const askap::scimath::Params::ShPtr &params,
-                 const LOFAR::ParameterSet &parset,
-                 const std::string &srcName, const std::string &baseKey = "sources.");
+                 const LOFAR::ParameterSet &parset, const std::string &srcName,
+                 const std::string &compName, const std::string &baseKey = "sources.");
 
         /// @brief check whether parameter list defines at least one component
         /// @details Parameter lists can have a mixture of components and

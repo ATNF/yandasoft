@@ -198,6 +198,9 @@ namespace askap
       /// @brief return the current grid
       /// @details essentially just returns the same grid that storeGrid can write out
       inline const casacore::Array<casacore::Complex> getGrid() const {return itsGrid[0];}
+
+      void setSourceIndex(casacore::uInt index) const { itsSourceIndex = index; }
+
   protected:
       /// @brief helper method to print CF cache stats in the log
       /// @details This method is largely intended for debugging. It writes down
@@ -442,7 +445,6 @@ protected:
       /// The grid is stored as a cube as well so we can index into that as well.
       std::vector<casacore::Array<casacore::Complex> > itsGrid;
 
-
   private:
 
       /// @brief return the table name to store the result to
@@ -588,6 +590,10 @@ protected:
 
       /// @brief keep track of current image channel and index into itsGrid
       int itsImageChan, itsGridIndex;
+
+      /// @brief number of full-samples to offset buffer for degridded model data.
+      /// Used in direction-dependent calibration
+      mutable int itsSourceIndex;
 
     };
   }

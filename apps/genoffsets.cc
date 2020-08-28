@@ -26,7 +26,7 @@
 
 
 #include <askap/askap/AskapLogging.h>
-ASKAP_LOGGER(logger, "genoffsets");
+ASKAP_LOGGER(logger, ".genoffsets");
 
 #include <askap/askap/AskapError.h>
 #include <askap/dataaccess/ParsetInterface.h>

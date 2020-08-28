@@ -29,7 +29,7 @@
 #include <askap/askap/AskapLogging.h>
 #include <casacore/casa/Logging/LogIO.h>
 #include <askap/askap/Log4cxxLogSink.h>
-ASKAP_LOGGER(logger, "");
+ASKAP_LOGGER(logger, ".tparalleliterator");
 
 #include <askap/askap/AskapError.h>
 #include <askap/dataaccess/SharedIter.h>

@@ -1,6 +1,6 @@
 /// @file
 /// @brief Common functionality for all mosaicing gridders
-/// @details AProjectGridderBase class encapsulates common operations for all mosaicing 
+/// @details AProjectGridderBase class encapsulates common operations for all mosaicing
 /// gridders: CF cache support and recalculation statistics, support for the buffer in the uv-space,
 /// and the factory of illumination pattrns.
 ///
@@ -54,14 +54,14 @@ using namespace askap::accessors;
 /// @param[in] maxFields Maximum number of fields allowed
 /// @param[in] pointingTol Pointing tolerance in radians
 /// @param[in] paTol Parallactic angle tolerance in radians
-/// @param[in] freqTol Frequency tolerance (relative, threshold for df/f), negative value 
-///        means the frequency axis is ignored 
-AProjectGridderBase::AProjectGridderBase(const int maxFeeds, const int maxFields, 
+/// @param[in] freqTol Frequency tolerance (relative, threshold for df/f), negative value
+///        means the frequency axis is ignored
+AProjectGridderBase::AProjectGridderBase(const int maxFeeds, const int maxFields,
                      const double pointingTol, const double paTol, const double freqTol) :
           itsPointingTolerance(pointingTol),  itsParallacticAngleTolerance(paTol),
           itsLastField(-1), itsCurrentField(0),
           itsDone(maxFeeds, maxFields, false), itsPointings(maxFeeds, maxFields, casacore::MVDirection()),
-          itsNumberOfCFGenerations(0), itsNumberOfIterations(0), 
+          itsNumberOfCFGenerations(0), itsNumberOfIterations(0),
           itsNumberOfCFGenerationsDueToPA(0), itsCFParallacticAngle(0),
           itsNumberOfCFGenerationsDueToFreq(0), itsFrequencyTolerance(freqTol),
           itsCFInvalidDueToPA(false), itsCFInvalidDueToFreq(false), itsSlopes(2, maxFeeds, maxFields,0.)
@@ -75,15 +75,15 @@ AProjectGridderBase::AProjectGridderBase(const int maxFeeds, const int maxFields
 /// @details It is needed because we have a shared pointer as a data member and want to
 /// clone the object instead of copying the reference as if it would be by default.
 /// @param[in] other input object
-AProjectGridderBase::AProjectGridderBase(const AProjectGridderBase &other) : 
+AProjectGridderBase::AProjectGridderBase(const AProjectGridderBase &other) :
     IVisGridder(other),
     itsPointingTolerance(other.itsPointingTolerance),
     itsParallacticAngleTolerance(other.itsParallacticAngleTolerance),
     itsLastField(other.itsLastField), itsCurrentField(other.itsCurrentField),
-    itsDone(other.itsDone.copy()), itsPointings(other.itsPointings.copy()), 
+    itsDone(other.itsDone.copy()), itsPointings(other.itsPointings.copy()),
     itsNumberOfCFGenerations(other.itsNumberOfCFGenerations),
     itsNumberOfIterations(other.itsNumberOfIterations),
-    itsNumberOfCFGenerationsDueToPA(other.itsNumberOfCFGenerationsDueToPA), 
+    itsNumberOfCFGenerationsDueToPA(other.itsNumberOfCFGenerationsDueToPA),
     itsCFParallacticAngle(other.itsCFParallacticAngle),
     itsNumberOfCFGenerationsDueToFreq(other.itsNumberOfCFGenerationsDueToFreq),
     itsFrequencyTolerance(other.itsFrequencyTolerance),
@@ -95,7 +95,7 @@ AProjectGridderBase::AProjectGridderBase(const AProjectGridderBase &other) :
       itsPattern.reset(new UVPattern(*(other.itsPattern)));
   }
 }
-  
+
 /// @brief destructor
 /// @details We print cache usage stats here. No specific destruction is required for any data member
 AProjectGridderBase::~AProjectGridderBase()
@@ -107,16 +107,16 @@ AProjectGridderBase::~AProjectGridderBase()
                ++nUsed;
             }
       }
-  }  
+  }
   if (itsDone.nelements()) {
       ASKAPLOG_INFO_STR(logger, "   AProjectGridderBase: CF cache memory utilisation (last iteration): "<<
               double(nUsed)/double(itsDone.nrow()*itsDone.ncolumn())*100<<"% of maxfeed*maxfield");
   }
-  
+
   if (itsNumberOfIterations != 0) {
       ASKAPLOG_INFO_STR(logger, "   AProjectGridderBase: CFs were rebuilt "<<
              itsNumberOfCFGenerations<<" times for "<<itsNumberOfIterations<<" iterations");
-      ASKAPLOG_INFO_STR(logger, "   Last iteration worked with "<<nUsed<<" CFs");        
+      ASKAPLOG_INFO_STR(logger, "   Last iteration worked with "<<nUsed<<" CFs");
       if (itsNumberOfCFGenerations != 0) {
           ASKAPLOG_INFO_STR(logger, "   Parallactic angle change caused "<<
                   itsNumberOfCFGenerationsDueToPA<<" of those rebuilds ("<<
@@ -126,8 +126,8 @@ AProjectGridderBase::~AProjectGridderBase()
                   itsNumberOfCFGenerationsDueToFreq<<" of those rebuilds ("<<
                   double(itsNumberOfCFGenerationsDueToFreq)/double(itsNumberOfCFGenerations)*100<<
                   " %)");
-      }   
-      if (nUsed != 0) { 
+      }
+      if (nUsed != 0) {
           // because nUsed is strictly speaking applicable to the last iteration only we need
           // to filter out rediculous values (and warn the user that the result is approximate
           // anyway)
@@ -148,9 +148,9 @@ AProjectGridderBase::~AProjectGridderBase()
 /// as soon as all necessary parameters are known.
 /// @param[in] uSize size in the direction of u-coordinate
 /// @param[in] vSize size in the direction of v-coordinate
-/// @param[in] uCellSize size of the uv-cell in the direction of 
+/// @param[in] uCellSize size of the uv-cell in the direction of
 ///            u-coordinate (in wavelengths)
-/// @param[in] vCellSize size of the uv-cell in the direction of 
+/// @param[in] vCellSize size of the uv-cell in the direction of
 ///            v-coordinate (in wavelengths)
 /// @param[in] overSample oversampling factor (default is 1)
 void AProjectGridderBase::initUVPattern(casacore::uInt uSize, casacore::uInt vSize, double uCellSize,
@@ -189,23 +189,23 @@ void AProjectGridderBase::indexField(const IConstDataAccessor &acc)
       itsPointings(firstFeed, itsCurrentField) = firstPointing;
       ASKAPLOG_DEBUG_STR(logger, "Found new field " << itsCurrentField<<" at "<<
                 printDirection(firstPointing));
-  } 
+  }
 }
 
 /// @brief check whether CF cache is valid
-/// @details This methods validates CF cache for one particular iteration. If necessary, 
+/// @details This methods validates CF cache for one particular iteration. If necessary,
 /// all values in itsDone are set to false. This method also sets some internal flags to
-/// update the stats correctly when updateStats is called. 
+/// update the stats correctly when updateStats is called.
 /// @param[in] acc input const accessor to analyse
 /// @param[in] symmetric true, if illumination pattern is symmetric, false otherwise
 void AProjectGridderBase::validateCFCache(const IConstDataAccessor &acc, bool symmetric)
 {
   ASKAPDEBUGTRACE("AProjectGridderBase::validateCFCache");
   const int nSamples = acc.nRow();
- 
+
   // flags are used to accumulate CF rebuild statistics
   itsCFInvalidDueToPA = false;
-    
+
   if (!symmetric) {
       // need to check parallactic angles here
       const casacore::Vector<casacore::Float> &feed1PAs = acc.feed1PA();
@@ -219,10 +219,10 @@ void AProjectGridderBase::validateCFCache(const IConstDataAccessor &acc, bool sy
            }
       }
   }
-    
+
   // the following flag is used to accululate CF rebuild statistics and internal logic
   itsCFInvalidDueToFreq = false;
-    
+
   // don't bother checking if the cache is rebuilt anyway
   if (!itsCFInvalidDueToPA && (itsFrequencyTolerance >= 0.)) {
       const casacore::Vector<casacore::Double> &freq = acc.frequency();
@@ -238,17 +238,17 @@ void AProjectGridderBase::validateCFCache(const IConstDataAccessor &acc, bool sy
                     break;
                }
           }
-      } 
+      }
       if (itsCFInvalidDueToFreq) {
           itsDone.set(false);
       }
   }
-    
+
   // cache the current frequency axis if the cache is going to be built
-  // do nothing if the tolerance is negative 
+  // do nothing if the tolerance is negative
   if ((itsCFInvalidDueToPA || itsCFInvalidDueToFreq) && (itsFrequencyTolerance >= 0.)) {
-      itsCachedFrequencies.assign(acc.frequency().copy());
-  } 
+      itsCachedFrequencies.assign(acc.frequency());
+  }
 }
 
 /// @brief assignment operator (never to be called)
@@ -263,7 +263,7 @@ AProjectGridderBase& AProjectGridderBase::operator=(const AProjectGridderBase &)
 
 
 /// @brief update statistics
-/// @details This class maintains cache rebuild statistics. It is impossible to update them 
+/// @details This class maintains cache rebuild statistics. It is impossible to update them
 /// directly in validateCFCache because a priori it is not known how many CFs are recalculated
 /// following invalidation. It depends on the actual algorithm and the dataset. To keep track
 /// of the cache rebuild stats call this method with the exact number of CFs calculated.
@@ -274,7 +274,7 @@ void AProjectGridderBase::updateStats(casacore::uInt nDone)
   itsNumberOfCFGenerations += nDone;
   if (itsCFInvalidDueToPA) {
       itsNumberOfCFGenerationsDueToPA += nDone;
-  }    
+  }
   if (itsCFInvalidDueToFreq) {
       itsNumberOfCFGenerationsDueToFreq += nDone;
   }
@@ -282,11 +282,11 @@ void AProjectGridderBase::updateStats(casacore::uInt nDone)
 
 /// @brief a helper factory of illumination patterns
 /// @details Illumination model is required for a number of gridders. This
-/// method allows to avoid duplication of code and encapsulates all 
-/// functionality related to illumination patterns. 
+/// method allows to avoid duplication of code and encapsulates all
+/// functionality related to illumination patterns.
 /// @param[in] parset ParameterSet containing description of illumination to use
 /// @return shared pointer to illumination interface
-boost::shared_ptr<IBasicIllumination> 
+boost::shared_ptr<IBasicIllumination>
 AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 {
    const std::string illumType = parset.getString("illumination", "disk");
@@ -298,7 +298,7 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
    	    ASKAPLOG_INFO_STR(logger,
 					"Using disk illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
-   
+
        	return boost::shared_ptr<IBasicIllumination>(new DiskIllumination(diameter,blockage));
 
    } else if (illumType == "ATCA") {
@@ -309,7 +309,7 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 					"Using ATCA illumination model, diameter="<<
 					diameter<<" metres, blockage="<<blockage<<" metres");
 
-   	    boost::shared_ptr<ATCAIllumination> illum(new ATCAIllumination(diameter,blockage)); 
+   	    boost::shared_ptr<ATCAIllumination> illum(new ATCAIllumination(diameter,blockage));
    	    ASKAPDEBUGASSERT(illum);
    	    if (parset.getBool("illumination.tapering", true)) {
    	        const double maxDefocusingPhase =
@@ -317,7 +317,7 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
    	                           "0rad"),"rad");
 	        illum->simulateTapering(maxDefocusingPhase);
 	        ASKAPLOG_INFO_STR(logger,"Tapering of the illumination is simulated, maximum defocusing phase = "<<
-	                  maxDefocusingPhase/M_PI*180.<<" deg."); 
+	                  maxDefocusingPhase/M_PI*180.<<" deg.");
 	    } else {
 	        ASKAPLOG_INFO_STR(logger,"Tapering of the illumination is not simulated");
 	    }
@@ -325,29 +325,29 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 	        const double width = SynthesisParamsHelper::convertQuantity(
 	           parset.getString("illumination.feedlegs.width","1.8m"),"m");
 	        const double rotation = SynthesisParamsHelper::convertQuantity(
-	           parset.getString("illumination.feedlegs.rotation","45deg"),"rad");   
-	        const double shadowingFactor = 
-	           parset.getDouble("illumination.feedlegs.shadowing",0.75);   
+	           parset.getString("illumination.feedlegs.rotation","45deg"),"rad");
+	        const double shadowingFactor =
+	           parset.getDouble("illumination.feedlegs.shadowing",0.75);
 	        illum->simulateFeedLegShadows(width,rotation,shadowingFactor);
 	        ASKAPLOG_INFO_STR(logger,"Feed legs are simulated. Width = "<<width<<" metres, rotated at "<<
 	           rotation/M_PI*180.<<" deg, shadowing factor (how much attenuation caused) = "<<shadowingFactor);
 	        if (parset.getBool("illumination.feedlegs.wedges", true)) {
 	            const double defaultWedgeShadowing[2] = {0.6,0.5};
-	            std::vector<double> wedgeShadowing = 
-	                parset.getDoubleVector("illumination.feedlegs.wedges.shadowing", 
+	            std::vector<double> wedgeShadowing =
+	                parset.getDoubleVector("illumination.feedlegs.wedges.shadowing",
 	                std::vector<double>(defaultWedgeShadowing,defaultWedgeShadowing+2));
 	            const double angle = SynthesisParamsHelper::convertQuantity(
-	                parset.getString("illumination.feedlegs.wedges.angle","15deg"),"rad");    
+	                parset.getString("illumination.feedlegs.wedges.angle","15deg"),"rad");
 	            const double startRadius = SynthesisParamsHelper::convertQuantity(
 	                parset.getString("illumination.feedlegs.wedges.startradius","3.5m"),"m");
-	            ASKAPCHECK(wedgeShadowing.size() && wedgeShadowing.size()<3, 
+	            ASKAPCHECK(wedgeShadowing.size() && wedgeShadowing.size()<3,
 	                 "illumination.feedlegs.wedges.shadowing can have either 1 or 2 elements only, "
 	                 "you have "<<wedgeShadowing.size());
 	            if (wedgeShadowing.size() == 1) {
 	                wedgeShadowing.push_back(wedgeShadowing[0]);
-	            }     
-	            ASKAPDEBUGASSERT(wedgeShadowing.size() == 2);    
-          	    illum->simulateFeedLegWedges(wedgeShadowing[0],wedgeShadowing[1],angle,startRadius);	            
+	            }
+	            ASKAPDEBUGASSERT(wedgeShadowing.size() == 2);
+          	    illum->simulateFeedLegWedges(wedgeShadowing[0],wedgeShadowing[1],angle,startRadius);
           	    ASKAPLOG_INFO_STR(logger,"Feed leg wedges are simulated. Shadowing factors are "<<
           	           wedgeShadowing<<", opening angle is "<<angle/M_PI*180.<<" deg, start radius is "<<
           	           startRadius<<" metres");
@@ -364,10 +364,10 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 
    	    ASKAPLOG_INFO_STR(logger, "Using SKA_LOW illumination model");
 
-   	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination()); 
+   	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination());
 
         const double diameter = SynthesisParamsHelper::convertQuantity(
-                                    parset.getString("diameter","35m"), "m" );   
+                                    parset.getString("diameter","35m"), "m" );
 
         double ra=std::numeric_limits<float>::quiet_NaN();
         double dec=std::numeric_limits<float>::quiet_NaN();
@@ -386,9 +386,7 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 	    return illum;
 
    }
-   
+
    ASKAPTHROW(AskapError, "Unknown illumination type "<<illumType);
    return boost::shared_ptr<IBasicIllumination>(); // to keep the compiler happy
 }
-
-

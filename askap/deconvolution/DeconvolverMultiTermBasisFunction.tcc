@@ -144,7 +144,7 @@ namespace askap {
             IPosition maxPos_private(2,0), minPos_private(2,0);
             const uInt ncol = im.ncolumn();
             const uInt nrow = im.nrow();
-            #pragma omp for schedule(static) nowait
+            #pragma omp for schedule(static)
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 for (uInt i = 0; i < nrow; i++ ) {
@@ -190,7 +190,7 @@ namespace askap {
             const uInt ncol = mask.ncolumn();
             const uInt nrow = mask.nrow();
 
-            #pragma omp for schedule(static) nowait
+            #pragma omp for schedule(static)
             for (uInt j = 0; j < ncol; j++ ) {
                 const T* pIm = &im(0,j);
                 const T* pMask = &mask(0,j);
@@ -227,7 +227,7 @@ namespace askap {
                 Vector<Array<T> >& psf,
                 Vector<Array<T> >& psfLong)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There are " << this->itsNumberTerms << " terms to be solved");
 
@@ -245,7 +245,7 @@ namespace askap {
         DeconvolverMultiTermBasisFunction<T, FT>::DeconvolverMultiTermBasisFunction(Array<T>& dirty,
                 Array<T>& psf)
                 : DeconvolverBase<T, FT>::DeconvolverBase(dirty, psf), itsDirtyChanged(True), itsBasisFunctionChanged(True),
-                itsSolutionType("MAXCHISQ"), itsDecoupled(false), itsDeep(False)
+                itsSolutionType("MAXCHISQ"), itsDecoupled(false)
         {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "There is only one term to be solved");
             this->itsPsfLongVec.resize(1);
@@ -278,18 +278,6 @@ namespace askap {
         const Bool DeconvolverMultiTermBasisFunction<T, FT>::decoupled()
         {
             return itsDecoupled;
-        };
-
-        template<class T, class FT>
-        void DeconvolverMultiTermBasisFunction<T, FT>::setDeepCleanMode(Bool deep)
-        {
-            itsDeep = deep;
-        };
-
-        template<class T, class FT>
-        const Bool DeconvolverMultiTermBasisFunction<T, FT>::deepCleanMode()
-        {
-            return itsDeep;
         };
 
         template<class T, class FT>
@@ -438,8 +426,10 @@ namespace askap {
 
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
 
-            ASKAPLOG_DEBUG_STR(decmtbflogger,
-                               "Calculating convolutions of residual images with basis functions");
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Calculating convolutions of residual images with basis functions");
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
             for (uInt base = 0; base < nBases; base++) {
                 // Calculate transform of residual images [nx,ny,nterms]
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
@@ -471,6 +461,10 @@ namespace askap {
                     this->itsResidualBasis(base)(term) = real(work);
                 }
             }
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Time to calculate residual images * basis functions: "<<end_time-start_time<<" sec");
 #ifdef USE_OPENACC
             itsACCManager.nBases = nBases;
             itsACCManager.nTerms = this->itsNumberTerms;
@@ -697,6 +691,7 @@ namespace askap {
             this->itsBasisFunctionChanged = False;
         }
 
+
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::ManyIterations()
         {
@@ -712,8 +707,7 @@ namespace askap {
             Vector<T> peakValues(this->itsNumberTerms);
             Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
-            Matrix<T> mask, mask_base;
-            uInt ncol, nrow;
+            Matrix<T> weights, mask, maskref;
             IPosition minPos(2, 0);
             IPosition maxPos(2, 0);
             T minVal(0.0), maxVal(0.0);
@@ -736,11 +730,65 @@ namespace askap {
             memset(TimerStop, 0, sizeof(TimerStop));
             memset(Times, 0, sizeof(Times));
 
+			// Termination
+			int converged;
+            this->control()->maskNeedsResetting(true);
+
             if (this->control()->targetIter() != 0) {
+
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
 
             #pragma omp parallel
             {
                 bool IsNotCont;
+
+                // =============== Set weights =======================
+
+                // Section 0
+                #pragma omp single
+                TimerStart[0] = MPI_Wtime();
+
+                if (isWeighted) {
+
+                    #pragma omp single
+                    weights = this->itsWeight(0).nonDegenerate();
+
+                    uInt ncol = weights.ncolumn();
+                    uInt nrow = weights.nrow();
+                    // Declare private versions of these
+                    uInt i, j;
+
+                    // Check weights for contiguity
+                    if (!weights.contiguousStorage()) {
+                        ASKAPLOG_WARN_STR(decmtbflogger, "weights (sec 0) is not contiguous\n");
+                    }
+
+                    if  (this->itsSolutionType == "MAXCHISQ") {
+                        // square weights for MAXCHISQ
+                        #pragma omp for schedule(static)
+                        for (j = 0; j < ncol; j++ ) {
+                            Vector<T> weightscol = weights.column(j);
+                            T* pWeights = weightscol.getStorage(IsNotCont);
+                            for (i = 0; i < nrow; i++ ) {
+                                pWeights[i] = abs(*(pWeights+i) * (*(pWeights+i)));
+                            }
+                        }
+                    }
+
+                    if (nBases>1) {
+                        // init scratch space for mask
+                        mask = Matrix<T>(weights.shape(),0.0);
+                        // Check mask base for contiguity
+                        if (!mask.contiguousStorage()) {
+                            ASKAPLOG_WARN_STR(decmtbflogger, "mask is not contiguous\n");
+                        }
+                    }
+
+                }
+
+                #pragma omp single
+                { TimerStop[0] = MPI_Wtime(); Times[0] += (TimerStop[0]-TimerStart[0]); }
 
                 // Commence cleaning iterations
                 do {
@@ -752,93 +800,92 @@ namespace askap {
                     // Reset optimium base
                     optimumBase = 0;
 
-                    // =============== Choose Component =======================
-
-                    // Section 0
-                    #pragma omp single nowait
-                    TimerStart[0] = MPI_Wtime();
-
-                    if (isWeighted) {
-                        #pragma omp single
-                        mask = this->itsWeight(0).nonDegenerate();
-
-                        uInt ncol = mask.ncolumn();
-                        uInt nrow = mask.nrow();
+                    // =============== Set up deep cleaning mask =======================
+                    // initialise a scratch space if mask needs to be reset each iter, otherwise just point at weights
+                    if (isWeighted && this->control()->maskNeedsResetting()) {
+                        uInt ncol = weights.ncolumn();
+                        uInt nrow = weights.nrow();
                         // Declare private versions of these
-                        T val; T* pMask;
                         uInt i, j;
-                        if  (this->itsSolutionType == "MAXCHISQ") {
-                            #pragma omp for schedule(static) nowait
-                            for (j = 0; j < ncol; j++ ) {
-                                pMask = &mask(0,j);
-                                for (i = 0; i < nrow; i++ ) {
-                                    val = abs(*(pMask+i) * (*(pMask+i)));
-                                    pMask[i] = val;
+                        if (this->control()->deepCleanMode()) {
+                            if (nBases>1) {
+                                #pragma omp single
+                                maskref.reference(mask);
+                            } else {
+                                // only a single base, so multiple weights and mask now.
+                                // reference the mask to the mask for base 0
+                                #pragma omp single
+                                maskref.reference(this->itsMask(0));
+                                // multiply weights by the base 0 mask
+                                #pragma omp for schedule(static)
+                                for (j = 0; j < ncol; j++ ) {
+                                    Vector<T> weightscol = weights.column(j);
+                                    T* pWeights = weightscol.getStorage(IsNotCont);
+                                    Vector<T> maskcol = maskref.column(j);
+                                    T* pMask = maskcol.getStorage(IsNotCont);
+                                    for (i = 0; i < nrow; i++ ) {
+                                        T val = *(pWeights+i) * (*(pMask+i));
+                                        pWeights[i] = val;
+                                    }
                                 }
+                                // now reference the mask to the updated weigths
+                                #pragma omp single
+                                maskref.reference(weights);
                             }
+                        } else {
+                            // reference the mask to the weigths
+                            #pragma omp single
+                            maskref.reference(weights);
                         }
+                        this->control()->maskNeedsResetting(false);
                     }
 
-                    #pragma omp single nowait
-                    { TimerStop[0] = MPI_Wtime(); Times[0] += (TimerStop[0]-TimerStart[0]); }
+                    // =============== Choose Component =======================
 
                     for (uInt base = 0; base < nBases; base++) {
-
-                        // Section 1 Timer
-                        #pragma omp single nowait
-                        TimerStart[1] = MPI_Wtime();
 
                         minPos(0) = 0; minPos(1) = 0; maxPos(0) = 0; maxPos(1) = 0;
                         minVal = 0.0; maxVal = 0.0;
 
-                        if (deepCleanMode()) {
-                            if (isWeighted) {
-                                #pragma omp sections
-                                {
-                                    #pragma omp section
-                                    mask_base = this->itsMask(base);
+                        if (this->control()->deepCleanMode()) {
 
-                                    #pragma omp section
-                                    if (base > 0) mask = this->itsWeight(0).nonDegenerate();
-                                }
-                                uInt ncol = mask.ncolumn();
-                                uInt nrow = mask.nrow();
-                                if (base>0) {
-                                    if  (this->itsSolutionType == "MAXCHISQ") {
-                                        // square weights for MAXCHISQ
-                                        #pragma omp for schedule(static)
-                                        for (uInt j = 0; j < ncol; j++ ) {
-                                            T* pMask = &mask(0,j);
-                                            //T* pMask = mask(0,j).getStorage(IsNotCont);
-                                            for (uInt i = 0; i < nrow; i++ ) {
-                                                T val = *(pMask+i) * (*(pMask+i));
-                                                pMask[i] = val;
-                                            }
+                            // Section 1 Timer
+                            #pragma omp single
+                            TimerStart[1] = MPI_Wtime();
+
+                            if (isWeighted) {
+                                // for a single base, the mask has already been set outside this loop
+
+                                if (nBases>1) {
+                                    uInt ncol = maskref.ncolumn();
+                                    uInt nrow = maskref.nrow();
+                                    Matrix<T> maskbase;
+                                    maskbase.reference(this->itsMask(base));
+                                    #pragma omp for schedule(static)
+                                    for (uInt j = 0; j < ncol; j++ ) {
+                                        Vector<T> weightscol = weights.column(j);
+                                        T* pWeights = weightscol.getStorage(IsNotCont);
+                                        Vector<T> maskbasecol = maskbase.column(j);
+                                        T* pMaskBase = maskbasecol.getStorage(IsNotCont);
+                                        Vector<T> maskcol = maskref.column(j);
+                                        T* pMask = maskcol.getStorage(IsNotCont);
+                                        for (uInt i = 0; i < nrow; i++ ) {
+                                            pMask[i] = *(pWeights+i) * (*(pMaskBase+i));
                                         }
                                     }
                                 }
 
-                                #pragma omp for schedule(static)
-                                for (uInt j = 0; j < ncol; j++ ) {
-                                    T* pMask = &mask(0,j);
-                                    T* pMaskBase = &mask_base(0,j);
-                                    for (uInt i = 0; i < nrow; i++ ) {
-                                        T val = *(pMask+i) * (*(pMaskBase+i));
-                                        pMask[i] = val;
-                                    }
-                                }
-
                             } else {
-                                #pragma omp single
-                                mask = this->itsMask(base);
+                                maskref.reference(this->itsMask(base));
                             }
-                        } // End of deep clean mode
 
-                        #pragma omp single nowait
-                        { TimerStop[1] = MPI_Wtime(); Times[1] += (TimerStop[1]-TimerStart[1]); }
+                            #pragma omp single
+                            { TimerStop[1] = MPI_Wtime(); Times[1] += (TimerStop[1]-TimerStart[1]); }
+
+                        }
 
                         #pragma omp single
-                        haveMask=mask.nelements()>0;
+                        haveMask = maskref.nelements()>0;
 
                         // We implement various approaches to finding the peak. The first is the cheapest
                         // and evidently the best (according to Urvashi).
@@ -847,14 +894,14 @@ namespace askap {
                         if (this->itsSolutionType == "MAXBASE") {
 
                             // Section 2 Timer
-                            #pragma omp single nowait
+                            #pragma omp single
                             TimerStart[2] = MPI_Wtime();
 
-                            //res.reference(this->itsResidualBasis(base)(0));
-                            res = this->itsResidualBasis(base)(0);
+                            #pragma omp single
+                            res.reference(this->itsResidualBasis(base)(0));
 
                             if (haveMask) {
-                                absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,mask);
+                                absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,maskref);
                             } else {
                                 absMinMaxPosOMP(minVal,maxVal,minPos,maxPos,res);
                             }
@@ -866,17 +913,20 @@ namespace askap {
                             }
                             // In performing the search for the peak across bases, we want to take into account
                             // the SNR so we normalise out the coupling matrix for term=0 to term=0.
-                            norm = 1.0 / sqrt(this->itsCouplingMatrix(base)(0, 0));
-                            maxVal *= norm;
-                            minVal *= norm;
+                            #pragma omp single
+                            {
+                                norm = 1.0 / sqrt(this->itsCouplingMatrix(base)(0, 0));
+                                maxVal *= norm;
+                                minVal *= norm;
+                            }
 
-                            #pragma omp single nowait
+                            #pragma omp single
                             { TimerStop[2] = MPI_Wtime(); Times[2] += (TimerStop[2]-TimerStart[2]); }
 
                         } else {  // Some other solver type than maxbase
 
                             // section 3
-                            #pragma omp single nowait
+                            #pragma omp single
                             TimerStart[3] = MPI_Wtime();
 
                             for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
@@ -889,29 +939,29 @@ namespace askap {
 
                                 for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
                                     T* coeff_pointer = coefficients(term1).getStorage(IsNotCont);
-                                    T* res_pointer = this->itsResidualBasis(base)(term2).getStorage(IsNotCont);
+                                    T* res_pointer = (float*)this->itsResidualBasis(base)(term2).getStorage(IsNotCont);
                                     #pragma omp for schedule(static)
                                     for (int index = 0; index < coefficients(term1).nelements(); index++) {
-                                        coeff_pointer[index] += res_pointer[index]*T(this->itsInverseCouplingMatrix(base)(term1,term2));
+                                        coeff_pointer[index] += res_pointer[index] *
+                                               T(this->itsInverseCouplingMatrix(base)(term1,term2));
                                     }
                                 }
                             } // End of for loop over terms
 
-                            #pragma omp single nowait
+                            #pragma omp single
                             { TimerStop[3] = MPI_Wtime(); Times[3] += (TimerStop[3]-TimerStart[3]); }
 
                             if (this->itsSolutionType == "MAXTERM0") {
 
-                                #pragma omp single nowait
+                                #pragma omp single
                                 TimerStart[4] = MPI_Wtime();
 
                                 res = coefficients(0);
 
                                 if (haveMask) {
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, mask);
-
+                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
                                 } else {
-                                absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
+                                    absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
                                 }
 
                                 #pragma omp for schedule(static)
@@ -920,20 +970,17 @@ namespace askap {
                                     maxValues(term) = coefficients(term)(maxPos);
                                 }
 
-                                #pragma omp single nowait
+                                #pragma omp single
                                 { TimerStop[4] = MPI_Wtime(); Times[4] += (TimerStop[4]-TimerStart[4]); }
 
                             } else {
                                 // MAXCHISQ
-                                #pragma omp single nowait
+                                #pragma omp single
                                 TimerStart[5] = MPI_Wtime();
 
-                                #pragma omp sections
+                                #pragma omp single
                                 {
-                                    #pragma omp section
                                     negchisq.resize(this->dirty(0).shape().nonDegenerate());
-
-                                    #pragma omp section
                                     negchisq.set(T(0.0));
                                 }
 
@@ -951,7 +998,7 @@ namespace askap {
                                     #pragma omp single
                                     res = negchisq;
 
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, mask);
+                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
                                 } else {
                                     #pragma omp single
                                     res = negchisq;
@@ -962,38 +1009,32 @@ namespace askap {
                                 // Small loop
                                 #pragma omp for schedule(static)
                                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
-                                                minValues(term) = coefficients(term)(minPos);
+                                            minValues(term) = coefficients(term)(minPos);
                                             maxValues(term) = coefficients(term)(maxPos);
                                 }
 
                                 // End of section 5
-                                #pragma omp single nowait
+                                #pragma omp single
                                 { TimerStop[5] = MPI_Wtime(); Times[5] += (TimerStop[5]-TimerStart[5]); }
 
                             } // End of Maxterm0 or Maxchi solver decision
                         } // End of else decision
 
-                        #pragma omp sections
+                        #pragma omp single
                         {
                             // We use the minVal and maxVal to find the optimum base
-                            #pragma omp section
-                            {
-                                if (abs(minVal) > absPeakVal) {
-                                    optimumBase = base;
-                                    absPeakVal = abs(minVal);
-                                    absPeakPos = minPos;
-                                }
+                            if (abs(minVal) > absPeakVal) {
+                                optimumBase = base;
+                                absPeakVal = abs(minVal);
+                                absPeakPos = minPos;
                             }
-
-                            #pragma omp section
-                            {
-                                if (abs(maxVal) > absPeakVal) {
-                                        optimumBase = base;
-                                        absPeakVal = abs(maxVal);
-                                        absPeakPos = maxPos;
-                                }
+                            if (abs(maxVal) > absPeakVal) {
+                                    optimumBase = base;
+                                    absPeakVal = abs(maxVal);
+                                    absPeakPos = maxPos;
                             }
                         }
+
                     } // End of iteration over number of bases
 
                     // Now that we know the location of the peak found using one of the
@@ -1001,47 +1042,39 @@ namespace askap {
                     // that we have to decouple the answer
 
                     // Section 6
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[6] = MPI_Wtime();
 
-                    #pragma omp sections
+                    #pragma omp single
                     {
-
-                        #pragma omp section
-                        {
-                            for (uInt term1 = 0; term1 < this->itsNumberTerms; ++term1) {
-                                peakValues(term1) = 0.0;
-                                for (uInt term2 = 0; term2 < this->itsNumberTerms; ++term2) {
-                                    peakValues(term1) +=
-                                        T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) *
-                                        this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
-                                }
+                        for (uInt term1 = 0; term1 < this->itsNumberTerms; ++term1) {
+                            peakValues(term1) = 0.0;
+                            for (uInt term2 = 0; term2 < this->itsNumberTerms; ++term2) {
+                                peakValues(term1) +=
+                                    T(this->itsInverseCouplingMatrix(optimumBase)(term1, term2)) *
+                                    this->itsResidualBasis(optimumBase)(term2)(absPeakPos);
                             }
                         }
 
                         // Record location of peak in mask
-                        #pragma omp section
                         if (this->itsMask.nelements()) this->itsMask(optimumBase)(absPeakPos)=T(1.0);
 
                         // Take square root to get value comparable to peak residual
-                        #pragma omp section
-                        {
-                            if (this->itsSolutionType == "MAXCHISQ") {
-                                absPeakVal = sqrt(max(T(0.0), absPeakVal));
-                            }
+                        if (this->itsSolutionType == "MAXCHISQ") {
+                            absPeakVal = sqrt(max(T(0.0), absPeakVal));
                         }
-                    }
+                    } // End of omp single section
 
                     // End of section 6
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[6] = MPI_Wtime(); Times[6] += (TimerStop[6]-TimerStart[6]); }
 
-                    if (!deepCleanMode() && !decoupled()) {
+                    if (!this->control()->deepCleanMode() && !decoupled()) {
 
                         // **** Compute coupled residual ****
 
                         // Section 7
-                        #pragma omp single nowait
+                        #pragma omp single
                         TimerStart[7] = MPI_Wtime();
 
                         for (uInt term = 0; term < nTerms; term++) {
@@ -1054,6 +1087,7 @@ namespace askap {
                                 if (isWeighted) {
                                     #pragma omp sections
                                     {
+                                        // replace with reference?
                                         #pragma omp section
                                         res = this->itsResidualBasis(base)(term);
 
@@ -1091,7 +1125,7 @@ namespace askap {
                         } // End of loop over terms
 
                         // End of Section 7
-                        #pragma omp single nowait
+                        #pragma omp single
                         { TimerStop[7] = MPI_Wtime(); Times[7] += (TimerStop[7]-TimerStart[7]); }
 
                         #pragma omp single
@@ -1109,7 +1143,7 @@ namespace askap {
                     #pragma omp barrier
 
                     // Section 8
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[8] = MPI_Wtime();
 
                     #pragma omp sections
@@ -1147,31 +1181,24 @@ namespace askap {
                     // This barrier is required - no implicit barrier following criticals
                     #pragma omp barrier
 
+                    // without OpenMP, this may be faster
+                    //sumFlux = sum(this->model(0));
+
                     #pragma omp single
                     this->state()->setTotalFlux(sumFlux);
 
                     #pragma omp sections
                     {
-                        #pragma omp section
-                        {
-                                    //  Check if we should enter deep cleaning mode
-                                    if (abs(absPeakVal) < this->control()->targetObjectiveFunction() && this->control()->targetObjectiveFunction2()>0 &&
-                                        abs(absPeakVal) > this->control()->targetObjectiveFunction2()) {
-                                    if (!deepCleanMode()) ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
-                                    setDeepCleanMode(True);
-                                    }
-                        }
-
                         // Now we adjust model and residual for this component
                         #pragma omp section
                         residualShape = this->dirty(0).shape().nonDegenerate();
 
                         #pragma omp section
                         {
-                                    psfShape(0) = this->itsBasisFunction->basisFunction().shape()(0),
-                                    psfShape(1) = this->itsBasisFunction->basisFunction().shape()(1);
+                            psfShape(0) = this->itsBasisFunction->basisFunction().shape()(0),
+                            psfShape(1) = this->itsBasisFunction->basisFunction().shape()(1);
                         }
-                    } 
+                    }
 
                     casa::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
                     casa::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
@@ -1179,11 +1206,11 @@ namespace askap {
                     casa::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
 
                     // End of section 8
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[8] = MPI_Wtime(); Times[8] += (TimerStop[8]-TimerStart[8]); }
 
                     // Section 9
-                    #pragma omp single nowait
+                    #pragma omp single
                     TimerStart[9] = MPI_Wtime();
 
                     // that there are some edge cases for which it fails.
@@ -1217,6 +1244,39 @@ namespace askap {
                         }
                     }
 
+/*
+                    const uInt ni = residualEnd(0) - residualStart(0);
+                    const uInt nj = residualEnd(1) - residualStart(1);
+                    const uInt ri0 = residualStart(0);
+                    const uInt rj0 = residualStart(1);
+                    const uInt pi0 = psfStart(0);
+                    const uInt pj0 = psfStart(1);
+
+                    // Add to model
+                    // We loop over all terms for the optimum base and ignore those terms with no flux
+                    for (uInt term = 0; term < this->itsNumberTerms; ++term) {
+                        if (abs(peakValues(term)) > 0.0) {
+                            const T amp = this->control()->gain() * peakValues(term);
+                            casa::Matrix<T> mMdl, mBfn;
+                            mMdl.reference(this->model(term).nonDegenerate()(modelSlicer));
+                            mBfn.reference(Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer));
+                            #pragma omp for schedule(static)
+                            for (uInt j = 0; j < nj; j++ ) {
+                                Vector<T> mdlcol = mMdl.column(j);
+                                T* pMdl = mdlcol.getStorage(IsNotCont);
+                                Vector<T> bfncol = mBfn.column(j);
+                                T* pBfn = bfncol.getStorage(IsNotCont);
+                                for (uInt i = 0; i < ni; i++ ) {
+                                    pMdl[i] += amp * (*(pBfn+i));
+                                }
+                            }
+
+                            this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
+
+                        }
+                    }
+*/
+
                     #pragma omp single
                     {
                         // Subtract PSFs, including base-base crossterms
@@ -1235,41 +1295,85 @@ namespace askap {
                         }
                     } 
 
+/*
+                    // Subtract PSFs, including base-base crossterms
+                    for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
+                        for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
+                            if (abs(peakValues(term2)) > 0.0) {
+                                for (uInt base = 0; base < nBases; base++) {
+
+
+                                    // This can be done in parallel, but isnt worth it.
+                                    //this->itsResidualBasis(base)(term1)(residualSlicer) =
+                                    //    this->itsResidualBasis(base)(term1)(residualSlicer)
+                                    //    - this->control()->gain() * peakValues(term2) *
+                                    //    this->itsPSFCrossTerms(base, optimumBase)(term1, term2)(psfSlicer);
+
+                                    const T amp = this->control()->gain() * peakValues(term2);
+                                    casa::Matrix<T> mRes, mPSF;
+                                    mRes.reference(this->itsResidualBasis(base)(term1));
+                                    mPSF.reference(this->itsPSFCrossTerms(base,optimumBase)(term1,term2));
+                                    #pragma omp for schedule(static)
+                                    for (uInt j = 0; j < nj; j++ ) {
+                                        Vector<T> rescol = mRes.column(rj0+j);
+                                        T* pRes = rescol.getStorage(IsNotCont);
+                                        Vector<T> psfcol = mPSF.column(pj0+j);
+                                        T* pPSF = psfcol.getStorage(IsNotCont);
+                                        for (uInt i = 0; i < ni; i++ ) {
+                                            pRes[ri0+i] -= amp * (*(pPSF+pi0+i));
+                                        }
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+*/
+
                     #pragma omp single
                     {
-                    this->monitor()->monitor(*(this->state()));
-                    this->state()->incIter();
+						this->monitor()->monitor(*(this->state()));
+						this->state()->incIter();
                     } 
 
                     // End of section 9
-                    #pragma omp single nowait
+                    #pragma omp single
                     { TimerStop[9] = MPI_Wtime(); Times[9] += (TimerStop[9]-TimerStart[9]); }
 
                     //End of all iterations
                     #pragma omp barrier
 
-                } while (!this->control()->terminate(*(this->state())));
+					#pragma omp single
+					{
+						converged = this->control()->terminate(*(this->state()));
+					}
+
+                } while (!converged);
 
             } // End of parallel section
+
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
+            ASKAPLOG_INFO_STR(decmtbflogger,
+                              "Time for minor cycles: "<<end_time-start_time<<" sec");
 
             // Report Times
             double sum_time = 0.0;
             for (int i = 0; i < no_timers; i++) {
-                printf("**** Section %d Time: %g\n", i, Times[i]);
+                ASKAPLOG_INFO_STR(decmtbflogger, "Section "<<i<<" Time: "<<Times[i]);
                 sum_time += Times[i];
             }
 
-                ASKAPLOG_INFO_STR(decmtbflogger, "Performed Multi-Term BasisFunction CLEAN for "
-                                      << this->state()->currentIter() << " iterations");
-                ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
+            ASKAPLOG_INFO_STR(decmtbflogger, "Performed Multi-Term BasisFunction CLEAN for "
+                                  << this->state()->currentIter() << " iterations");
+            ASKAPLOG_INFO_STR(decmtbflogger, this->control()->terminationString());
 
             } else {
-                ASKAPLOG_INFO_STR(decmtbflogger,
-                    "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
+              ASKAPLOG_INFO_STR(decmtbflogger,
+                  "Bypassed Multi-Term BasisFunction CLEAN due to 0 iterations in the setup");
             }
+
         } // End of many iterations function
-
-
 
 
 
@@ -1279,11 +1383,13 @@ namespace askap {
             // This is the parallel version of deconvolve using ManyIterations()
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::deconvolve");
             this->initialise();
-            double start_time = MPI_Wtime();
+            //const double start_time = MPI_Wtime();
+            const time_t start_time = time(0);
             this->ManyIterations();
-            double end_time = MPI_Wtime();
+            //const double end_time = MPI_Wtime();
+            const time_t end_time = time(0);
             this->finalise();
-            printf("==== Time Required: %g\n", end_time - start_time);
+            ASKAPLOG_INFO_STR(decmtbflogger, "Time Required: "<<end_time - start_time);
             return True;
         }
 
@@ -1451,7 +1557,7 @@ namespace askap {
                 int Idx;
                 T minVal(0.0), maxVal(0.0);
 
-                if (deepCleanMode()) {
+                if (this->control()->deepCleanMode()) {
                     if (isWeighted) {
                         // recompute mask*weight for each new base
                         if (base>0) {
@@ -1624,7 +1730,7 @@ namespace askap {
             // be the absolute value of the peak residual
             // For deep cleaning we want to restrict the abspeakval to the mask
             // so we just use the value determined above
-            if (!deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
+            if (!this->control()->deepCleanMode() && !decoupled()) getCoupledResidual(absPeakVal);
 
 
 	    // Update collective time over all iterations
@@ -1673,8 +1779,11 @@ namespace askap {
             if (abs(absPeakVal) < this->control()->targetObjectiveFunction() &&
                 this->control()->targetObjectiveFunction2()>0 &&
                 abs(absPeakVal) > this->control()->targetObjectiveFunction2()) {
-              if (!deepCleanMode()) ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
-              setDeepCleanMode(True);
+                if (!this->control()->deepCleanMode()) {
+                    ASKAPLOG_INFO_STR(decmtbflogger, "Starting deep cleaning phase");
+                }
+                //setDeepCleanMode(True);
+                this->control()->setDeepCleanMode();
             }
 
             // Now we adjust model and residual for this component

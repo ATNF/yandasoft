@@ -30,6 +30,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
@@ -65,7 +66,7 @@ namespace askap
         IDataSharedIter& idi) : scimath::Equation(ip),
       askap::scimath::ImagingEquation(ip), itsIdi(idi),
       itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
-      itsUsePreconGridder(false)
+      itsUsePreconGridder(false), itsNDir(1)
     {
       itsGridder = IVisGridder::ShPtr(new SphFuncVisGridder());
       init();
@@ -74,7 +75,7 @@ namespace askap
 
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi) :
       itsIdi(idi), itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
-      itsUsePreconGridder(false)
+      itsUsePreconGridder(false), itsNDir(1)
     {
       itsGridder = IVisGridder::ShPtr(new SphFuncVisGridder());
       reference(defaultParameters().clone());
@@ -82,9 +83,10 @@ namespace askap
     }
 
     ImageFFTEquation::ImageFFTEquation(const askap::scimath::Params& ip,
-        IDataSharedIter& idi, IVisGridder::ShPtr gridder) : scimath::Equation(ip),
-      askap::scimath::ImagingEquation(ip), itsGridder(gridder), itsIdi(idi),
-      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false), itsUsePreconGridder(false)
+        IDataSharedIter& idi, IVisGridder::ShPtr gridder) :
+      scimath::Equation(ip), askap::scimath::ImagingEquation(ip),
+      itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false),
+      itsBoxPSFGridder(false), itsUsePreconGridder(false), itsNDir(1)
     {
       init();
     }
@@ -94,7 +96,8 @@ namespace askap
         IDataSharedIter& idi, IVisGridder::ShPtr gridder,
         const LOFAR::ParameterSet& parset) : scimath::Equation(ip),
       askap::scimath::ImagingEquation(ip), itsGridder(gridder), itsIdi(idi),
-      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false), itsUsePreconGridder(false)
+      itsSphFuncPSFGridder(false), itsBoxPSFGridder(false),
+      itsUsePreconGridder(false), itsNDir(1)
     {
       useAlternativePSF(parset);
       init();
@@ -103,7 +106,7 @@ namespace askap
     ImageFFTEquation::ImageFFTEquation(IDataSharedIter& idi,
         IVisGridder::ShPtr gridder) :
       itsGridder(gridder), itsIdi(idi), itsSphFuncPSFGridder(false),
-      itsBoxPSFGridder(false), itsUsePreconGridder(false)
+      itsBoxPSFGridder(false), itsUsePreconGridder(false), itsNDir(1)
     {
       reference(defaultParameters().clone());
       init();
@@ -226,6 +229,15 @@ namespace askap
       // switch between these. This optimization may not be sufficient in the long run.
 
       itsIdi.chooseOriginal();
+
+      // DDCALTAG -- set increased buffer size
+      if (itsNDir > 1) {
+         DDCalBufferDataAccessor accBuffer(*itsIdi);
+         ASKAPLOG_DEBUG_STR(logger, "calling accBuffer.setNDir("<<itsNDir<<")");
+         accBuffer.setNDir(itsNDir); 
+      }
+      int dirIndex = itsNDir > 1 ? -1 : 0;
+
       ASKAPLOG_DEBUG_STR(logger, "Initialising for model degridding");
       for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
@@ -244,6 +256,34 @@ namespace askap
             const casacore::IPosition imageShape(imagePixels.shape());
             itsModelGridders[imageName]->initialiseDegrid(axes, imagePixels);
         }
+
+        // DDCALTAG -- set parameter for increased buffer size
+        // could alternatively pass dirIndex * itsIdi->nRow(). See if one is better than the other
+        if (itsNDir > 1) {
+            if ( imageName.find(".taylor.") != std::string::npos ) {
+                // Taylor terms are used, so only increment dirIndex if this is taylor.0
+                if ( imageName.find(".taylor.0") != std::string::npos ) {
+                    ASKAPLOG_DEBUG_STR(logger, imageName<<" is taylor 0, so incrementing DD-cal buffer index");
+                    dirIndex++;
+                } else {
+                    ASKAPLOG_DEBUG_STR(logger, imageName<<" is not taylor 0 -- not incrementing DD-cal buffer index");
+                }
+            } else {
+                // Taylor terms are not used, so increment dirIndex
+                dirIndex++;
+            }
+            ASKAPLOG_DEBUG_STR(logger, "degridding "<<imageName<<" into buffer "<<dirIndex);
+            try {
+                // Only possible in DDCalBufferDataAccessor, so cast first
+                const boost::shared_ptr<TableVisGridder const> &tGridder = 
+                       boost::dynamic_pointer_cast<TableVisGridder const>(itsModelGridders[imageName]);
+                tGridder->setSourceIndex(dirIndex);
+            }
+            catch (std::bad_cast&) {}
+            ASKAPCHECK(dirIndex <= itsNDir,
+                "The number of specified calibration directions is less than the number calibration image fields");
+        }
+
       }
       // Loop through degridding the data
       ASKAPLOG_DEBUG_STR(logger, "Starting to degrid model" );
@@ -266,8 +306,8 @@ namespace askap
         */
         for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
         {
-          string imageName("image"+(*it));
-          itsModelGridders[imageName]->degrid(*itsIdi);
+            string imageName("image"+(*it));
+            itsModelGridders[imageName]->degrid(*itsIdi);
         }
         #ifdef ASKAP_DEBUG
         const casacore::uInt nRow = itsIdi->nRow();
@@ -299,6 +339,7 @@ namespace askap
     void ImageFFTEquation::calcImagingEquations(askap::scimath::ImagingNormalEquations& ne) const
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
+     
 
       // We will need to loop over all completions i.e. all sources
       const std::vector<std::string> completions(parameters().completions("image"));
@@ -449,14 +490,14 @@ namespace askap
         casacore::Array<double> imageDeriv(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
 
-        
+
         // for debugging/research, store grid prior to FFT
         // boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(itsResidualGridders[imageName]);
         // if (tvg) {
         //    tvg->storeGrid("uvcoverage"+(*it),0);
         //}
         // end debugging code
-        
+
 
 
 

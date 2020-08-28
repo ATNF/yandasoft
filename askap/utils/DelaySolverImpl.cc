@@ -27,10 +27,11 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
+#include <askap/askap_synthesis.h>
 #include <askap/utils/DelaySolverImpl.h>
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapUtil.h>
-ASKAP_LOGGER(logger, ".delaysolver.DelaySolverImpl");
+ASKAP_LOGGER(logger, ".DelaySolverImpl");
 
 #include <askap/askap/AskapError.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
@@ -111,7 +112,7 @@ void DelaySolverImpl::process(const accessors::IConstDataAccessor &acc)
            ASKAPDEBUGASSERT(itsTargetRes > 0);
            itsChanToAverage = casa::uInt(itsTargetRes / abs(actualRes));
        } 
-       ASKAPLOG_INFO_STR(logger, "Averaging "<<itsChanToAverage<<" consecutive spectral channels");
+       ASKAPLOG_DEBUG_STR(logger, "Averaging "<<itsChanToAverage<<" consecutive spectral channels");
        ASKAPDEBUGASSERT(itsChanToAverage > 0);
        itsDelayEstimator.setResolution(actualRes * itsChanToAverage);
        const casa::uInt targetNChan = acc.nChannel() / itsChanToAverage;
@@ -226,7 +227,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
   
   const casa::uInt nAnt = casa::max(casa::max(itsAnt1IDs), casa::max(itsAnt2IDs)) + 1;
   
-  ASKAPLOG_INFO_STR(logger, "Using "<<itsNAvg<<" cycles to estimate delays for "<<nAnt<<" antennas; reference = "<<itsRefAnt);
+  ASKAPLOG_DEBUG_STR(logger, "Using "<<itsNAvg<<" cycles to estimate delays for "<<nAnt<<" antennas; reference = "<<itsRefAnt);
   // build a set of baselines (rows) to exclude
   std::set<casa::uInt> rows2exclude;
   ASKAPDEBUGASSERT(itsAnt1IDs.nelements() == itsAnt2IDs.nelements());
@@ -255,7 +256,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
        }
   }
   ASKAPCHECK(itsAnt1IDs.nelements() > rows2exclude.size(), "Looks like all data are flagged or excluded");
-  ASKAPLOG_INFO_STR(logger, "Using "<<itsAnt1IDs.nelements() - rows2exclude.size()<<" rows(baselines) out of "<<
+  ASKAPLOG_DEBUG_STR(logger, "Using "<<itsAnt1IDs.nelements() - rows2exclude.size()<<" rows(baselines) out of "<<
                              itsAnt1IDs.nelements()<<" available in the dataset");
   // build a list of excluded (flagged) antennas to ensure their
   // delays are set to zero
@@ -326,8 +327,8 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
            }              
        }
   }
-  ASKAPLOG_INFO_STR(logger, "Delays (ns) per baseline: "<<std::setprecision(9)<<delays*1e9);
-  ASKAPLOG_INFO_STR(logger, "Quality of delay estimate: "<<std::setprecision(3)<<quality);
+  ASKAPLOG_DEBUG_STR(logger, "Delays (ns) per baseline: "<<std::setprecision(9)<<delays*1e9);
+  ASKAPLOG_DEBUG_STR(logger, "Quality of delay estimate: "<<std::setprecision(3)<<quality);
   // add conditions for flagged antennas to ensure zero delay
   if (excludedAntennas.size() == 0) {
       ASKAPLOG_INFO_STR(logger, "All available antennas have unflagged data");
@@ -338,7 +339,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
                  excludedAntennas.size()<<") - this shouldn't happen");
 
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
-           ASKAPLOG_INFO_STR(logger, "Antenna "<<*antIt<<" has no valid data - result will have zero delay");
+           ASKAPLOG_WARN_STR(logger, "Antenna "<<*antIt<<" has no valid data - result will have zero delay");
            ASKAPDEBUGASSERT(*rowIt < dm.nrow());
            ASKAPDEBUGASSERT(*rowIt < delays.nelements());
            ASKAPDEBUGASSERT(*antIt < dm.ncolumn());
@@ -377,7 +378,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
 void DelaySolverImpl::setApproximateDelays(const casa::Vector<double> &delays)
 {
   if (delays.nelements()) {
-      ASKAPLOG_INFO_STR(logger, "The following approximate delays (ns) will be removed before averaging "<<delays * 1e9);
+      ASKAPLOG_DEBUG_STR(logger, "The following approximate delays (ns) will be removed before averaging "<<delays * 1e9);
   }
   itsDelayApproximation.assign(delays.copy());
 }

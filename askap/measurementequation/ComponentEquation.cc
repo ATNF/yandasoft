@@ -23,6 +23,8 @@
 
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/SharedIter.h>
+// DDCALTAG -- make sure changing from CalBuffer to DDCalBuffer doesn't affect any other use cases
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/DesignMatrix.h>
@@ -38,14 +40,15 @@
 #include <casacore/scimath/Mathematics/AutoDiff.h>
 #include <casacore/scimath/Mathematics/AutoDiffMath.h>
 
-
 #include <askap/measurementequation/UnpolarizedPointSource.h>
 #include <askap/measurementequation/UnpolarizedGaussianSource.h>
 #include <askap/measurementequation/Calibrator1934.h>
 #include <askap/measurementequation/VectorOperations.h>
 
-
 #include <stdexcept>
+
+#include <askap/askap/AskapLogging.h>
+ASKAP_LOGGER(logger, ".measurementequation.componentequation");
 
 using askap::scimath::INormalEquations;
 using askap::scimath::DesignMatrix;
@@ -56,16 +59,17 @@ namespace askap
   {
 
     ComponentEquation::ComponentEquation(const askap::scimath::Params& ip,
-          const accessors::IDataSharedIter& idi) :  scimath::Equation(ip), MultiChunkEquation(idi),  
-           askap::scimath::GenericEquation(ip), GenericMultiChunkEquation(idi),
-           itsAllComponentsUnpolarised(false)
+          const accessors::IDataSharedIter& idi) :
+          scimath::Equation(ip), MultiChunkEquation(idi),  
+          askap::scimath::GenericEquation(ip), GenericMultiChunkEquation(idi),
+          itsAllComponentsUnpolarised(false), itsNDir(1), itsIsDD(false)
     {
       init();
     };
 
     ComponentEquation::ComponentEquation(const accessors::IDataSharedIter& idi) :
            MultiChunkEquation(idi), GenericMultiChunkEquation(idi),
-           itsAllComponentsUnpolarised(false) 
+           itsAllComponentsUnpolarised(false), itsNDir(1), itsIsDD(false)
     {
       setParameters(defaultParameters());
       init();
@@ -86,6 +90,8 @@ askap::scimath::Params ComponentEquation::defaultParameters()
       ip.add("shape.bmaj");
       ip.add("shape.bmin");
       ip.add("shape.bpa");
+      ip.add("flux.spectral_index");
+      ip.add("flux.ref_freq");
       return ip;
 }
 
@@ -106,6 +112,9 @@ void ComponentEquation::fillComponentCache(
   // at least one polarised component is implemented.
   itsAllComponentsUnpolarised = true;
   
+  int nSources = 0;
+  std::vector<string> sources;
+
   // This loop is over all strings that complete the flux.i.* pattern
   // correctly. An exception will be throw if the parameters are not
   // consistent
@@ -113,9 +122,14 @@ void ComponentEquation::fillComponentCache(
   for (std::vector<std::string>::const_iterator it=completions.begin();
         it!=completions.end();++it,++compIt)  {
           const std::string &cur = *it;
+
           const double ra=parameters().scalarValue("direction.ra"+cur);
           const double dec=parameters().scalarValue("direction.dec"+cur);
           const double fluxi=parameters().scalarValue("flux.i"+cur);
+          const double spectral_index = parameters().has("flux.spectral_index"+cur) ? 
+                   parameters().scalarValue("flux.spectral_index"+cur) : 0.;
+          const double ref_freq = parameters().has("flux.ref_freq"+cur) ? 
+                   parameters().scalarValue("flux.ref_freq"+cur) : 1e9;
           const double bmaj = parameters().has("shape.bmaj"+cur) ? 
                    parameters().scalarValue("shape.bmaj"+cur) : 0.;
           const double bmin = parameters().has("shape.bmin"+cur) ? 
@@ -125,11 +139,12 @@ void ComponentEquation::fillComponentCache(
           
           if((bmaj>0.0)&&(bmin>0.0)) {
              // this is a gaussian
-             compIt->reset(new UnpolarizedGaussianSource(cur,fluxi,ra,dec,bmaj,
-                            bmin,bpa));
+             compIt->reset(new UnpolarizedGaussianSource(cur,fluxi,ra,dec,
+                            bmaj,bmin,bpa,spectral_index,ref_freq));
           } else {
              // this is a point source
-             compIt->reset(new UnpolarizedPointSource(cur,fluxi,ra,dec));
+             compIt->reset(new UnpolarizedPointSource(cur,fluxi,ra,dec,
+                            spectral_index,ref_freq));
           }
   }
   
@@ -153,14 +168,18 @@ void ComponentEquation::fillComponentCache(
 /// @param[in] freq a vector of frequencies (one for each spectral
 ///            channel) 
 /// @param[in] rwVis a non-const reference to the visibility cube to alter
+/// @param[in] rowOffset offset for the current model if more than one is present
 void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
        const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
        const casacore::Vector<casacore::Double>& freq,
-       casacore::Cube<casacore::Complex> &rwVis) const
+       casacore::Cube<casacore::Complex> &rwVis,
+       const casacore::uInt rowOffset) const
 {
-  ASKAPDEBUGASSERT(rwVis.nrow() == uvw.nelements());
+  // DDCALTAG
+  // ensure that any offset for multi-direction models is consistent with the buffer size
+  ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
+  ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
-                                
   ASKAPDEBUGASSERT(rwVis.nplane() == itsPolConverter.outputPolFrame().nelements());
   
   // flattened buffer for visibilities 
@@ -168,7 +187,7 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
  
   
   for (casacore::uInt row=0;row<rwVis.nrow();++row) {
-       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);
+       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
        for (casacore::Vector<casacore::Stokes::StokesTypes>::const_iterator polIt = itsPolConverter.inputPolFrame().begin();
             polIt != itsPolConverter.inputPolFrame().end(); ++polIt) {
             // model given input Stokes
@@ -204,26 +223,34 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
 /// @param[in] freq a vector of frequencies (one for each spectral
 ///            channel) 
 /// @param[in] rwVis a non-const reference to the visibility cube to alter
+/// @param[in] rowOffset offset for the current model if more than one is present
 void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
        const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
        const casacore::Vector<casacore::Double>& freq,
-       casacore::Cube<casacore::Complex> &rwVis) const
+       casacore::Cube<casacore::Complex> &rwVis,
+       const casacore::uInt rowOffset) const
 {
-  ASKAPDEBUGASSERT(rwVis.nrow() == uvw.nelements());
+  // DDCALTAG
+  // ensure that any offset for multi-direction models is consistent with the buffer size
+  //  - this will be updated as part of YAN-326, so leave for now
+  ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
+  ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
   ASKAPDEBUGASSERT(rwVis.nplane() >= 1);
   
   // flattened buffer for visibilities 
   std::vector<double> vis(2*freq.nelements());
-  
+
   // only Stokes I is of interest for the unpolarised component, use sparse transform
   const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform = 
         itsPolConverter.getSparseTransform(casacore::Stokes::I); 
 
-  for (casacore::uInt row=0;row<rwVis.nrow();++row) {
+  // DDCALTAG -- changed rwVis.nrow() to uvw.nelements()
+  for (casacore::uInt row=0;row<uvw.nelements();++row) {
        comp.calculate(uvw[row],freq,vis);
+
        //
-       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);
+       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
        
        ASKAPDEBUGASSERT(thisRow.ncolumn() == itsPolConverter.outputPolFrame().nelements());
        
@@ -275,6 +302,17 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
   
   const casacore::Vector<casacore::Double>& freq = chunk.frequency();
   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = chunk.uvw();
+
+  // DDCALTAG -- pass along DD cal info if need be
+  if (itsNDir > 1) {
+      try {
+          // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
+          accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
+          ndAcc.setNDir(itsNDir);
+      }
+      catch (std::bad_cast&) {}
+  }
+
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
          
   // reset all visibility cube to 0
@@ -286,21 +324,48 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
       // this is the first use. The converter will be used inside addModelToCube shortly      
       itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);    
   }
-         
+
   // loop over components
+  // DDCALTAG COMPTAG -- number of sources must equal Cddcalibrator.nCal parameter.
+  // DDCALTAG COMPTAG -- Need to add a check or remove Cddcalibrator.nCal
+  casacore::uInt rowOffset = 0;
   for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
        compList.begin(); compIt!=compList.end();++compIt) {
        
        ASKAPDEBUGASSERT(*compIt); 
        // current component
        const IParameterizedComponent& curComp = *(*compIt);
+
+       // DDCALTAG COMPTAG -- get current component name
+       // using the "flux.i." parameter since it must be there, as required in fillComponentCache
+       int srcID = 0;
+       for (int idx=0; idx<curComp.nParameters(); ++idx) {
+           if (curComp.parameterName(idx).find("flux.i.") == 0) {
+               const std::string &compName = curComp.parameterName(idx).substr(7);
+               if (parameters().has("source."+compName)) {
+                   srcID = parameters().scalarValue("source."+compName);
+               }
+               else {
+                   srcID = 0;
+               }
+               //ASKAPLOG_INFO_STR(logger, "DDCALTAG  - adding component "<< compName<<" model to buffer "<<srcID);
+               break;
+           }
+       }
+       // DDCALTAG -- set the appropriate row offset for this source
+       if (itsNDir > 1) {
+           rowOffset = srcID * uvw.nelements();
+       }
+
        try {
             const IUnpolarizedComponent &unpolComp = 
               dynamic_cast<const IUnpolarizedComponent&>(curComp);
-            addModelToCube(unpolComp,uvw,freq,rwVis);
+            // DDCALTAG
+            addModelToCube(unpolComp,uvw,freq,rwVis,rowOffset);
        }
        catch (const std::bad_cast&) {
-            addModelToCube(curComp,uvw,freq,rwVis);
+            // DDCALTAG
+            addModelToCube(curComp,uvw,freq,rwVis,rowOffset);
        }
   }
 }
@@ -330,6 +395,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
                    const casacore::Vector<casacore::Double>& freq,
                    scimath::DesignMatrix &dm, casacore::Vector<casacore::Double> &residual) const
 {
+
   const size_t nParameters = comp.nParameters();
   // the number of polarisations in the visibility cube
   const casacore::uInt nPol = itsPolConverter.outputPolFrame().nelements();
@@ -352,7 +418,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
   std::vector<std::vector<casacore::AutoDiff<double> > > visDerivBuffer(nPol);
                             
   casacore::Array<casacore::Double> derivatives(casacore::IPosition(2,nData, nParameters));
-           
+
   for (casacore::uInt row=0,offset=0; row<uvw.nelements(); ++row) {
        
        const casacore::RigidVector<casacore::Double, 3> &thisRowUVW = uvw[row];
@@ -411,6 +477,7 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
                   residual(casacore::Slice(offset,2*freq.nelements())));
        }
   }
+
   // Now we can add the design matrix, residual, and weights
   for (casacore::uInt par=0; par<nParameters; ++par) {
        dm.addDerivative(comp.parameterName(par), 
@@ -471,6 +538,7 @@ void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor
   for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
             compList.begin(); compIt!=compList.end();++compIt) {
        ASKAPDEBUGASSERT(*compIt); 
+           
        updateDesignMatrixAndResiduals(*(*compIt),uvw,freq,designmatrix,
                            residual);
   }

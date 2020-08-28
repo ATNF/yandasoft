@@ -730,6 +730,20 @@ namespace askap
       theirImageAccessor = accessors::imageAccessFactory(parset);
     }
 
+    /// @brief setup image handler
+    /// @details This method uses the factory to setup a helper class handling the
+    /// operations with images (default is casa). It is necessary to call this method
+    /// at least once before any read or write operation can happen.
+    /// @param[in] parset a parset file containing parameters describing which image handler to use
+    /// @param[in] comms, MPI communicator
+    /// @note The key parameter describing the image handler is "imagetype". By default, the
+    /// casa image handler is created (however, a call to this method is still required)
+    void SynthesisParamsHelper::setUpImageHandler(const LOFAR::ParameterSet &parset,
+                                                  askap::askapparallel::AskapParallel &comms)
+    {
+      theirImageAccessor = accessors::imageAccessFactory(parset, comms);
+    }
+
 
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
 						 const string& imagename)
@@ -1345,7 +1359,7 @@ namespace askap
 
            // actual fitting
            // the beam fitter fails at times - producing no or a bad solution
-           // We've tried a few approaches: 
+           // We've tried a few approaches:
            //  - retry with different support - often works, but still some failures
            //  - use setIncludeRange to exclude pixels below the cutoff - works sometimes, but worse at times
            //  - use estimate to set the initial guess - this seems the best solution so far
@@ -1454,15 +1468,16 @@ namespace askap
     /// @param[in] params a shared pointer to the parameter container
     /// @param[in] parset a parset object to read the data from
     /// @param[in] srcName name of the source
+    /// @param[in] compName name of the component
     /// @param[in] baseKey a prefix added to parset parameter names (default
     /// is "sources.", wich matches the current layout of the parset file)
     void SynthesisParamsHelper::copyComponent(const askap::scimath::Params::ShPtr &params,
-           const LOFAR::ParameterSet &parset,
-           const std::string &srcName, const std::string &baseKey)
+           const LOFAR::ParameterSet &parset, const std::string &srcName,
+           const std::string &compName, const std::string &baseKey)
     {
        ASKAPDEBUGASSERT(params);
        // check the special case of predefined calibrators
-       const std::string calParamName = baseKey + srcName + ".calibrator";
+       const std::string calParamName = baseKey + compName + ".calibrator";
        if (parset.isDefined(calParamName)) {
            params->add("calibrator."+parset.getString(calParamName));
            ASKAPCHECK(params->completions("calibrator.").size() == 1,
@@ -1482,19 +1497,32 @@ namespace askap
        parameterList["shape.bmaj"] = false;
        parameterList["shape.bmin"] = false;
        parameterList["shape.bpa"] = false;
+       parameterList["flux.spectral_index"] = false;
+       parameterList["flux.ref_freq"] = false;
+
+       // DDCALTAG COMPTAG -- keep a list of the sources and give each a unique ID
+       const std::vector<std::string> sourceList = params->completions("sourceID.");
+       if (std::find(sourceList.begin(), sourceList.end(), srcName) == sourceList.end()) {
+           params->add("sourceID."+srcName, sourceList.size());
+       }
+
+       // DDCALTAG COMPTAG -- link this component to its source ID 
+       //ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
+       //    " to source "<<params->scalarValue("sourceID."+srcName));
+       params->add("source."+compName, params->scalarValue("sourceID."+srcName));
 
        // now iterate through all parameters
        for (std::map<std::string, bool>::const_iterator ci = parameterList.begin();
             ci!=parameterList.end(); ++ci) {
-            const std::string parName = baseKey+srcName+"."+ci->first;
+            const std::string parName = baseKey+compName+"."+ci->first;
             if (parset.isDefined(parName)) {
                 const double val = parset.getDouble(parName);
-                params->add(ci->first+"."+srcName, val);
+                params->add(ci->first+"."+compName, val);
             } else {
                 if (ci->second) {
                     ASKAPTHROW(AskapError, "Parameter "<<parName<<
-                           " is required to define the source "<<srcName<<
-                           ", baseKey="<<baseKey<<" or "<<baseKey + srcName +".calibrator parameter should be present");
+                           " is required to define the source "<<compName<<
+                           ", baseKey="<<baseKey<<" or "<<baseKey + compName +".calibrator parameter should be present");
                 }
             }
        }

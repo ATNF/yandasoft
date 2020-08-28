@@ -213,7 +213,7 @@ void WDependentGridderBase::configureWSampling(const LOFAR::ParameterSet& parset
   // optionally export w-terms corresponding to each w-plane into dat file (largely for debugging)
   const std::string dbgExportFileName = parset.getString("wsampling.export","");
   if (dbgExportFileName != "") {
-      ASKAPLOG_INFO_STR(logger, "Exporing w-term for each w-plane and reverse translation into "<<dbgExportFileName);
+      ASKAPLOG_INFO_STR(logger, "Exporting w-term for each w-plane and reverse translation into "<<dbgExportFileName);
       boost::shared_ptr<std::ofstream> os;
       if (dbgExportFileName != "log") {
           os.reset(new std::ofstream(dbgExportFileName.c_str()));

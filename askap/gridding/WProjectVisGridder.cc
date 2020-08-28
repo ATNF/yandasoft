@@ -615,13 +615,12 @@ IVisGridder::ShPtr WProjectVisGridder::createGridder(const LOFAR::ParameterSet& 
     const string tablename = parset.getString("tablename", "");
     const float alpha=parset.getFloat("alpha", 1.);
     const bool useDouble = parset.getBool("usedouble",false);
-    const bool shareCF = parset.getBool("sharecf",false);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
     ASKAPLOG_INFO_STR(logger, "Using " << (useDouble ? "double":"single")<<
                       " precision to calculate convolution functions");
     boost::shared_ptr<WProjectVisGridder> gridder(new WProjectVisGridder(wmax, nwplanes,
-            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble, shareCF));
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
 
@@ -663,6 +662,8 @@ void WProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     }
 
     setAbsCutoffFlag(absCutoff);
+
+    itsShareCF = parset.getBool("sharecf",false);
 }
 
 

@@ -32,7 +32,7 @@
 #include <askap/askap/AskapLogging.h>
 #include <askap/askapparallel/AskapParallel.h>
 
-ASKAP_LOGGER(logger, "makescans");
+ASKAP_LOGGER(logger, ".makescans");
 
 #include <askap/askap/AskapError.h>
 #include <askap/dataaccess/ParsetInterface.h>

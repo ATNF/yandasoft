@@ -39,7 +39,7 @@
 #include <askap/scimath/utils/ImageUtils.h>
 #include <linmos/LinmosAccumulator.h>
 
-ASKAP_LOGGER(logger, "tmerge");
+ASKAP_LOGGER(logger, ".tmerge");
 
 using namespace askap;
 using namespace askap::scimath;
