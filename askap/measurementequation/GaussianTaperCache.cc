@@ -31,10 +31,10 @@
 #include <askap/measurementequation/GaussianTaperCache.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.gaussiantapercache");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/Arrays/ArrayMath.h>

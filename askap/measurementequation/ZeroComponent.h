@@ -35,7 +35,7 @@
 #include <askap/scimath/fitting/ComplexDiffMatrix.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/IConstDataAccessor.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/measurementequation/MEComponent.h>
 
 

@@ -4,11 +4,11 @@
 #include <askap/utils/LinmosUtils.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 /// ASKAP includes
-#include <askap/Application.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
-#include <askap/StatReporter.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askap/Application.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/StatReporter.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 /// CASA includes
 #include <casacore/images/Images/ImageInterface.h>

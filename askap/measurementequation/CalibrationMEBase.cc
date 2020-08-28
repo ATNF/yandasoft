@@ -37,11 +37,11 @@
 
 // own includes
 #include <askap/measurementequation/CalibrationMEBase.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <casacore/casa/Arrays/MatrixMath.h>
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askap/scimath/fitting/GenericNormalEquations.h>
 #include <askap/scimath/fitting/DesignMatrix.h>

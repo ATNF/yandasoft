@@ -37,10 +37,10 @@
 // ASKAPsoft includes
 #include <casacore/casa/OS/Timer.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapUtil.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 ASKAP_LOGGER(logger, ".parallel");
 

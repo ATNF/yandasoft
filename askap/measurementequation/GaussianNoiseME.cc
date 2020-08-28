@@ -39,7 +39,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/measurementequation/GaussianNoiseME.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 using namespace askap;
 using namespace askap::synthesis;

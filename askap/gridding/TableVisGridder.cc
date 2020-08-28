@@ -23,14 +23,14 @@
 
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <askap/dataaccess/IDataAccessor.h>
 #include <askap/dataaccess/OnDemandBufferDataAccessor.h>
 ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
-#include <fft/FFTWrapper.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/Arrays/ArrayIter.h>
@@ -50,8 +50,8 @@ ASKAP_LOGGER(logger, ".gridding.tablevisgridder");
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/scimath/utils/ImageUtils.h>
 
-#include <askap/CasaSyncHelper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/askap/CasaSyncHelper.h>
+#include <askap/profile/AskapProfiler.h>
 
 using namespace askap::scimath;
 using namespace askap;

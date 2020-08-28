@@ -24,7 +24,7 @@
 
 #include <casacore/casa/Arrays/IPosition.h>
 #include <askap/utils/CommandLineParser.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>
 #include <casacore/casa/Quanta/MVDirection.h>

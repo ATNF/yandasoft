@@ -39,7 +39,7 @@
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/IVisGridder.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 
 #include <sstream>
@@ -60,10 +60,10 @@
 #include <casacore/casa/OS/Path.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/askap_synthesis.h>
 
 using namespace std;

@@ -33,14 +33,14 @@
 
 // own includes
 #include <askap/askap_synthesis.h>
-#include <askap/AskapUtil.h>
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/fitting/Params.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/Log4cxxLogSink.h>
 // just for logging
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 // command line parser
 #include <askap/utils/CommandLineParser.h>

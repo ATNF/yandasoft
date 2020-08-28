@@ -38,7 +38,7 @@
 #include <casacore/casa/Arrays/Matrix.h>
 
 // ASKAPsoft includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <askap/opcal/ScanStats.h>
 #include <askap/opcal/GenericCalInfo.h>

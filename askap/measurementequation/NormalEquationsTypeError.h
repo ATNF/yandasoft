@@ -36,7 +36,7 @@
 #ifndef NORMAL_EQUATIONS_TYPE_ERROR_H
 #define NORMAL_EQUATIONS_TYPE_ERROR_H
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <string>
 
 namespace askap {

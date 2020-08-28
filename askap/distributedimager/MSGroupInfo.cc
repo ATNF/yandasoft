@@ -38,8 +38,8 @@
 #include <iomanip>
 
 // ASKAPsoft includes
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
 #include <casacore/casa/Quanta/Unit.h>
 #include <casacore/measures/Measures/MFrequency.h>
 #include <askap/dataaccess/IConstDataSource.h>

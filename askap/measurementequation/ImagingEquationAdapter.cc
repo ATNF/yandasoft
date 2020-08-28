@@ -43,9 +43,9 @@ using namespace askap::accessors;
 #include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.imagingequationadapter");
 
 /// @brief constructor

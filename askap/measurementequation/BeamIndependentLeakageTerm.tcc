@@ -32,8 +32,8 @@
 #define BEAM_INDEPENDENT_LEAKAGE_TERM_TCC
 
 // own includes
-#include <utils/PolConverter.h>
-#include <calibaccess/CalParamNameHelper.h>
+#include <askap/scimath/utils/PolConverter.h>
+#include <askap/calibaccess/CalParamNameHelper.h>
 
 // casa includes
 #include <casacore/measures/Measures/Stokes.h>

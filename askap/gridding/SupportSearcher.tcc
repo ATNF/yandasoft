@@ -32,10 +32,10 @@
 #ifndef SUPPORT_SEARCHER_TCC
 #define SUPPORT_SEARCHER_TCC
 
-#include <askap/AskapError.h>
-#include <profile/AskapProfiler.h>
+#include <askap/askap/AskapError.h>
+#include <askap/profile/AskapProfiler.h>
 #include <complex>
-//#include <askap/AskapLogging.h>
+//#include <askap/askap/AskapLogging.h>
 //ASKAP_LOGGER(gsslogger, ".gridding.supportsearcher");
 
 namespace askap {

@@ -31,7 +31,7 @@
 ///
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>

@@ -41,7 +41,7 @@
 #include <askap/measurementequation/IParameterizedComponent.h>
 #include <askap/measurementequation/IUnpolarizedComponent.h>
 #include <askap/measurementequation/GenericMultiChunkEquation.h>
-#include <utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 
 // casa includes
 #include <casacore/casa/aips.h>

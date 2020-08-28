@@ -34,7 +34,7 @@
 #define CALIBRATOR_PARALLEL_H
 
 // own includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/parallel/MEParallelApp.h>
 #include <Common/ParameterSet.h>
 #include <askap/gridding/IVisGridder.h>

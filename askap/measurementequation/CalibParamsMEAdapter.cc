@@ -40,11 +40,11 @@
 // own includes
 #include <askap/askap_synthesis.h>
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/fitting/Equation.h>
 #include <askap/calibaccess/JonesJTerm.h>
 #include <askap/calibaccess/JonesDTerm.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <askap/calibaccess/CalParamNameHelper.h>
 ASKAP_LOGGER(logger, ".measurementequation");
 

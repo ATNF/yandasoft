@@ -39,7 +39,7 @@
 #include <casacore/casa/Quanta/MVPosition.h>
 #include <casacore/casa/BasicSL/Constants.h>
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <cppunit/extensions/HelperMacros.h>
 

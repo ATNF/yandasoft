@@ -34,7 +34,7 @@
 #define I_COMPONENT_H
 
 // own includes
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // std includes
 #include <vector>

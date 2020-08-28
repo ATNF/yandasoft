@@ -31,7 +31,7 @@
 #define SYNIMAGEMSMFSSOLVER_H_
 
 #include <askap/measurementequation/ImageCleaningSolver.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 
 
 #include <boost/shared_ptr.hpp>

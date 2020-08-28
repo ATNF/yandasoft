@@ -31,7 +31,7 @@
 ///
 
 #include <string>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>
@@ -41,7 +41,7 @@
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <casacore/scimath/Mathematics/MatrixMathLA.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>

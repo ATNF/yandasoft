@@ -36,7 +36,7 @@
 #include <vector>
 #include <algorithm>
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_vector.h>

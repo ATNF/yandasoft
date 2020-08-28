@@ -33,7 +33,7 @@
 #include <string>
 
 // ASKAPsoft includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/Equation.h>

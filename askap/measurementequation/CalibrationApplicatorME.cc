@@ -38,14 +38,14 @@
 #include <casacore/scimath/Mathematics/MatrixMathLA.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>
 #include <casacore/scimath/Mathematics/SquareMatrix.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/utils/PolConverter.h>
 #include <askap/dataaccess/IFlagAndNoiseDataAccessor.h>
 
 
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation");
 
 #include <boost/shared_ptr.hpp>

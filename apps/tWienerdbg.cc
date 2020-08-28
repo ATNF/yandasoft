@@ -27,10 +27,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/casa/Logging/LogIO.h>
-#include <askap/Log4cxxLogSink.h>
+#include <askap/askap/Log4cxxLogSink.h>
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -45,7 +45,7 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/utils/ImageUtils.h>
 
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 ASKAP_LOGGER(logger, ".tpreconditioner");
 

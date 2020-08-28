@@ -36,7 +36,7 @@
 #include <casacore/casa/Arrays/ArrayMath.h>
 
 // own includes
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // std
 #include <stdexcept>

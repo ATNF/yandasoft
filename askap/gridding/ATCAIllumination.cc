@@ -34,9 +34,9 @@
 
 
 #include <askap/gridding/ATCAIllumination.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 using namespace askap;
 using namespace askap::synthesis;

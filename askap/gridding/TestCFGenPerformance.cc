@@ -35,10 +35,10 @@
 #include <casacore/casa/Quanta/Quantum.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.testcfgenperformance");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/gridding/TestCFGenPerformance.h>
 #include <askap/gridding/AProjectGridderBase.h>
 

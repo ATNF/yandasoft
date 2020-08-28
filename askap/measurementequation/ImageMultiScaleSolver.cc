@@ -24,18 +24,18 @@
 #include <askap/measurementequation/ImageMultiScaleSolver.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <boost/shared_ptr.hpp>
 
 ASKAP_LOGGER(logger, ".measurementequation.imagemultiscalesolver");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // need it just for null deleter
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>

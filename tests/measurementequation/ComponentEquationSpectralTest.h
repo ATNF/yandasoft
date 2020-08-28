@@ -33,7 +33,7 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <cmath>
 

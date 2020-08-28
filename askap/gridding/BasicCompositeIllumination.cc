@@ -41,7 +41,7 @@
 
 #include <askap/gridding/BasicCompositeIllumination.h>
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 namespace askap {
 

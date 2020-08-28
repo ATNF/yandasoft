@@ -33,16 +33,16 @@
 #include <casacore/casa/Quanta/MVTime.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 
 ASKAP_LOGGER(logger, ".gridding.aprojectwstackgridder");
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
-#include <profile/AskapProfiler.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <askap/gridding/AProjectWStackVisGridder.h>
-#include <fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 #include <askap/gridding/IBasicIllumination.h>
 
 #include <askap/scimath/utils/PaddingUtils.h>

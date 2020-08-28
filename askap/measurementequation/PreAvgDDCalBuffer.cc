@@ -38,11 +38,11 @@
 #include <askap/measurementequation/PreAvgDDCalBuffer.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalbuffer");
 
 using namespace askap;

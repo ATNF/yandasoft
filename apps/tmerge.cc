@@ -30,9 +30,9 @@
 #include "askap/askap_synthesis.h"
 
 //# Includes
-#include <askap/Application.h>
-#include <askap/AskapLogging.h>
-#include <askap/StatReporter.h>
+#include <askap/askap/Application.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/StatReporter.h>
 
 #include <askap/scimath/fitting/ImagingNormalEquations.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>

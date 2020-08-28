@@ -27,7 +27,7 @@
 /// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // Include package level header file
-#include "askap/askap_synthesis.h"
+#include <askap/askap_synthesis.h>
 
 // System include
 #include <string>
@@ -35,37 +35,37 @@
 #include <stdlib.h>
 
 // ASKAPsoft includes
-#include "askap/Application.h"
-#include "askap/AskapError.h"
-#include "askap/AskapUtil.h"
-#include "askap/AskapLogging.h"
-#include "askap/StatReporter.h"
-#include "dataaccess/TableDataSource.h"
-#include "dataaccess/IConstDataSource.h"
-#include "dataaccess/IFlagDataAccessor.h"
-#include "dataaccess/SharedIter.h"
-#include "dataaccess/ParsetInterface.h"
-#include "calibaccess/ICalSolutionConstSource.h"
-#include "calibaccess/CalibAccessFactory.h"
-#include "calibaccess/ServiceCalSolutionSourceStub.h"
-#include "calibaccess/ChanAdapterCalSolutionConstSource.h"
+#include <askap/askap/Application.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/StatReporter.h>
+#include <askap/dataaccess/TableDataSource.h>
+#include <askap/dataaccess/IConstDataSource.h>
+#include <askap/dataaccess/IFlagDataAccessor.h>
+#include <askap/dataaccess/SharedIter.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/calibaccess/CalibAccessFactory.h>
+#include <askap/calibaccess/ServiceCalSolutionSourceStub.h>
+#include <askap/calibaccess/ChanAdapterCalSolutionConstSource.h>
 
 #ifdef USE_CAL_SERVICE
-#include "calserviceaccessor/ServiceCalSolutionSource.h"
+#include <askap/calserviceaccessor/ServiceCalSolutionSource.h>
 #endif
 
-#include "dataaccess/OnDemandNoiseAndFlagDA.h"
-#include "askap/RangePartition.h"
-#include "boost/shared_ptr.hpp"
+#include <askap/dataaccess/OnDemandNoiseAndFlagDA.h>
+#include <askap/askap/RangePartition.h>
+#include <boost/shared_ptr.hpp>
 
 // Local packages includes
-#include "askap/measurementequation/ICalibrationApplicator.h"
-#include "askap/measurementequation/CalibrationApplicatorME.h"
-#include "askap/measurementequation/CalibrationIterator.h"
-#include "askap/parallel/ParallelWriteIterator.h"
+#include <askap/measurementequation/ICalibrationApplicator.h>
+#include <askap/measurementequation/CalibrationApplicatorME.h>
+#include <askap/measurementequation/CalibrationIterator.h>
+#include <askap/parallel/ParallelWriteIterator.h>
 
 // casacore includes
-#include "casacore/casa/OS/Timer.h"
+#include <casacore/casa/OS/Timer.h>
 
 
 ASKAP_LOGGER(logger, ".ccalapply");

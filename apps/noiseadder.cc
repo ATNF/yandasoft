@@ -27,10 +27,10 @@
 
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".noiseadder");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/dataaccess/ParsetInterface.h>
 
@@ -48,7 +48,7 @@ ASKAP_LOGGER(logger, ".noiseadder");
 #include <askap/measurementequation/GaussianNoiseME.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>
-#include <askapparallel/MPIComms.h>
+#include <askap/askapparallel/MPIComms.h>
 
 // std
 #include <stdexcept>

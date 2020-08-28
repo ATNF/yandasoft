@@ -29,10 +29,10 @@
 #include <casacore/casa/Quanta.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.meparsetinterface");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <askap/measurementequation/MEParsetInterface.h>
 #include <askap/measurementequation/ImageSolver.h>

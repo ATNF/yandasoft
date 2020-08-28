@@ -23,14 +23,14 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.sphfuncvisgridder");
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <askap/gridding/SphFuncVisGridder.h>
 #include <casacore/casa/Arrays/ArrayIter.h>
-#include <fft/FFTWrapper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/profile/AskapProfiler.h>
 
 namespace askap
 {
