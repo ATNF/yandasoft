@@ -1,7 +1,8 @@
 # GitLab CI script for yandasoft
 
 image: registry.gitlab.com/askapsdp/all_yandasoft:latest
-
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
 .common: {tags: [azure]}
 
 stages:
