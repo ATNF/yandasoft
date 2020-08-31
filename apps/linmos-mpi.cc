@@ -45,8 +45,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
   // initialise an image accessor
   accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
-  // Deal with collective I/O case
-  bool collective = parset.getBool("imageacces","individual");
+  // Do we want to use collective I/O or individual/independent I/O
+  bool collective = parset.getString("imageaccess","individual")=="collective";
+  // CASA images need to be written one process at a time, for fits we have a choice
+  // options "serial", "parallel"
+  bool serialWrite = parset.getString("imageaccess.write","serial")=="serial" ||
+                     parset.getString("imagetype")=="casa";
+
 
   // if we have Taylor terms and we need to correct them for the beam spectral
   // index - do it now ...
@@ -132,49 +137,59 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     casa::IPosition trc(shape);
     nchanCube = trc[3];
 
-    if (comms.rank() >= trc[3]) {
+    if (comms.rank() >= nchanCube) {
       ASKAPLOG_WARN_STR(logger,"Rank " << comms.rank() << " has no work to merge");
       return;
     }
     if (nchanCube % comms.nProcs() != 0) {
       ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << comms.nProcs() << " not a factor of number of channels: "<< trc[3]);
+      if (collective)  ASKAPLOG_WARN_STR(logger,"Turning off collective I/O due to unbalanced allocation");
+      collective = false;
     }
-    if (comms.nProcs() >= nchanCube) {
+    if (comms.nProcs() > nchanCube) {
       collective = false; // can't do it easily
       numChannelsLocal = 1;
     }
     else {
       numChannelsLocal = nchanCube/comms.nProcs();
+      if (nchanCube % comms.nProcs() != 0) numChannelsLocal +=1;
     }
 
     // Two schemes for reading/writing - not sure what is best for independent I/O
-    // For collective I/O only consecutive sections are currently supported - so make that the default
-    // 1. read evenly distributed over file, each rank has its own section
-    // 2. read consecutive sections of file, all ranks process each section
-    bool consecutive = (collective ? true : parset.getBool("imageacces.order","distributed"));
+    // 1. process channels evenly distributed over file, each rank has its own section
+    // 2. process contiguous sections of file, all ranks process each section
+    bool contiguous = parset.getString("imageaccess.order","distributed")!="distributed";
+    // For collective I/O only contiguous sections are currently supported - so enforce that
+    contiguous |= collective;
 
-    if (consecutive) {
+    if (contiguous) {
+        if (collective) ASKAPLOG_INFO_STR(logger,"Using collective I/O and contiguous channel access");
+        else ASKAPLOG_INFO_STR(logger,"Using contiguous channel access");
         firstChannel = comms.rank();
         channelInc = comms.nProcs();
         lastChannel = firstChannel + (numChannelsLocal - 1) * channelInc;
         // unless beyond end
-        if (lastChannel > nchanCube) {
+        if (lastChannel >= nchanCube) {
            numChannelsLocal -= 1;
            lastChannel = firstChannel + (numChannelsLocal - 1) * channelInc;
         }
     } else {
+        ASKAPLOG_INFO_STR(logger,"Using distributed channel access");
         firstChannel = comms.rank() * numChannelsLocal;
-        channelInc = 1;
-        // last rank gets the leftovers
-        if (comms.rank() == comms.nProcs()-1) {
-           numChannelsLocal = nchanCube - firstChannel;
+        if (firstChannel >=nchanCube) {
+            ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " has no work to merge");
+            return;
         }
+        channelInc = 1;
         lastChannel = firstChannel + numChannelsLocal - 1;
+        if (lastChannel >= nchanCube) {
+           numChannelsLocal = nchanCube - firstChannel;
+           lastChannel = nchanCube - 1;
+        }
     }
 
     ASKAPLOG_INFO_STR(logger,"Channel allocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size"
         << " with increment "<< channelInc << " and stops at "<< lastChannel);
-
 
     // So the plan is to iterate over each channel ...
     // Calculate the inShapes for each channel and file ....
@@ -340,7 +355,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           trc[0] = trc[0]-1;
           trc[1] = trc[1]-1;
           trc[2] = trc[2]-1;
-          trc[3] = channel + 1-1;
+          trc[3] = channel;
 
           accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
           Array<float> inPix = iacc.read(inImgName,blc,trc);
@@ -426,13 +441,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               switch (inPixIsTaylor)
               {
               case 0:
-                  inPix = taylor0;//.copy();
+                  inPix = taylor0;
                   break;
               case 1:
-                  inPix = taylor1;//.copy();
+                  inPix = taylor1;
                   break;
               case 2:
-                  inPix = taylor2;//.copy();
+                  inPix = taylor2;
                   break;
               }
 
@@ -443,7 +458,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
 
-          //casa::PagedImage<casa::Float> inImg(inWgtName);
             const casa::IPosition shape = iacc.shape(inWgtName);
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape);
@@ -608,7 +622,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
       casa::IPosition outShape = accumulator.outShape();
 
-      if (!collective) {
+      if (!collective && serialWrite) {
           if (comms.isMaster()) {
 
             ASKAPLOG_INFO_STR(logger, "Ensuring serial access to cubes");
@@ -653,7 +667,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
           }
       }
-      if (!collective) {
+      if (!collective && serialWrite) {
           if (comms.rank() < comms.nProcs()-1) { // last rank does not use this method
             int buf;
             int to = comms.rank()+1;
