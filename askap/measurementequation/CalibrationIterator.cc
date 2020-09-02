@@ -40,7 +40,7 @@
 
 #include <askap/measurementequation/CalibrationIterator.h>
 #include <askap/dataaccess/OnDemandNoiseAndFlagDA.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <askap/measurementequation/ICalibrationApplicator.h>
 

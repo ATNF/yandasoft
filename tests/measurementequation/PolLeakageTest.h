@@ -49,8 +49,8 @@
 #include <askap/measurementequation/CalibParamsMEAdapter.h>
 #include <cppunit/extensions/HelperMacros.h>
 
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <boost/shared_ptr.hpp>
 

@@ -31,7 +31,7 @@
 
 #include <askap/askap_synthesis.h>
 
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Cube.h>
 

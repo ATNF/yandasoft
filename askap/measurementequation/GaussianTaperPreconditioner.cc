@@ -31,11 +31,11 @@
 #include <askap/measurementequation/GaussianTaperPreconditioner.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.gaussiantaperpreconditioner");
 
-#include <askap/AskapError.h>
-#include <profile/AskapProfiler.h>
+#include <askap/askap/AskapError.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <askap/gridding/SupportSearcher.h>
 #include <askap/scimath/utils/PaddingUtils.h>

@@ -40,10 +40,10 @@
 #include <askap/parallel/ParallelIteratorStatus.h>
 #include <askap/dataaccess/IFlagDataAccessor.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
-#include <askap/AskapLogging.h>
-#include <askap/RangePartition.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/RangePartition.h>
 
 #include <Blob/BlobString.h>
 #include <Blob/BlobIBufString.h>

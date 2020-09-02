@@ -40,15 +40,19 @@ using namespace askap::synthesis;
 using namespace askap::accessors;
 
 #include <askap/dataaccess/FakeSingleStepIterator.h>
+#include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/measurementequation/MultiChunkEquation.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
+
+#include <askap/askap/AskapLogging.h>
+ASKAP_LOGGER(logger, ".measurementequation.imagingequationadapter");
 
 /// @brief constructor
 /// @details This constructor initializes a fake iterator. Actual measurement
 /// equation is set up via a call to assign method (templated)
 ImagingEquationAdapter::ImagingEquationAdapter() : 
-        itsIterAdapter(new FakeSingleStepIterator) {}
+        itsIterAdapter(new FakeSingleStepIterator), itsNDir(1) {}
 
 /// @brief access to parameters
 /// @details This call is translated to itsActualEquation. We need to override
@@ -80,6 +84,17 @@ void ImagingEquationAdapter::predict() const
      "assign method should be called before first usage of ImagingEquationAdapter");
   // there will be an exception if this class is initialized with the type,
   // which works with the iterator directly and bypasses accessor-based method.
+
+  // DDCALTAG -- pass along DD cal info if need be
+  if (itsNDir > 1) {
+      try {
+          const boost::shared_ptr<ImageFFTEquation const>
+              &ie = boost::dynamic_pointer_cast<ImageFFTEquation const>(itsActualEquation);
+          ie->setNDir(itsNDir);
+      }
+      catch (const std::bad_cast&) {}
+  }
+
   itsActualEquation->predict();
 }
    

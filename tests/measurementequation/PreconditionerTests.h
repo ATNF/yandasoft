@@ -35,7 +35,7 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Complex.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/lattices/LatticeMath/Fit2D.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/lattices/LatticeMath/LatticeFFT.h>

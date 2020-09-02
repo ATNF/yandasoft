@@ -30,8 +30,8 @@
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 
-#include <askap/AskapError.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
 
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/gridding/SKA_LOWIllumination.h>
@@ -42,7 +42,7 @@
 
 ASKAP_LOGGER(logger, ".gridding.ska-lowllumination");
 
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 // for debugging - to export intermediate images
 #include <askap/scimath/utils/ImageUtils.h>

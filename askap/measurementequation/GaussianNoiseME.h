@@ -43,7 +43,7 @@
 
 // own includes
 #include <askap/measurementequation/IMeasurementEquation.h>
-#include <utils/ComplexGaussianNoise.h>
+#include <askap/scimath/utils/ComplexGaussianNoise.h>
 
 // casa includes
 #include <casacore/casa/BasicMath/Random.h>

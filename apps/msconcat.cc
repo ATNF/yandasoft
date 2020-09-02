@@ -27,7 +27,7 @@
 /// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // Package level header file
-#include "askap/askap_synthesis.h"
+#include <askap/askap_synthesis.h>
 
 // System includes
 #include <sstream>
@@ -38,26 +38,26 @@
 #include <iterator>
 
 // ASKAPsoft includes
-#include "askap/AskapError.h"
-#include "askap/AskapLogging.h"
-#include "askap/StatReporter.h"
-#include "askap/Log4cxxLogSink.h"
-#include "boost/shared_ptr.hpp"
-#include "askap/utils/CommandLineParser.h"
-#include "casacore/casa/OS/File.h"
-#include "casacore/casa/aips.h"
-#include "casacore/casa/Quanta.h"
-#include "casacore/casa/Arrays/Vector.h"
-#include "casacore/casa/Arrays/MatrixMath.h"
-#include "casacore/tables/Tables/TableDesc.h"
-#include "casacore/tables/Tables/SetupNewTab.h"
-#include "casacore/tables/DataMan/IncrementalStMan.h"
-#include "casacore/tables/DataMan/StandardStMan.h"
-#include "casacore/tables/DataMan/TiledShapeStMan.h"
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/StatReporter.h>
+#include <askap/askap/Log4cxxLogSink.h>
+#include <boost/shared_ptr.hpp>
+#include <askap/utils/CommandLineParser.h>
+#include <casacore/casa/OS/File.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Quanta.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/MatrixMath.h>
+#include <casacore/tables/Tables/TableDesc.h>
+#include <casacore/tables/Tables/SetupNewTab.h>
+#include <casacore/tables/DataMan/IncrementalStMan.h>
+#include <casacore/tables/DataMan/StandardStMan.h>
+#include <casacore/tables/DataMan/TiledShapeStMan.h>
 
-#include "casacore/ms/MSOper/MSConcat.h"
-#include "casacore/ms/MeasurementSets/MeasurementSet.h"
-#include "casacore/ms/MeasurementSets/MSColumns.h"
+#include <casacore/ms/MSOper/MSConcat.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MeasurementSets/MSColumns.h>
 
 ASKAP_LOGGER(logger, ".msconcat");
 

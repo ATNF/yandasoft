@@ -165,6 +165,10 @@ namespace askap
         IVisGridder::ShPtr getPSFGridder(std::string name) const {
             return itsPSFGridders[name];
         };
+
+        /// DDCALTAG
+        /// Set the number of DD calibration directions
+        void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
  
       private:
 
@@ -188,6 +192,10 @@ namespace askap
 
         /// Iterator giving access to the data
         mutable accessors::IDataSharedIter itsIdi;
+
+        /// DDCALTAG
+        /// The number of separate directions (equations)
+        mutable casacore::uInt itsNDir;
 
         /// @brief change monitors per image parameter
         /// @details This objects are used to determine whether a new

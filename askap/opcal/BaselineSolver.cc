@@ -32,10 +32,10 @@
 /// @author Max Voronkov <Maxim.Voronkov@csiro.au>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <askap/opcal/BaselineSolver.h>
-#include <askap/IndexedCompare.h>
+#include <askap/askap/IndexedCompare.h>
 #include <askap/opcal/ObservationDescription.h>
 #include <askap/scimath/utils/PhaseUnwrapper.h>
 

@@ -29,14 +29,14 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 
 
-#include <askap/AskapLogging.h>
-#include <askapparallel/AskapParallel.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 ASKAP_LOGGER(logger, ".makescans");
 
-#include <askap/AskapError.h>
-#include <dataaccess/ParsetInterface.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/dataaccess/ParsetInterface.h>
+#include <askap/askap/AskapUtil.h>
 
 
 // casa

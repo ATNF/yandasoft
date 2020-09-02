@@ -32,10 +32,10 @@
 #include <askap/parallel/GroupVisAggregator.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".parallel.groupvisaggregator");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 
 namespace askap {

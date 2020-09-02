@@ -35,7 +35,7 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicMath/Math.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 
 ASKAP_LOGGER(decentropyilogger, ".deconvolution.entropyi");
 

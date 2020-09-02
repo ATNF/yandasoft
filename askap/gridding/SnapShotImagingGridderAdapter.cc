@@ -40,15 +40,15 @@
 ///
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 #include <askap/gridding/SnapShotImagingGridderAdapter.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 
-#include <fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/images/Images/ImageRegrid.h>
@@ -59,7 +59,7 @@ ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 //#include <askap/measurementequation/SynthesisParamsHelper.h>
 
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 using namespace askap;
 using namespace askap::synthesis;

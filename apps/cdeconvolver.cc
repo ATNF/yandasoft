@@ -37,11 +37,11 @@
 #include <string>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".cdeconvolver");
-#include <askap/AskapError.h>
-#include <askap/Application.h>
-#include <askap/StatReporter.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/Application.h>
+#include <askap/askap/StatReporter.h>
 #include <askap/deconvolution/DeconvolverBase.h>
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>

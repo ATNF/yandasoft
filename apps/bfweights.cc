@@ -35,7 +35,7 @@
 #include <askap/utils/ImplCalWeightSolver.h>
 #include <askap/utils/EigenSolve.h>
 #include <askap/utils/IlluminationUtils.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 #include <fstream>
 

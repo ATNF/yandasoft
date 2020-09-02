@@ -33,7 +33,7 @@
 
 #include <askap/measurementequation/RestoringBeamHelper.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 namespace askap {
 

@@ -30,7 +30,7 @@
 
 #include <string>
 
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>

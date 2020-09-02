@@ -42,8 +42,8 @@
 #include <casacore/casa/BasicSL/Complex.h>
 
 // own
-#include <dataaccess/IConstDataAccessor.h>
-#include <utils/DelayEstimator.h>
+#include <askap/dataaccess/IConstDataAccessor.h>
+#include <askap/scimath/utils/DelayEstimator.h>
 
 namespace askap {
 

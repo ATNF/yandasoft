@@ -44,7 +44,7 @@
 #define CONTOUR_FINDER_H
 
 // askap includes - just the exception class
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // casa includes
 #include <casacore/casa/Arrays/Array.h>

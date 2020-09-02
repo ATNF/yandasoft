@@ -3,6 +3,7 @@ AdviseParallel.cc
 BPCalibratorParallel.cc
 CalibratorParallel.cc
 ContSubtractParallel.cc
+DDCalibratorParallel.cc
 GroupVisAggregator.cc
 ImagerParallel.cc
 MEParallel.cc
@@ -19,6 +20,7 @@ AdviseParallel.h
 BPCalibratorParallel.h
 CalibratorParallel.h
 ContSubtractParallel.h
+DDCalibratorParallel.h
 GroupVisAggregator.h
 ImagerParallel.h
 MEParallel.h

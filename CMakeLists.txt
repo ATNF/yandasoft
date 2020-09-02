@@ -19,11 +19,8 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/askap-cmake")
 include(version_utils)
 get_version_string()
-if (VERSION_SHORT)
-    project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
-else ()
-    project(yandasoft VERSION 0.0.0 LANGUAGES C CXX)
-endif ()
+
+project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
 
 
 configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
@@ -32,6 +29,7 @@ configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 # of this package. This allows the PATCH versions to change on everything
 # but the version number cannot be less or more than the current version
 # 
+set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
 
 
 
@@ -88,11 +86,11 @@ endif(ENABLE_SHARED)
 # YandaSoft dependencies .. in order
 find_package(lofar-common REQUIRED)
 find_package(lofar-blob REQUIRED)
-find_package(askap-askap REQUIRED)
-find_package(askap-imagemath REQUIRED)
-find_package(askap-scimath REQUIRED)
-find_package(askap-parallel REQUIRED)
-find_package(askap-accessors REQUIRED)
+find_package(askap-askap ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-imagemath ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-scimath ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-parallel ${REQUIRED_VERSION} REQUIRED)
+find_package(askap-accessors ${REQUIRED_VERSION} REQUIRED)
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(GSL REQUIRED)
@@ -147,17 +145,18 @@ set_target_properties(yandasoft PROPERTIES
 add_library(askap::yandasoft ALIAS yandasoft)
 
 target_link_libraries(yandasoft PUBLIC
+	lofar::Common
+	lofar::Blob
 	askap::askap
 	askap::scimath
 	askap::imagemath
-	lofar::Common
-	lofar::Blob
 	askap::accessors
 	askap::parallel
 	${log4cxx_LIBRARY}
 	${CASACORE_LIBRARIES}
 	${COMPONENTS_LIBRARY}
 	${Boost_LIBRARIES}
+        ${GSL_LIBRARIES}
 )
 
 target_compile_definitions(yandasoft PUBLIC

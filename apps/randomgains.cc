@@ -31,8 +31,8 @@
 #include <casacore/casa/BasicSL/Complex.h>
 
 // own includes
-#include <askap/AskapUtil.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
 
 // command line parser
 #include <askap/utils/CommandLineParser.h>

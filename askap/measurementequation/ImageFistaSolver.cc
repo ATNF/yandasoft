@@ -22,15 +22,15 @@
 ///
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 #include <boost/shared_ptr.hpp>
 
 ASKAP_LOGGER(logger, ".measurementequation.imagefistasolver");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 // need it just for null deleter
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapUtil.h>
 
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 

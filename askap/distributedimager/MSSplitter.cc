@@ -37,29 +37,29 @@
 #include <stdint.h>
 
 // ASKAPsoft includes
-#include "askap/AskapError.h"
-#include "askap/AskapLogging.h"
-#include "askap/Application.h"
-#include "askap/AskapUtil.h"
-#include "askap/StatReporter.h"
-#include "askap/Log4cxxLogSink.h"
-#include "boost/shared_ptr.hpp"
-#include "Common/ParameterSet.h"
-#include "casacore/casa/OS/File.h"
-#include "casacore/casa/aips.h"
-#include "casacore/casa/Arrays/IPosition.h"
-#include "casacore/casa/Arrays/Slicer.h"
-#include "casacore/casa/Arrays/Array.h"
-#include "casacore/casa/Arrays/Vector.h"
-#include "casacore/casa/Arrays/Cube.h"
-#include "casacore/casa/Quanta/MVTime.h"
-#include "casacore/tables/Tables/TableDesc.h"
-#include "casacore/tables/Tables/SetupNewTab.h"
-#include "casacore/tables/DataMan/IncrementalStMan.h"
-#include "casacore/tables/DataMan/StandardStMan.h"
-#include "casacore/tables/DataMan/TiledShapeStMan.h"
-#include "casacore/ms/MeasurementSets/MeasurementSet.h"
-#include "casacore/ms/MeasurementSets/MSColumns.h"
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/Application.h>
+#include <askap/askap/AskapUtil.h>
+#include <askap/askap/StatReporter.h>
+#include <askap/askap/Log4cxxLogSink.h>
+#include <boost/shared_ptr.hpp>
+#include <Common/ParameterSet.h>
+#include <casacore/casa/OS/File.h>
+#include <casacore/casa/aips.h>
+#include <casacore/casa/Arrays/IPosition.h>
+#include <casacore/casa/Arrays/Slicer.h>
+#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Vector.h>
+#include <casacore/casa/Arrays/Cube.h>
+#include <casacore/casa/Quanta/MVTime.h>
+#include <casacore/tables/Tables/TableDesc.h>
+#include <casacore/tables/Tables/SetupNewTab.h>
+#include <casacore/tables/DataMan/IncrementalStMan.h>
+#include <casacore/tables/DataMan/StandardStMan.h>
+#include <casacore/tables/DataMan/TiledShapeStMan.h>
+#include <casacore/ms/MeasurementSets/MeasurementSet.h>
+#include <casacore/ms/MeasurementSets/MSColumns.h>
 
 
 ASKAP_LOGGER(logger, ".mssplitter");

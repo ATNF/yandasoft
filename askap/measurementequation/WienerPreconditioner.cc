@@ -24,13 +24,13 @@
 #include <askap/measurementequation/WienerPreconditioner.h>
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/utils/PaddingUtils.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -41,7 +41,7 @@ ASKAP_LOGGER(logger, ".measurementequation.wienerpreconditioner");
 #include <casacore/lattices/Lattices/SubLattice.h>
 //#include <casacore/lattices/Lattices/ArrayLattice.h>
 //#include <casacore/lattices/LatticeMath/LatticeFFT.h>
-#include <fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 #include <casacore/lattices/LEL/LatticeExpr.h>
 
 // for debugging - to export intermediate images

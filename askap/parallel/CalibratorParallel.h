@@ -34,7 +34,7 @@
 #define CALIBRATOR_PARALLEL_H
 
 // own includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/parallel/MEParallelApp.h>
 #include <Common/ParameterSet.h>
 #include <askap/gridding/IVisGridder.h>
@@ -131,7 +131,8 @@ namespace askap
 
       /// @brief Generates a map with LSQR solver parameters, from a given parset.
       /// @param[in] parset Input parset.
-      /// @note This static method is also called from BPCalibratorParallel, thus introducing horizontal dependency.
+      /// @note This static method is also called from BPCalibratorParallel and DDCalibratorParallel,
+      /// thus introducing horizontal dependency.
       /// @return Map with LSQR solver parameters.
       static std::map<std::string, std::string> getLSQRSolverParameters(const LOFAR::ParameterSet& parset);
 

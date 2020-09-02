@@ -25,9 +25,9 @@
 #include <askap/askap_synthesis.h>
 
 // ASKAPsoft includes
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.visgridderfactory");
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/casa/OS/DynLib.h>        // for dynamic library loading
 #include <casacore/casa/BasicSL/String.h>   // for downcase
 #include <casacore/scimath/Mathematics/Interpolate2D.h>

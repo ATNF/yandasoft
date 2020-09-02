@@ -31,7 +31,7 @@
 #define ASKAP_SYNTHESIS_IMAGERPARALLEL_H_
 
 // ASKAPsoft includes
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 #include <askap/scimath/fitting/Solver.h>
 #include <Common/ParameterSet.h>
 

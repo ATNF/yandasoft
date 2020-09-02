@@ -28,7 +28,7 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 #include <askap/parallel/ParallelIteratorStatus.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 namespace askap {
 

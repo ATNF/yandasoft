@@ -47,7 +47,7 @@
 #include <askap/utils/SkyCatalogTabWriter.h>
 #include <iomanip>
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 
 using namespace casa;
 using namespace std;

@@ -24,8 +24,8 @@
 
 #include <askap/askap_synthesis.h>
 
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/casa/OS/Directory.h>
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/casa/BasicSL/String.h>   // for downcase

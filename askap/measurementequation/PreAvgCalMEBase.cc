@@ -37,7 +37,7 @@
 
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/dataaccess/IDataIterator.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/scimath/fitting/ComplexDiffMatrix.h>
 #include <askap/scimath/fitting/ComplexDiff.h>
 #include <askap/scimath/fitting/DesignMatrix.h>
@@ -46,7 +46,7 @@
 #include <askap/scimath/fitting/CalParamNameHelper.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".measurementequation.preavgcalmebase");
 
 using namespace askap;

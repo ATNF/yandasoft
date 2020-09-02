@@ -33,14 +33,14 @@
 
 
 #include <askap/gridding/DiskIllumination.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 // temporary
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.diskillumination");
 //
 
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 using namespace askap;
 using namespace askap::synthesis;

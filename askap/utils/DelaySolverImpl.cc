@@ -29,11 +29,11 @@
 
 #include <askap/askap_synthesis.h>
 #include <askap/utils/DelaySolverImpl.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
 ASKAP_LOGGER(logger, ".DelaySolverImpl");
 
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 
 // std

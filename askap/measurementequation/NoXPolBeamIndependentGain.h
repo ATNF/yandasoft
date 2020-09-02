@@ -36,9 +36,9 @@
 #include <askap/scimath/fitting/ComplexDiff.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/IConstDataAccessor.h>
-#include <askap/AskapError.h>
+#include <askap/askap/AskapError.h>
 #include <askap/measurementequation/ParameterizedMEComponent.h>
-#include <utils/PolConverter.h>
+#include <askap/scimath/utils/PolConverter.h>
 
 // std includes
 #include <string>

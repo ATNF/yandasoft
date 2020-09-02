@@ -29,11 +29,14 @@
 
 // Test includes
 #include "ComponentEquationTest.h"
+#include "ComponentEquationSpectralTest.h"
 #include "Calibrator1934Test.h"
 #include "VectorOperationsTest.h"
 #include "ImageDFTEquationTest.h"
 #include "ImageFFTEquationTest.h"
 #include "CalibrationMETest.h"
+#include "CalibrationDDTest.h"
+#include "CalibrationIonoTest.h"
 #include "PreconditionerTests.h"
 #include "SynthesisParamsHelperTest.h"
 #include "ImageParamsHelperTest.h"
@@ -43,7 +46,7 @@
 #include "RestoringBeamHelperTest.h"
 #include "VisMetaDataStatsTest.h"
 
-#include <askapparallel/AskapParallel.h>
+#include <askap/askapparallel/AskapParallel.h>
 
 int main( int argc, char **argv)
 {
@@ -53,9 +56,12 @@ int main( int argc, char **argv)
 
     runner.addTest(askap::synthesis::VectorOperationsTest::suite());
     runner.addTest(askap::synthesis::ComponentEquationTest::suite());
+    runner.addTest(askap::synthesis::ComponentEquationSpectralTest::suite());
     runner.addTest(askap::synthesis::Calibrator1934Test::suite());
     runner.addTest(askap::synthesis::PreAvgCalBufferTest::suite());
     runner.addTest(askap::synthesis::CalibrationMETest::suite());
+    runner.addTest(askap::synthesis::CalibrationDDTest::suite());
+    runner.addTest(askap::synthesis::CalibrationIonoTest::suite());
     // runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
     runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
     runner.addTest(askap::synthesis::PreconditionerTests::suite());

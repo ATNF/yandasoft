@@ -30,18 +30,18 @@
 ///
 
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
+#include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 
 #include <askap/gridding/AProjectGridderBase.h>
-#include <askap/AskapError.h>
-#include <askap/AskapUtil.h>
+#include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/gridding/DiskIllumination.h>
 #include <askap/gridding/ATCAIllumination.h>
 #include <askap/gridding/SKA_LOWIllumination.h>
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <profile/AskapProfiler.h>
+#include <askap/profile/AskapProfiler.h>
 
 #include <limits>
 

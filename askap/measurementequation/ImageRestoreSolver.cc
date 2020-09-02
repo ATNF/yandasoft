@@ -32,9 +32,9 @@
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/askap_synthesis.h>
-#include <askap/AskapLogging.h>
-#include <askap/AskapError.h>
-#include <profile/AskapProfiler.h>
+#include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapError.h>
+#include <askap/profile/AskapProfiler.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/Matrix.h>

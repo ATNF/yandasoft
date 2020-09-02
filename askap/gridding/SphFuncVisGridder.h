@@ -29,7 +29,7 @@
 
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/dataaccess/IConstDataAccessor.h>
-#include <utils/SpheroidalFunction.h>
+#include <askap/scimath/utils/SpheroidalFunction.h>
 
 namespace askap
 {
