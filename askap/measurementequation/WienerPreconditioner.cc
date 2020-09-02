@@ -161,12 +161,16 @@ namespace askap
           maxPSFBefore << ", is less than or equal to zero");
       ASKAPLOG_INFO_STR(logger, "Peak of PSF before Wiener filtering = " << maxPSFBefore);
 
+      /*
+       * Not using the PSF to generate the filter, so this isn't needed and complicates subsequent normalisation
+       *
       if (itsDoNormalise) {
           ASKAPLOG_INFO_STR(logger, "The PSF will be normalised to 1 before filter construction");
           psf=psf/maxPSFBefore;
           // dirty=dirty/maxPSFBefore;
           maxPSFBefore=1.0;
       }
+       */
 
       casacore::Matrix<casacore::Float> psf2D(psf.nonDegenerate());
       casacore::Matrix<casacore::Float> dirty2D(dirty.nonDegenerate());
@@ -275,7 +279,9 @@ namespace askap
                         kernelW = max(kernelW,kernelWidthMatrix(xb,yb));
                     }
                 }
-                const int kernelWidth = ceil(kernelW);
+                // ceil was experiencing some roundoff error, so changing to round.
+                //const int kernelWidth = ceil(kernelW);
+                const int kernelWidth = round(kernelW);
 
                 if (kernelWidth>0) {
 
@@ -426,6 +432,7 @@ namespace askap
       }
 
       scratch *= itsWienerfilter;
+
       scimath::fft2d(scratch, false);
       psf2D = real(scratch);
       const float maxPSFAfter=casacore::max(psf2D);
