@@ -34,7 +34,7 @@ mslist
 msmerge
 mstabtest
 noiseadder
-#opcal ONLY BECAUSE IT IS THE SAME NAME AS A DIRECTORY UPSTREAM
+opcal 
 randomgains
 smear
 tCFGeneration
