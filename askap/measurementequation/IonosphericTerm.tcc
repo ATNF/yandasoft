@@ -71,31 +71,39 @@ inline scimath::ComplexDiffMatrix IonosphericTerm::get(const accessors::IConstDa
    
    const casacore::uInt dir1 = chunk.feed1()[row];
    const casacore::uInt dir2 = chunk.feed2()[row];
+   ASKAPASSERT(dir1 == dir2);   
 
-   // antenna positions for ant1
+   // antenna positions for ant1 (m)
    const std::string u1name = "antenna.position.x."+toString(ant1);
    const std::string v1name = "antenna.position.y."+toString(ant1);
 
-   // antenna positions for ant2
+   // antenna positions for ant2 (m)
    const std::string u2name = "antenna.position.x."+toString(ant2);
    const std::string v2name = "antenna.position.y."+toString(ant2);
 
    // ionospheric parameters: dl/lambda^2 and dm/lambda_2
    const std::string lname = "ionosphere.coeff.l."+toString(dir1);
-   const std::string mname = "ionosphere.coeff.m."+toString(dir2);
+   const std::string mname = "ionosphere.coeff.m."+toString(dir1);
 
+   // these are not phased up and are in units of metres
    const casacore::Complex u = parameters()->scalarValue(u1name) - parameters()->scalarValue(u2name);
    const casacore::Complex v = parameters()->scalarValue(v1name) - parameters()->scalarValue(v2name);
-   const scimath::ComplexDiff phase_const = -casacore::C::_2pi * ( u*getParameter(lname) + v*getParameter(mname) );
+   // I would think this should be negative, but that is resulting in parameters with the wrong sign
+   // should, but in, e.g. UnpolarizedPointSource.cc, the phase factor is +ve!!
+   const scimath::ComplexDiff phaseConst = casacore::C::_2pi * ( u*getParameter(lname) + v*getParameter(mname) );
 
    const casacore::Vector<casacore::Double>& frequency = parameters()->value("frequency");
+
+   const casacore::Complex I = casacore::Complex(0.0,1.0);
 
    scimath::ComplexDiffMatrix calFactor(nPol, nPol * nChan, 0.);
 
    for (casacore::uInt chan = 0; chan < nChan; ++chan) {
 
        const casacore::Float lambda = casacore::C::c / frequency[chan];
-       const askap::scimath::ComplexDiff phase = phase_const * lambda*lambda;
+       // x and y are in metres, so divide phaseConst by lambda
+       // phase = phaseConst/lambda * lambda*lambda;
+       const askap::scimath::ComplexDiff phase = phaseConst * lambda;
 
        for (casacore::uInt pol=0; pol<nPol; ++pol) {
        
@@ -109,28 +117,19 @@ inline scimath::ComplexDiffMatrix IonosphericTerm::get(const accessors::IConstDa
                           polIndex / 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
          
             // gains for antenna 2, polarisation X if XX or YX, or Y if XY or YY
-            const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, dir2,
+            const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, dir1,
                           polIndex % 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
-         
-            /*
-            if (row == 0 && pol == 0) {
-                std::cout << "IONOCAL IonosphericTerm (npol = "<<nPol<<"): row = "<<row<<
-                                 ", ant1 = "<<ant1<<", ant2 = "<<ant2<<
-                                 ", dir1 = "<<dir1<<", dir2 = "<<dir2<<
-                                 ", exp(-i*2pi * ("<<u<<"*"<<getParameter(lname).value()<<
-                                             " +  "<<v<<"*"<<getParameter(mname).value()<<")" << std::endl;
-            }
-            */
 
             // we need to think of how to deal with distributed problem on the cluster (i.e. adding
             // some base to the channel number and propagating it through the framework)    
-            // exp( j * phase ) ~ 1 + j * phase
             // could also include gains as free ComplexDiff parameters here, but just use their values for now
+            // want:
+            //  - value set using exp(i*phase)
+            //  - derivatives set using i*phase
+            // so set to float variable exp(i*phase) but replace the i*phase part with a ComplexDiff version
             calFactor(pol, pol + chan * nPol) = getParameter(g1name).value() * conj(getParameter(g2name).value()) *
-                                                ( 1.0 + casacore::Complex(0.0,1.0) * phase );
-
+                                                ( exp(I*phase.value()) - I*phase.value() + I*phase );
        }
-
 
    }
 
