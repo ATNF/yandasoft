@@ -104,7 +104,9 @@ namespace askap
                  //std::cout <<parname<<" "<<params1->complexValue(parname)/float(casacore::C::arcmin)<<" - "<<
                  //                          params2->complexValue(parname)/float(casacore::C::arcmin)<<" = "<<
                  //                          params1->complexValue(parname)/float(casacore::C::arcmin) - 
-                 //                          params2->complexValue(parname)/float(casacore::C::arcmin) << std::endl;
+                 //                          params2->complexValue(parname)/float(casacore::C::arcmin)<<
+                 //                          " (unscaled = "<<params1->complexValue(parname) - 
+                 //                          params2->complexValue(parname)<<")" << std::endl;
            
                  // check that the real parts are equal
                  CPPUNIT_ASSERT_DOUBLES_EQUAL(params1->complexValue(parname).real(),
@@ -192,10 +194,11 @@ namespace askap
           }
           // frequency-dependent fixed parameters
           params1->add("frequency", frequency);
-          // free parameters. work in lambda^2 once the basic setup is established
+          // free parameters
+          // ave wavelength is about 0.24 m. 
           for (casacore::uInt dir=0; dir<nDir; ++dir) {
-               params1->add("ionosphere.coeff.l."+toString(dir), 1.0*casacore::C::arcmin);
-               params1->add("ionosphere.coeff.m."+toString(dir), 2.0*casacore::C::arcmin);
+               params1->add("ionosphere.coeff.l."+toString(dir), 10.0*casacore::C::arcsec);
+               params1->add("ionosphere.coeff.m."+toString(dir), 20.0*casacore::C::arcsec);
           }
 
           // uvw info is not always available in IonosphericTerm, and eventually xyz staton position data will be needed.
@@ -238,10 +241,10 @@ namespace askap
           }
           // frequency-dependent fixed parameters
           params2->add("frequency", frequency);
-          // free parameters. work in lambda^2 once the basic setup is established
+          // free parameters
           for (casacore::uInt dir=0; dir<nDir; ++dir) {
-              params2->add("ionosphere.coeff.l."+toString(dir), 0.0*casacore::C::arcmin);
-              params2->add("ionosphere.coeff.m."+toString(dir), 0.0*casacore::C::arcmin);
+              params2->add("ionosphere.coeff.l."+toString(dir), 0.0*casacore::C::arcsec);
+              params2->add("ionosphere.coeff.m."+toString(dir), 0.0*casacore::C::arcsec);
           }
 
           p2.reset(new ComponentEquation(*params2, idi));
