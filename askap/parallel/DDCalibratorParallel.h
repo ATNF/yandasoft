@@ -128,6 +128,11 @@ namespace askap
       /// @param[in] parset ParameterSet for inputs
       void init(const LOFAR::ParameterSet& parset);
 
+      /// @brief initalise ionospheric parameters
+      /// @details 
+      /// @param[in] parset ParameterSet for inputs
+      void initIonoParams(const LOFAR::ParameterSet& parset);
+
       /// @brief Performs phase rotation.
       /// @note To be called after all cycles completed in the major loop.
       void doPhaseReferencing();
@@ -223,6 +228,9 @@ namespace askap
       /// @brief flag switching the bandpass calibration on
       bool itsSolveBandpass;
 
+      /// @brief flag switching the ionospheric calibration on
+      bool itsSolveIonosphere;
+
       /// @brief chunk size per worker (used in parallel case)
       /// @details zero means that the whole dataset is used
       casacore::uInt itsChannelsPerWorker;
@@ -265,7 +273,8 @@ namespace askap
       /// @param[in] nAnt currently expected number of antennas in the buffer
       /// @param[in] nCal currently expected number of separate calibrators in the buffer -- same as nBeam in cCal
       /// @param[in] nChan currently expected number of frequency channels in the buffer
-      void updatePreAvgBufferEstimates(const casacore::uInt nAnt, const casacore::uInt nCal, const casacore::uInt nChan = 1);
+      void updatePreAvgBufferEstimates(const casacore::uInt nCal,
+          const casacore::uInt nAnt = 1, const casacore::uInt nChan = 1);
 
       /// @brief maximum number of antennas for pre-averging
       /// @details It is handy to cache the number of antennas expected to be dealt with in pre-averaging.

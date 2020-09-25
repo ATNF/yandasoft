@@ -81,6 +81,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/NoXPolBeamIndependentGain.h>
 #include <askap/measurementequation/LeakageTerm.h>
 #include <askap/measurementequation/BeamIndependentLeakageTerm.h>
+#include <askap/measurementequation/IonosphericTerm.h>
 #include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -119,9 +120,9 @@ using namespace askap::askapparallel;
 /// @param[in] parset ParameterSet for inputs
 DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset),
-      itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
-      itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
+      MEParallelApp(comms,parset), itsPerfectModel(new scimath::Params()),
+      itsSolveGains(false), itsSolveLeakage(false), itsSolveBandpass(false),
+      itsSolveIonosphere(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsNormaliseGains(false), itsSolutionInterval(-1.),
       itsMaxNAntForPreAvg(0u), itsMaxNCalForPreAvg(0u), itsMaxNChanForPreAvg(1u),
       itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
@@ -149,9 +150,17 @@ DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& 
          " supported at the moment for simplicity");
   }
 
-  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass,
-      "Nothing to solve! Either gains or leakages (or both) or bandpass have to be solved for,"
-      " you specified solve='"<<what2solve<<"'");
+  if (what2solve.find("ionosphere") != std::string::npos) {
+      ASKAPLOG_INFO_STR(logger, "Ionospheric DTEC gradients will be solved for (solve='"<<what2solve<<"')");
+      itsSolveIonosphere = true;
+      ASKAPCHECK(!itsSolveGains && !itsSolveLeakage && !itsSolveBandpass,
+         "Combination of ionospheric DTEC gradients and antenna-based effects is not"
+         " supported at the moment for simplicity");
+  }
+
+  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass || itsSolveIonosphere,
+      "Nothing to solve! Either gains or leakages (or both), bandpass or ionospheric DTEC grdients"
+      " have to be solved for, you specified solve='"<<what2solve<<"'");
 
   init(parset);
 
@@ -288,18 +297,18 @@ DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& 
 /// @details This method updates global maxima based on the current local values. It is handy to
 /// avoid code dublication as well as for the case if we ever decide to trim the pre-aveaging buffer
 /// to exclude fixed parameters.
-/// @param[in] nAnt currently expected number of antennas in the buffer
 /// @param[in] nCal currently expected number of separate calibrators in the buffer - same as nBeam for cCalibrator
+/// @param[in] nAnt currently expected number of antennas in the buffer
 /// @param[in] nChan currently expected number of frequency channels in the buffer
-void DDCalibratorParallel::updatePreAvgBufferEstimates(const casacore::uInt nAnt,
-                                                       const casacore::uInt nCal,
+void DDCalibratorParallel::updatePreAvgBufferEstimates(const casacore::uInt nCal,
+                                                       const casacore::uInt nAnt,
                                                        const casacore::uInt nChan)
 {
-   if (itsMaxNAntForPreAvg < nAnt) {
-       itsMaxNAntForPreAvg = nAnt;
-   }
    if (itsMaxNCalForPreAvg < nCal) {
        itsMaxNCalForPreAvg = nCal;
+   }
+   if (itsMaxNAntForPreAvg < nAnt) {
+       itsMaxNAntForPreAvg = nAnt;
    }
    if (itsMaxNChanForPreAvg < nChan) {
        itsMaxNChanForPreAvg = nChan;
@@ -341,7 +350,7 @@ void DDCalibratorParallel::init(const LOFAR::ParameterSet& parset)
           }
           // technically could've done it outside the if-statement but this way it reflects the intention to keep track
           // which parameters are added to the model
-          updatePreAvgBufferEstimates(nAnt, nCal);
+          updatePreAvgBufferEstimates(nCal, nAnt);
       }
       if (itsSolveLeakage) {
           ASKAPLOG_INFO_STR(logger, "Initialise leakages (unknowns) for "<<nAnt<<" antennas and "<<nCal<<" cal(s).");
@@ -355,7 +364,7 @@ void DDCalibratorParallel::init(const LOFAR::ParameterSet& parset)
           }
           // technically could've done it outside the if-statement but this way it reflects the intention to keep track
           // which parameters are added to the model
-          updatePreAvgBufferEstimates(nAnt, nCal );
+          updatePreAvgBufferEstimates(nCal, nAnt);
       }
       if (itsSolveBandpass) {
           const casacore::uInt nChan = parset.getInt32("nChan",304);
@@ -375,7 +384,18 @@ void DDCalibratorParallel::init(const LOFAR::ParameterSet& parset)
                     }
                }
           }
-          updatePreAvgBufferEstimates(nAnt, nCal, nChan);
+          updatePreAvgBufferEstimates(nCal, nAnt, nChan);
+      }
+      if (itsSolveIonosphere) {
+          const casacore::uInt nChan = parset.getInt32("nChan",304);
+          // add antenna- and frequency-dependent fixed paramaters
+          initIonoParams(parset);
+          // add free parameters
+          for (casacore::uInt cal = 0; cal<nCal; ++cal) {
+               itsModel->add("ionosphere.coeff.l."+utility::toString(cal), 0.0);
+               itsModel->add("ionosphere.coeff.m."+utility::toString(cal), 0.0);
+          }
+          updatePreAvgBufferEstimates(nCal, nAnt, nChan);
       }
   }
   if (itsComms.isWorker()) {
@@ -385,12 +405,109 @@ void DDCalibratorParallel::init(const LOFAR::ParameterSet& parset)
 
       const casacore::uInt nChan = parset.getInt32("chanperworker",0);
       if (nChan > 0) {
+          if (itsSolveIonosphere) {
+              // add antenna- and frequency-dependent fixed paramaters
+              // DAM may need to be smarter when it comes to chanperworker
+              initIonoParams(parset);
+          }
           const casacore::uInt nAnt = parset.getInt32("nAnt",36);
           const casacore::uInt nCal = parset.getInt32("nCal",1);
-          updatePreAvgBufferEstimates(nAnt, nCal, nChan);
+          updatePreAvgBufferEstimates(nCal, nAnt, nChan);
       }
   }
   itsMajorLoopIterationNumber = 0;
+}
+
+// DAM move the following bits generating the vectors into IonosphericTerm.cc?
+
+/// @brief initalise ionospheric parameters
+/// @details 
+/// @param[in] parset ParameterSet for inputs
+void DDCalibratorParallel::initIonoParams(const LOFAR::ParameterSet& parset)
+{
+
+  const casacore::uInt nAnt = parset.getInt32("nAnt",36);
+  const casacore::uInt nCal = parset.getInt32("nCal",1);
+
+  // if only solving for the ionospheric parameters, add gains as fixed parameters
+  if (!itsSolveGains) {
+      ASKAPLOG_INFO_STR(logger, "Initialise gains (unknowns) for "<<nAnt<<" antennas and "<<nCal<<" cal(s).");
+      for (casacore::uInt ant = 0; ant<nAnt; ++ant) {
+           for (casacore::uInt cal = 0; cal<nCal; ++cal) {
+                itsModel->add(accessors::CalParamNameHelper::paramName(ant, cal, casacore::Stokes::XX),
+                              casacore::Complex(1.,0.));
+                itsModel->add(accessors::CalParamNameHelper::paramName(ant, cal, casacore::Stokes::YY),
+                              casacore::Complex(1.,0.));
+           }
+      }
+  }
+
+  // add frequency-dependent fixed paramaters
+  if (!parset.isDefined("frequencies")) {
+      ASKAPCHECK(itsModel, "frequencies parameter is required in parset");
+  }
+  std::vector<string> spw = parset.getStringVector("frequencies");
+  ASKAPASSERT(spw.size() == 3);
+  const int nInChan = stoi(spw[0]);
+  const double startFreq = asQuantity(spw[1]).getValue("Hz");
+  const double freqInc = asQuantity(spw[2]).getValue("Hz");
+  ASKAPCHECK(nInChan > 0, "inefficient frequency information");
+  casacore::Vector<double> frequency(nInChan);
+  // add the frequency vector as a paramater
+  for (int chan = 0; chan < nInChan; chan++) {
+      frequency[chan] = startFreq + chan*freqInc;
+  }
+  itsModel->add("frequency", frequency);
+
+  // add antenna-dependent fixed paramaters
+  if (!parset.isDefined("antennas.definition")) {
+      ASKAPCHECK(itsModel, "antennas.definition parameter is required in parset");
+  }
+  // load antennas.definition file
+  LOFAR::ParameterSet antFile = LOFAR::ParameterSet(substitute(parset.getString("antennas.definition")));
+  // strip out the required parameters
+  const std::string telName = antFile.getString("antennas.telescope");
+  ASKAPLOG_INFO_STR(logger, "setting antenna parameters for array  "<<telName);
+  LOFAR::ParameterSet antParset(antFile.makeSubset("antennas."+telName+"."));
+
+  // get a position scaling factor, if supplied
+  const double scale = antParset.getDouble("scale", 1.0);
+  // get the list of antenna names to include
+  std::vector<std::string> antNames(antParset.getStringVector("names"));
+  ASKAPCHECK(antNames.size() > 0, "No antennas defined in parset file");
+  ASKAPCHECK(antNames.size() == nAnt,
+      "Inconsistent antenna information: expected "<<nAnt<<" names, got "<<antNames.size());
+  // add antenna positions as paramaters
+  const bool debug = false;
+  if (debug) {
+      // convert global XYZ locations to the uvw frame.
+      // can compare calibrator offsets directly for simulated data, but only for the direction specified.
+      // check that the coordinates are global
+      string coordinates = antParset.getString("coordinates");
+      ASKAPCHECK(coordinates == "global", "coordinates must be \"global\"");
+      // gha = lst[t] - ra - lon
+      const float gha = 3.286441 - 3.272492 - 2.037924;
+      const float dec = -0.7853982;
+      for (int ant = 0; ant < nAnt; ant++) {
+          const std::vector<double> xyz = antParset.getDoubleVector(antNames[ant]);
+          const float u =           sin(gha)*xyz[0] +          cos(gha)*xyz[1];
+          const float v = -sin(dec)*cos(gha)*xyz[0] + sin(dec)*sin(gha)*xyz[1] + cos(dec)*xyz[2];
+          itsModel->add("antenna.position.x."+toString(ant), u);
+          itsModel->add("antenna.position.y."+toString(ant), v);
+          itsModel->add("antenna.position.z."+toString(ant), 0);
+      }
+  } else {
+      // check that the coordinates are local
+      string coordinates = antParset.getString("coordinates");
+      ASKAPCHECK(coordinates == "local", "coordinates must be \"local\"");
+      for (int ant = 0; ant < nAnt; ant++) {
+          // should there be a check that the antenna order is consistent with the MS?
+          const std::vector<double> xyz = antParset.getDoubleVector(antNames[ant]);
+          itsModel->add("antenna.position.x."+toString(ant), xyz[0] * scale);
+          itsModel->add("antenna.position.y."+toString(ant), xyz[1] * scale);
+          itsModel->add("antenna.position.z."+toString(ant), xyz[2] * scale);
+      }
+  }
 }
 
 void DDCalibratorParallel::calcOne(const std::string& ms, bool discard)
@@ -529,8 +646,12 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
       preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgDDCalMEBase>());
    } else if (itsSolveBandpass) {
        preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgDDCalMEBase>());
+   } else if (itsSolveIonosphere) {
+       preAvgME.reset(new CalibrationME<IonosphericTerm, PreAvgDDCalMEBase>());
+       preAvgME->isIonospheric(true);
    } else {
-       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
+       ASKAPTHROW(AskapError, "Unsupported calibration solver option or combination.  Verify solve parameter."
+           " Supported options: bandpass, ionosphere, or any combination of gains and leakages.");
    }
    ASKAPDEBUGASSERT(preAvgME);
    // without the following lines of code, the buffer initialisation will be performed based on the first sighted
@@ -543,6 +664,7 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
        ASKAPLOG_WARN_STR(logger, "Pre-averaging calibration buffer size estimate ("<<itsMaxNChanForPreAvg<<
               " channels) doesn't seem to be aligned with the frequency dependence property of selected calibration effects");
    }
+
    preAvgME->initialise(itsMaxNAntForPreAvg, itsMaxNCalForPreAvg, itsMaxNChanForPreAvg);
 
    casacore::Timer accumulation_timer;
@@ -554,6 +676,17 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
    const std::vector<std::string> params(itsModel->freeNames());
    for (std::vector<std::string>::const_iterator ci=params.begin(); ci != params.end(); ++ci) {
         std::string baseParName = *ci;
+
+        // deal with specific ionospheric parameters first, otherwise continue as in CalibrartorParallel
+        if (itsSolveIonosphere) {
+            // during ionospheric calibration, any non-ionospheric parameters should be fixed
+            // may allow gains to be free parameters alongside ionospheric params, but not enabled yet
+            if (!accessors::CalParamNameHelper::ionoParam(baseParName)) {
+                itsModel->fix(*ci);
+            }
+            continue;
+        }
+
         casa::uInt curChan = 0;
         if (accessors::CalParamNameHelper::bpParam(baseParName)) {
             const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
@@ -571,7 +704,8 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
                 continue;
             }
         }
-        const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes> parsed = accessors::CalParamNameHelper::parseParam(baseParName);
+        const std::pair<accessors::JonesIndex, casa::Stokes::StokesTypes>
+            parsed = accessors::CalParamNameHelper::parseParam(baseParName);
         casa::uInt pol = 0;
         for (; pol < stokes.nelements(); ++pol) {
              if (stokes[pol] == parsed.second) {
@@ -631,7 +765,8 @@ void DDCalibratorParallel::calcNE()
   // achieve what we want
   scimath::Params tempMetadata;
   if (itsNe) {
-      boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
+      boost::shared_ptr<scimath::GenericNormalEquations>
+          gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           tempMetadata = gne->metadata();
       }
@@ -660,8 +795,8 @@ void DDCalibratorParallel::calcNE()
           ASKAPCHECK(itsSolver, "Solver not defined correctly");
           // just throw exception for now, although we could've maintained a map of dataset names/iterators
           // to allow reuse of the right iterator
-          ASKAPCHECK((itsSolutionInterval < 0) || (measurementSets().size() < 2),
-              "The code currently doesn't support time-dependent solutions for a number of measurement sets in the serial mode");
+          ASKAPCHECK((itsSolutionInterval < 0) || (measurementSets().size() < 2), "The code currently doesn't"
+              " support time-dependent solutions for a number of measurement sets in the serial mode");
           //
           itsSolver->init();
           for (size_t iMs=0; iMs<measurementSets().size(); ++iMs) {
@@ -799,7 +934,9 @@ void DDCalibratorParallel::rotatePhases()
   std::vector<std::string> names(itsModel->freeNames());
   casacore::Array<casacore::Complex> refPhaseTerms;
   const casacore::uInt refPols = 2;
-  if (itsSolveBandpass) {
+  if (itsSolveIonosphere && !itsSolveGains) {
+      return;
+  } else if (itsSolveBandpass) {
       ASKAPLOG_INFO_STR(logger, "Setting up separate phase referencing for each bandpass channel");
       ASKAPLOG_INFO_STR(logger, "Rotating XX phases to have that of "<<itsRefGainXX<<
           ".chan equal to 0 and YY phases to have that of "<<itsRefGainYY<<".chan equal to 0");
@@ -896,7 +1033,8 @@ double DDCalibratorParallel::solutionTime() const
   // extract this solution as most recent.
   ASKAPASSERT(itsNe);
 
-  boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
+  boost::shared_ptr<scimath::GenericNormalEquations>
+      gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
   if (gne) {
       scimath::Params& metadata = gne->metadata();
       if (metadata.has("min_time")) {
@@ -920,7 +1058,8 @@ void DDCalibratorParallel::setNextChunkFlag(const bool flag)
 {
   ASKAPCHECK(itsComms.isWorker(), "setNextChunkFlag is supposed to be used in workers");
   if (itsNe) {
-      const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
+      const boost::shared_ptr<scimath::GenericNormalEquations>
+          gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           scimath::Params& metadata = gne->metadata();
           const double encodedVal = flag ? 1. : -1.;
@@ -944,7 +1083,8 @@ void DDCalibratorParallel::setNextChunkFlag(const bool flag)
 bool DDCalibratorParallel::getNextChunkFlag() const
 {
   if (itsNe) {
-      const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
+      const boost::shared_ptr<scimath::GenericNormalEquations>
+          gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           const scimath::Params& metadata = gne->metadata();
           const std::string parName = "next_chunk_flag";
@@ -961,7 +1101,8 @@ bool DDCalibratorParallel::getNextChunkFlag() const
 void DDCalibratorParallel::removeNextChunkFlag()
 {
   if (itsNe) {
-      const boost::shared_ptr<scimath::GenericNormalEquations> gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
+      const boost::shared_ptr<scimath::GenericNormalEquations>
+          gne = boost::dynamic_pointer_cast<scimath::GenericNormalEquations>(itsNe);
       if (gne) {
           scimath::Params& metadata = gne->metadata();
           const std::string parName = "next_chunk_flag";
@@ -1016,7 +1157,13 @@ void DDCalibratorParallel::writeModel(const std::string &postfix)
                solAcc = itsSolutionSource->rwSolution(solutionID);
                ASKAPASSERT(solAcc);
            }
-           if (itsSolveBandpass) {
+           if (itsSolveIonosphere) {
+               ASKAPCHECK(it->find(accessors::CalParamNameHelper::ionoPrefix()) == 0,
+                       "Expect parameter name starting from "<<accessors::CalParamNameHelper::ionoPrefix()<<
+                       " for the bandpass calibration, you have "<<*it);
+               ASKAPLOG_INFO_STR(logger, "DAM need to write "<<*it<<" = "<<val);
+               //solAcc->setBandpassElement(, val);
+           } else if (itsSolveBandpass) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
                        " for the bandpass calibration, you have "<<*it);
