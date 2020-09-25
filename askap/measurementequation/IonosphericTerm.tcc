@@ -120,13 +120,12 @@ inline scimath::ComplexDiffMatrix IonosphericTerm::get(const accessors::IConstDa
             const std::string g2name = accessors::CalParamNameHelper::paramName(ant2, dir1,
                           polIndex % 2 == 0 ? casacore::Stokes::XX : casacore::Stokes::YY);
 
-            // we need to think of how to deal with distributed problem on the cluster (i.e. adding
+            // We need to think of how to deal with distributed problem on the cluster (i.e. adding
             // some base to the channel number and propagating it through the framework)    
-            // could also include gains as free ComplexDiff parameters here, but just use their values for now
-            // want:
-            //  - value set using exp(i*phase)
-            //  - derivatives set using i*phase
-            // so set to float variable exp(i*phase) but replace the i*phase part with a ComplexDiff version
+            // For accurate model generation but linear derivatives, we want:
+            //  - the value part of the ComplexDiff to be exp(i*phase)
+            //  - the derivative parts of the ComplexDiff to be i*phase
+            // So set to float variable exp(i*phase) but replace the i*phase part with a ComplexDiff version
             calFactor(pol, pol + chan * nPol) = getParameter(g1name).value() * conj(getParameter(g2name).value()) *
                                                 ( exp(I*phase.value()) - I*phase.value() + I*phase );
        }
