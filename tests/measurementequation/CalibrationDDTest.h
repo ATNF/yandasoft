@@ -286,13 +286,13 @@ namespace askap
           ASKAPASSERT(da.itsStokes.nelements() == 1);
           da.itsStokes[0] = casacore::Stokes::XX;
           
-          const double realGains[nAnt] = {1.1, 0.9, 1.05, 0.87, 1.333,
+          const double realGains[] = {1.1, 0.9, 1.05, 0.87, 1.333,
                                           1.1, 1.0, 1.0, -1.0, 0.3, 
                                          -0.5, 1.1, 0.9, 0.98, 1.03,
                                          -0.3, -1.1, 0.9, 1.1, 1.05,
                                           1.0, -0.3, 1.1, 0.3, 1.8,
                                           0.5, -0.7, 1.054, 1.0, 1.1}; 
-          const double imagGains[nAnt] = {0.0, 0., -0.05, 0.587, 0.,
+          const double imagGains[] = {0.0, 0., -0.05, 0.587, 0.,
                                           0., -0.1, 0.02, -0.1, 0.84, 
                                           0.86, 0.1, 0.1, 0., 0.03,
                                          -0.84, 0., 0., -0.1, -0.05,
