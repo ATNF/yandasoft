@@ -877,7 +877,8 @@ void Simulator::observe(const casacore::String& sourceName,
         double gmst = epGMST1().get("d").getValue("d");
         gmst = (gmst - Int(gmst)) * C::_2pi; // Into Radians
 
-        MEpoch ep(Quantity((Time + Tint / 2), "s"));
+        const double timeCentroid = Time + Tint / 2;
+        const MEpoch ep(Quantity(timeCentroid, "s"));
         msd.setEpoch(ep);
 
         // current phase center for a beam without offset
@@ -885,7 +886,7 @@ void Simulator::observe(const casacore::String& sourceName,
         // with the phase center
 
         // ???? May be we can use fcs defined earlier instead of fc ????
-        MDirection fc = msc.field().phaseDirMeas(baseFieldID);
+        const MDirection fc = msc.field().phaseDirMeas(baseFieldID);
         msd.setFieldCenter(fc);
         msd.setAntenna(0); // assume for now that all par. angles are the same
 
@@ -893,7 +894,7 @@ void Simulator::observe(const casacore::String& sourceName,
         Vector<Bool> isTooLow(nAnt); isTooLow.set(False);
         double fractionBlocked1 = 0.0, fractionBlocked2 = 0.0;
         Int startingRow = row;
-        double diamMax2 = square(max(antDiam));
+        const double diamMax2 = square(max(antDiam));
 
         // Start of loop over feed
         for (Int feed = 0; feed < nFeed; feed++) {
@@ -908,7 +909,8 @@ void Simulator::observe(const casacore::String& sourceName,
             msc.scanNumber().put(row + 1, scan);
             msc.fieldId().put(row + 1, baseFieldID);
             msc.dataDescId().put(row + 1, baseSpWID);
-            msc.time().put(row + 1, Time + Tint / 2);
+            msc.time().put(row + 1, timeCentroid);
+            msc.timeCentroid().put(row + 1, timeCentroid);
             msc.arrayId().put(row + 1, maxArrayId);
             msc.processorId().put(row + 1, 0);
             msc.exposure().put(row + 1, Tint);
@@ -940,9 +942,9 @@ void Simulator::observe(const casacore::String& sourceName,
             //                               printDirection(feed_phc.getValue())<<" offsets: "<<beamOffset(0)/casacore::C::pi*180<<" "<<
             //                               beamOffset(1)/casacore::C::pi*180<<" mount="<<antenna_mounts[0]);
 
-            double ra, dec; // current phase center
-            ra = feed_phc.getAngle().getValue()(0);
-            dec = feed_phc.getAngle().getValue()(1);
+            // current phase center
+            const double ra = feed_phc.getAngle().getValue()(0);
+            const double dec = feed_phc.getAngle().getValue()(1);
 
             // Transformation from antenna position difference (ant2-ant1) to uvw
             double H0 = gmst - ra, sH0 = sin(H0), cH0 = cos(H0), sd = sin(dec), cd = cos(dec);
@@ -958,7 +960,7 @@ void Simulator::observe(const casacore::String& sourceName,
                 antUVW.column(ant1) = product(trans, antXYZ.column(ant1));
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
-                double x1 = antUVW(0, ant1), y1 = antUVW(1, ant1), z1 = antUVW(2, ant1);
+                const double x1 = antUVW(0, ant1), y1 = antUVW(1, ant1), z1 = antUVW(2, ant1);
                 Int startAnt2 = ant1 + 1;
 
                 if (autoCorrelationWt_p > 0.0) startAnt2 = ant1;
@@ -971,7 +973,7 @@ void Simulator::observe(const casacore::String& sourceName,
                     msc.feed1().put(row, feed);
                     msc.feed2().put(row, feed);
 
-                    double x2 = antUVW(0, ant2), y2 = antUVW(1, ant2), z2 = antUVW(2, ant2);
+                    const double x2 = antUVW(0, ant2), y2 = antUVW(1, ant2), z2 = antUVW(2, ant2);
                     Vector<double> uvwvec(3);
                     uvwvec(0) = x2 - x1;
                     uvwvec(1) = y2 - y1;
