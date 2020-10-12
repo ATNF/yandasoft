@@ -183,6 +183,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   const casa::uInt refAnt = config().getUint("refant",1);
   const bool exclude13 = config().getBool("exclude13", false);
   utils::DelaySolverImpl solver(targetRes, stokesVector[0], ampCutoff, refAnt);
+  solver.setAntennaNames(itsAntennaNames);
   if (exclude13) {
       solver.excludeBaselines(casa::Vector<std::pair<casa::uInt,casa::uInt> >(1,std::pair<casa::uInt,
              casa::uInt>(1,2)));

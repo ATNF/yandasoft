@@ -35,6 +35,7 @@
 
 // std
 #include <utility>
+#include <vector>
 
 // casa
 #include <casacore/casa/Arrays/Vector.h>
@@ -111,7 +112,22 @@ public:
     /// @param[in] flag true, to get messages published with high severity (default), false otherwise
     void setVerboseFlag(bool flag);
 
+    /// @brief set antenna names
+    /// @details If antenna names are set, these names will be used in the log messages related to the given antennas.
+    /// Otherwise (default), only antenna id will be shown.
+    /// @param[in] names vector with antenna names - index is id
+    /// @note It is allowed to have fewer named antennas than ids, if the array is too small antenna will be referred by id only.
+    void setAntennaNames(const std::vector<std::string> &names);
+
 protected:
+
+    /// @brief helper method to get string referring to antenna
+    /// @details Depending on whether the name is defined for the antenna with the 
+    /// given id, this method returns either "with id=..." or "name (id=..)". To be
+    /// used in log messages.
+    /// @param[in] id antenna id
+    /// @return string referring to the antenna with the given id
+    std::string antennaNameString(casa::uInt id) const;
 
     /// @brief helper method to check that all channels/rows are flagged
     /// @param[in] flags matrix with flags
@@ -124,6 +140,7 @@ protected:
     /// Note, delay units are the same as itsDelayApproximation (i.e. seconds).
     /// @param[in] row row of interest
     double delayApproximation(casa::uInt row) const;
+
         
 private:
 
@@ -178,6 +195,10 @@ private:
     /// @details We call the solver more than once, to avoid duplication of messages in the
     /// high-level log, this flag is used to suppress them during the first pass
     bool itsVerbose;
+
+    /// @brief optional antenna names for reporting in the log
+    /// @details If not empty, this vector has antenna names for each id.
+    std::vector<std::string> itsAntennaNames;
 };
 
 } // namespace utils

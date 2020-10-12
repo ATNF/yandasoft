@@ -248,6 +248,29 @@ void DelaySolverImpl::setTargetResolution(double targetRes)
   ASKAPCHECK(itsTargetRes > 0, "Target spectral resolution should be positive, you have "<<itsTargetRes<<" Hz");
 }
 
+/// @brief set antenna names
+/// @details If antenna names are set, these names will be used in the log messages related to the given antennas.
+/// Otherwise (default), only antenna id will be shown.
+/// @param[in] names vector with antenna names - index is id
+/// @note It is allowed to have fewer named antennas than ids, if the array is too small antenna will be referred by id only.
+void DelaySolverImpl::setAntennaNames(const std::vector<std::string> &names)
+{
+   itsAntennaNames = names;
+}
+
+/// @brief helper method to get string referring to antenna
+/// @details Depending on whether the name is defined for the antenna with the 
+/// given id, this method returns either "with id=..." or "name (id=..)". To be
+/// used in log messages.
+/// @param[in] id antenna id
+/// @return string referring to the antenna with the given id
+std::string DelaySolverImpl::antennaNameString(casa::uInt id) const
+{
+   if (id < itsAntennaNames.size()) {
+       return itsAntennaNames[id] + " (id=" + utility::toString(id) + ")";
+   } 
+   return "with id=" + utility::toString(id);
+}
     
 /// @brief solve for antenna-based delays
 /// @details This method estimates delays for all baselines and then solves for
@@ -314,9 +337,9 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
        if (dataPresent) {
            if (!referencePresent) {
                if (itsVerbose) {
-                   ASKAPLOG_WARN_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
+                   ASKAPLOG_WARN_STR(logger, "Antenna "<<antennaNameString(ant)<<" has valid data, but not in baseline with the reference antenna "<<antennaNameString(itsRefAnt)<<", degeneracy possible");
                } else {
-                   ASKAPLOG_DEBUG_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
+                   ASKAPLOG_DEBUG_STR(logger, "Antenna "<<antennaNameString(ant)<<" has valid data, but not in baseline with the reference antenna "<<antennaNameString(itsRefAnt)<<", degeneracy possible");
                }
            }
        } else {
@@ -383,9 +406,9 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
 
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
            if (itsVerbose) {
-               ASKAPLOG_WARN_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
+               ASKAPLOG_WARN_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay");
            } else {
-               ASKAPLOG_DEBUG_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
+               ASKAPLOG_DEBUG_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay");
            }
            ASKAPDEBUGASSERT(*rowIt < dm.nrow());
            ASKAPDEBUGASSERT(*rowIt < delays.nelements());
