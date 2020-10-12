@@ -406,9 +406,9 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
 
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
            if (itsVerbose) {
-               ASKAPLOG_WARN_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay");
+               ASKAPLOG_WARN_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay update");
            } else {
-               ASKAPLOG_DEBUG_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay");
+               ASKAPLOG_DEBUG_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay update");
            }
            ASKAPDEBUGASSERT(*rowIt < dm.nrow());
            ASKAPDEBUGASSERT(*rowIt < delays.nelements());
