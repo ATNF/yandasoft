@@ -27,7 +27,9 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 ///
 
-#include <askap/askap_synthesis.h>
+// a bit hacky way to get logs tagged with the cp-prefix
+#define ASKAP_PACKAGE_NAME "cp"
+
 #include <askap/utils/DelaySolverImpl.h>
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapUtil.h>
