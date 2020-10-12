@@ -35,6 +35,7 @@
 
 // std
 #include <utility>
+#include <vector>
 
 // casa
 #include <casacore/casa/Arrays/Vector.h>
@@ -101,8 +102,32 @@ public:
     /// @param[in] targetRes target spectral resolution in Hz, data are averaged to match the desired resolution 
     /// note, integral number of channels are averaged.
     void setTargetResolution(double targetRes);
-    
+
+    /// @brief set verbose flag
+    /// @details Some important messages are set with high-severity (INFO and above), so they make it to the 
+    /// main system log given how we use this application now. This is the default behavior. However, setting false
+    /// to this flag allows to downgrade these messages to DEBUG severity and suppress these messages. We use this
+    /// in two-stage solution with initial estimation via lags. Otherwise, it is possible to have a duplication of
+    /// messages.
+    /// @param[in] flag true, to get messages published with high severity (default), false otherwise
+    void setVerboseFlag(bool flag);
+
+    /// @brief set antenna names
+    /// @details If antenna names are set, these names will be used in the log messages related to the given antennas.
+    /// Otherwise (default), only antenna id will be shown.
+    /// @param[in] names vector with antenna names - index is id
+    /// @note It is allowed to have fewer named antennas than ids, if the array is too small antenna will be referred by id only.
+    void setAntennaNames(const std::vector<std::string> &names);
+
 protected:
+
+    /// @brief helper method to get string referring to antenna
+    /// @details Depending on whether the name is defined for the antenna with the 
+    /// given id, this method returns either "with id=..." or "name (id=..)". To be
+    /// used in log messages.
+    /// @param[in] id antenna id
+    /// @return string referring to the antenna with the given id
+    std::string antennaNameString(casa::uInt id) const;
 
     /// @brief helper method to check that all channels/rows are flagged
     /// @param[in] flags matrix with flags
@@ -115,6 +140,7 @@ protected:
     /// Note, delay units are the same as itsDelayApproximation (i.e. seconds).
     /// @param[in] row row of interest
     double delayApproximation(casa::uInt row) const;
+
         
 private:
 
@@ -164,6 +190,15 @@ private:
     /// allows to get a coarse delay first in full resolution data and then refine it with
     /// averaging. Empty array means zero initial delay (i.e. nothing special is done).
     casa::Vector<double> itsDelayApproximation;  
+
+    /// @brief if false, some log messages are downgraded to debug severity
+    /// @details We call the solver more than once, to avoid duplication of messages in the
+    /// high-level log, this flag is used to suppress them during the first pass
+    bool itsVerbose;
+
+    /// @brief optional antenna names for reporting in the log
+    /// @details If not empty, this vector has antenna names for each id.
+    std::vector<std::string> itsAntennaNames;
 };
 
 } // namespace utils
