@@ -25,8 +25,11 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 
+// Package level header file
+#include <askap/askap_synthesis.h>
+
 #include <askap/dataaccess/TableDataSource.h>
-//#include <askap/askap_accessors.h>
+
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapUtil.h>
 ASKAP_LOGGER(logger, ".delaysolver");

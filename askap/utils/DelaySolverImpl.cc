@@ -278,7 +278,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
        //ASKAPCHECK(dataPresent == referencePresent, "It looks like there are valid data for antenna "<<ant<<", but all baselines to reference="<<itsRefAnt<<" are flagged or missing.");
        if (dataPresent) {
            if (!referencePresent) {
-               ASKAPLOG_WARN_STR(logger, "Antenna "<<ant<<" has valid data, but not in baseline with the reference antenna "<<itsRefAnt<<", degeneracy possible");
+               ASKAPLOG_WARN_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
            }
        } else {
            excludedAntennas.insert(ant);
@@ -339,7 +339,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
                  excludedAntennas.size()<<") - this shouldn't happen");
 
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
-           ASKAPLOG_WARN_STR(logger, "Antenna "<<*antIt<<" has no valid data - result will have zero delay");
+           ASKAPLOG_WARN_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
            ASKAPDEBUGASSERT(*rowIt < dm.nrow());
            ASKAPDEBUGASSERT(*rowIt < delays.nelements());
            ASKAPDEBUGASSERT(*antIt < dm.ncolumn());
