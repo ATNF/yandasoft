@@ -101,7 +101,16 @@ public:
     /// @param[in] targetRes target spectral resolution in Hz, data are averaged to match the desired resolution 
     /// note, integral number of channels are averaged.
     void setTargetResolution(double targetRes);
-    
+
+    /// @brief set verbose flag
+    /// @details Some important messages are set with high-severity (INFO and above), so they make it to the 
+    /// main system log given how we use this application now. This is the default behavior. However, setting false
+    /// to this flag allows to downgrade these messages to DEBUG severity and suppress these messages. We use this
+    /// in two-stage solution with initial estimation via lags. Otherwise, it is possible to have a duplication of
+    /// messages.
+    /// @param[in] flag true, to get messages published with high severity (default), false otherwise
+    void setVerboseFlag(bool flag);
+
 protected:
 
     /// @brief helper method to check that all channels/rows are flagged
@@ -164,6 +173,11 @@ private:
     /// allows to get a coarse delay first in full resolution data and then refine it with
     /// averaging. Empty array means zero initial delay (i.e. nothing special is done).
     casa::Vector<double> itsDelayApproximation;  
+
+    /// @brief if false, some log messages are downgraded to debug severity
+    /// @details We call the solver more than once, to avoid duplication of messages in the
+    /// high-level log, this flag is used to suppress them during the first pass
+    bool itsVerbose;
 };
 
 } // namespace utils

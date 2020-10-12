@@ -54,7 +54,7 @@ using namespace askap::utils;
 /// @param[in] refAnt reference antenna index   
 DelaySolverImpl::DelaySolverImpl(double targetRes, casa::Stokes::StokesTypes pol, float ampCutoff, casa::uInt refAnt) :
    itsTargetRes(targetRes), itsPol(pol), itsAmpCutoff(ampCutoff), itsRefAnt(refAnt), itsNAvg(0u), itsDelayEstimator(targetRes),
-   itsChanToAverage(1u) 
+   itsChanToAverage(1u), itsVerbose(true)
 {
   ASKAPCHECK(itsTargetRes > 0, "Target spectral resolution should be positive, you have "<<itsTargetRes<<" Hz");
 } 
@@ -81,6 +81,19 @@ bool DelaySolverImpl::checkAllFlagged(const casa::Matrix<bool> &flags)
    }
    return true;
 }
+
+/// @brief set verbose flag
+/// @details Some important messages are set with high-severity (INFO and above), so they make it to the 
+/// main system log given how we use this application now. This is the default behavior. However, setting false
+/// to this flag allows to downgrade these messages to DEBUG severity and suppress these messages. We use this
+/// in two-stage solution with initial estimation via lags. Otherwise, it is possible to have a duplication of
+/// messages.
+/// @param[in] flag true, to get messages published with high severity (default), false otherwise
+void DelaySolverImpl::setVerboseFlag(bool flag)
+{
+   itsVerbose = flag;
+}
+
 
      
 /// @brief process one data accessor
@@ -125,24 +138,44 @@ void DelaySolverImpl::process(const accessors::IConstDataAccessor &acc)
        itsAvgCounts.set(0u);
    } else {
        if (itsFreqAxis.nelements() != acc.nChannel()) {
-           ASKAPLOG_WARN_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
-                             << acc.nChannel()<<", ignoring");
+           if (itsVerbose) {
+               ASKAPLOG_WARN_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
+                                 << acc.nChannel()<<", ignoring");
+           } else {
+               ASKAPLOG_DEBUG_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
+                                 << acc.nChannel()<<", ignoring");
+           }
            return;
        }
        if (itsAnt1IDs.nelements() != acc.nRow()) {
-           ASKAPLOG_WARN_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
-                             << acc.nRow()<<", ignoring");
+           if (itsVerbose) {
+               ASKAPLOG_WARN_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
+                                 << acc.nRow()<<", ignoring");
+           } else {
+               ASKAPLOG_DEBUG_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
+                                 << acc.nRow()<<", ignoring");
+           }
            return;
        }
        for (casa::uInt row = 0; row < acc.nRow(); ++row) {
             if (itsAnt1IDs[row] != acc.antenna1()[row]) {
-                ASKAPLOG_WARN_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
-                                  " now "<<acc.antenna1()[row]<<", ignoring");
+                if (itsVerbose) {
+                    ASKAPLOG_WARN_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
+                                      " now "<<acc.antenna1()[row]<<", ignoring");
+                } else {
+                    ASKAPLOG_DEBUG_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
+                                      " now "<<acc.antenna1()[row]<<", ignoring");
+                }
                 return;                  
             }                     
             if (itsAnt2IDs[row] != acc.antenna2()[row]) {
-                ASKAPLOG_WARN_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
-                                  " now "<<acc.antenna2()[row]<<", ignoring");
+                if (itsVerbose) {
+                    ASKAPLOG_WARN_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
+                                      " now "<<acc.antenna2()[row]<<", ignoring");
+                } else {
+                    ASKAPLOG_DEBUG_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
+                                      " now "<<acc.antenna2()[row]<<", ignoring");
+                }
                 return;                  
             }                     
        }
@@ -280,7 +313,11 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
        //ASKAPCHECK(dataPresent == referencePresent, "It looks like there are valid data for antenna "<<ant<<", but all baselines to reference="<<itsRefAnt<<" are flagged or missing.");
        if (dataPresent) {
            if (!referencePresent) {
-               ASKAPLOG_WARN_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
+               if (itsVerbose) {
+                   ASKAPLOG_WARN_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
+               } else {
+                   ASKAPLOG_DEBUG_STR(logger, "Antenna id="<<ant<<" has valid data, but not in baseline with the reference antenna id="<<itsRefAnt<<", degeneracy possible");
+               }
            }
        } else {
            excludedAntennas.insert(ant);
@@ -333,7 +370,11 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
   ASKAPLOG_DEBUG_STR(logger, "Quality of delay estimate: "<<std::setprecision(3)<<quality);
   // add conditions for flagged antennas to ensure zero delay
   if (excludedAntennas.size() == 0) {
-      ASKAPLOG_INFO_STR(logger, "All available antennas have unflagged data");
+      if (itsVerbose) {
+          ASKAPLOG_INFO_STR(logger, "All available antennas have unflagged data");
+      } else {
+          ASKAPLOG_DEBUG_STR(logger, "All available antennas have unflagged data");
+      }
   } else {
 
       ASKAPCHECK(rows2exclude.size() >= excludedAntennas.size(), "Number of excluded rows ("<<rows2exclude.size()<<
@@ -341,7 +382,11 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
                  excludedAntennas.size()<<") - this shouldn't happen");
 
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
-           ASKAPLOG_WARN_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
+           if (itsVerbose) {
+               ASKAPLOG_WARN_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
+           } else {
+               ASKAPLOG_DEBUG_STR(logger, "Antenna with id="<<*antIt<<" has no valid data - result will have zero delay");
+           }
            ASKAPDEBUGASSERT(*rowIt < dm.nrow());
            ASKAPDEBUGASSERT(*rowIt < delays.nelements());
            ASKAPDEBUGASSERT(*antIt < dm.ncolumn());

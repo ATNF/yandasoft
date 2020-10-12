@@ -200,6 +200,11 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   
   if (estimateViaLags) {
       ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
+
+      // suppress logging warnings at high severity for the time of initial estimate
+      // (same warnings will be given during the second solver run)
+      solver.setVerboseFlag(false);
+
       // the following means no averaging
       solver.setTargetResolution(1.);
       
@@ -213,6 +218,8 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       solver.setApproximateDelays(delayApprox);
       solver.init();
       solver.setTargetResolution(targetRes);      
+      // re-enable warning logging at high severity
+      solver.setVerboseFlag(true);
   }
       
   for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {
