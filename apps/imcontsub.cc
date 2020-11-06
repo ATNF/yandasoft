@@ -43,7 +43,10 @@
 #include <casacore/scimath/Fitting/LinearFitSVD.h>
 #include <casacore/scimath/Functionals/Polynomial.h>
 #include <casacore/casa/OS/CanonicalConversion.h>
-
+#include <casacore/fits/FITS/FITSDateUtil.h>
+#include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
+#include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
+#include <casacore/casa/Quanta/MVTime.h>
 // robust contsub C++ version
 
 ASKAP_LOGGER(logger, ".imcontsub");
@@ -51,7 +54,7 @@ ASKAP_LOGGER(logger, ".imcontsub");
 //using namespace std;
 using namespace askap;
 using namespace askap::accessors;
-//using namespace casacore;
+using namespace casacore;
 //using namespace askap::synthesis;
 
 class ImContSubApp : public askap::Application
@@ -65,18 +68,27 @@ public:
         try {
             StatReporter stats;
             LOFAR::ParameterSet subset(config().makeSubset("imcontsub."));
+            // we only deal with fits files
+            subset.replace("imcontsub.imagetype","fits");
 
             ASKAPLOG_INFO_STR(logger, "ASKAP image based continuum subtraction application " << ASKAP_PACKAGE_VERSION);
 
-            casa::String infile = subset.getString("inputfitscube","");
-            casa::String outfile = subset.getString("outputfitscube","");
+            String infile = subset.getString("inputfitscube","");
+            String outfile = subset.getString("outputfitscube","");
+            // check for .fits extension, we need both versions because the accessor adds it
             size_t pos = infile.rfind(".fits");
-            if (pos==std::string::npos) {
-                infile += ".fits";
-            }
+            infile = infile.substr(0,pos);
+            String infile_ext = infile + ".fits";
+
+            // create output file if empty
             if (outfile=="") {
-                pos = infile.rfind(".fits");
+                pos = infile_ext.rfind(".fits");
                 outfile = infile.substr(0,pos) + ".contsub.fits";
+            }
+            // make sure output has .fits extension
+            pos = outfile.rfind(".fits");
+            if (pos==std::string::npos) {
+                outfile += ".fits";
             }
             float threshold = subset.getFloat("threshold",2.0);
             int order = subset.getInt("order",2);
@@ -84,15 +96,23 @@ public:
             int shift = subset.getInt("shift",0);
             bool interleave = subset.getBool("interleave",false);
 
+
             FitsImageAccessParallel accessor(comms);
 
+            // work out channel shift due to bary/lsrk to topo correction
+            Vector<int> channelShift = dopplerCorrection(infile, accessor, subset);
+
             if (comms.isMaster()) {
-                ASKAPLOG_INFO_STR(logger,"In = "<<infile <<", Out = "<<
+                ASKAPLOG_INFO_STR(logger,"In = "<<infile_ext <<", Out = "<<
                                       outfile <<", threshold = "<<threshold << ", order = "<< order <<
                                       ", blocksize = " << blocksize << ", shift = "<< shift <<
                                       ", interleave = "<< interleave);
+                uint nchan = channelShift.nelements();
+                if (channelShift(0)!=0 or channelShift(nchan-1)!=0) {
+                    ASKAPLOG_INFO_STR(logger,"Channel shift at start and end of spectrum: "<<channelShift(0)<<", "<<channelShift(nchan-1));
+                }
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
-                accessor.copy_header(infile, outfile);
+                accessor.copy_header(infile_ext, outfile);
             }
 
             // All wait for header to be written
@@ -101,13 +121,13 @@ public:
             // Now process the rest of the file in parallel
             // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
             const int iax = 1;
-            casa::Array<casa::Float> arr = accessor.read_all(infile,iax);
+            Array<Float> arr = accessor.read_all(infile_ext,iax);
             // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
             arr.removeDegenerate();
             ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
-            casa::Cube<casa::Float> cube(arr);
-            // Are we processing in blocks of channels (to match beamforming intervals)?
+            Cube<Float> cube(arr);
             int nz = cube.shape()(2);
+            // Are we processing in blocks of channels (to match beamforming intervals)?
             if (blocksize==0) {
                 blocksize = nz;
                 shift = 0;
@@ -115,46 +135,59 @@ public:
 
             // Process spectrum by spectrum
             ASKAPLOG_INFO_STR(logger,"Process the spectra");
-            if (!interleave) {
-                for (uint y = 0; y< cube.shape()(1); y++ ) {
-                    for (uint x = 0; x < cube.shape()(0); x++ ) {
-                        for (int z = 0; z < nz/blocksize; z++) {
-                            int start = -shift + z * blocksize;
-                            int stop = casa::min(start + blocksize, nz);
-                            start = casa::max(0, start);
-                            int length = stop - start;
-                            casa::Vector<casa::Float> spec(cube(casa::Slice(x,1),casa::Slice(y,1),
-                                casa::Slice(start,length)));
-                            process_spectrum(spec, threshold, order);
+            // subtract in blocks
+            // bary/lsrk complication: channels shifted wrt topo observing frame, shift is freq dependent
+            // need to count blocks and channels in topo frame and subtract corresponding bary/lsrk channels
+            int step = blocksize;
+            if (interleave) step = step / 2;
+            Vector<Float> workvec(nz);
+            Vector<Float> spec(step);
+            for (uint y = 0; y< cube.shape()(1); y++ ) {
+                for (uint x = 0; x < cube.shape()(0); x++ ) {
+                    // get a reference to the current spectrum from the cube
+                    Vector<Float> refvec(cube(Slice(x,1),Slice(y,1),Slice()));
+                    // make a working copy
+                    workvec = refvec;
+                    int ic = 0;
+                    int stop = 0;
+                    int lastStopsub = 0;
+                    while (stop < nz) {
+                        int start = -shift + ic * step;
+                        stop = min(start + blocksize, nz);
+                        // now find start and stop channel before bary/lsrk correction
+                        int topostart = start + channelShift(min(max(0,start),nz-1));
+                        int topostop = stop + channelShift(stop-1);
+                        // the interval we're going to subtract (smaller when interleaving)
+                        int startsub = topostart;
+                        int stopsub = topostop;
+                        if (interleave) {
+                            // all but first & last interval - use central 50%
+                            if (ic > 0) {
+                                startsub = topostart + step/2;
+                            }
+                            if (stop < nz) {
+                                stopsub = topostop - step/2 - (step/2)%2;
+                            }
                         }
-                    }
-                }
-            } else {
-                // interleaving blocks and using central 50% for subtraction
-                // shift ignored in this case, as we are clearly not handling beam forming discontinuities
-                const uint nblocks = (nz/blocksize) * 2 - 1; // add interleaved blocks
-                const uint step = blocksize/2;
-                // need to work with a copy of the spectrum
-                casa::Vector<casa::Float> workvec(nz);
-                casa::Vector<casa::Float> spec(blocksize);
-                for (uint y = 0; y< cube.shape()(1); y++ ) {
-                    for (uint x = 0; x < cube.shape()(0); x++ ) {
-                        casa::Vector<casa::Float> refvec(cube(casa::Slice(x,1),casa::Slice(y,1),casa::Slice()));
-                        workvec = refvec;
-                        for (uint z = 0; z < nblocks; z++) {
-                            const uint start = z * step;
-                            spec = workvec(casa::Slice(start,blocksize));
-                            process_spectrum(spec, threshold, order);
-                            uint startsub  = start + step/2;
-                            uint stopsub = startsub + step;
-                            if (z == 0) startsub = start;
-                            if (z == nblocks-1) stopsub = nz;
-                            const uint length = stopsub - startsub;
-                            refvec(casa::Slice(startsub,length)) = spec(casa::Slice(startsub-start,length));
+                        if (lastStopsub > 0) {
+                            // make sure we don't skip a channel in bary mode
+                            startsub = lastStopsub;
                         }
+                        lastStopsub = stopsub;
+                        startsub = max(0, startsub);
+                        stopsub =  min(stopsub, nz);
+                        topostart = max(0, topostart);
+                        topostop = min(topostop, nz);
+                        // size can change, spec will resize if needed
+                        spec.assign(workvec(Slice(topostart, topostop - topostart)));
+                        process_spectrum(spec, threshold, order);
+                        const size_t length = stopsub - startsub;
+                        refvec(Slice(startsub,length)) = spec(Slice(startsub-topostart,length));
+                        ic += 1;
                     }
                 }
             }
+
 
             // Write results to output file - make sure we use the same axis as for reading
             accessor.write_all(outfile,arr,iax);
@@ -174,52 +207,115 @@ public:
         }
 
 
-        void process_spectrum(casa::Vector<casa::Float>& vec, float threshold, int order, bool log=false) {
+        Vector<int> dopplerCorrection(String& infile, FitsImageAccessParallel& accessor, LOFAR::ParameterSet& parset)
+        {
+            IPosition shape = accessor.shape(infile);
+            ASKAPCHECK(shape.size()>2,"imcontsub needs at least 3 dimensions in the image");
+
+            // get some header info we need
+            String specsys = accessor.getMetadataKeyword(infile.before("."),"SPECSYS");
+
+            // default is TOPO
+            if (specsys=="") specsys = "TOPOCENT";
+            CoordinateSystem cs = accessor.coordSys(infile);
+            int spectralAxis = cs.spectralAxisNumber();
+            // if we can't find the spectral axis, assume largest of 3rd or 4th axis for topo only
+            if (spectralAxis < 0) {
+                ASKAPCHECK(specsys.startsWith("TOPO"),"Cannot find spectral axis in cube");
+                spectralAxis = 2;
+                if (shape.size()>3 && shape(3) > shape(2)) spectralAxis = 3;
+            }
+            int nFreq = shape(spectralAxis);
+            // Fill with zero shift for TOPO
+            Vector<int> channelShift(nFreq,0);
+            if (!specsys.startsWith("TOPO")) {
+                MFrequency::Ref topoFrame = MFrequency::Ref(MFrequency::TOPO);
+                MFrequency::Ref freqRefFrame = topoFrame;
+                if (specsys.startsWith("BARY")) freqRefFrame = MFrequency::Ref(MFrequency::BARY);
+                if (specsys.startsWith("LSR")) freqRefFrame = MFrequency::Ref(MFrequency::LSRK);
+                // we need to calculate doppler shift: need direction, location, time, frequency info
+                CoordinateSystem cs = accessor.coordSys(infile);
+                DirectionCoordinate dc = cs.directionCoordinate();
+                MDirection dir(MVDirection(dc.referenceValue()),dc.directionType());
+                SpectralCoordinate sc = cs.spectralCoordinate();
+                // ASKAP antenna 0
+                MPosition pos(MVPosition(-2556088.476234,  5097405.971301, -2848428.398018),MPosition::ITRF);
+                string dateObs = accessor.getMetadataKeyword(infile,"DATE-OBS");
+                if (dateObs == "") {
+                    dateObs = parset.getString("date-obs","");
+                    ASKAPCHECK(dateObs!="","Please specify the observing date (DATE-OBS is missing in FITS)");
+                }
+                string timeSys = accessor.getMetadataKeyword(infile,"TIMESYS");
+                if (timeSys=="") timeSys = "UTC";
+                MVTime mvtime;
+                MEpoch::Types system;
+                FITSDateUtil::fromFITS(mvtime, system, dateObs, timeSys);
+                MEpoch epoch(MVEpoch(mvtime.get()),system);
+                // convert channel frequencies back to TOPO frame
+                Vector<double> freqs(nFreq);
+                Vector<double> topoFreqs(nFreq);
+                for (int chan=0; chan<nFreq; chan++) {
+                    sc.toWorld(freqs(chan),double(chan));
+                }
+                sc.setReferenceConversion(MFrequency::TOPO,epoch,pos,dir);
+                for (int chan=0; chan<nFreq; chan++) {
+                    sc.toWorld(topoFreqs(chan),double(chan));
+                }
+
+                for (int chan=0; chan<nFreq; chan++) {
+                    channelShift(chan) = round((freqs(chan) - topoFreqs(chan))/sc.increment()(0));
+                }
+            }
+            return channelShift;
+        }
+
+        void process_spectrum(Vector<Float>& vec, float threshold, int order, bool log=false) {
             size_t n = vec.nelements();
 
             // first remove spectral index
 
             // use every 10th point, more for shorter spectra
-            const int inc = casa::max(1,casa::min(n/100,10));
+            const int inc = max(1,min(n/100,10));
             const int n1 = n/inc;
-            casa::Vector<casa::Float> y1(n1);
+            Vector<Float> y1(n1);
             for (int i=0; i<n1; i++) y1(i) = vec(i*inc);
 
             // mask out NaNs and extreme outliers and count how many points we have left
             // Note: fractile partially sorts the array!
-            casa::Float q5 = casa::fractile(y1,0.05f);
-            casa::Float q95 = casa::fractile(y1,0.95f);
+            Float q5 = fractile(y1,0.05f);
+            Float q95 = fractile(y1,0.95f);
             int ngood = 0;
             for (int i=0; i<n1; i++) {
-                if (!casa::isNaN(y1(i)) && (y1(i) >= q5) && (y1(i) <= q95)) ngood++;
+                if (!isNaN(y1(i)) && (y1(i) >= q5) && (y1(i) <= q95)) ngood++;
             }
             if (log) {
                 ASKAPLOG_INFO_STR(logger,"q5="<<q5<<", q95="<<q95<< ", y1="<< y1);
                 ASKAPLOG_INFO_STR(logger,"n1="<<n1<<", ngood="<<ngood);
             }
-            casa::Vector<casa::Float> x(ngood), y(ngood);
+            Vector<Float> x(ngood), y(ngood);
             for (int i=0, j=0; i<n1; i++) {
-                casa::Float s = vec(i*inc);
-                if (!casa::isNaN(s) && (s >= q5) && (s <= q95)) {
+                Float s = vec(i*inc);
+                if (!isNaN(s) && (s >= q5) && (s <= q95)) {
                     y(j) = s;
                     x(j++) = i*inc;
                 }
             }
             if (log) ASKAPLOG_INFO_STR(logger,"y="<<y);
 
-            casa::Float xmean = 0;
-            casa::Float offset = 0;
-            casa::Float slope = 0;
+            Float xmean = 0;
+            Float offset = 0;
+            Float slope = 0;
 
             if (ngood > 1) {
                 xmean = mean(x);
                 x -= xmean;
                 // fit line to spectrum and subtract it
-                offset = sum(y) / ngood;
+                //offset = sum(y) / ngood;
                 slope = sum(x * y) / sum(x * x);
+                offset = fractile(y,0.50f);
             }
 
-            casa::Vector<casa::Float> x_full(n), y_full(n);
+            Vector<Float> x_full(n), y_full(n);
             indgen(x_full);
             x_full -= xmean;
             for (int i = 0; i<n; i++) y_full(i) = vec(i) - (offset + slope * x_full(i));
@@ -227,38 +323,38 @@ public:
 
             // now select data within threshold of median
             // Copy required because fractile does partial sort
-            casa::Vector<casa::Float> tmp(y_full.copy());
-            casa::Float q15 = casa::fractile(tmp, 0.15f);
-            casa::Float q50 = casa::fractile(tmp, 0.50f);
-            casa::Float iqr = (1/1.35)*2*(q50-q15); // just copying python version - iqr should really be 2*(q50-q25)
-            casa::Vector<casa::Bool> mask = (y_full >= q50 - threshold * iqr ) & ( y_full <= q50 + threshold * iqr);
+            Vector<Float> tmp(y_full.copy());
+            Float q15 = fractile(tmp, 0.15f);
+            Float q50 = fractile(tmp, 0.50f);
+            Float iqr = (1/1.35)*2*(q50-q15); // just copying python version - iqr should really be 2*(q50-q25)
+            Vector<Bool> mask = (y_full >= q50 - threshold * iqr ) & ( y_full <= q50 + threshold * iqr);
             if (log) {
                 ASKAPLOG_INFO_STR(logger,"q15="<<q15<<", q50="<<q50<< ", iqr="<< iqr);
             }
 
             // fit polynomial of given order
-            //casa::LinearFitSVD<casa::Float> fitter;
+            //LinearFitSVD<Float> fitter;
 
             // using AutoDiff - slow
-            // casa::Polynomial<casa::AutoDiff<casa::Float> > func(order+1);
+            // Polynomial<AutoDiff<Float> > func(order+1);
             // for (int i=0; i<order+1; i++) {
             //     func.setCoefficient( i, 1.0);
             // }
             // fitter.setFunction(func);
             // ASKAPLOG_INFO_STR(logger,"Fitting spectrum");
-            // casa::Vector<casa::Float> solution = fitter.fit(x_full, vec, &mask);
+            // Vector<Float> solution = fitter.fit(x_full, vec, &mask);
             // subtract continuum model from data
-            // casa::Vector<casa::Float> model(n);
+            // Vector<Float> model(n);
             // ASKAPLOG_INFO_STR(logger,"Subtracting model");
-            // bool ok = fitter.residual(model, x_full, casa::True);
+            // bool ok = fitter.residual(model, x_full, True);
             // vec -= model;
 
             // using LSQaips - need invert before solve
             // Note: fitter uses double internally, giving float inputs just results in internal copying
             //       and is slower
-            casa::LSQaips fitter(order+1);
-            casa::Vector<casa::Double> xx(order+1);
-            casa::VectorSTLIterator<casa::Double> it(xx);
+            LSQaips fitter(order+1);
+            Vector<Double> xx(order+1);
+            VectorSTLIterator<Double> it(xx);
             for (int i=0; i<n; i++) {
                 if (mask(i)) {
                     xx(0) = 1;
@@ -266,17 +362,17 @@ public:
                         xx(j) = xx(j-1) * i;
                     }
                     //ASKAPLOG_INFO_STR(logger,"makeNorm "<<i<<" "<<vec(i));
-                    fitter.makeNorm(it,1.0,casa::Double(vec(i)));
+                    fitter.makeNorm(it,1.0,Double(vec(i)));
                 }
             }
-            casa::uInt nr1;
+            uInt nr1;
             //cout << "Invert = " << fitter.invert(nr1);
             //cout << ", rank=" << nr1 << endl;
-            casa::Vector<casa::Double> solution(order+1);
+            Vector<Double> solution(order+1);
             if (fitter.invert(nr1)) {
                 fitter.solve(solution);
 
-                casa::Vector<casa::Float> model(n);
+                Vector<Float> model(n);
                 for (int i=0; i<n; i++) {
                     model(i)=solution(order);
                     for (int j=order-1; j>=0; j--) {
