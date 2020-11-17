@@ -294,7 +294,7 @@ TableVisGridder::~TableVisGridder() {
         ASKAPLOG_DEBUG_STR(logger, "   Samples rejected due to MaxPointingSeparation = "<<
                                    itsRowsRejectedDueToMaxPointingSeparation);
     }
-    if((itsNumberGridded<1) && (itsNumberDegridded<1)) {
+    if(unusedGridder()) {
       ASKAPLOG_WARN_STR(logger, "Unused gridder");
       if (itsRowsRejectedDueToMaxPointingSeparation != 0) {
           ASKAPLOG_WARN_STR(logger, "It looks like all samples were rejected due to MaxPointingSeparation!");
