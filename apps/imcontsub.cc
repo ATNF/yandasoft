@@ -69,27 +69,17 @@ public:
             StatReporter stats;
             LOFAR::ParameterSet subset(config().makeSubset("imcontsub."));
             // we only deal with fits files
-            subset.replace("imcontsub.imagetype","fits");
+            String imagetype = subset.getString("imcontsub.imagetype","fits");
+            ASKAPCHECK(imagetype=="fits","imcontsub can only process fits files");
 
             ASKAPLOG_INFO_STR(logger, "ASKAP image based continuum subtraction application " << ASKAP_PACKAGE_VERSION);
 
             String infile = subset.getString("inputfitscube","");
             String outfile = subset.getString("outputfitscube","");
-            // check for .fits extension, we need both versions because the accessor adds it
-            size_t pos = infile.rfind(".fits");
-            infile = infile.substr(0,pos);
-            String infile_ext = infile + ".fits";
 
             // create output file if empty
-            if (outfile=="") {
-                pos = infile_ext.rfind(".fits");
-                outfile = infile.substr(0,pos) + ".contsub.fits";
-            }
-            // make sure output has .fits extension
-            pos = outfile.rfind(".fits");
-            if (pos==std::string::npos) {
-                outfile += ".fits";
-            }
+            if (outfile=="") outfile = infile + ".contsub";
+
             float threshold = subset.getFloat("threshold",2.0);
             int order = subset.getInt("order",2);
             int blocksize = subset.getInt("blocksize",0);
@@ -103,7 +93,7 @@ public:
             Vector<int> channelShift = dopplerCorrection(infile, accessor, subset);
 
             if (comms.isMaster()) {
-                ASKAPLOG_INFO_STR(logger,"In = "<<infile_ext <<", Out = "<<
+                ASKAPLOG_INFO_STR(logger,"In = "<<infile <<", Out = "<<
                                       outfile <<", threshold = "<<threshold << ", order = "<< order <<
                                       ", blocksize = " << blocksize << ", shift = "<< shift <<
                                       ", interleave = "<< interleave);
@@ -112,7 +102,8 @@ public:
                     ASKAPLOG_INFO_STR(logger,"Channel shift at start and end of spectrum: "<<channelShift(0)<<", "<<channelShift(nchan-1));
                 }
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
-                accessor.copy_header(infile_ext, outfile);
+                ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header "<<infile<<", "<<outfile);
+                accessor.copy_header(infile, outfile);
             }
 
             // All wait for header to be written
@@ -121,7 +112,7 @@ public:
             // Now process the rest of the file in parallel
             // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
             const int iax = 1;
-            Array<Float> arr = accessor.read_all(infile_ext,iax);
+            Array<Float> arr = accessor.read_all(infile, iax);
             // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
             arr.removeDegenerate();
             ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
@@ -276,60 +267,74 @@ public:
 
             // use every 10th point, more for shorter spectra
             const int inc = max(1,min(n/100,10));
-            const int n1 = n/inc;
+            const size_t n1 = n/inc;
             Vector<Float> y1(n1);
-            for (int i=0; i<n1; i++) y1(i) = vec(i*inc);
+            for (size_t i=0; i<n1; i++) y1(i) = vec(i*inc);
 
             // mask out NaNs and extreme outliers and count how many points we have left
             // Note: fractile partially sorts the array!
             Float q5 = fractile(y1,0.05f);
             Float q95 = fractile(y1,0.95f);
             int ngood = 0;
-            for (int i=0; i<n1; i++) {
+            for (size_t i=0; i<n1; i++) {
                 if (!isNaN(y1(i)) && (y1(i) >= q5) && (y1(i) <= q95)) ngood++;
             }
             if (log) {
                 ASKAPLOG_INFO_STR(logger,"q5="<<q5<<", q95="<<q95<< ", y1="<< y1);
                 ASKAPLOG_INFO_STR(logger,"n1="<<n1<<", ngood="<<ngood);
             }
-            Vector<Float> x(ngood), y(ngood);
-            for (int i=0, j=0; i<n1; i++) {
-                Float s = vec(i*inc);
-                if (!isNaN(s) && (s >= q5) && (s <= q95)) {
-                    y(j) = s;
-                    x(j++) = i*inc;
-                }
-            }
-            if (log) ASKAPLOG_INFO_STR(logger,"y="<<y);
-
             Float xmean = 0;
             Float offset = 0;
             Float slope = 0;
+            if (ngood > 0) {
+                Vector<Float> x(ngood), y(ngood);
+                for (size_t i=0, j=0; i<n1; i++) {
+                    Float s = vec(i*inc);
+                    if (!isNaN(s) && (s >= q5) && (s <= q95)) {
+                        y(j) = s;
+                        x(j++) = i*inc;
+                    }
+                }
+                if (log) ASKAPLOG_INFO_STR(logger,"y="<<y);
 
-            if (ngood > 1) {
-                xmean = mean(x);
-                x -= xmean;
-                // fit line to spectrum and subtract it
-                //offset = sum(y) / ngood;
-                slope = sum(x * y) / sum(x * x);
-                offset = fractile(y,0.50f);
+
+                if (ngood > 1) {
+                    xmean = mean(x);
+                    x -= xmean;
+                    // fit line to spectrum
+                    slope = sum(x * y) / sum(x * x);
+                    //offset = sum(y) / ngood;
+                    offset = fractile(y,0.50f);
+                }
             }
 
-            Vector<Float> x_full(n), y_full(n);
+            // subtract linear fit and filter out NaNs
+            Vector<Float> x_full(n), y_full(n), tmp(n);
+            Vector<Bool> mask(n);
             indgen(x_full);
             x_full -= xmean;
-            for (int i = 0; i<n; i++) y_full(i) = vec(i) - (offset + slope * x_full(i));
+            ngood = 0;
+            for (size_t i = 0; i<n; i++) {
+                y_full(i) = vec(i) - (offset + slope * x_full(i));
+                mask(i) = !isNaN(y_full(i));
+                if (mask(i)) {
+                    tmp(ngood++) = y_full(i);
+                }
+            }
             if (log) ASKAPLOG_INFO_STR(logger,"offset = "<<offset<<", slope = "<<slope);
 
             // now select data within threshold of median
-            // Copy required because fractile does partial sort
-            Vector<Float> tmp(y_full.copy());
-            Float q15 = fractile(tmp, 0.15f);
-            Float q50 = fractile(tmp, 0.50f);
+            if (ngood==0) return;
+            Float q15 = fractile(tmp(Slice(0,ngood)), 0.15f);
+            Float q50 = fractile(tmp(Slice(0,ngood)), 0.50f);
             Float iqr = (1/1.35)*2*(q50-q15); // just copying python version - iqr should really be 2*(q50-q25)
-            Vector<Bool> mask = (y_full >= q50 - threshold * iqr ) & ( y_full <= q50 + threshold * iqr);
+            for (size_t i = 0; i<n; i++) mask(i) &= (y_full(i) >= q50 - threshold * iqr) &
+                                                    (y_full(i) <= q50 + threshold * iqr);
             if (log) {
                 ASKAPLOG_INFO_STR(logger,"q15="<<q15<<", q50="<<q50<< ", iqr="<< iqr);
+                for (size_t i = 0; i<n; i++) {
+                    if (!mask(i)) ASKAPLOG_INFO_STR(logger,"discarded y("<<i<<")="<<y_full(i)<<", vec("<<i<<")="<<vec(i));
+                }
             }
 
             // fit polynomial of given order
@@ -355,7 +360,7 @@ public:
             LSQaips fitter(order+1);
             Vector<Double> xx(order+1);
             VectorSTLIterator<Double> it(xx);
-            for (int i=0; i<n; i++) {
+            for (size_t i=0; i<n; i++) {
                 if (mask(i)) {
                     xx(0) = 1;
                     for (int j=1; j<order+1; j++) {
@@ -373,7 +378,7 @@ public:
                 fitter.solve(solution);
 
                 Vector<Float> model(n);
-                for (int i=0; i<n; i++) {
+                for (size_t i=0; i<n; i++) {
                     model(i)=solution(order);
                     for (int j=order-1; j>=0; j--) {
                         model(i) = i * model(i) + solution(j);
