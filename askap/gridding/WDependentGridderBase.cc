@@ -69,21 +69,29 @@ WDependentGridderBase::WDependentGridderBase(const double wmax,
 /// @brief destructor, writes w-plane hit distribution if necessary
 WDependentGridderBase::~WDependentGridderBase()
 {
-  if (itsWPlaneStats.size()) {
-      std::string tag = "(non-PSF gridder)";
-      if (isPSFGridder()) tag = "(PSF gridder)";
-      if (isPCFGridder()) tag = "(preconditioner function gridder)";
-      ASKAPLOG_INFO_STR(logger, "W-plane hit statistics "<<tag<<
-          ":  plane(nwplanes="<<itsNWPlanes<<")  w-term(wmax="<<
-          getWMax()<<")  Number of hits");
-      for (int plane = 0; plane<int(itsWPlaneStats.size()); ++plane) {
-           if (plane < itsNWPlanes) {
-               const int val = itsWPlaneStats[plane];
-               ASKAPLOG_INFO_STR(logger, "W-plane hit statistics:     "<<
-                   std::setw(4)<<plane<<"  "<<std::setw(9)<<
-                   std::setprecision(7)<<getWTerm(plane)<<"  "<<val);
-           }
-      }
+  if (unusedGridder()) {
+      ASKAPLOG_DEBUG_STR(logger, "Unused gridder (WDependentGridderBase destructor)");
+  } else {
+     if (itsWPlaneStats.size()) {
+         std::string tag = "(non-PSF gridder)";
+         if (isPSFGridder()) {
+             tag = "(PSF gridder)";
+         } 
+         if (isPCFGridder()) {
+             tag = "(preconditioner function gridder)";
+         }
+         ASKAPLOG_INFO_STR(logger, "W-plane hit statistics "<<tag<<
+             ":  plane(nwplanes="<<itsNWPlanes<<")  w-term(wmax="<<
+             getWMax()<<")  Number of hits");
+         for (int plane = 0; plane<int(itsWPlaneStats.size()); ++plane) {
+              if (plane < itsNWPlanes) {
+                  const int val = itsWPlaneStats[plane];
+                  ASKAPLOG_INFO_STR(logger, "W-plane hit statistics:     "<<
+                      std::setw(4)<<plane<<"  "<<std::setw(9)<<
+                      std::setprecision(7)<<getWTerm(plane)<<"  "<<val);
+              }
+         }
+     }
   }
 }
 

@@ -61,22 +61,22 @@ ACCManager<T>::~ACCManager() {
     size_t nimages= nBases*nTerms;
     for (int i = 0; i< nimages ; i++) {
         T* tomove = (T *) residuals[i];
-        #pragma acc exit data delete(tomove[0:npixels]) 
+        #pragma acc exit data delete(tomove[0:npixels])
     }
     // the masks
     //
     for (int i = 0; i<nBases;i++) {
         T* tomove = (T *) masks[i];
-        #pragma acc exit data delete(tomove[0:npixels]) 
+        #pragma acc exit data delete(tomove[0:npixels])
     }
 
     T* tomove = (T *) maskToUse;
-    #pragma acc exit data delete(tomove[0:npixels]) 
+    #pragma acc exit data delete(tomove[0:npixels])
 
     tomove = (T *) weight;
     #pragma acc exit data delete(tomove[0:npixels])
 
-    
+
 }
 template <class T>
 void ACCManager<T>::CopyToDevice() {
@@ -85,17 +85,17 @@ void ACCManager<T>::CopyToDevice() {
     size_t nimages= nBases*nTerms;
     for (int i = 0; i< nimages ; i++) {
         T* tomove = (T *) residuals[i];
-        #pragma acc enter data copyin(tomove[0:npixels]) 
+        #pragma acc enter data copyin(tomove[0:npixels])
     }
     // the masks
     //
     for (int i = 0; i<nBases;i++) {
         T* tomove = (T *) masks[i];
-        #pragma acc enter data copyin(tomove[0:npixels]) 
+        #pragma acc enter data copyin(tomove[0:npixels])
     }
 
     T* tomove = (T *) maskToUse;
-    #pragma acc enter data copyin(tomove[0:npixels]) 
+    #pragma acc enter data copyin(tomove[0:npixels])
 
     tomove = (T *) weight;
     #pragma acc enter data copyin(tomove[0:npixels])
@@ -112,7 +112,7 @@ void ACCManager<T>::UpdateMask(int base) {
 }
 template <class T>
 void ACCManager<T>::InitMask(int base) {
-    
+
     #pragma acc parallel loop present(maskToUse,weight)
     for (int i=0;i<npixels;i++) {
        maskToUse[i] = weight[i];
@@ -133,15 +133,13 @@ namespace askap {
 
 
         template<class T>
-        void absMinMaxPosOMP(T& minVal, T& maxVal, IPosition& minPos, IPosition& maxPos, const Matrix<T>& im) {
+        void absMaxPosOMP(T& maxVal, IPosition& maxPos, const Matrix<T>& im) {
 
             // Set Shared values
             maxVal = T(0.0);
-            minVal = T(1000.0);
             // Create and shared private values
             T maxVal_private(0.0);
-            T minVal_private(1000.0);
-            IPosition maxPos_private(2,0), minPos_private(2,0);
+            IPosition maxPos_private(2,0);
             const uInt ncol = im.ncolumn();
             const uInt nrow = im.nrow();
             #pragma omp for schedule(static)
@@ -154,23 +152,14 @@ namespace askap {
                         maxPos_private(0) = i;
                         maxPos_private(1) = j;
                     }
-                    if (val < minVal_private) {
-                        minVal_private = val;
-                        minPos_private(0) = i;
-                        minPos_private(1) = j;
-                    }
                 }
             }
-            // Update shared max and min values and positions
+            // Update shared max values and positions
             #pragma omp critical
             {
                 if (maxVal_private > maxVal) {
                     maxVal = maxVal_private;
                     maxPos = maxPos_private;
-                }
-                if (minVal_private < minVal) {
-                    minVal = minVal_private;
-                    minPos = minPos_private;
                 }
             }
             #pragma omp barrier
@@ -178,15 +167,13 @@ namespace askap {
 
 
         template<class T>
-        void absMinMaxPosMaskedOMP(T& minVal, T& maxVal, IPosition& minPos, IPosition& maxPos, const Matrix<T>& im, const Matrix<T>& mask) {
+        void absMaxPosMaskedOMP(T& maxVal, IPosition& maxPos, const Matrix<T>& im, const Matrix<T>& mask) {
 
             // Set Shared Values
             maxVal = T(0.0);
-            minVal = T(1000.0);
             // Set Private Values
             T maxVal_private(0.0);
-            T minVal_private(1000.0);
-            IPosition maxPos_private(2,0), minPos_private(2,0);
+            IPosition maxPos_private(2,0);
             const uInt ncol = mask.ncolumn();
             const uInt nrow = mask.nrow();
 
@@ -201,11 +188,6 @@ namespace askap {
                             maxPos_private(0) = i;
                             maxPos_private(1) = j;
                         }
-                    if (val < minVal_private) {
-                            minVal_private = val;
-                            minPos_private(0) = i;
-                            minPos_private(1) = j;
-                    }
                 }
             }
             #pragma omp critical
@@ -213,10 +195,6 @@ namespace askap {
                 if (maxVal_private > maxVal) {
                     maxVal = maxVal_private;
                     maxPos = maxPos_private;
-                }
-                if (minVal_private < minVal) {
-                    minVal = minVal_private;
-                    minPos = minPos_private;
                 }
             }
             #pragma omp barrier
@@ -395,7 +373,7 @@ namespace askap {
 
 #ifdef USE_OPENACC
             itsACCManager.CopyToDevice();
-#endif            
+#endif
             // Force change in basis function
             initialiseForBasisFunction(true);
 
@@ -474,8 +452,8 @@ namespace askap {
 
             itsACCManager.residuals = new uInt64[itsACCManager.nBases*itsACCManager.nTerms];
             itsACCManager.deleteResiduals =  new casacore::Bool[itsACCManager.nBases*itsACCManager.nTerms];
-             
-            size_t idx = 0; 
+
+            size_t idx = 0;
             for (uInt base = 0; base < nBases; base++) {
                 // Calculate transform of residual images [nx,ny,nterms]
                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
@@ -507,7 +485,7 @@ namespace askap {
             this->itsMask.resize(nBases);
 
 #ifdef USE_OPENACC
-            
+
             Bool deleteIt;
             itsACCManager.tmpMask = this->itsWeight(0).nonDegenerate();
             itsACCManager.masks = new uInt64[nBases];
@@ -526,7 +504,7 @@ namespace askap {
 #endif
 
             }
-#ifdef USE_OPENACC            
+#ifdef USE_OPENACC
             size_t npixels = this->itsMask(0).nelements();
             itsACCManager.maskToUse = new T[npixels];
 #endif
@@ -705,12 +683,10 @@ namespace askap {
             float sumFlux;
             uInt optimumBase(0);
             Vector<T> peakValues(this->itsNumberTerms);
-            Vector<T> minValues(this->itsNumberTerms);
             Vector<T> maxValues(this->itsNumberTerms);
             Matrix<T> weights, mask, maskref;
-            IPosition minPos(2, 0);
             IPosition maxPos(2, 0);
-            T minVal(0.0), maxVal(0.0);
+            T maxVal(0.0);
             Bool haveMask;
             T norm;
             Vector<Array<T> > coefficients(this->itsNumberTerms);
@@ -794,10 +770,10 @@ namespace askap {
                 do {
 
                     // Reset peak pos
-                    absPeakPos(1) = 0;  absPeakPos(2) = 0;
+                    absPeakPos = 0;
                     // Reset peak Val
                     absPeakVal = 0.0;
-                    // Reset optimium base
+                    // Reset optimum base
                     optimumBase = 0;
 
                     // =============== Set up deep cleaning mask =======================
@@ -805,8 +781,6 @@ namespace askap {
                     if (isWeighted && this->control()->maskNeedsResetting()) {
                         uInt ncol = weights.ncolumn();
                         uInt nrow = weights.nrow();
-                        // Declare private versions of these
-                        uInt i, j;
                         if (this->control()->deepCleanMode()) {
                             if (nBases>1) {
                                 #pragma omp single
@@ -818,12 +792,12 @@ namespace askap {
                                 maskref.reference(this->itsMask(0));
                                 // multiply weights by the base 0 mask
                                 #pragma omp for schedule(static)
-                                for (j = 0; j < ncol; j++ ) {
+                                for (uInt j = 0; j < ncol; j++ ) {
                                     Vector<T> weightscol = weights.column(j);
                                     T* pWeights = weightscol.getStorage(IsNotCont);
                                     Vector<T> maskcol = maskref.column(j);
                                     T* pMask = maskcol.getStorage(IsNotCont);
-                                    for (i = 0; i < nrow; i++ ) {
+                                    for (uInt i = 0; i < nrow; i++ ) {
                                         T val = *(pWeights+i) * (*(pMask+i));
                                         pWeights[i] = val;
                                     }
@@ -844,8 +818,8 @@ namespace askap {
 
                     for (uInt base = 0; base < nBases; base++) {
 
-                        minPos(0) = 0; minPos(1) = 0; maxPos(0) = 0; maxPos(1) = 0;
-                        minVal = 0.0; maxVal = 0.0;
+                        maxPos = 0;
+                        maxVal = 0.0;
 
                         if (this->control()->deepCleanMode()) {
 
@@ -901,14 +875,13 @@ namespace askap {
                             res.reference(this->itsResidualBasis(base)(0));
 
                             if (haveMask) {
-                                absMinMaxPosMaskedOMP(minVal,maxVal,minPos,maxPos,res,maskref);
+                                absMaxPosMaskedOMP(maxVal,maxPos,res,maskref);
                             } else {
-                                absMinMaxPosOMP(minVal,maxVal,minPos,maxPos,res);
+                                absMaxPosOMP(maxVal,maxPos,res);
                             }
 
                             #pragma omp for schedule(static)
                             for (uInt term = 0; term < this->itsNumberTerms; term++) {
-                                minValues(term) = this->itsResidualBasis(base)(term)(minPos);
                                 maxValues(term) = this->itsResidualBasis(base)(term)(maxPos);
                             }
                             // In performing the search for the peak across bases, we want to take into account
@@ -917,7 +890,6 @@ namespace askap {
                             {
                                 norm = 1.0 / sqrt(this->itsCouplingMatrix(base)(0, 0));
                                 maxVal *= norm;
-                                minVal *= norm;
                             }
 
                             #pragma omp single
@@ -959,14 +931,13 @@ namespace askap {
                                 res = coefficients(0);
 
                                 if (haveMask) {
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
+                                    absMaxPosMaskedOMP(maxVal, maxPos, res, maskref);
                                 } else {
-                                    absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
+                                    absMaxPosOMP(maxVal, maxPos, res);
                                 }
 
                                 #pragma omp for schedule(static)
                                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
-                                    minValues(term) = coefficients(term)(minPos);
                                     maxValues(term) = coefficients(term)(maxPos);
                                 }
 
@@ -998,18 +969,17 @@ namespace askap {
                                     #pragma omp single
                                     res = negchisq;
 
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, maskref);
+                                    absMaxPosMaskedOMP(maxVal, maxPos, res, maskref);
                                 } else {
                                     #pragma omp single
                                     res = negchisq;
 
-                                    absMinMaxPosOMP(minVal, maxVal,minPos,maxPos,res);
+                                    absMaxPosOMP(maxVal, maxPos, res);
                                 }
 
                                 // Small loop
                                 #pragma omp for schedule(static)
                                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
-                                            minValues(term) = coefficients(term)(minPos);
                                             maxValues(term) = coefficients(term)(maxPos);
                                 }
 
@@ -1023,11 +993,6 @@ namespace askap {
                         #pragma omp single
                         {
                             // We use the minVal and maxVal to find the optimum base
-                            if (abs(minVal) > absPeakVal) {
-                                optimumBase = base;
-                                absPeakVal = abs(minVal);
-                                absPeakPos = minPos;
-                            }
                             if (abs(maxVal) > absPeakVal) {
                                     optimumBase = base;
                                     absPeakVal = abs(maxVal);
@@ -1080,9 +1045,8 @@ namespace askap {
                         for (uInt term = 0; term < nTerms; term++) {
                             for (uInt base = 0; base < nBases; base++) {
 
-                                minPos(0) = 0; minPos(1) = 0;
                                 maxPos(0) = 0; maxPos(1) = 0;
-                                minVal = 0.0; maxVal = 0.0;
+                                maxVal = 0.0;
 
                                 if (isWeighted) {
                                     #pragma omp sections
@@ -1095,22 +1059,17 @@ namespace askap {
                                         wt = this->itsWeight(0).nonDegenerate();
                                     }
 
-                                    absMinMaxPosMaskedOMP(minVal, maxVal, minPos, maxPos, res, wt);
+                                    absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
                                 } else {
 
-                                    absMinMaxPosOMP(minVal, maxVal, minPos, maxPos, res);
+                                    absMaxPosOMP(maxVal, maxPos, res);
                                 }
                                 // TODO: Do I need this barrier?
                                 #pragma omp barrier
 
                                 #pragma omp single
                                 {
-                                    if (abs(minVal) > abs(maxVal)) {
-                                        maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(minPos));
-                                    }
-                                    else {
-                                        maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(maxPos));
-                                    }
+                                    maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(maxPos));
                                 }
                             } // End of loop over bases
 
@@ -1176,7 +1135,7 @@ namespace askap {
                     }
 
                     #pragma omp critical
-                    sumFlux = sumFlux + localsum;
+                    sumFlux += localsum;
 
                     // This barrier is required - no implicit barrier following criticals
                     #pragma omp barrier
@@ -1293,7 +1252,7 @@ namespace askap {
                                 }
                             }
                         }
-                    } 
+                    }
 
 /*
                     // Subtract PSFs, including base-base crossterms
@@ -1334,7 +1293,7 @@ namespace askap {
                     {
 						this->monitor()->monitor(*(this->state()));
 						this->state()->incIter();
-                    } 
+                    }
 
                     // End of section 9
                     #pragma omp single
@@ -1414,7 +1373,7 @@ namespace askap {
                 }
             }
         }
-        
+
         template<class T>
         void absMaxPosMaskedACC(T& maxVal, int&  maxPos,  const T* im, const T* mask, uInt nele)
         {
@@ -1428,12 +1387,12 @@ namespace askap {
                 T test = abs(im[i] * mask[i]);
                 if (test > maxValf) {
                    maxValf = test;
-		  
+
                 }
             }
-	   
 
-            #pragma acc parallel loop present(mask,im)  
+
+            #pragma acc parallel loop present(mask,im)
             for (int i = 0; i < nele; i++ ) {
                 if (abs(im[i] * mask[i]) == maxValf) {
                     maxPosI = i;
@@ -1568,7 +1527,7 @@ namespace askap {
                             }
                         }
 #ifdef USE_OPENACC
-                        itsACCManager.InitMask(base); 
+                        itsACCManager.InitMask(base);
                         itsACCManager.UpdateMask(base);
 #else
                         mask*=this->itsMask(base);
@@ -1577,12 +1536,12 @@ namespace askap {
                     } else {
                         mask=this->itsMask(base);
                     }
-                } 
-                
+                }
+
                 else {
 #ifdef USE_OPENACC
-                itsACCManager.InitMask(base); 
-#endif                  
+                itsACCManager.InitMask(base);
+#endif
                 }
 
                 Bool haveMask=mask.nelements()>0;
@@ -1597,7 +1556,7 @@ namespace askap {
 #ifdef USE_OPENACC
                         bool deleteIm,deleteMa;
                         int nelements = res.nelements();
-                        const T * im = (T *) itsACCManager.residuals[base*itsACCManager.nTerms]; 
+                        const T * im = (T *) itsACCManager.residuals[base*itsACCManager.nTerms];
                         const T * ma = (T *) itsACCManager.maskToUse;
                         printf("Check Array Locations im:%p ma:%p\n",im,ma);
                         absMaxPosMaskedACC(maxVal,Idx,im,ma,nelements);
@@ -1605,12 +1564,12 @@ namespace askap {
                         const int x = Idx % itsACCManager.ncols;
                         maxPos(0) = x;
                         maxPos(1) = y;
-			            
+
                         printf("Check Max Locations (OpenACC): val=%f at: %d, %d, %d\n", maxVal, maxPos(0), maxPos(1), Idx);
 
                         //absMaxPosMasked(maxVal, maxPos, res, mask);
                         //printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
-#else                       
+#else
                         absMaxPosMasked(maxVal, maxPos, res, mask);
 			           // printf("Check Max Locations (Serial): %d, %d\n", maxPos(0), maxPos(1));
 //                      casacore::minMaxMasked(minVal, maxVal, minPos, maxPos, this->itsResidualBasis(base)(0),mask)
@@ -1720,7 +1679,7 @@ namespace askap {
             T * tomove = (T *) itsACCManager.masks[optimumBase];
 //          printf("device ptr %p offset: %d\n",tomove,optimumIdx);
             #pragma acc update device(tomove[optimumIdx:1])
-#endif 
+#endif
             // Take square root to get value comparable to peak residual
             if (this->itsSolutionType == "MAXCHISQ") {
                 absPeakVal = sqrt(max(T(0.0), absPeakVal));

@@ -25,10 +25,15 @@
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
 
+// a bit hacky way to get logs tagged with the cp-prefix
+#define ASKAP_PACKAGE_NAME "cp"
+
+
 #include <askap/dataaccess/TableDataSource.h>
-//#include <askap/askap_accessors.h>
+
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapUtil.h>
+
 ASKAP_LOGGER(logger, ".delaysolver");
 
 #include <askap/askap/AskapError.h>
@@ -178,6 +183,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   const casa::uInt refAnt = config().getUint("refant",1);
   const bool exclude13 = config().getBool("exclude13", false);
   utils::DelaySolverImpl solver(targetRes, stokesVector[0], ampCutoff, refAnt);
+  solver.setAntennaNames(itsAntennaNames);
   if (exclude13) {
       solver.excludeBaselines(casa::Vector<std::pair<casa::uInt,casa::uInt> >(1,std::pair<casa::uInt,
              casa::uInt>(1,2)));
@@ -195,6 +201,11 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   
   if (estimateViaLags) {
       ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
+
+      // suppress logging warnings at high severity for the time of initial estimate
+      // (same warnings will be given during the second solver run)
+      solver.setVerboseFlag(false);
+
       // the following means no averaging
       solver.setTargetResolution(1.);
       
@@ -208,6 +219,8 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       solver.setApproximateDelays(delayApprox);
       solver.init();
       solver.setTargetResolution(targetRes);      
+      // re-enable warning logging at high severity
+      solver.setVerboseFlag(true);
   }
       
   for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {

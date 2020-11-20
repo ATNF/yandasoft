@@ -202,6 +202,12 @@ namespace askap
       void setSourceIndex(casacore::uInt index) const { itsSourceIndex = index; }
 
   protected:
+      /// @brief helper method to check that the gridder has been unused so far
+      /// @details Unused means no visibilities were either gridded or degridded
+      /// using this instance
+      /// @return true, if this gridder has not been used
+      bool unusedGridder() const  { return (itsNumberGridded<1) && (itsNumberDegridded<1); }
+
       /// @brief helper method to print CF cache stats in the log
       /// @details This method is largely intended for debugging. It writes down
       /// to the log the support sizes/offsets for all convolution functions in the cache and
