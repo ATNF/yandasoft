@@ -282,6 +282,7 @@ class CdeconvolverApp : public askap::Application
                       if (from < 0) {
                             from = comms.nProcs();
                       }
+                      ASKAPLOG_INFO_STR(logger, "Waiting for trigger from rank " << from);
                       comms.receive((void *) &buf,sizeof(int),from);
                     }
                     // write out the slice
