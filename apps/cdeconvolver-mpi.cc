@@ -217,7 +217,7 @@ class CdeconvolverApp : public askap::Application
             std::tie(firstChannel, numChannelsLocal) = get_channel_allocation(comms, nchanCube);
             ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
             bool firstPassForMaster = true;
-l
+
             for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
 
                 //FIXME: this is just looping over each channel of the allocation
