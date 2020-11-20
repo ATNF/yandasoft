@@ -216,7 +216,8 @@ class CdeconvolverApp : public askap::Application
             int firstChannel, numChannelsLocal;
             std::tie(firstChannel, numChannelsLocal) = get_channel_allocation(comms, nchanCube);
             ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
-
+            bool firstPassForMaster = true;
+l
             for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
 
                 //FIXME: this is just looping over each channel of the allocation
@@ -268,17 +269,19 @@ class CdeconvolverApp : public askap::Application
 
                     doTheWork(subset, thisBuffer, thisPSFBuffer, thisPCFBuffer, psfout, dirty, model, restored);
                     
-                    if (comms.isMaster()) {
-
+                    if (comms.isMaster() && firstPassForMaster == true) {
 
                       ASKAPLOG_INFO_STR(logger, "Ensuring serial access to cubes");
-
+                      firstPassForMaster = false; 
 
                     }
                     else { // this is essentially a serializer - it is required for CASA image types
                     // but not FITS
                       int buf;
                       int from = comms.rank() - 1;
+                      if (from < 0) {
+                            from = comms.nProcs();
+                      }
                       comms.receive((void *) &buf,sizeof(int),from);
                     }
                     // write out the slice
@@ -297,7 +300,11 @@ class CdeconvolverApp : public askap::Application
                       int to = comms.rank()+1;
                       comms.send((void *) &buf,sizeof(int),to);
                     }
-                    
+                    else {
+                      int buf;
+                      int to = 0;
+                      comms.send((void *) &buf,sizeof(int),to);
+                    }
                     
                 }
                 
