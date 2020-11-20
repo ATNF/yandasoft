@@ -280,7 +280,7 @@ class CdeconvolverApp : public askap::Application
                       int buf;
                       int from = comms.rank() - 1;
                       if (from < 0) {
-                            from = comms.nProcs();
+                            from = comms.nProcs()-1;
                       }
                       ASKAPLOG_INFO_STR(logger, "Waiting for trigger from rank " << from);
                       comms.receive((void *) &buf,sizeof(int),from);
