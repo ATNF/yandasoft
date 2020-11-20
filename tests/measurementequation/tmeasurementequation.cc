@@ -46,11 +46,11 @@
 #include "RestoringBeamHelperTest.h"
 #include "VisMetaDataStatsTest.h"
 
-#include <askap/askapparallel/AskapParallel.h>
+// avoid use of MPI for unit tests
+double MPI_Wtime() { return double(time(0)); }
 
 int main( int argc, char **argv)
 {
-    askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
 
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
