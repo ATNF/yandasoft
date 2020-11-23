@@ -98,7 +98,7 @@ double Calibrator1934::fluxDensity(const double freqInMHz)
       "The flux model of 1934-638 is only valid from 500 MHz to 10 GHz, you have freq = "<<freqInMHz<<" MHz");
   const double lgF = log(freqInMHz) / log(10.);
   // polynomial fit
-  const double lgS = -30.7667 + (26.4908 - (7.0977 - 0.6053334 * lgF) * lgF) * lgF;
+  const double lgS = -30.7667 + (26.4908 - (7.0977 - 0.605334 * lgF) * lgF) * lgF;
   return exp(lgS * log(10.));
 }  
 
