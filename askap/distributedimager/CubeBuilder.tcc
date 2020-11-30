@@ -536,7 +536,6 @@ void CubeBuilder<T>::setUnits(const std::string &units)
 template <class T>
 void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
 {
-    ASKAPLOG_INFO_STR(CubeBuilderLogger,"Seting the date-obs keyword");
     String date, timesys;
     casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
     itsCube->setMetadataKeyword(itsFilename,"DATE-OBS", date, "Date of observation");
