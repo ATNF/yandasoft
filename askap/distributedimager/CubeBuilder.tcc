@@ -50,8 +50,10 @@
 #include <casacore/coordinates/Coordinates/LinearCoordinate.h>
 #include <casacore/coordinates/Coordinates/StokesCoordinate.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
+#include <casacore/fits/FITS/FITSDateUtil.h>
 #include <casacore/measures/Measures/Stokes.h>
 #include <casacore/images/Images/PagedImage.h>
+#include <casacore/casa/Quanta/MVTime.h>
 #include <casacore/casa/Quanta/Unit.h>
 #include <casacore/casa/Quanta/QC.h>
 
@@ -83,8 +85,8 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
 
     const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec");
     const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
-    // UV cellsize is probably 
-    casacore::Vector<casacore::Double> UVCellSize; 
+    // UV cellsize is probably
+    casacore::Vector<casacore::Double> UVCellSize;
     UVCellSize.resize(2);
     ASKAPDEBUGASSERT(itsShape.nelements()>=2);
     UVCellSize[0] = 1./(xcellsize.getValue("rad")*(imageShapeVector[0]));
@@ -96,7 +98,7 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
         units.resize(2);
         units[0] = "m";
         units[1] = "m";
-       
+
         std::vector<std::string> names;
         names.resize(2);
         names[0] = "u";
@@ -115,9 +117,9 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
             crpix[dim] = imageShapeVector[dim]/2;
             crval[dim] = 0.0;
         }
-        
+
         LinearCoordinate lc(names, units, crval, UVCellSize,xform,crpix);
-        
+
         coordsys.addCoordinate(lc);
     }
 
@@ -153,8 +155,8 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
         } else {
             ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
         }
-    
-        
+
+
         SpectralCoordinate sc(freqRef, f0, inc, refPix);
 
         // add rest frequency, but only if requested, and only for
@@ -497,8 +499,8 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         } else {
             ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
         }
-    
-        
+
+
         SpectralCoordinate sc(freqRef, f0, inc, refPix);
 
         // add rest frequency, but only if requested, and only for
@@ -529,6 +531,17 @@ template <class T>
 void CubeBuilder<T>::setUnits(const std::string &units)
 {
     itsCube->setUnits(itsFilename,units);
+}
+
+template <class T>
+void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
+{
+    ASKAPLOG_INFO_STR(CubeBuilderLogger,"Seting the date-obs keyword");
+    String date, timesys;
+    casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
+    itsCube->setMetadataKeyword(itsFilename,"DATE-OBS", date, "Date of observation");
+    if (itsCube->getMetadataKeyword(itsFilename,"TIMESYS")=="")
+        itsCube->setMetadataKeyword(itsFilename,"TIMESYS", timesys, "Time system");
 }
 
 } // namespace cp

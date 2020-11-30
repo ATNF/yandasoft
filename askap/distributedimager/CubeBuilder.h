@@ -47,7 +47,7 @@
 namespace askap {
 namespace cp {
 
-template <class T> 
+template <class T>
 class CubeBuilder {
     public:
         /// Constructor
@@ -57,7 +57,7 @@ class CubeBuilder {
                     const casacore::Quantity& inc,
                     const std::string& name = "");
 
-        CubeBuilder(const LOFAR::ParameterSet& parset,const std:: string& name);            
+        CubeBuilder(const LOFAR::ParameterSet& parset,const std:: string& name);
 
         /// Destructor
         ~CubeBuilder();
@@ -73,12 +73,13 @@ class CubeBuilder {
 
         void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
         void setUnits(const std::string &units);
+        void setDateObs(const casacore::MVEpoch &dateObs);
 
     std::string filename() const{return itsFilename;};
 
     private:
 
-        
+
         boost::shared_ptr<accessors::IImageAccess<T> > itsCube;
 
 
