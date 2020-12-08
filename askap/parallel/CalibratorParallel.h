@@ -231,6 +231,9 @@ namespace askap
       /// @brief flag switching the bandpass calibration on
       bool itsSolveBandpass;
 
+      /// @brief flag switching the bandpass leakage calibration on
+      bool itsSolveBandpassLeakage;
+
       /// @brief chunk size per worker (used in parallel case)
       /// @details zero means that the whole dataset is used
       casacore::uInt itsChannelsPerWorker;
