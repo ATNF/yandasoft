@@ -40,13 +40,13 @@
 #include <utility>
 
 // ASKAPsoft includes
-#include <askap/askap/AskapLogging.h>
-ASKAP_LOGGER(logger, ".cdeconvolver");
-#include <askap/askap/AskapError.h>
-#include <askap/askap/Application.h>
-#include <askap/askap/StatReporter.h>
+#include <askap/AskapLogging.h>
+#include <askap/AskapError.h>
+#include <askap/Application.h>
+#include <askap/StatReporter.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/WienerPreconditioner.h>
+#include <askap/measurementequation/GaussianTaperPreconditioner.h>
 #include <askap/deconvolution/DeconvolverBase.h>
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>
@@ -71,6 +71,8 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <Blob/BlobIBufVector.h>
 #include <Blob/BlobOStream.h>
 #include <Blob/BlobOBufVector.h>
+
+ASKAP_LOGGER(logger, ".cdeconvolver");
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -364,25 +366,125 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Arra
     if (subset.isDefined("preconditioner.Names")) {
         ASKAPLOG_INFO_STR(logger,"Preparing for preconditioning");
 
-        // Preconditioning Assuming they only want Wiener.
-        boost::shared_ptr<WienerPreconditioner>
-            wp = WienerPreconditioner::createPreconditioner(subset.makeSubset("preconditioner.Wiener."));
-        ASKAPASSERT(wp);
-        
-        // The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
-        // I'm not normalising it as I dont think I need to.
-        
-        //askap::scimath::fft2d(pcfArray,false);
-        casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, pcfArray);
-        askap::scimath::fft2d(scratch, false);
-        casacore::convertArray<casacore::Complex, casacore::DComplex>(pcfArray,scratch);
+        const vector<string> preconditioners=subset.getStringVector("preconditioner.Names",vector<string>());
+       
+        // could follow ImageSolverFactory and use addPreconditioner to add each to an ImageSolver.
+        // but just keep separate for now
 
-        casacore::Array<casacore::Float> pcfReal = real(pcfArray) * norm;
+        if ( preconditioners.size() == 0 ) {
+            ASKAPLOG_WARN_STR(logger," - no preconditioners given. Deconvolving unfiltered images.");
+        }
 
-        wp->doPreconditioning(psfArray,fBuffer,pcfReal);
-        //casacore::Array<casacore::Float> psfArrayUnfiltered = psfArray;
-        //wp->doPreconditioning(psfArrayUnfiltered,psfArray,pcfReal);
-        //wp->doPreconditioning(psfArrayUnfiltered,fBuffer,pcfReal);
+        for (vector<string>::const_iterator pc = preconditioners.begin(); pc != preconditioners.end(); ++pc) {
+            if ( (*pc)=="Wiener" ) {
+                ASKAPLOG_INFO_STR(logger," - using a Wiener filter");
+            }
+            else if ( (*pc) == "GaussianTaper" ) {
+                ASKAPLOG_INFO_STR(logger," - using a GaussianTaper");
+            }
+            else if ( (*pc) == "None" ) {
+                ASKAPLOG_INFO_STR(logger," - no preconditioning specified. Deconvolving unfiltered images.");
+            }
+            else {
+                ASKAPTHROW(AskapError, "Unknown preconditioner "<<*pc);
+            }
+        }
+
+        for (vector<string>::const_iterator pc = preconditioners.begin(); pc != preconditioners.end(); ++pc) {
+                
+            // The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
+            // I'm not normalising it as I dont think I need to.
+            
+            //askap::scimath::fft2d(pcfArray,false);
+            casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, pcfArray);
+            askap::scimath::fft2d(scratch, false);
+            casacore::convertArray<casacore::Complex, casacore::DComplex>(pcfArray,scratch);
+            
+            casacore::Array<casacore::Float> pcfReal = real(pcfArray) * norm;
+
+            if ( (*pc)=="Wiener" ) {
+                ASKAPLOG_INFO_STR(logger,"Applying Wiener filter");
+
+                // Preconditioning Assuming they only want Wiener.
+                boost::shared_ptr<WienerPreconditioner>
+                    wp = WienerPreconditioner::createPreconditioner(subset.makeSubset("preconditioner.Wiener."));
+                ASKAPASSERT(wp);
+             
+                wp->doPreconditioning(psfArray,fBuffer,pcfReal);
+
+            } else if ( (*pc) == "GaussianTaper") {
+                ASKAPLOG_INFO_STR(logger,"Applying GaussianTaper");
+
+                // Copied from ImageSolverFactory::configurePreconditioners. See that for comments and updates.
+                // Should really have a function like WienerPreconditioner::createPreconditioner() to set all this up.
+
+                ASKAPCHECK(subset.isDefined("preconditioner.GaussianTaper"),
+                           "preconditioner.GaussianTaper parameter is required to use GaussianTaper");
+                const vector<double> taper = SynthesisParamsHelper::convertQuantity(
+                                                 subset.getStringVector("preconditioner.GaussianTaper"),"rad");
+                ASKAPCHECK((taper.size() == 3) || (taper.size() == 1),
+                           "preconditioner.GaussianTaper can have either single element or "
+                           " a vector of 3 elements. You supplied a vector of "<<taper.size()<<" elements");
+
+                ASKAPCHECK(subset.isDefined("Images.shape") && subset.isDefined("Images.cellsize"),
+                           "Imager.shape and Imager.cellsize should be defined to convert the taper fwhm "
+                           "specified in angular units in the image plane into uv cells");
+                const std::vector<double> cellsize = SynthesisParamsHelper::convertQuantity(
+                                                         subset.getStringVector("Images.cellsize"),"rad");
+                const std::vector<int> shape = subset.getInt32Vector("Images.shape");
+                ASKAPCHECK((cellsize.size() == 2) && (shape.size() == 2),
+                           "Images.cellsize and Images.shape parameters should have exactly two values");
+
+                bool isPsfSize = subset.getBool("preconditioner.GaussianTaper.isPsfSize",False);
+                double tol = subset.getDouble("preconditioner.GaussianTaper.tolerance",0.005);
+                // Try to use the same cutoff as used by the restore solver so final beams will match
+                double cutoff = subset.getDouble("restore.beam.cutoff",0.5);
+               
+                /*
+                 * leave this unless needed
+                 *
+                // additional scaling factor due to padding. by default - no padding
+                const boost::shared_ptr<ImageCleaningSolver>
+                    ics = boost::dynamic_pointer_cast<ImageCleaningSolver>(solver);
+                const double paddingFactor = ics ? ics->paddingFactor() : 1.;
+                */
+                const double paddingFactor = 1.;
+               
+                // factors which appear in nominator are effectively half sizes in radians
+                const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casacore::C::pi;
+                const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casacore::C::pi;
+
+                boost::shared_ptr<GaussianTaperPreconditioner> gp;
+
+                if (taper.size() == 3) {
+                  ASKAPDEBUGASSERT((taper[0]!=0) && (taper[1]!=0));
+                  gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[1],taper[2],
+                                                           isPsfSize,cutoff,tol));
+                  //solver->addPreconditioner(IImagePreconditioner::ShPtr(
+                  //    new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[1],taper[2],
+                  //                                    isPsfSize,cutoff,tol)));
+                } else {
+                  ASKAPDEBUGASSERT(taper[0]!=0);
+                  if (std::abs(xFactor-yFactor)<4e-15) {
+                    // the image is square, can use the short cut
+                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,tol));
+                    //solver->addPreconditioner(IImagePreconditioner::ShPtr(
+                    //    new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,tol)));
+                  } else {
+                    // the image is rectangular. Although the gaussian taper is symmetric in
+                    // angular coordinates, it will be elongated along the vertical axis in
+                    // the uv-coordinates.
+                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol));
+                    //solver->addPreconditioner(IImagePreconditioner::ShPtr(
+                    //    new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol)));
+                  } // xFactor!=yFactor
+                } // else: taper.size() == 3
+             
+                gp->doPreconditioning(psfArray,fBuffer,pcfReal);
+
+            }
+
+        } // loop over all preconditioners
 
     } else {
         ASKAPLOG_INFO_STR(logger,"No preconditioning");
@@ -430,7 +532,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Arra
     model = deconvolver->model().copy();
 
     outpsf = psfArray;
-    
+
     casacore::Vector< casacore::Array<casacore::Float> > restored_vec(1); // some times there are more that one restore
     if(deconvolver->restore(restored_vec))
         restored = restored_vec(0).copy();

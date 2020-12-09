@@ -82,6 +82,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/NoXPolBeamIndependentGain.h>
 #include <askap/measurementequation/LeakageTerm.h>
 #include <askap/measurementequation/BeamIndependentLeakageTerm.h>
+#include <askap/measurementequation/FreqDependentLeakage.h>
 #include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -154,8 +155,14 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
       ASKAPCHECK(!itsSolveGains && !itsSolveLeakage,
          "Combination of frequency-dependent and frequency-independent effects is not supported at the moment for simplicity");
   }
+  if (what2solve.find("bpleakage") != std::string::npos) {
+      ASKAPLOG_INFO_STR(logger, "Bandpass leakage will be solved for (solve='"<<what2solve<<"')");
+      itsSolveBandpassLeakage = true;
+      ASKAPCHECK(!itsSolveGains && !itsSolveLeakage,
+         "Combination of frequency-dependent and frequency-independent effects is not supported at the moment for simplicity");
+  }
 
-  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass,
+  ASKAPCHECK(itsSolveGains || itsSolveLeakage || itsSolveBandpass || itsSolveBandpassLeakage,
       "Nothing to solve! Either gains or leakages (or both) or bandpass have to be solved for, you specified solve='"<<
       what2solve<<"'");
 
@@ -164,7 +171,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
   if (parset.getString("solver", "") == "LSQR"
       && parset.getString("solver.LSQR.parallelMatrix", "") == "true") {
       ASKAPCHECK(itsComms.isParallel(), "Parallel matrix scheme is supported only in the parallel mode!");
-      ASKAPCHECK(itsSolveBandpass, "Parallel matrix scheme is supported only for bandpass solutions!");
+      ASKAPCHECK(itsSolveBandpass||itsSolveBandpassLeakage, "Parallel matrix scheme is supported only for bandpass solutions!");
       itsMatrixIsParallel = true;
   }
 
@@ -179,7 +186,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
 
       if (solverType == "LSQR") {
           std::map<std::string, std::string> solverParams = CalibratorParallel::getLSQRSolverParameters(parset);
-          if (itsSolveBandpass) {
+          if (itsSolveBandpass || itsSolveBandpassLeakage) {
               solverParams["nChan"] = parset.getString("nChan");
           }
           itsSolver->setParameters(solverParams);
@@ -265,7 +272,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
         }
 
       }
-#endif 
+#endif
 
   }
   if (itsComms.isWorker()) {
@@ -376,6 +383,22 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
                     for (casacore::uInt chan = 0; chan<nChan; ++chan) {
                          itsModel->add(accessors::CalParamNameHelper::addChannelInfo(xxParName, chan), casacore::Complex(1.,0.));
                          itsModel->add(accessors::CalParamNameHelper::addChannelInfo(yyParName, chan), casacore::Complex(1.,0.));
+                    }
+               }
+          }
+          updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
+      }
+      if (itsSolveBandpassLeakage) {
+          const casacore::uInt nChan = parset.getInt32("nChan",304);
+          ASKAPLOG_INFO_STR(logger, "Initialise bandpass leakage (unknowns) for "<<nAnt<<" antennas, "<<nBeam<<" beam(s) and "<<
+                                   nChan<<" spectral channels");
+          for (casacore::uInt ant = 0; ant<nAnt; ++ant) {
+               for (casacore::uInt beam = 0; beam<nBeam; ++beam) {
+                    const std::string xyParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::XY);
+                    const std::string yxParName = accessors::CalParamNameHelper::bpPrefix() + accessors::CalParamNameHelper::paramName(ant, beam, casacore::Stokes::YX);
+                    for (casacore::uInt chan = 0; chan<nChan; ++chan) {
+                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(xyParName, chan), casacore::Complex(0.,0.));
+                         itsModel->add(accessors::CalParamNameHelper::addChannelInfo(yxParName, chan), casacore::Complex(0.,0.));
                     }
                }
           }
@@ -573,10 +596,14 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
        } else {
           preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());
        }
-   } else if (itsSolveBandpass) {
+   } else if (itsSolveBandpass && !itsSolveBandpassLeakage) {
        preAvgME.reset(new CalibrationME<NoXPolFreqDependentGain, PreAvgCalMEBase>());
+   } else if (itsSolveBandpass && itsSolveBandpassLeakage) {
+       preAvgME.reset(new CalibrationME<Product<NoXPolFreqDependentGain,FreqDependentLeakage>, PreAvgCalMEBase>());
+   } else if (!itsSolveBandpass && itsSolveBandpassLeakage) {
+       preAvgME.reset(new CalibrationME<FreqDependentLeakage, PreAvgCalMEBase>());
    } else {
-       ASKAPTHROW(AskapError, "Unsupported combination of itsSolveGains and itsSolveLeakage. This shouldn't happen. Verify solve parameter");
+       ASKAPTHROW(AskapError, "Unsupported combination of things to solve for. This shouldn't happen. Verify solve parameter");
    }
    ASKAPDEBUGASSERT(preAvgME);
    // without the following lines of code, the buffer initialisation will be performed based on the first sighted
@@ -607,7 +634,7 @@ void CalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
             const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
             curChan = chanInfo.first;
             baseParName = chanInfo.second;
-            // in the distributed bandpass case this worker can only deal with a subset of channels. 
+            // in the distributed bandpass case this worker can only deal with a subset of channels.
             // I (MV) not sure it is a correct way to just ignore channels outside of the current rank's work unit,
             // but just do it for now as it reverts to the old behaviour for such channels and we don't use ccalibrator for bandpass anyway
             // for ASKAP. I must say that the code became quite messy with all these various use cases
@@ -1034,7 +1061,7 @@ void CalibratorParallel::writeModel(const std::string &postfix)
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
-      
+
       // solution accessor, shared pointer is uninitialised if solution ID hasn't been obtained
       boost::shared_ptr<ICalSolutionAccessor> solAcc;
 
@@ -1050,7 +1077,7 @@ void CalibratorParallel::writeModel(const std::string &postfix)
                solAcc = itsSolutionSource->rwSolution(solutionID);
                ASKAPASSERT(solAcc);
            }
-           if (itsSolveBandpass) {
+           if (itsSolveBandpass || itsSolveBandpassLeakage) {
                ASKAPCHECK(it->find(accessors::CalParamNameHelper::bpPrefix()) == 0,
                        "Expect parameter name starting from "<<accessors::CalParamNameHelper::bpPrefix()<<
                        " for the bandpass calibration, you have "<<*it);

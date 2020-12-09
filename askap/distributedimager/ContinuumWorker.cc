@@ -517,11 +517,15 @@ void ContinuumWorker::processChannels()
     root = "pcf";
     std::string pcf_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
+<<<<<<< HEAD
     
     root = "psfgrid";
     std::string psfgrid_name = root + std::string(".wr.") \
       + utility::toString(itsComms.rank());
       
+=======
+
+>>>>>>> 3a09e561c5bef3ff977c5d318a32681375e16288
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
@@ -536,19 +540,24 @@ void ContinuumWorker::processChannels()
     ASKAPLOG_DEBUG_STR(logger, "nchan: " << this->nchanCube << " base f0: " << f0.getValue("MHz")
     << " width: " << freqinc.getValue("MHz") << " (" << workUnits[0].get_channelWidth() << ")");
 
+    // We want the start of observations stored in the image keywords
+    // The velocity calculations use the first MS for this, so we'll do that too
+    casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
 
     if ( itsComms.isCubeCreator() ) {
-      itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc,img_name));
+      itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
       itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
-      
+      // Fill in the date
+      itsImageCube->setDateObs(dateObs);
+      itsResidualCube->setDateObs(dateObs);
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, grid_name));
         itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcf_name));
         itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
       }
-      
+
 
     }
 
@@ -559,14 +568,14 @@ void ContinuumWorker::processChannels()
       itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
       itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, weights_name));
 
- 
+
       if ( dumpgrids ) {
         itsGriddedVis.reset(new CubeBuilder<casacore::Complex>(itsParset, grid_name));
         itsPCFCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcf_name));
         itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
 
       }
-      
+
     }
 
     if (itsParset.getBool("restore", false)) {
@@ -588,6 +597,8 @@ void ContinuumWorker::processChannels()
           itsPSFimageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_image_name));
         }
         itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
+        // Fill in the date
+        itsRestoredCube->setDateObs(dateObs);
       }
 
       if (!itsComms.isCubeCreator()) {
@@ -714,7 +725,7 @@ void ContinuumWorker::processChannels()
         itsAdvisor->updateDirectionFromWorkUnit(itsParsets[workUnitCount],workUnits[workUnitCount]);
       }
       if (updateDir || !gridder_initialized) {
-          
+
         boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,localChannel));
         rootImagerPtr = tempIm;
         gridder_initialized = true;
@@ -723,7 +734,7 @@ void ContinuumWorker::processChannels()
         boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,rootImagerPtr->gridder(),localChannel));
         rootImagerPtr = tempIm;
       }
-        
+
       CalcCore& rootImager = *rootImagerPtr; // just for the semantics
       //// CalcCore rootImager(itsParsets[workUnitCount], itsComms, ds, localChannel);
       /// set up the image for this channel
@@ -1107,10 +1118,14 @@ void ContinuumWorker::processChannels()
         casacore::Array<casacore::Complex> pcfarr = rootImager.getPCFGrid();
         casacore::Vector<casacore::Complex> pcfVec(pcfarr.reform(IPosition(1,pcfarr.nelements())));
         rootImager.params()->addComplexVector("pcf.slice",pcfVec);
+<<<<<<< HEAD
         casacore::Array<casacore::Complex> psfarr = rootImager.getPSFGrid();
         casacore::Vector<casacore::Complex> psfVec(psfarr.reform(IPosition(1,psfarr.nelements())));
         rootImager.params()->addComplexVector("psfgrid.slice",psfVec);
       } 
+=======
+      }
+>>>>>>> 3a09e561c5bef3ff977c5d318a32681375e16288
 
       rootImager.check();
 
