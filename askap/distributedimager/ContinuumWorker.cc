@@ -517,15 +517,11 @@ void ContinuumWorker::processChannels()
     root = "pcf";
     std::string pcf_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
-<<<<<<< HEAD
     
     root = "psfgrid";
     std::string psfgrid_name = root + std::string(".wr.") \
       + utility::toString(itsComms.rank());
       
-=======
-
->>>>>>> 3a09e561c5bef3ff977c5d318a32681375e16288
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";
@@ -1118,14 +1114,10 @@ void ContinuumWorker::processChannels()
         casacore::Array<casacore::Complex> pcfarr = rootImager.getPCFGrid();
         casacore::Vector<casacore::Complex> pcfVec(pcfarr.reform(IPosition(1,pcfarr.nelements())));
         rootImager.params()->addComplexVector("pcf.slice",pcfVec);
-<<<<<<< HEAD
         casacore::Array<casacore::Complex> psfarr = rootImager.getPSFGrid();
         casacore::Vector<casacore::Complex> psfVec(psfarr.reform(IPosition(1,psfarr.nelements())));
         rootImager.params()->addComplexVector("psfgrid.slice",psfVec);
-      } 
-=======
       }
->>>>>>> 3a09e561c5bef3ff977c5d318a32681375e16288
 
       rootImager.check();
 
