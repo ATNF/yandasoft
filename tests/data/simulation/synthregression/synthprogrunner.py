@@ -14,7 +14,7 @@ class SynthesisProgramRunner:
                   change 
       '''
       if not os.path.exists(template_parset):
-         raise RuntimeError, "Template parset file %s is not found" % template_parset
+         raise RuntimeError("Template parset file %s is not found" % template_parset)
       self.template_parset = template_parset
 
 
@@ -25,16 +25,16 @@ class SynthesisProgramRunner:
       self.imgstat = os.popen('which imgstat').read().rstrip()
       
       if not os.path.exists(self.simulator):
-          raise RuntimeError, "csimulator is missing at %s" % self.simulator
+          raise RuntimeError("csimulator is missing at %s" % self.simulator)
 
       if not os.path.exists(self.imager):
-          raise RuntimeError, "cimager is missing at %s" % self.imager
+          raise RuntimeError("cimager is missing at %s" % self.imager)
 
       if not os.path.exists(self.calibrator):
-          raise RuntimeError, "ccalibrator is missing at %s" % self.calibrator
+          raise RuntimeError("ccalibrator is missing at %s" % self.calibrator)
 
       if not os.path.exists(self.imgstat):
-          raise RuntimeError, "imgstat is missing at %s" % self.imgstat
+          raise RuntimeError("imgstat is missing at %s" % self.imgstat)
 
       self.tmp_parset = "temp_parset.in"
       self.initParset()
@@ -46,7 +46,7 @@ class SynthesisProgramRunner:
 
       '''
       if os.path.exists(self.tmp_parset):
-         print "WARNING. File %s is overwritten" % self.tmp_parset
+         print("WARNING. File %s is overwritten" % self.tmp_parset)
       os.system("rm -f %s" %  self.tmp_parset)
       os.system("cp %s %s" % (self.template_parset, self.tmp_parset))
       
@@ -69,7 +69,7 @@ class SynthesisProgramRunner:
       '''
       res = os.system("%s -c %s" % (cmd, self.tmp_parset))
       if res != 0:
-         raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
+         raise RuntimeError("Command %s failed with error %s" % (cmd,res))
 
    def runMPICommand(self,cmd,np):
       '''
@@ -79,7 +79,7 @@ class SynthesisProgramRunner:
       '''
       res = os.system("mpirun -np %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
-         raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
+         raise RuntimeError("Command %s failed with error %s" % (cmd,res))
 
    def runSRUNCommand(self,cmd,np):
       '''
@@ -89,7 +89,7 @@ class SynthesisProgramRunner:
       '''
       res = os.system("srun --reservation=gpuhack2019team3 -A gpuhack2019team3 -p gpuq -n %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
-         raise RuntimeError, "Command %s failed with error %s" % (cmd,res)
+         raise RuntimeError("Command %s failed with error %s" % (cmd,res))
 
 
 
@@ -133,36 +133,36 @@ class SynthesisProgramRunner:
          name - image name
       '''
       if not os.path.exists(name):
-         raise RuntimeError, "Image %s doesn't exist" % name
+         raise RuntimeError("Image %s doesn't exist" % name)
       imgstat_out = ".tmp.imgstat"
       if os.path.exists(imgstat_out):
          os.system("rm -f %s" % imgstat_out)
       res = os.system("%s %s > %s" % (self.imgstat,name,imgstat_out))
       if res != 0:
-         raise RuntimeError, "Command %s failed with error %s" % (self.imgstat,res)
+         raise RuntimeError("Command %s failed with error %s" % (self.imgstat,res))
       result = {}
-      f = file(imgstat_out)
-      try:
-         row = 0
-         for line in f:
-            parts = line.split()
-            if len(parts)<2 and row>0:
-                   raise RuntimeError, "Expected at least 2 elements in row %i, you have: %s" % (row+1,parts)
-            if row == 0:
-               if len(parts)<4:
-                  raise RuntimeError, "Expected at least 4 columns on the first row, you have: %s " % (parts,)
-               result['peak'] = float(parts[0])
-               if parts[3] != "(J2000)":
-                   raise RuntimeError, "Expected J2000 as the 4th element, you have: %s " % (parts,) 
-            elif row == 1:
-               result['ra'] = float(parts[0])
-               result['dec'] = float(parts[1])
-            elif row == 2:
-               result['rms'] = float(parts[0])
-               result['median'] = float(parts[1])
-            row = row + 1
-      finally:
-         f.close()
+      with open(imgstat_out) as f:
+         try:
+            row = 0
+            for line in f:
+               parts = line.split()
+               if len(parts)<2 and row>0:
+                  raise RuntimeError("Expected at least 2 elements in row %i, you have: %s" % (row+1,parts))
+               if row == 0:
+                  if len(parts)<4:
+                     raise RuntimeError("Expected at least 4 columns on the first row, you have: %s " % (parts,))
+                  result['peak'] = float(parts[0])
+                  if parts[3] != "(J2000)":
+                     raise RuntimeError("Expected J2000 as the 4th element, you have: %s " % (parts,))
+               elif row == 1:
+                  result['ra'] = float(parts[0])
+                  result['dec'] = float(parts[1])
+               elif row == 2:
+                  result['rms'] = float(parts[0])
+                  result['median'] = float(parts[1])
+               row = row + 1
+         finally:
+            f.close()
       return result
       
 # angular distance in degrees of the peak from the given point
@@ -181,7 +181,7 @@ def offsetDirection(ref,l,m):
       l,m - true angle offsets in longitude and latitude respectively (also in degrees)
    '''
    if len(ref)!=2:
-      raise RuntimeError, "Expected two-element list or tuple, you have: %s" % (ref,)
+      raise RuntimeError("Expected two-element list or tuple, you have: %s" % (ref,))
    # sin and cos of the longitude offset 
    sL = math.sin(l/180.*math.pi)
    cL = math.cos(l/180.*math.pi)
@@ -210,7 +210,7 @@ def sinProjection(ref,l,m):
       Return: two element tuple with ra and dec of the offset position (degrees)
    '''
    if len(ref)!=2:
-      raise RuntimeError, "Expected two-element list or tuple, you have: %s" % (ref,)
+      raise RuntimeError("Expected two-element list or tuple, you have: %s" % (ref,))
    # offsets in radians
    L = l/180.*math.pi
    M = m/180.*math.pi
