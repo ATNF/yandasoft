@@ -105,9 +105,9 @@ Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
 #Cimager.threshold.majorcycle                    = 10mJy
 
 #
-Cimager.preconditioner.Names                    = [GaussianTaper]
-Cimager.preconditioner.Wiener.noisepower        = 30.
-Cimager.preconditioner.GaussianTaper            = [20arcsec,20arcsec,0deg]
+#Cimager.preconditioner.Names                    = [Wiener,GaussianTaper]
+#Cimager.preconditioner.Wiener.noisepower        = 30.
+#Cimager.preconditioner.GaussianTaper            = [20arcsec,20arcsec,0deg]
 #
 
 #
