@@ -15,23 +15,23 @@ def analyseResult(spr, checkWeights=True):
    psf_peak=[294.854166667,-63.7125]
    true_peak=sinProjection(psf_peak,src_offset,0)
    stats = spr.imageStats('image.cont.taylor.0.restored')
-   print "Statistics for taylor-0 restored image: ",stats
+   print("Statistics for taylor-0 restored image: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
    if disterr > 8:
-      raise RuntimeError, "Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak)
+      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
    if abs(stats['peak']-1.)>0.1:
-      raise RuntimeError, "Peak flux in the image is notably different from 1 Jy, F=%f" % stats['peak']
+      raise RuntimeError("Peak flux in the image is notably different from 1 Jy, F=%f" % stats['peak'])
    
    stats = spr.imageStats('image.cont.taylor.0')
-   print "Statistics for modelimage: ",stats
+   print("Statistics for modelimage: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
    if disterr > 8:
-      raise RuntimeError, "Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak)
+      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
 
    stats = spr.imageStats('residual.cont.taylor.0')
-   print "Statistics for residual image: ",stats
+   print("Statistics for residual image: ",stats)
    if stats['rms']>0.01 or abs(stats['median'])>0.0001:
-      raise RuntimeError, "Residual image has too high rms or median. Please verify"
+      raise RuntimeError("Residual image has too high rms or median. Please verify")
 
 
 spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
