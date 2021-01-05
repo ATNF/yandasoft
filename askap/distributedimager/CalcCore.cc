@@ -224,6 +224,27 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
    
     return tvg->getGrid();
 }
+casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
+    
+    ASKAPCHECK(itsEquation, "Equation not defined");
+    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
+    // We will need to loop over all completions i.e. all sources
+    const std::vector<std::string> completions(itsModel->completions("image"));
+
+    // To minimize the number of data passes, we keep copies of the gridders in memory, and
+    // switch between these. This optimization may not be sufficient in the long run.
+    // Set up initial gridders for model and for the residuals. This enables us to
+    // do both at the same time.
+
+
+    std::vector<std::string>::const_iterator it=completions.begin();
+    const string imageName("image"+(*it));
+    boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getPSFGridder(imageName));
+    ASKAPCHECK(tvg,"PSFGridder not defined")
+   
+    return tvg->getGrid();
+}
 void CalcCore::calcNE()
 {
 

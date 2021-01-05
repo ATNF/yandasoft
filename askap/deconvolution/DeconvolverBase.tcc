@@ -145,7 +145,7 @@ namespace askap {
             // Get the beam information
             const casacore::Vector<float> beam = parset.getFloatVector("beam");
             ASKAPCHECK(beam.size() == 3, "Need three elements for beam. You have " << beam);
-            ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " << beam(0) <<
+            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam(0) <<
                               " x " << beam(1) << " pixels at position angle " << beam(2) << " degrees");
             itsBMaj = beam(0);
             itsBMin = beam(1);
@@ -400,7 +400,7 @@ namespace askap {
 
             scimath::fft2d(gaussian, true);
 
-            ASKAPLOG_INFO_STR(logger, "Volume of PSF = " << volume << " pixels");
+            ASKAPLOG_INFO_STR(decbaselogger, "Volume of PSF = " << volume << " pixels");
 
             for (uInt term = 0; term < itsNumberTerms; term++) {
                 Array<FT> vis(model(term).shape());

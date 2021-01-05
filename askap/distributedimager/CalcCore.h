@@ -97,6 +97,9 @@ namespace cp {
         casacore::Array<casacore::Complex> getGrid();
         /// @brief return the PCF grid
         casacore::Array<casacore::Complex> getPCFGrid();
+        /// @brief return the PSF grid
+        casacore::Array<casacore::Complex> getPSFGrid();
+        
 
     private:
 
