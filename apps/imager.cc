@@ -100,8 +100,8 @@ class ImagerApp : public askap::Application
                 }
                 // Instantiate the Distributed Imager
                 // FIXME
-                ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
-                sleep(20);
+                // ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
+                // sleep(20);
                 // end sleep
                 ContinuumImager imager(subset, comms_p);
 
