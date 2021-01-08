@@ -122,9 +122,14 @@ void CalcCore::doCalc()
         sel->chooseCrossCorrelations();
         sel << itsParset;
 
-        // If we want more channels probably increase this ....
-        sel->chooseChannels(1, itsChannel);
-
+        // This is the logic that switches on the combination of channels.
+        // Earlier logic has updated the Channels parameter in the parset ....
+        bool combineChannels = itsParset.getBool("combinechannels",false);
+        
+        if (!combineChannels) {
+            sel->chooseChannels(1, itsChannel);
+        }
+        
         IDataConverterPtr conv = ds.createConverter();
         conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
         conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));

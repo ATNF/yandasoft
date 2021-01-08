@@ -76,6 +76,7 @@ namespace askap {
                 void set_dataset(std::string dataset);
                 void set_globalChannel(unsigned int chan);
                 void set_localChannel(unsigned int chan);
+                void set_nchan(unsigned int nchan);
                 void set_channelFrequency(double freq);
                 void set_channelWidth(double width);
                 void set_beam(unsigned int beam);
@@ -86,6 +87,7 @@ namespace askap {
                 std::string get_dataset(void) const;
                 unsigned int get_globalChannel(void) const;
                 unsigned int get_localChannel(void) const;
+                unsigned int get_numChan(void) const;
                 double get_channelFrequency(void) const;
                 double get_channelWidth(void) const;
                 unsigned int get_beam() const;
@@ -121,6 +123,7 @@ namespace askap {
                 std::string itsDataset;
                 unsigned int itsGlobalChannel;
                 unsigned int itsLocalChannel;
+                unsigned int itsNumContiguousChannels;
                 double itsChannelFrequency;
                 unsigned int itsBeam;
                 double itsChannelWidth;

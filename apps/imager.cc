@@ -63,7 +63,7 @@ class ImagerApp : public askap::Application
             // Instantiate the comms class
 
             askap::cp::CubeComms comms_p(argc, const_cast<const char **>(argv));
-
+            
 
             try {
 
@@ -99,6 +99,10 @@ class ImagerApp : public askap::Application
                     ASKAPLOG_INFO_STR(logger, "All workers are treated as identical");
                 }
                 // Instantiate the Distributed Imager
+                // FIXME
+                ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
+                sleep(20);
+                // end sleep
                 ContinuumImager imager(subset, comms_p);
 
                 // runit

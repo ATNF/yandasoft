@@ -80,7 +80,10 @@ class ContinuumWorker
         // Cache a workunit to a different location
         void cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
         // Process a workunit
-        void processWorkUnit(ContinuumWorkUnit& wu);
+        void preProcessWorkUnit(ContinuumWorkUnit& wu);
+        // Compress all continuous channel allocations into individual workunits
+        void compressWorkUnits();
+        
         // Delete a workunit from the cache
         void deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
         // clear the current cached files
