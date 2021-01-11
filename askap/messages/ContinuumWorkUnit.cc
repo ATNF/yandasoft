@@ -82,6 +82,10 @@ void ContinuumWorkUnit::set_localChannel(unsigned int chan)
     itsLocalChannel = chan;
 }
 
+void ContinuumWorkUnit::set_nchan(unsigned int nchan) {
+    itsNumContiguousChannels = nchan;
+}
+
 void ContinuumWorkUnit::set_channelFrequency(double freq)
 {
     itsChannelFrequency = freq;

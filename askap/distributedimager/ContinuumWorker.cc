@@ -186,7 +186,7 @@ void ContinuumWorker::run(void)
       << ", width " << wu.get_channelWidth() / 1e3 << " kHz");
     try {
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (before): " << (itsParset.getStringVector("dataset", true)));
-        processWorkUnit(wu);
+        preProcessWorkUnit(wu);
         ASKAPLOG_DEBUG_STR(logger, "Parset Reports (after): " << (itsParset.getStringVector("dataset", true)));
     } catch (AskapError& e) {
         ASKAPLOG_WARN_STR(logger, "Failure processing workUnit");
@@ -261,6 +261,13 @@ void ContinuumWorker::run(void)
       ASKAPLOG_INFO_STR(logger, "Base global channel of cube is " << this->baseCubeGlobalChannel);
     }
     this->baseFrequency = itsAdvisor->getBaseFrequencyAllocation(itsComms.rank() - 1);
+  }
+  else {
+      bool combineChannels = itsParset.getBool("combinechannels", false);
+      if (combineChannels) {
+          ASKAPLOG_INFO_STR(logger, "Not in localsolver (spectral line) mode - and combine channels is set so compressing channel allocations)");
+          compressWorkUnits();
+      }
   }
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
@@ -375,7 +382,79 @@ void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& 
 
 
 }
-void ContinuumWorker::processWorkUnit(ContinuumWorkUnit& wu)
+void ContinuumWorker::compressWorkUnits() {
+    
+    // This takes the list of workunits and reprocesses them so that all the contiguous
+    // channels are compressed into single workUnits for multiple channels
+    // this is not applicable for the spectral line experiment but can markedly reduce
+    // the number of FFT required for the continuum processesing mode
+    
+    // In preProcessWorkUnit we made a list of all the channels in the allocation
+    // but the workunit may contain different measurement sets so I suppose it is
+    // globalChannel that is more important for the sake of allocation ... but
+    // the selector only works on one measurement set.
+    
+    // So the upshot is this simple scheme cannot combine channels from different
+    // measurement sets into the same grid as we are using the MS accessor as the vehicle to
+    // provide the integration.
+    
+    // So we need to loop through our workunit list and make a new list that just contains a
+    // single workunit for each contiguous group of channels.
+    
+    // First lets loop through our workunits
+   
+    vector<ContinuumWorkUnit> compressedList; // probably easier to generate a new list
+    vector<LOFAR::ParameterSet> compressedParsets;
+    
+    ContinuumWorkUnit startUnit = workUnits[0];
+    LOFAR::ParameterSet startParset = itsParsets[0];
+    
+    unsigned int contiguousCount = 1;
+    
+    for ( int count = 1; count < workUnits.size(); count++) {
+        
+        ContinuumWorkUnit nextUnit = workUnits[count];
+        LOFAR::ParameterSet nextParset = itsParsets[count];
+        
+        std::string startDataset = startUnit.get_dataset();
+        int startChannel = startUnit.get_localChannel();
+        std::string nextDataset = nextUnit.get_dataset();
+        int nextChannel = nextUnit.get_localChannel();
+        
+        if ( startDataset.compare(nextDataset) == 0 ) { // same dataset
+            if (nextChannel == (startChannel + contiguousCount)) { // next channel is contiguous to previous
+                contiguousCount++;
+                ASKAPLOG_INFO_STR(logger, "contiguous channel detected: count " << contiguousCount);
+                startUnit.set_nchan(contiguousCount); // update the nchan count for this workunit
+                // Now need to update the parset details
+                char channelParam[64];
+                sprintf(channelParam, "[%d,%d]", contiguousCount,startUnit.get_localChannel());
+                startParset.replace("Channels",channelParam);
+            }
+            else { // no longer contiguous channels reset the count
+                contiguousCount = 0;
+            }
+        }
+        else { // different dataset reset the count
+            ASKAPLOG_INFO_STR(logger, "Datasets differ resetting count");
+            contiguousCount = 0;
+        }
+        if (count == (workUnits.size()-1) || contiguousCount == 0) { // last unit
+            ASKAPLOG_INFO_STR(logger, "Adding unit to compressed list");
+            compressedList.insert(compressedList.end(),startUnit);
+            ASKAPLOG_INFO_STR(logger, "Adding parset to the list");
+            compressedParsets.insert(compressedParsets.end(),startParset);
+            startUnit = nextUnit;
+            startParset = nextParset;
+        }
+        
+    }
+    ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
+    ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
+    workUnits = compressedList;
+    itsParsets = compressedParsets;
+}
+void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
 
 
