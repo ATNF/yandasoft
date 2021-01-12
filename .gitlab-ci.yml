@@ -58,7 +58,8 @@ robottests:
      - pip install robotframework
   script:
     - mkdir -p public/robot
-    - robot tests/data/simulation/synthregression
+    - cd tests/data/simulation/synthregression
+    - robot .
     - mv output.html public/robot/
     - mv log.html public/robot
     - mv report.html public/robot
