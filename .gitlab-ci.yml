@@ -57,7 +57,7 @@ robottests:
   before_script:
      - pip install robotframework
   script:
-    - mkdir public/robot
+    - mkdir -p public/robot
     - robot tests/data/simulation/synthregression
     - mv output.html public/robot/
     - mv log.html public/robot
