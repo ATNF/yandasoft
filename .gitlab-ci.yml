@@ -59,6 +59,8 @@ robottests:
      - pip install robotframework
   script:
     - mkdir -p public/robot
+    - useradd runner
+    - su runner
     - cd tests/data/simulation/synthregression
     - robot .
     - mv output.html public/robot/
