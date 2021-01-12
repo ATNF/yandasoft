@@ -54,7 +54,7 @@ robottests:
   stage: test
   dependencies:
      - build
-  before script:
+  before_script:
      - pip install robotframework
   script:
     - mkdir public/robot
