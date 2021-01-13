@@ -47,7 +47,7 @@ class SynthesisProgramRunner:
       '''
       if os.path.exists(self.tmp_parset):
          print("WARNING. File %s is overwritten" % self.tmp_parset)
-      os.system("rm -f %s" %  self.tmp_parset)
+         os.system("rm -f %s" %  self.tmp_parset)
       os.system("cp %s %s" % (self.template_parset, self.tmp_parset))
       
 
