@@ -37,7 +37,7 @@ def analyseResult(spr, checkWeights=True):
 spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
 spr.runSimulator()
 
-spr = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
-spr.runNewImager(4)
-analyseResult(spr)
+spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
+spr2.runNewImager(4)
+analyseResult(spr2)
 
