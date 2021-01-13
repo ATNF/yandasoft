@@ -47,9 +47,11 @@ class SynthesisProgramRunner:
       '''
       if os.path.exists(self.tmp_parset):
          print("WARNING. File %s is overwritten" % self.tmp_parset)
-      os.system("rm -f %s" %  self.tmp_parset)
+         print("WARNING. Removing %s " % self.tmp_parset)
+         os.system("rm -f %s" %  self.tmp_parset)
+      print("INFO copying %s to %s" % (self.template_parset, self.tmp_parset))
       os.system("cp %s %s" % (self.template_parset, self.tmp_parset))
-      
+      print("INFO Done")      
 
    def addToParset(self,str):
       '''
@@ -77,9 +79,14 @@ class SynthesisProgramRunner:
 
          cmd - command
       '''
-      res = os.system("mpirun -np %d %s -c %s" % (np, cmd, self.tmp_parset))
+      print("INFO Command (via Popen): mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
+      #res = os.system("mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
+      #pipe = subprocess.Popen(("mpiexec  -n %d %s -c %s" % (np, cmd, self.tmp_parset)),shell=True,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
+      res = os.system("echo hello world")
       if res != 0:
+         print("Error")
          raise RuntimeError("Command %s failed with error %s" % (cmd,res))
+      print("INFO Command succeeded");
 
    def runSRUNCommand(self,cmd,np):
       '''
@@ -113,6 +120,14 @@ class SynthesisProgramRunner:
       mpirun = 'mpirun -np %d' % nProcs
       self.runCommand(mpirun + ' ' + self.calibrator)
 
+   def runNewImagerParallel(self, nProcs, args=''):
+      '''
+         Run new imager on a current parset in parallel
+      '''
+      mpirun = 'mpirun %s -np %d' % (args, nProcs)
+      self.runCommand(mpirun + ' ' + self.NewImager)
+
+
    def runImager(self):
       '''
          Run cimager on a current parset
@@ -123,6 +138,7 @@ class SynthesisProgramRunner:
       '''
          Run imager on a current parset
       '''
+      print("INFO Running %s via MPI" % self.NewImager)
       self.runMPICommand(self.NewImager,nproc)
       #self.runSRUNCommand(self.NewImager,2)
 

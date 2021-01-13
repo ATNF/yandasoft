@@ -3,7 +3,7 @@
 image: registry.gitlab.com/askapsdp/all_yandasoft:latest
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
-.common: {tags: [azure]}
+.common: {tags: [askapsdp]}
 
 stages:
   - build
@@ -48,6 +48,30 @@ test:
       - build
     reports:
       junit: build/ctest.xml
+    when: always
+
+robottests:
+  extends: .common
+  stage: test
+  dependencies:
+     - build
+  before_script:
+     - pip install robotframework
+  script:
+    - mkdir -p public/robot
+    - chmod go+rw public
+    - chmod go+rw public/robot
+    - cd tests/data/simulation/synthregression
+    - robot --loglevel DEBUG --noncritical non-critical .
+    - mv output.xml ${CI_PROJECT_DIR}/public/robot/output.xml
+    - mv log.html ${CI_PROJECT_DIR}/public/robot/log.html
+    - mv report.html ${CI_PROJECT_DIR}/public/robot/report.html
+    - mv *.stdout.txt ${CI_PROJECT_DIR}/public/robot/
+    - mv *.stderr.txt ${CI_PROJECT_DIR}/public/robot/
+  artifacts:
+    paths:
+      - public/robot    
+    when: always
 
 pages:
   extends: .common

@@ -38,7 +38,8 @@ spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
 spr.runSimulator()
 
 spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
-print("INFO About to Run new Imager")
+spr2.addToParset("Cimager.combinechannels = true")
+
 
 import os
 if "CI" in os.environ:
