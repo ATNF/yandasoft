@@ -79,6 +79,7 @@ class SynthesisProgramRunner:
 
          cmd - command
       '''
+      print("INFO Command: mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
       res = os.system("mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
       if res != 0:
          raise RuntimeError("Command %s failed with error %s" % (cmd,res))
@@ -125,6 +126,7 @@ class SynthesisProgramRunner:
       '''
          Run imager on a current parset
       '''
+      print("INFO Running %s via MPI" % self.NewImager)
       self.runMPICommand(self.NewImager,nproc)
       #self.runSRUNCommand(self.NewImager,2)
 
