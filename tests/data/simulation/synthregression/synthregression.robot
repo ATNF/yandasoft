@@ -39,5 +39,5 @@ MSMFS with new imager
 Run PythonTest ${thetest}
     Log            ${thetest}
     [Tags]         ${thetest}
-    ${result} =    Run Process   python   ${thetest}.py    shell=True   stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt
+    ${result} =    Run Process   python3   ${thetest}.py    shell=True   stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt
     Should Be Equal As Integers      ${result.rc}     0
