@@ -61,11 +61,8 @@ robottests:
     - mkdir -p public/robot
     - chmod go+rw public
     - chmod go+rw public/robot
-    - useradd runner
-    - su runner
     - cd tests/data/simulation/synthregression
-    - robot --loglevel DEBUG --include testmsmfs --noncritical non-critical .
-    - cat testmsmfs.stdout.txt
+    - robot --loglevel DEBUG --noncritical non-critical .
     - mv output.xml ${CI_PROJECT_DIR}/public/robot/output.xml
     - mv log.html ${CI_PROJECT_DIR}/public/robot/log.html
     - mv report.html ${CI_PROJECT_DIR}/public/robot/report.html
