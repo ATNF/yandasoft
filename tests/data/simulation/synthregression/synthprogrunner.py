@@ -124,7 +124,7 @@ class SynthesisProgramRunner:
       '''
          Run new imager on a current parset in parallel
       '''
-      mpirun = 'mpirun -np %d' % nProcs
+      mpirun = 'mpirun --allow-run-as-root -np %d' % nProcs
       self.runCommand(mpirun + ' ' + self.NewImager)
 
 
