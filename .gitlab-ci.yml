@@ -65,7 +65,7 @@ robottests:
     - su runner
     - cd tests/data/simulation/synthregression
     - robot --loglevel DEBUG --noncritical non-critical .
-    - mv output.html public/robot/output.html
+    - mv output.xml public/robot/output.xml
     - mv log.html public/robot/log.html
     - mv report.html public/robot/report.html
     - mv *.stdout public/robot/
