@@ -120,11 +120,11 @@ class SynthesisProgramRunner:
       mpirun = 'mpirun -np %d' % nProcs
       self.runCommand(mpirun + ' ' + self.calibrator)
 
-   def runNewImagerParallel(self, nProcs):
+   def runNewImagerParallel(self, nProcs, args=''):
       '''
          Run new imager on a current parset in parallel
       '''
-      mpirun = 'mpirun --allow-run-as-root -np %d' % nProcs
+      mpirun = 'mpirun %s -np %d' % (args, nProcs)
       self.runCommand(mpirun + ' ' + self.NewImager)
 
 
