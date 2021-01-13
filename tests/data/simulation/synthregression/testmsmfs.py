@@ -39,6 +39,10 @@ spr.runSimulator()
 
 spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
 print("INFO About to Run new Imager")
-spr2.runNewImager(4)
+try:
+    spr2.runNewImager(4)
+except:
+   print("Unexpected error:", sys.exc_info()[0])
+
 analyseResult(spr2)
 
