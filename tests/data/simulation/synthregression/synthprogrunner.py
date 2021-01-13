@@ -47,11 +47,11 @@ class SynthesisProgramRunner:
       '''
       if os.path.exists(self.tmp_parset):
          print("WARNING. File %s is overwritten" % self.tmp_parset)
-         print("Removing %s " % self.tmp_parset)
+         print("WARNING. Removing %s " % self.tmp_parset)
          os.system("rm -f %s" %  self.tmp_parset)
       print("INFO copying %s to %s" % (self.template_parset, self.tmp_parset))
       os.system("cp %s %s" % (self.template_parset, self.tmp_parset))
-      
+      print("INFO Done")      
 
    def addToParset(self,str):
       '''
