@@ -65,11 +65,12 @@ robottests:
     - su runner
     - cd tests/data/simulation/synthregression
     - robot --loglevel DEBUG --noncritical non-critical .
+    - cat testmsmfs.stdout
     - mv output.xml ${CI_PROJECT_DIR}/public/robot/output.xml
     - mv log.html ${CI_PROJECT_DIR}/public/robot/log.html
     - mv report.html ${CI_PROJECT_DIR}/public/robot/report.html
-    - mv *.stdout ${CI_PROJECT_DIR}/public/robot/
-    - mv *.stderr ${CI_PROJECT_DIR}/public/robot/
+    - mv *.stdout.txt ${CI_PROJECT_DIR}/public/robot/
+    - mv *.stderr.txt ${CI_PROJECT_DIR}/public/robot/
   artifacts:
     paths:
       - public/robot    
