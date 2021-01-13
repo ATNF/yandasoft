@@ -20,11 +20,11 @@ facetingtest: test of faceted imaging with a spherical function gridder
     [Template]      Run PythonTest ${thetest}  
     facetingtest
 calibratortest: test of ccalibrator
-    [Tags]          calibratoretest
+    [Tags]          calibratortest    non-critical
     [Template]      Run PythonTest ${thetest}  
-    calibratoretest
+    calibratortest
 leakagecalibtest: test of polarisation leakage calibration
-    [Tags]          leakagecalibtest
+    [Tags]          leakagecalibtest   non-critical
     [Template]      Run PythonTest ${thetest}  
     leakagecalibtest
 1934-638: test source position and flux on real ATCA data"
@@ -32,7 +32,7 @@ leakagecalibtest: test of polarisation leakage calibration
     [Template]      Run PythonTest ${thetest}
     test1934  
 MSMFS with new imager
-    [Tags]          testmsmfs
+    [Tags]          testmsmfs    non-critical
     [Template]      Run PythonTest ${thetest}
     testmsmfs  
 *** Keywords ***
