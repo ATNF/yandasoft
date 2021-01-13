@@ -32,12 +32,16 @@ leakagecalibtest: test of polarisation leakage calibration
     [Template]      Run PythonTest ${thetest}
     test1934  
 MSMFS with new imager
-    [Tags]          testmsmfs    non-critical
+    [Tags]          testmsmfs  
     [Template]      Run PythonTest ${thetest}
     testmsmfs  
+MSMFS with channels gridded together
+    [Tags]          msmfs-integrated-channels
+    [Template]      Run PythonTest ${thetest}
+    testcombined
 *** Keywords ***
 Run PythonTest ${thetest}
     Log            ${thetest}
     [Tags]         ${thetest}
-    ${result} =    Run Process   python3   ${thetest}.py    shell=True   stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt
+    ${result} =    Run Process   python3   ${thetest}.py    stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt    shell=True
     Should Be Equal As Integers      ${result.rc}     0
