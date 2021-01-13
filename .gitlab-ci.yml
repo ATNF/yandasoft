@@ -62,13 +62,13 @@ robottests:
     - useradd runner
     - su runner
     - cd tests/data/simulation/synthregression
-    - robot .
+    - robot --include testmsmfs .
     - mv output.html public/robot/
     - mv log.html public/robot
     - mv report.html public/robot
   artifacts:
     paths:
-      - public    
+      - public/robot    
     when: always
 
 pages:
