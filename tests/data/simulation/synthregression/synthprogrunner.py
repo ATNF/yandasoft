@@ -86,6 +86,7 @@ class SynthesisProgramRunner:
       if res != 0:
          print("Error: %s" % error)
          raise RuntimeError("Command %s failed with error %s" % (cmd,res))
+      print("INFO Command succeeded");
 
    def runSRUNCommand(self,cmd,np):
       '''
