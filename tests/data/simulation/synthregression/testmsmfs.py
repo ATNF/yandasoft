@@ -41,8 +41,8 @@ spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
 print("INFO About to Run new Imager")
 try:
     spr2.runNewImagerParallel(4)
-except:
-   print("Unexpected error:", sys.exc_info()[0])
+except RuntimeError:
+   print("Runtime error:", sys.exc_info()[0])
 
 analyseResult(spr2)
 
