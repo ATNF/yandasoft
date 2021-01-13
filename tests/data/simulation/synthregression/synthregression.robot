@@ -32,11 +32,11 @@ leakagecalibtest: test of polarisation leakage calibration
     [Template]      Run PythonTest ${thetest}
     test1934  
 MSMFS with new imager
-    [Tags]          testmsmfs  
+    [Tags]          testmsmfs      newimager
     [Template]      Run PythonTest ${thetest}
     testmsmfs  
 MSMFS with channels gridded together
-    [Tags]          msmfs-integrated-channels
+    [Tags]          combinedchannels    newimagers
     [Template]      Run PythonTest ${thetest}
     testcombined
 *** Keywords ***
