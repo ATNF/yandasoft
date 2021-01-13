@@ -121,7 +121,7 @@ CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comm
         const LOFAR::ParameterSet& parset) :
       MEParallelApp(comms,parset),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
-      itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
+      itsSolveBandpass(false), itsSolveBandpassLeakage(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsBeamIndependentLeakages(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
       itsMaxNAntForPreAvg(0u), itsMaxNBeamForPreAvg(0u), itsMaxNChanForPreAvg(1u),
       itsMatrixIsParallel(false), itsMajorLoopIterationNumber(0)
