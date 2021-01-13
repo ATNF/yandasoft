@@ -120,6 +120,14 @@ class SynthesisProgramRunner:
       mpirun = 'mpirun -np %d' % nProcs
       self.runCommand(mpirun + ' ' + self.calibrator)
 
+   def runNewImagerParallel(self, nProcs):
+      '''
+         Run new imager on a current parset in parallel
+      '''
+      mpirun = 'mpirun -np %d' % nProcs
+      self.runCommand(mpirun + ' ' + self.NewImager)
+
+
    def runImager(self):
       '''
          Run cimager on a current parset
