@@ -36,7 +36,7 @@ MSMFS with new imager
     [Template]      Run PythonTest ${thetest}
     testmsmfs  
 MSMFS with channels gridded together
-    [Tags]          combinedchannels    newimagers
+    [Tags]          combinedchannels    newimager
     [Template]      Run PythonTest ${thetest}
     testcombined
 *** Keywords ***
