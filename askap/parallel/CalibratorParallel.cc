@@ -411,10 +411,12 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
       itsEquation.reset();
 
       const casacore::uInt nChan = parset.getInt32("chanperworker",0);
+      const casacore::uInt nAnt = parset.getInt32("nAnt",36);
+      const casacore::uInt nBeam = parset.getInt32("nBeam",1);
       if (nChan > 0) {
-          const casacore::uInt nAnt = parset.getInt32("nAnt",36);
-          const casacore::uInt nBeam = parset.getInt32("nBeam",1);
           updatePreAvgBufferEstimates(nAnt, nBeam, nChan);
+      } else {
+          updatePreAvgBufferEstimates(nAnt, nBeam);
       }
   }
   itsMajorLoopIterationNumber = 0;
