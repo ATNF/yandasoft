@@ -144,6 +144,11 @@ namespace askap
       /// (which is crucial for faceting) will be wrong.
       void zeroAllModelImages() const;
 
+      /// @brief test whether to advise on wmax, which can require an extra pass over the data.
+      /// @param parset ParameterSet to be updated
+      /// @return if advice is needed, returns the name of the gridder. Otherwise, returns an empty string.
+      static string wMaxAdviceNeeded(LOFAR::ParameterSet &parset);
+
   protected:
 
       /// @brief a helper method to extract peak residual
@@ -196,11 +201,6 @@ namespace askap
       /// @param parset updated ParameterSet
       static void cleanUpAdviseParameters(LOFAR::ParameterSet &parset);
 
-      /// @brief test whether to advise on wmax, which can require an extra pass over the data.
-      /// @param parset ParameterSet to be updated
-      /// @return if advice is needed, returns the name of the gridder. Otherwise, returns an empty string.
-      static string wMaxAdviceNeeded(LOFAR::ParameterSet &parset);
-
       /// Calculate normal equations for one data set
       /// @param ms Name of data set
       /// @param discard Discard old equation?
@@ -211,7 +211,7 @@ namespace askap
 
       /// Do we want a residual image
       bool itsResidual;
-      
+
       /// @brief solution source to get calibration data from
       /// @details This object is initialised by workers. It knows how to
       /// retrieve calibration solutions (from a parset file, casa table or a database).

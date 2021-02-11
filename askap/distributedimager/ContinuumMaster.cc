@@ -121,7 +121,7 @@ void ContinuumMaster::run(void)
     try {
 
         diadvise.prepare();
-        diadvise.addMissingParameters();
+        diadvise.addMissingParameters(unitParset,false);
 
         ASKAPLOG_DEBUG_STR(logger,"*****");
         ASKAPLOG_DEBUG_STR(logger,"Parset" << diadvise.getParset());
@@ -166,6 +166,8 @@ void ContinuumMaster::run(void)
 
     }
     // all the work units allocated - lets send the DONEs
+    // now finish the advice for remaining parameters
+    diadvise.addMissingParameters();
 
 
 

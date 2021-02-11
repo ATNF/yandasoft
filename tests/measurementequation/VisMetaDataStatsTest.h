@@ -1,10 +1,10 @@
 /// @file
-/// 
+///
 /// @brief Unit tests for VisMetaDataStats class
 /// @details VisMetaDataStats accumulates certain statistics of the visibility data.
 /// It is used to provide advise capability for the parameters used in imager and
 /// calibrator.
-/// 
+///
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -57,12 +57,13 @@ namespace askap
       CPPUNIT_TEST_SUITE(VisMetaDataStatsTest);
       CPPUNIT_TEST(testProcessModified);
       CPPUNIT_TEST(testProcess);
+      CPPUNIT_TEST(testProcessFlag);
       CPPUNIT_TEST(testMerge);
       CPPUNIT_TEST(testBlobStream);
-      CPPUNIT_TEST(testSnapShot);  
-      CPPUNIT_TEST_EXCEPTION(testTangentCheck,AskapError);    
-      CPPUNIT_TEST_EXCEPTION(testToleranceCheck,AskapError);    
-      CPPUNIT_TEST(testReset);  
+      CPPUNIT_TEST(testSnapShot);
+      CPPUNIT_TEST_EXCEPTION(testTangentCheck,AskapError);
+      CPPUNIT_TEST_EXCEPTION(testToleranceCheck,AskapError);
+      CPPUNIT_TEST(testReset);
       CPPUNIT_TEST(testDirectionMerge);
       CPPUNIT_TEST(testDirectionMerge1);
       CPPUNIT_TEST(testDirOffsets);
@@ -79,12 +80,12 @@ namespace askap
                  acc.itsUVW[row](dim) *= 10.;
             }
             acc.itsPointingDir1[row].shift(-0.001,0.001,casacore::True);
-            acc.itsPointingDir2[row].shift(-0.001,0.001,casacore::True);            
+            acc.itsPointingDir2[row].shift(-0.001,0.001,casacore::True);
          }
          for (casacore::uInt chan=0; chan<acc.nChannel(); ++chan) {
               acc.itsFrequency[chan] += 10e6;
          }
-      }  
+      }
     public:
       void testProcessModified() {
          accessors::DataAccessorStub acc(true);
@@ -94,7 +95,7 @@ namespace askap
          stats.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.41e9,stats.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.27e9,stats.minFreq(),1.);
-         
+
          const double freqFactor = 1.41/1.4; // we have different maximum frequency now
          CPPUNIT_ASSERT_DOUBLES_EQUAL(73120.88*freqFactor,stats.maxU(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(47906.8*freqFactor,stats.maxV(),1.);
@@ -107,14 +108,14 @@ namespace askap
          expectedDir.shift(-0.001,0.001,casacore::True);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
-         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);         
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
       }
 
       void checkCombined(const VisMetaDataStats &stats) {
          // verify results after merge (we have the same end result in various tests)
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.41e9,stats.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats.minFreq(),1.);
-         
+
          const double freqFactor = 1.41/1.4; // we have different maximum frequency now
          CPPUNIT_ASSERT_DOUBLES_EQUAL(73120.88 * freqFactor,stats.maxU(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(47906.8 * freqFactor,stats.maxV(),1.);
@@ -126,9 +127,9 @@ namespace askap
          shiftedDir.shift(-0.0005,0.0005,casacore::True);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., shiftedDir.separation(stats.centre()), 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0005,stats.maxOffsets().first,1e-6);
-         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0005,stats.maxOffsets().second,1e-6);         
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.0005,stats.maxOffsets().second,1e-6);
       }
-      
+
       void testProcess() {
          accessors::DataAccessorStub acc(true);
          VisMetaDataStats stats;
@@ -137,7 +138,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats.minFreq(),1.);
 
-         // note, we didn't independently verify the following uvw 
+         // note, we didn't independently verify the following uvw
          // values, but the magnitude make sense for the stubbed layout
          CPPUNIT_ASSERT_DOUBLES_EQUAL(7312.088,stats.maxU(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(4790.68,stats.maxV(),1.);
@@ -145,10 +146,10 @@ namespace askap
          bool noResidualW = false;
          try {
              stats.maxResidualW(); // this should fail!
-         } 
+         }
          catch (const askap::AskapError &) {
              noResidualW = true;
-         } 
+         }
          CPPUNIT_ASSERT(noResidualW);
          //
          CPPUNIT_ASSERT_EQUAL(30u, stats.nAntennas());
@@ -162,18 +163,85 @@ namespace askap
          modifyStubbedData(acc);
          stats.process(acc);
          checkCombined(stats);
-      } 
-      
+      }
+
+      void testProcessFlag() {
+         accessors::DataAccessorStub acc(true);
+         // modify the flags - flag first row and first channel
+         casacore::Cube<casacore::Bool> flags = acc.flag();
+         flags(0,casacore::Slice(),casacore::Slice()) = casacore::True;
+         flags(casacore::Slice(),0,casacore::Slice()) = casacore::True;
+         // switch on the flagged data processing - results should be unchanged
+         VisMetaDataStats stats(true);
+         CPPUNIT_ASSERT_EQUAL(0ul, stats.nVis());
+         stats.process(acc);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats.maxFreq(),1.);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats.minFreq(),1.);
+
+         // note, we didn't independently verify the following uvw
+         // values, but the magnitude make sense for the stubbed layout
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(7312.088,stats.maxU(),1.);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(4790.68,stats.maxV(),1.);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(7200.87,stats.maxW(),1.);
+         bool noResidualW = false;
+         try {
+             stats.maxResidualW(); // this should fail!
+         }
+         catch (const askap::AskapError &) {
+             noResidualW = true;
+         }
+         CPPUNIT_ASSERT(noResidualW);
+         //
+         CPPUNIT_ASSERT_EQUAL(30u, stats.nAntennas());
+         CPPUNIT_ASSERT_EQUAL(1u, stats.nBeams());
+         CPPUNIT_ASSERT_EQUAL(3480ul, stats.nVis());
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
+         const casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
+
+         // Now process again without the flagged data
+         {
+             VisMetaDataStats stats;
+             CPPUNIT_ASSERT_EQUAL(0ul, stats.nVis());
+             stats.process(acc);
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(1.38e9,stats.maxFreq(),1.);
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats.minFreq(),1.);
+
+             // note, we didn't independently verify the following uvw
+             // values, but the magnitude make sense for the stubbed layout
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(7207.63,stats.maxU(),1.);
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(4722.24,stats.maxV(),1.);
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(7098.00,stats.maxW(),1.);
+             bool noResidualW = false;
+             try {
+                 stats.maxResidualW(); // this should fail!
+             }
+             catch (const askap::AskapError &) {
+                 noResidualW = true;
+             }
+             CPPUNIT_ASSERT(noResidualW);
+             //
+             CPPUNIT_ASSERT_EQUAL(30u, stats.nAntennas());
+             CPPUNIT_ASSERT_EQUAL(1u, stats.nBeams());
+             CPPUNIT_ASSERT_EQUAL(3038ul, stats.nVis());
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
+             const casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
+             CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
+         }
+      }
+
       void testMerge() {
          accessors::DataAccessorStub acc(true);
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats1(tangent);
-         stats1.process(acc);         
+         stats1.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats1.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats1.minFreq(),1.);
          modifyStubbedData(acc);
          VisMetaDataStats stats2(tangent);
-         stats2.process(acc);         
+         stats2.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.41e9,stats2.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.27e9,stats2.minFreq(),1.);
          // now merge
@@ -183,9 +251,9 @@ namespace askap
          stats1.merge(stats3);
          checkCombined(stats1);
          stats3.merge(stats1);
-         checkCombined(stats3);         
+         checkCombined(stats3);
       }
-      
+
       void testBlobStream() {
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          accessors::DataAccessorStub acc(true);
@@ -204,7 +272,7 @@ namespace askap
          LOFAR::BlobIStream bis(bib);
          VisMetaDataStats stats3;
          bis >> stats3;
-         // compare two versions         
+         // compare two versions
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.41e9,stats3.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.27e9,stats3.minFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(stats2.maxU(),stats3.maxU(),1.);
@@ -220,12 +288,12 @@ namespace askap
          stats3.merge(stats1);
          checkCombined(stats3);
       }
-      
+
       void testSnapShot() {
          accessors::DataAccessorStub acc(true);
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
-         VisMetaDataStats stats(tangent,1);
-         stats.process(acc);         
+         VisMetaDataStats stats(tangent,1.0);
+         stats.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats.minFreq(),1.);
          // the accessor stub doesn't do uvw-rotation, so the values are the same
@@ -233,48 +301,48 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(4790.68,stats.maxV(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(7200.87,stats.maxW(),1.);
          // now can check residual w-term
-         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.7953,stats.maxResidualW(),1e-4);         
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0.7953,stats.maxResidualW(),1e-4);
          CPPUNIT_ASSERT_EQUAL(30u, stats.nAntennas());
          CPPUNIT_ASSERT_EQUAL(1u, stats.nBeams());
          CPPUNIT_ASSERT_EQUAL(3480ul, stats.nVis());
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().first,1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,stats.maxOffsets().second,1e-6);
          const casacore::MVDirection expectedDir(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
-         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);         
+         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., expectedDir.separation(stats.centre()), 1e-6);
       }
-      
+
       void testTangentCheck() {
          accessors::DataAccessorStub acc(true);
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats(tangent);
-         stats.process(acc);   
+         stats.process(acc);
          VisMetaDataStats stats1;
-         stats1.merge(stats);      
+         stats1.merge(stats);
       }
-      
+
       void testToleranceCheck() {
          accessors::DataAccessorStub acc(true);
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats(tangent,1.);
-         stats.process(acc);   
+         stats.process(acc);
          VisMetaDataStats stats1(tangent,700.);
          stats1.merge(stats);
       }
-      
+
       void testReset() {
          accessors::DataAccessorStub acc(true);
          const casacore::MVDirection tangent(casacore::Quantity(0, "deg"), casacore::Quantity(0, "deg"));
          VisMetaDataStats stats1(tangent);
-         stats1.process(acc);         
+         stats1.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats1.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats1.minFreq(),1.);
          VisMetaDataStats stats2(tangent);
-         stats2.process(acc);         
+         stats2.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.4e9,stats2.maxFreq(),1.);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.260e9,stats2.minFreq(),1.);
          CPPUNIT_ASSERT_EQUAL(3480ul, stats2.nVis());
          stats2.reset();
-         CPPUNIT_ASSERT_EQUAL(0ul, stats2.nVis());         
+         CPPUNIT_ASSERT_EQUAL(0ul, stats2.nVis());
          modifyStubbedData(acc);
          stats2.process(acc);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.41e9,stats2.maxFreq(),1.);
@@ -284,15 +352,15 @@ namespace askap
          stats1.merge(stats2);
          checkCombined(stats1);
       }
-   
+
       void testDirectionMerge() {
          // Unit test written while debugging ASKAPSDP-1689
-         
+
          // set up the tree
          std::vector<boost::shared_ptr<VisMetaDataStats> > tree(7);
          for (size_t i = 0; i<tree.size(); ++i) {
               const casacore::MVDirection tangent(asQuantity("12:30:00.00"), asQuantity("-045.00.00.00"));
-              
+
               accessors::DataAccessorStub acc(true);
               const casacore::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
               acc.itsPointingDir1.set(testDir1);
@@ -303,9 +371,9 @@ namespace askap
                   acc.itsPointingDir1.set(testDir2);
                   acc.itsPointingDir2.set(testDir2);
               }
-              
+
               VisMetaDataStats stats(tangent);
-              stats.process(acc);         
+              stats.process(acc);
 
               // serialise
               LOFAR::BlobString b1(false);
@@ -340,18 +408,18 @@ namespace askap
 
          for (size_t i = 0; i<tree.size(); ++i) {
               const casacore::MVDirection tangent(asQuantity("22:51:40.42"), asQuantity("-59.58.04.04"));
-              
+
               accessors::DataAccessorStub acc(true);
               const casacore::MVDirection testDir1(asQuantity("22:40:00.0"), asQuantity("-59.59.59.92"));
               acc.itsPointingDir1.set(testDir1);
               acc.itsPointingDir2.set(testDir1);
-   
-              
+
+
               tree[i].reset(new VisMetaDataStats(tangent));
               CPPUNIT_ASSERT(tree[i]);
               if (i != 0) {
                   tree[i]->process(acc);
-              } 
+              }
          }
          // manual tree-reduction
          CPPUNIT_ASSERT_EQUAL(size_t(7u), tree.size());
@@ -370,7 +438,7 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().first, 1e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(0., stats1.maxOffsets().second, 1e-6);
 
-         
+
          const casacore::MVDirection testDir1(asQuantity("12:35:39.36"), asQuantity("-044.59.28.59"));
 
          const std::pair<double, double> offsets1 = stats1.getOffsets(testDir1);
@@ -398,19 +466,18 @@ namespace askap
               const casacore::MVDirection processedDir1 = stats1.getOffsetDir(offsets1);
               offsets1 = stats1.getOffsets(processedDir1);
          }
-         // for some reason the accuracy of MVDirection::shift is not good enough. 
+         // for some reason the accuracy of MVDirection::shift is not good enough.
          // this test results in errors about 1.8e-6 rad or 4 arcsec. Ideally, it needs
          // to be investigated at some stage.
          //std::cout<<offsets1.second - offsets.second<<std::endl;
          CPPUNIT_ASSERT_DOUBLES_EQUAL(offsets.first, offsets1.first, 2e-6);
          CPPUNIT_ASSERT_DOUBLES_EQUAL(offsets.second, offsets1.second, 2e-6);
       }
-      
+
     };
-  
+
   } // namespace synthesis
 
 } // namespace askap
 
 #endif // #ifndef VIS_META_DATA_STATS_ME_TEST_H
-

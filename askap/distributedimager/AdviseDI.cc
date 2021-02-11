@@ -28,6 +28,7 @@
 ///
 
 #include <askap/distributedimager/AdviseDI.h>
+#include <askap/parallel/ImagerParallel.h>
 #include <askap/askap/AskapError.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/dataaccess/TableDataSource.h>
@@ -142,7 +143,7 @@ void AdviseDI::prepare() {
     ASKAPLOG_DEBUG_STR(logger, "nWorkersPerGroup " << nWorkersPerGroup);
     unsigned int nGroups = itsComms.nGroups();
     ASKAPLOG_DEBUG_STR(logger, "nGroups " << nGroups);
-    const int nchanpercore = itsParset.getInt32("nchanpercore", 1);
+    int nchanpercore = itsParset.getInt32("nchanpercore", 1);
     ASKAPLOG_DEBUG_STR(logger,"nchanpercore " << nchanpercore);
     const int nwriters = itsParset.getInt32("nwriters", 1);
     ASKAPLOG_DEBUG_STR(logger,"nwriters " << nwriters);
@@ -227,12 +228,12 @@ void AdviseDI::prepare() {
         ASKAPCHECK(srow==0,"More than one spectral window not currently supported in adviseDI");
 
         // get the channel selection - first append all the input channels
-        
+
         size_t chanStart=0;
         size_t chanStop=0;
         size_t chanStep=0;
-       
-                 
+
+
         chanStart = 0;
         chanStop = casacore::ROScalarColumn<casacore::Int>(in.spectralWindow(),"NUM_CHAN")(0);
         chanStep = 1;
@@ -288,16 +289,16 @@ void AdviseDI::prepare() {
     // the work allocations
     itsAllocatedFrequencies.resize(nWorkersPerGroup);
     itsAllocatedWork.resize(nWorkers);
-    
+
     // setup frequency frame
     const Bool bc = itsParset.getBool("barycentre",false);
 
     std::string freqFrame = itsParset.getString("freqframe","topo");
-    
+
     if (bc == true) { // legacy
         freqFrame = "bary";
     }
-    
+
     if (freqFrame == "topo") {
         ASKAPLOG_INFO_STR(logger, "Parset frequencies will be treated as topocentric");
         itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
@@ -313,8 +314,8 @@ void AdviseDI::prepare() {
     } else {
         ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
     }
-    
-   
+
+
     // At this point we now have each channel from each MS
     // in a unique array.
     // It's freq frame is itsRef - so in principle we support any input reference frame ....
@@ -330,7 +331,7 @@ void AdviseDI::prepare() {
 
     for (unsigned int n = 0; n < ms.size(); ++n) {
 
-        
+
 
         // builds a list of all the channels
 
@@ -338,16 +339,16 @@ void AdviseDI::prepare() {
 
             MeasFrame itsFrame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
             MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
-             
 
-            
+
+
             itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
 
             /// The original scheme attempted to convert the input into the output frame
             /// and only keep those output (FFRAME) channels that matched.
             /// This was not deemed useful or helpful enough though. But I need to keep that
             /// mode as a default.
-           
+
         }
     }
 
@@ -361,7 +362,7 @@ void AdviseDI::prepare() {
     }
     else {
       custom_compare = compare;
-      ASKAPLOG_INFO_STR(logger,"Using standard compare for (zero tolerance) for freuqnecy allocations");
+      ASKAPLOG_INFO_STR(logger,"Using standard compare (zero tolerance) for frequency allocations");
     }
 
 
@@ -371,20 +372,20 @@ void AdviseDI::prepare() {
     itsInputFrequencies.resize(std::distance(itsInputFrequencies.begin(),topo_it));
     ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size() << " Output " << itsFFrameFrequencies.size());
 
-    
+
     // Now they are unique we need to get a list of desired output freqencies that meet
     // the requirements specified in the parset
 
-    if (user_defined_channels) { 
-        // the user has specified nchan and a start channel 
+    if (user_defined_channels) {
+        // the user has specified nchan and a start channel
         // this is probably based upon the input frame as the user has
         // <probably> not done the maths to work out the output channel mapping so.
-        // The channel width is unchanged - I may allow the channel width to be used 
+        // The channel width is unchanged - I may allow the channel width to be used
         // but that is probably another ticket.
 
         size_t n = itsChannels[0];
         size_t st = itsChannels[1];
-        
+
         if (n > itsInputFrequencies.size()){
             ASKAPLOG_WARN_STR(logger, "Requested nchan > available channels; truncating");
         }
@@ -414,18 +415,34 @@ void AdviseDI::prepare() {
         ASKAPLOG_WARN_STR(logger, "Full channel range is being used");
         for (unsigned int ch = 0; ch < itsInputFrequencies.size(); ++ch) {
            itsRequestedFrequencies.push_back(itsInputFrequencies[ch]);
-        } 
+        }
     }
     // Now we have a list of requested frequencies lets allocate them to nodes - some maybe empty.
     ASKAPLOG_INFO_STR(logger,
     " User requests " << itsRequestedFrequencies.size() << " cube " << " starting at " << itsRequestedFrequencies[0].getValue());
+
+    if (itsRequestedFrequencies.size()/nWorkersPerGroup != nchanpercore) {
+        ASKAPLOG_WARN_STR(logger,"Mismatch: #requested frequencies = "<<itsRequestedFrequencies.size()<<
+        ", #workers = "<<nWorkersPerGroup<<", #chan per core = "<<nchanpercore);
+        nchanpercore = itsRequestedFrequencies.size()/nWorkersPerGroup;
+        ASKAPLOG_WARN_STR(logger,"Trying nchanpercore = "<<nchanpercore);
+        string param = "nchanpercore";
+        std::ostringstream pstr;
+        pstr<<nchanpercore;
+        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr.str().c_str());
+        if (itsParset.isDefined("nchanpercore")) {
+            itsParset.replace(param, pstr.str().c_str());
+        } else {
+            itsParset.add(param, pstr.str().c_str());
+        }
+    }
     ASKAPCHECK(itsRequestedFrequencies.size()/nWorkersPerGroup == nchanpercore,"Miss-match nchanpercore is incorrect");
 
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
         unsigned int allocation_index = floor(ch / nchanpercore);
-        
+
         ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() \
         << " to worker " << allocation_index+1);
 
@@ -465,7 +482,7 @@ void AdviseDI::prepare() {
             bool allocated = false;
             for (unsigned int set=0;set < ms.size();++set){
 
-                
+
                 MeasFrame itsFrame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
                 MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
                 MFrequency::Ref refout(itsFreqType,itsFrame); // the frame desired
@@ -586,7 +603,7 @@ void AdviseDI::prepare() {
                 ASKAPLOG_WARN_STR(logger,"Ran out of eligible writers will write myself");
                 mywriter = wrk;
                 break;
-                
+
             }
         }
 
@@ -624,17 +641,17 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     else {
         rtn = itsAllocatedWork[id].back();
         itsAllocatedWork[id].pop_back();
-        
+
     }
     int count=0;
     for (int alloca = 0 ; alloca < itsAllocatedWork.size() ; alloca++) {
         count = count + itsAllocatedWork[alloca].size();
-        
+
     }
     itsWorkUnitCount = count;
     return rtn;
 }
-vector<int> AdviseDI::matchall(int ms_number, 
+vector<int> AdviseDI::matchall(int ms_number,
 casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
     /// return all the input channels in the range
     vector<int> matches;
@@ -642,15 +659,15 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
             ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
             if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
                 ASKAPLOG_DEBUG_STR(logger, "Found");
-                matches.push_back(ch);  
+                matches.push_back(ch);
             }
     }
-        
+
     return matches;
 }
 
 void AdviseDI::addMissingParameters() {
-    this->addMissingParameters(this->itsParset);
+    this->addMissingParameters(this->itsParset,True);
 }
 void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::cp::ContinuumWorkUnit& wu) {
 
@@ -684,23 +701,24 @@ void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::c
   }
 }
 
-void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
+
+void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 {
 
-    ASKAPLOG_INFO_STR(logger,"Adding missing params ");
+    ASKAPLOG_DEBUG_STR(logger,"Adding missing params ");
 
     if (isPrepared == true) {
-        ASKAPLOG_INFO_STR(logger,"Prepared therefore can add frequency label for the output image");
+        ASKAPLOG_DEBUG_STR(logger,"Prepared therefore can add frequency label for the output image");
         std::vector<casacore::MFrequency>::iterator begin_it;
         std::vector<casacore::MFrequency>::iterator end_it;
-       
+
         begin_it = itsRequestedFrequencies.begin();
         end_it = itsRequestedFrequencies.end()-1;
 
-        
+
         this->minFrequency = (*begin_it).getValue();
         this->maxFrequency = (*end_it).getValue();
-        ASKAPLOG_INFO_STR(logger,"Min:Max frequency -- " << this->minFrequency << ":" << this->maxFrequency);
+        ASKAPLOG_DEBUG_STR(logger,"Min:Max frequency -- " << this->minFrequency << ":" << this->maxFrequency);
 
 
     }
@@ -738,26 +756,11 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
 
    for (size_t img = 0; img < imageNames.size(); ++img) {
 
-     param = "Images."+imageNames[img]+".cellsize";
-     if ( !parset.isDefined(param) ) {
-       cellsizeNeeded = true;
-     }
-     else {
-       param = "Images.cellsize";
-       if (!parset.isDefined(param) ) {
-         const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
-         std::ostringstream pstr;
-         pstr<<"["<< cellSizeVector[0].c_str() <<"arcsec,"<<cellSizeVector[1].c_str() <<"arcsec]";
-         ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-         parset.add(param, pstr.str().c_str());
-       }
-     }
-     param = "Images."+imageNames[img]+".shape";
-     if ( !parset.isDefined(param) ) shapeNeeded = true;
+     if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) cellsizeNeeded = true;
+     if (!parset.isDefined("Images."+imageNames[img]+".shape")) shapeNeeded = true;
 
      param = "Images."+imageNames[img]+".frequency";
      if ( !parset.isDefined(param) && isPrepared == true) {
-
        const string key="Images."+imageNames[img]+".frequency";
        char tmp[64];
        // changing this to match adviseParallel
@@ -766,8 +769,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
        string val = string(tmp);
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << val);
        parset.add(key,val);
-
      }
+
      param ="Images."+imageNames[img]+".direction";
      if ( !parset.isDefined(param) ) {
 
@@ -801,7 +804,12 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
        nTerms = itsParset.getInt(param);
      }
 
+     param = "Images."+imageNames[img]+".nchan";
      if ( !parset.isDefined("Images."+imageNames[img]+".nchan") ) {
+         std::ostringstream pstr;
+         pstr<<1;  // Default nchan is 1
+         ASKAPLOG_INFO_STR(logger, "  Advising on parameter nchan : " << pstr.str().c_str());
+         parset.add(param, pstr.str().c_str());
 
      }
    }
@@ -829,17 +837,119 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset)
        }
    }
 
+   if (!extra) return;
    // test for general missing parameters:
-   if ( cellsizeNeeded && !parset.isDefined("nUVWMachines") ) {
+   // if any of these is missing we run the stats
+   string wMaxGridder = ImagerParallel::wMaxAdviceNeeded(parset);
+   bool missing = !parset.isDefined("nUVWMachines");
+   missing |= (cellsizeNeeded && !parset.isDefined("Images.cellsize"));
+   missing |= (shapeNeeded && !parset.isDefined("Images.shape"));
+   missing |= (wMaxGridder!="");
 
-   } else if ( cellsizeNeeded && !parset.isDefined("Images.cellsize") ) {
+   if (missing) {
+       ASKAPLOG_INFO_STR(logger, "Remaining missing parameters require a pass through the data");
 
-   } else if ( shapeNeeded && !parset.isDefined("Images.shape") ) {
+       if (!parset.isDefined("tangent")) {
+           std::ostringstream pstr;
+           pstr<<"["<<printLon(itsTangent[0])<<", "<<printLat(itsTangent[0])<<", J2000]";
+           ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << pstr.str().c_str());
+           parset.add("tangent", pstr.str().c_str());
+           parset.add("tangent.advised", pstr.str().c_str());
+       }
 
+       // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
+       param = "gridder.snapshotimaging.wtolerance";
+       if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
+           string wtolerance = parset.getString(param);
+           ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
+           parset.add("wtolerance", wtolerance);
+           parset.add("wtolerance.advised", wtolerance);
+       }
+       if (wMaxGridder!="") {
+           param = "gridder."+wMaxGridder+".wpercentile";
+           if (parset.isDefined(param)) {
+               string wpercentile = parset.get(param);
+               parset.add("wpercentile", wpercentile);
+               parset.add("wpercentile.advised", wpercentile);
+           }
+       }
+
+       estimate(parset);
+       const VisMetaDataStats &advice = estimator();
+
+       param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
+       if (!parset.isDefined(param)) {
+           std::ostringstream pstr;
+           pstr<<advice.nBeams();
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+           parset.add(param, pstr.str().c_str());
+       }
+
+       param = "Images.cellsize";
+       std::vector<double> cellSize(2, advice.squareCellSize());
+       if (parset.isDefined(param)) {
+           cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector(param),"arcsec");
+       } else if (cellsizeNeeded) {
+           std::ostringstream pstr;
+           pstr<<"["<<cellSize[0]<<"arcsec,"<<cellSize[1]<<"arcsec]";
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+           parset.add(param, pstr.str().c_str());
+       }
+
+       param = "Images.shape"; // if image shape is undefined, use the advice.
+       if (shapeNeeded && !parset.isDefined(param)) {
+           std::ostringstream pstr;
+           const double fieldSize = advice.squareFieldSize(1); // in deg
+           const long lSize = long(fieldSize * 3600 / cellSize[0]) + 1;
+           const long mSize = long(fieldSize * 3600 / cellSize[1]) + 1;
+           pstr<<"["<<lSize<<","<<mSize<<"]";
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+           parset.add(param, pstr.str().c_str());
+       }
+       string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
+       if (gridder!="") {
+           param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
+           if (!parset.isDefined(param)) {
+               std::ostringstream pstr;
+               // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
+               if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
+                   pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+                   parset.add(param, pstr.str().c_str());
+               } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
+                   pstr<<advice.wPercentile();
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str() << " with specified percentile value");
+                   parset.add(param, pstr.str().c_str());
+                   // if we're setting from percentile, turn on clipping
+                   param = "gridder."+gridder+".wmaxclip";
+                   if (!parset.isDefined(param)) parset.add(param, "true");
+               } else {
+                   pstr<<advice.maxW();
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
+                   parset.add(param, pstr.str().c_str());
+               }
+           }
+       }
    }
-   ASKAPLOG_INFO_STR(logger,"Done adding missing params ");
+   ASKAPLOG_DEBUG_STR(logger,"Done adding missing params ");
 
+   if (parset.isDefined("tangent.advised")) {
+       parset.remove("tangent");
+       parset.remove("tangent.advised");
+   }
+
+   if (parset.isDefined("wtolerance.advised")) {
+       parset.remove("wtolerance");
+       parset.remove("wtolerance.advised");
+   }
+
+   if (parset.isDefined("wpercentile.advised")) {
+       parset.remove("wpercentile");
+       parset.remove("wpercentile.advised");
+   }
 }
+
+
 // Utility function to get dataset names from parset.
 std::vector<std::string> AdviseDI::getDatasets()
 {
@@ -869,7 +979,7 @@ std::vector<std::string> AdviseDI::getDatasets()
     return ms;
 }
 
-/// the adviseDI should be smart enough to tell the difference between a straight list and 
+/// the adviseDI should be smart enough to tell the difference between a straight list and
 /// actual frequencies .... or is that too different.
 std::vector<double> AdviseDI::getFrequencies() {
     std::vector<double> f(3,0);
@@ -878,20 +988,20 @@ std::vector<double> AdviseDI::getFrequencies() {
     if (!itsParset.isDefined("Frequencies")) {
     ASKAPLOG_WARN_STR(logger,
         "Frequencies keyword is not defined");
-        
+
     }
     else {
         fstr = itsParset.getStringVector("Frequencies",true);
-        
+
         f[0] = atof(fstr[0].c_str());
         f[1] = atof(fstr[1].c_str());
         f[2] = atof(fstr[2].c_str());
          // just a start and stop - assume no averaging
         if (f[2] == 0) {
            ASKAPLOG_WARN_STR(logger,
-           "Channel width not specified this setting will be ignored"); 
+           "Channel width not specified this setting will be ignored");
         }
-        
+
     }
     return f;
 }
@@ -914,7 +1024,7 @@ std::vector<int> AdviseDI::getChannels() {
         cstr = itsParset.getStringVector("Channels",true);
         c[0] = atof(cstr[0].c_str());
         string wild = "%w";
-        
+
         if (cstr[1].compare(wild) == 0) {
             ASKAPLOG_WARN_STR(logger,
         "Wild card in the Channel list");
@@ -928,7 +1038,7 @@ std::vector<int> AdviseDI::getChannels() {
 
 
     }
-    
+
     // just a start and stop - assume no averaging
     if (c[2] == 0) {
         c[2] = 1;
@@ -953,15 +1063,15 @@ void AdviseDI::updateComms() {
             // the same channel
             if (itsAllocatedWork[worker][alloc].get_payloadType() == cp::ContinuumWorkUnit::NA) {
                 ASKAPLOG_WARN_STR(logger,
-                "NA Payload in updateComms");  
+                "NA Payload in updateComms");
             }
             else if (current_freq != last_freq || alloc == 0) {
-                
+
                 itsCubeComms.addWriter(itsAllocatedWork[worker][alloc].get_writer());
 
                 itsCubeComms.addChannelToWriter(itsAllocatedWork[worker][alloc].get_writer(),worker+1);
                 itsCubeComms.addChannelToWorker(worker+1);
-                
+
                 last_freq = current_freq;
             }
         }

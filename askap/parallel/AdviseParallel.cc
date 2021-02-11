@@ -74,7 +74,7 @@ struct EstimatorAdapter : public scimath::INormalEquations {
 
   /// @brief Clone this into a shared pointer
   /// @details "Virtual constructor" - creates a copy of this object. Derived
-  /// classes must override this method to instantiate the object of a proper 
+  /// classes must override this method to instantiate the object of a proper
   /// type.
   virtual INormalEquations::ShPtr clone() const
   {
@@ -88,101 +88,115 @@ struct EstimatorAdapter : public scimath::INormalEquations {
   /// state as immediately after creation with the default constructor
   virtual void reset()
       { itsEstimator->reset(); }
-  
+
   /// @brief Merge these normal equations with another
   /// @details Combining two normal equations depends on the actual class type
   /// (different work is required for a full matrix and for an approximation).
-  /// This method must be overriden in the derived classes for correct 
-  /// implementation. 
+  /// This method must be overriden in the derived classes for correct
+  /// implementation.
   /// This means that we just add
   /// @param[in] src an object to get the normal equations from
   virtual void merge(const INormalEquations& src)  {
     try {
        const EstimatorAdapter& ea = dynamic_cast<const EstimatorAdapter&>(src);
+       ASKAPLOG_DEBUG_STR(logger, "Merge This Largest residual W: "<<itsEstimator->maxW()<<" wavelengths, percentile = "<<itsEstimator->wPercentile());
+       ASKAPLOG_DEBUG_STR(logger, "With other Largest residual W: "<<ea.itsEstimator->maxW()<<" wavelengths, percentile = "<<ea.itsEstimator->wPercentile());
        itsEstimator->merge(*(ea.itsEstimator));
     }
     catch (const std::bad_cast &bc) {
        ASKAPTHROW(AskapError, "Unsupported type of normal equations used with the estimator adapter: "<<bc.what());
     }
   }
-  
+
   /// @brief write the object to a blob stream
   /// @param[in] os the output stream
-  virtual void writeToBlob(LOFAR::BlobOStream& os) const 
+  virtual void writeToBlob(LOFAR::BlobOStream& os) const
     { itsEstimator->writeToBlob(os); }
 
   /// @brief read the object from a blob stream
   /// @param[in] is the input stream
-  /// @note Not sure whether the parameter should be made const or not 
-  virtual void readFromBlob(LOFAR::BlobIStream& is) 
+  /// @note Not sure whether the parameter should be made const or not
+  virtual void readFromBlob(LOFAR::BlobIStream& is)
     { itsEstimator->readFromBlob(is); }
-      
-  
+
+
   /// @brief obtain shared pointer
   /// @return shared pointer to the estimator
   inline boost::shared_ptr<VisMetaDataStats> get() const { return itsEstimator;}
-  
-  
+
+
   /// @brief stubbed method for this class
   /// @return nothing, throws an exception
-  virtual const casacore::Matrix<double>& normalMatrix(const std::string &, 
-                        const std::string &) const 
+  virtual const casacore::Matrix<double>& normalMatrix(const std::string &,
+                        const std::string &) const
       { ASKAPTHROW(AskapError, "Method is not supported"); }
-      
+
   /// @brief stubbed method for this class
   /// @return nothing, throws an exception
   virtual const casacore::Vector<double>& dataVector(const std::string &) const
       { ASKAPTHROW(AskapError, "Method is not supported"); }
-                        
+
   /// @brief stubbed method for this class
   /// @return nothing, throws an exception
-  virtual std::vector<std::string> unknowns() const 
+  virtual std::vector<std::string> unknowns() const
       { ASKAPTHROW(AskapError, "Method is not supported"); }
-      
+
 private:
   /// @brief estimator to work with, reference semantics
-  boost::shared_ptr<VisMetaDataStats> itsEstimator;      
+  boost::shared_ptr<VisMetaDataStats> itsEstimator;
 };
 
-// actual AdviseParallel implementation 
+// actual AdviseParallel implementation
 
 /// @brief Constructor from ParameterSet
 /// @details The parset is used to construct the internal state. We could
 /// also support construction from a python dictionary (for example).
 /// The command line inputs are needed solely for MPI - currently no
 /// application specific information is passed on the command line.
-/// @param comms communication object 
+/// @param comms communication object
 /// @param parset ParameterSet for inputs
 AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
     MEParallelApp(comms, addMissingFields(parset)), itsTangentDefined(false)
+{
+   init(parset);
+}
+
+void AdviseParallel::init(const LOFAR::ParameterSet& parset)
 {
    itsWTolerance = parset.getDouble("wtolerance",-1.);
    if (parset.isDefined("tangent")) {
        const std::vector<std::string> direction = parset.getStringVector("tangent");
        ASKAPCHECK(direction.size() == 3, "Direction should have exactly 3 parameters, you have "<<direction.size());
        ASKAPCHECK(direction[2] == "J2000", "Only J2000 is implemented at the moment, you have requested "<<direction[2]);
-      
+
        const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
        const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
        itsTangent = casacore::MVDirection(ra,dec);
        itsTangentDefined = true;
    }
+   // keep the historical default for now, taking the flags into account can be a lot slower
+   itsIncludeFlaggedData = parset.getBool("includeflagged",true);
+   ASKAPLOG_INFO_STR(logger, (itsIncludeFlaggedData ? "I" : "Not i")<< "ncluding flagged data in meta data statistics ");
+   // set w percentile if present
+   itsWPercentile = parset.getDouble("wpercentile",99.9)/100.0;
+   ASKAPCHECK(itsWPercentile>0 && itsWPercentile<1,"wpercentile value needs to be between 0 and 100");
+   myParset = parset;
    itsNe.reset();
-}    
+}
 
 /// @brief make the estimate
 /// @details This method iterates over one or more datasets, accumulates and aggregates statistics. If
 /// tangent point is not defined, two iterations are performed. The first one is to estimate the tangent
-/// point and the second to obtain  
+/// point and the second to obtain the stats
 void AdviseParallel::estimate()
 {
    if (itsTangentDefined) {
        ASKAPLOG_INFO_STR(logger, "Using explicitly defined tangent point "<<printDirection(itsTangent)<<" (J2000)");
-       itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance));
+       itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance, itsIncludeFlaggedData,itsWPercentile));
        // we only need one iteration here
    } else {
        // the first iteration is just to get an estimate for the tangent point
-       itsEstimator.reset(new VisMetaDataStats);
+       itsEstimator.reset(new VisMetaDataStats(false,itsWPercentile));
    }
    calcNE();
    if (!itsTangentDefined) {
@@ -195,13 +209,13 @@ void AdviseParallel::estimate()
        receiveModel();
        ASKAPCHECK(params()->has("tangent"), "tangent is not defined. There is likely to be a problem with model broadcast/receive");
        const casacore::Vector<casacore::Double> tangent = params()->value("tangent");
-       ASKAPCHECK(tangent.nelements() == 2, "Expect a 2-element vector for tangent, you have "<<tangent);       
+       ASKAPCHECK(tangent.nelements() == 2, "Expect a 2-element vector for tangent, you have "<<tangent);
        itsTangent = casacore::MVDirection(tangent);
        itsTangentDefined = true;
        ASKAPLOG_INFO_STR(logger, "Using tangent "<<printDirection(itsTangent)<<" (estimated most central direction)");
        // now all ranks should have the same value of itsTangent & itsTangentDefined, ready for the second iteration
-       itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance));
-       calcNE();        
+       itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance, itsIncludeFlaggedData,itsWPercentile));
+       calcNE();
    }
    // to synchronise stats held by all workers (wouldn't be necessary if the only thing we wanted was to print summary)
    broadcastStatistics();
@@ -228,7 +242,7 @@ void AdviseParallel::broadcastStatistics()
           out.putStart("statistics", currentVersion);
           itsEstimator->writeToBlob(out);
           out.putEnd();
-          itsComms.broadcastBlob(bs ,0);       
+          itsComms.broadcastBlob(bs ,0);
       }
       if (itsComms.isWorker()) {
           // workers receive stats from the master
@@ -238,12 +252,12 @@ void AdviseParallel::broadcastStatistics()
           const int version=in.getStart("statistics");
           ASKAPASSERT(version == currentVersion);
           itsEstimator->readFromBlob(in);
-          in.getEnd();          
+          in.getEnd();
       }
   }
 }
 
-   
+
 /// @brief perform the accumulation for the given dataset
 /// @details This method iterates over the given dataset, predicts visibilities according to the
 /// model and subtracts these model visibilities from the original visibilities in the dataset.
@@ -256,18 +270,18 @@ void AdviseParallel::calcOne(const std::string &ms)
    timer.mark();
    ASKAPLOG_INFO_STR(logger, "Performing iteration to accumulate metadata statistics for " << ms );
    ASKAPDEBUGASSERT(itsEstimator);
-   
+
    accessors::TableDataSource ds(ms, accessors::TableDataSource::MEMORY_BUFFERS, dataColumn());
 
    ASKAPLOG_INFO_STR(logger, "Initialised accessor" );
-   ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());      
-   
+   ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
+
    ASKAPLOG_INFO_STR(logger, "Initialised UVW cache" );
    accessors::IDataSelectorPtr sel=ds.createSelector();
    ASKAPLOG_INFO_STR(logger, "Initialised data selector" );
 
-   sel << parset();
-   ASKAPLOG_INFO_STR(logger, "Filled selector" << parset());
+   sel << myParset;
+   ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << myParset);
    accessors::IDataConverterPtr conv=ds.createConverter();
    ASKAPLOG_INFO_STR(logger, "Initialised converter" );
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
@@ -278,13 +292,13 @@ void AdviseParallel::calcOne(const std::string &ms)
    for (; it.hasMore(); it.next()) {
         // iteration over the dataset
         itsEstimator->process(*it);
-        
+
    }
-   
+
    ASKAPLOG_INFO_STR(logger, "Finished iteration for "<< ms << " in "<< timer.real()
-                   << " seconds ");    
+                   << " seconds ");
 }
-      
+
 /// @brief calculate "normal equations", i.e. statistics for this dataset
 void AdviseParallel::calcNE()
 {
@@ -302,7 +316,7 @@ void AdviseParallel::calcNE()
           for (size_t iMs=0; iMs<measurementSets().size(); ++iMs) {
                calcOne(measurementSets()[iMs]);
           }
-       }       
+       }
    }
    if (itsComms.isMaster()) {
        receiveNE();
@@ -369,14 +383,14 @@ void AdviseParallel::summary() const
             ASKAPLOG_INFO_STR(logger, "  --- or the minimum image size: "<<imgSize<<" x "<<imgSize<<" pixels");
        }
    }
-} 
+}
 
 /// @brief a hopefully temporary method to define missing fields in parset
 /// @details We reuse some code for general synthesis application, but it requires some
 /// parameters (like gridder) to be defined. This method fills the parset with stubbed fields.
 /// Hopefully, it is a temporary approach.
 /// @param parset ParameterSet for inputs
-/// @return new parset 
+/// @return new parset
 LOFAR::ParameterSet AdviseParallel::addMissingFields(const LOFAR::ParameterSet& parset)
 {
   LOFAR::ParameterSet result(parset);

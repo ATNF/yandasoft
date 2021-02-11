@@ -269,13 +269,22 @@ namespace askap
           }
       }
 
+      string wMaxGridder = wMaxAdviceNeeded(parset);
       // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
       param = "gridder.snapshotimaging.wtolerance";
-      if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxAdviceNeeded(parset)!="")) {
+      if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
           string wtolerance = parset.getString(param);
           ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
           parset.add("wtolerance", wtolerance);
           parset.add("wtolerance.advised", wtolerance);
+      }
+      if (wMaxGridder!="") {
+          param = "gridder."+wMaxGridder+".wpercentile";
+          if (parset.isDefined(param)) {
+              string wpercentile = parset.get(param);
+              parset.add("wpercentile", wpercentile);
+              parset.add("wpercentile.advised", wpercentile);
+          }
       }
 
     }
@@ -290,7 +299,7 @@ namespace askap
       wGridders.push_back("AWProject");
       wGridders.push_back("AProjectWStack");
       for(std::vector<std::string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
-          if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax") ) {
+          if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax")) {
               return *i;
           }
       }
@@ -310,6 +319,11 @@ namespace askap
       if (parset.isDefined("wtolerance.advised")) {
           parset.remove("wtolerance");
           parset.remove("wtolerance.advised");
+      }
+
+      if (parset.isDefined("wpercentile.advised")) {
+          parset.remove("wpercentile");
+          parset.remove("wpercentile.advised");
       }
 
     }
@@ -437,6 +451,12 @@ namespace askap
                   pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
                   parset.add(param, pstr.str().c_str());
+              } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
+                  pstr<<advice.wPercentile();
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str() << " with specified percentile value");
+                  parset.add(param, pstr.str().c_str());
+                  param = "gridder."+gridder+".wmaxclip";
+                  if (!parset.isDefined(param)) parset.add(param, "true");
               } else {
                   pstr<<advice.maxW();
                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());

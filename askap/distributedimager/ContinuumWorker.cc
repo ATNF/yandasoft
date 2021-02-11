@@ -151,7 +151,6 @@ ContinuumWorker::~ContinuumWorker()
 
 void ContinuumWorker::run(void)
 {
-
   // Send the initial request for work
   ContinuumWorkRequest wrequest;
 
@@ -176,10 +175,10 @@ void ContinuumWorker::run(void)
 
     } else {
 
-      ASKAPLOG_INFO_STR(logger, "Worker has received valid allocation");
+      ASKAPLOG_DEBUG_STR(logger, "Worker has received valid allocation");
     }
     const string ms = wu.get_dataset();
-    ASKAPLOG_INFO_STR(logger, "Received Work Unit for dataset " << ms
+    ASKAPLOG_DEBUG_STR(logger, "Received Work Unit for dataset " << ms
       << ", local (topo) channel " << wu.get_localChannel()
       << ", global (topo) channel " << wu.get_globalChannel()
       << ", frequency " << wu.get_channelFrequency() / 1.e6 << " MHz"
@@ -383,48 +382,48 @@ void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& 
 
 }
 void ContinuumWorker::compressWorkUnits() {
-    
+
     // This takes the list of workunits and reprocesses them so that all the contiguous
     // channels are compressed into single workUnits for multiple channels
     // this is not applicable for the spectral line experiment but can markedly reduce
     // the number of FFT required for the continuum processesing mode
-    
+
     // In preProcessWorkUnit we made a list of all the channels in the allocation
     // but the workunit may contain different measurement sets so I suppose it is
     // globalChannel that is more important for the sake of allocation ... but
     // the selector only works on one measurement set.
-    
+
     // So the upshot is this simple scheme cannot combine channels from different
     // measurement sets into the same grid as we are using the MS accessor as the vehicle to
     // provide the integration.
-    
+
     // So we need to loop through our workunit list and make a new list that just contains a
     // single workunit for each contiguous group of channels.
-    
+
     // First lets loop through our workunits
-   
+
     vector<ContinuumWorkUnit> compressedList; // probably easier to generate a new list
     vector<LOFAR::ParameterSet> compressedParsets;
-    
+
     ContinuumWorkUnit startUnit = workUnits[0];
     LOFAR::ParameterSet startParset = itsParsets[0];
-    
+
     unsigned int contiguousCount = 1;
-    
+
     for ( int count = 1; count < workUnits.size(); count++) {
-        
+
         ContinuumWorkUnit nextUnit = workUnits[count];
         LOFAR::ParameterSet nextParset = itsParsets[count];
-        
+
         std::string startDataset = startUnit.get_dataset();
         int startChannel = startUnit.get_localChannel();
         std::string nextDataset = nextUnit.get_dataset();
         int nextChannel = nextUnit.get_localChannel();
-        
+
         if ( startDataset.compare(nextDataset) == 0 ) { // same dataset
             if (nextChannel == (startChannel + contiguousCount)) { // next channel is contiguous to previous
                 contiguousCount++;
-                ASKAPLOG_INFO_STR(logger, "contiguous channel detected: count " << contiguousCount);
+                ASKAPLOG_DEBUG_STR(logger, "contiguous channel detected: count " << contiguousCount);
                 startUnit.set_nchan(contiguousCount); // update the nchan count for this workunit
                 // Now need to update the parset details
                 char channelParam[64];
@@ -436,18 +435,18 @@ void ContinuumWorker::compressWorkUnits() {
             }
         }
         else { // different dataset reset the count
-            ASKAPLOG_INFO_STR(logger, "Datasets differ resetting count");
+            ASKAPLOG_DEBUG_STR(logger, "Datasets differ resetting count");
             contiguousCount = 0;
         }
         if (count == (workUnits.size()-1) || contiguousCount == 0) { // last unit
-            ASKAPLOG_INFO_STR(logger, "Adding unit to compressed list");
+            ASKAPLOG_DEBUG_STR(logger, "Adding unit to compressed list");
             compressedList.insert(compressedList.end(),startUnit);
-            ASKAPLOG_INFO_STR(logger, "Adding parset to the list");
+            ASKAPLOG_DEBUG_STR(logger, "Adding parset to the list");
             compressedParsets.insert(compressedParsets.end(),startParset);
             startUnit = nextUnit;
             startParset = nextParset;
         }
-        
+
     }
     ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
     ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
@@ -457,16 +456,19 @@ void ContinuumWorker::compressWorkUnits() {
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
 
-
-
   // This also needs to set the frequencies and directions for all the images
   ASKAPLOG_DEBUG_STR(logger, "In processWorkUnit");
   LOFAR::ParameterSet unitParset = itsParset;
   ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In process workunit)" << (itsParset.getStringVector("dataset", true)));
 
   char ChannelPar[64];
+  bool localsolve = unitParset.getBool("solverpercore", false);
 
-  sprintf(ChannelPar, "[1,%d]", wu.get_localChannel() + 1);
+  // We're processing spectral data one channel at a time, but needs the stats for all, try setting this here
+  // For continuum this is done in compressWorkUnits (if combinechannels is set, which it should be)
+  // Channel numbers are zero based
+  int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
+  sprintf(ChannelPar, "[%d,%d]", n, wu.get_localChannel());
   bool perbeam = unitParset.getBool("perbeam", true);
 
   if (!perbeam) {
@@ -478,20 +480,17 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
     unitParset.replace(param, bstr.str().c_str());
   }
 
+
   bool usetmpfs = unitParset.getBool("usetmpfs", false);
-  bool localsolve = unitParset.getBool("solverpercore", false);
-
   if (usetmpfs && !localsolve) // only do this here if in continuum mode
-
   {
     cacheWorkUnit(wu, unitParset);
-    sprintf(ChannelPar, "[1,1]");
+    sprintf(ChannelPar, "[1,0]");
   }
 
   unitParset.replace("Channels", ChannelPar);
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
-
   itsAdvisor->addMissingParameters(unitParset);
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
@@ -596,11 +595,11 @@ void ContinuumWorker::processChannels()
     root = "pcf";
     std::string pcf_name = root + std::string(".wr.") \
     + utility::toString(itsComms.rank());
-    
+
     root = "psfgrid";
     std::string psfgrid_name = root + std::string(".wr.") \
       + utility::toString(itsComms.rank());
-      
+
     if (itsComms.isSingleSink()) {
       // Need to reset the names to something eveyone knows
       img_name = "image";

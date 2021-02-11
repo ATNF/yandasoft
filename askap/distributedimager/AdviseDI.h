@@ -82,7 +82,7 @@ namespace askap {
             /// @details Add whatever details we require for both master and
             /// worker implementations
 
-            void addMissingParameters(LOFAR::ParameterSet& parset);
+            void addMissingParameters(LOFAR::ParameterSet& parset, bool extra=false);
 
             void addMissingParameters();
 
@@ -146,8 +146,8 @@ namespace askap {
             /// @brief reference frame for frequency
             /// @details We may want to simulate/image in different reference frames.
             /// This field contains the reference frame selected in the parset.
-            casacore::MFrequency::Ref itsFreqRefFrame;  
-            
+            casacore::MFrequency::Ref itsFreqRefFrame;
+
             casacore::MFrequency::Types itsFreqType;
 
             double minFrequency;
