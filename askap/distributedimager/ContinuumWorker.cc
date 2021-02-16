@@ -45,6 +45,7 @@
 // ASKAPsoft includes
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
+#include <askap/askap/AskapUtil.h>
 #include <askap/scimath/fitting/Equation.h>
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/ImagingNormalEquations.h>
@@ -85,6 +86,7 @@ using namespace askap;
 using namespace askap::scimath;
 using namespace askap::synthesis;
 using namespace askap::accessors;
+using utility::toString;
 
 ASKAP_LOGGER(logger, ".ContinuumWorker");
 
@@ -461,31 +463,27 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   LOFAR::ParameterSet unitParset = itsParset;
   ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In process workunit)" << (itsParset.getStringVector("dataset", true)));
 
-  char ChannelPar[64];
-  bool localsolve = unitParset.getBool("solverpercore", false);
+  const bool localsolve = unitParset.getBool("solverpercore", false);
 
   // We're processing spectral data one channel at a time, but needs the stats for all, try setting this here
   // For continuum this is done in compressWorkUnits (if combinechannels is set, which it should be)
   // Channel numbers are zero based
-  int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
-  sprintf(ChannelPar, "[%d,%d]", n, wu.get_localChannel());
-  bool perbeam = unitParset.getBool("perbeam", true);
+  const int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
+  string ChannelPar = "["+toString(n)+","+toString(wu.get_localChannel())+"]";
+  const bool perbeam = unitParset.getBool("perbeam", true);
 
   if (!perbeam) {
     string param = "beams";
-    std::ostringstream bstr;
-
-    bstr << "[" << wu.get_beam() << "]";
-
-    unitParset.replace(param, bstr.str().c_str());
+    string bstr = "[" + toString(wu.get_beam()) + "]";
+    unitParset.replace(param, bstr);
   }
 
 
-  bool usetmpfs = unitParset.getBool("usetmpfs", false);
+  const bool usetmpfs = unitParset.getBool("usetmpfs", false);
   if (usetmpfs && !localsolve) // only do this here if in continuum mode
   {
     cacheWorkUnit(wu, unitParset);
-    sprintf(ChannelPar, "[1,0]");
+    ChannelPar="[1,0]";
   }
 
   unitParset.replace("Channels", ChannelPar);

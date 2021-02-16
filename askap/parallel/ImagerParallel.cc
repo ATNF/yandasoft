@@ -86,6 +86,7 @@ namespace askap
 {
   namespace synthesis
   {
+    using utility::toString;
     using askap::operator<<;
 
     ImagerParallel::ImagerParallel(askap::askapparallel::AskapParallel& comms,
@@ -269,7 +270,7 @@ namespace askap
           }
       }
 
-      string wMaxGridder = wMaxAdviceNeeded(parset);
+      const string wMaxGridder = wMaxAdviceNeeded(parset);
       // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
       param = "gridder.snapshotimaging.wtolerance";
       if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
@@ -445,22 +446,22 @@ namespace askap
       if (gridder!="") {
           param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
           if (!parset.isDefined(param)) {
-              std::ostringstream pstr;
+              string pstr;
               // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
               if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
-                  pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
-                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-                  parset.add(param, pstr.str().c_str());
+                  pstr = toString(advice.maxResidualW()); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+                  parset.add(param, pstr);
               } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
-                  pstr<<advice.wPercentile();
-                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str() << " with specified percentile value");
-                  parset.add(param, pstr.str().c_str());
+                  pstr = toString(advice.wPercentile());
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr << " with specified percentile value");
+                  parset.add(param, pstr);
                   param = "gridder."+gridder+".wmaxclip";
                   if (!parset.isDefined(param)) parset.add(param, "true");
               } else {
-                  pstr<<advice.maxW();
-                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-                  parset.add(param, pstr.str().c_str());
+                  pstr = toString(advice.maxW());
+                  ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+                  parset.add(param, pstr);
               }
           }
       }

@@ -36,6 +36,7 @@
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/askap_synthesis.h>
 #include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
 
 
 ASKAP_LOGGER(logger, ".adviseDI");
@@ -73,6 +74,8 @@ ASKAP_LOGGER(logger, ".adviseDI");
 namespace askap {
 
 namespace synthesis {
+
+using utility::toString;
 
 float frequency_tolerance = 0.0;
 
@@ -427,13 +430,12 @@ void AdviseDI::prepare() {
         nchanpercore = itsRequestedFrequencies.size()/nWorkersPerGroup;
         ASKAPLOG_WARN_STR(logger,"Trying nchanpercore = "<<nchanpercore);
         string param = "nchanpercore";
-        std::ostringstream pstr;
-        pstr<<nchanpercore;
-        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr.str().c_str());
+        string pstr = toString(nchanpercore);
+        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
         if (itsParset.isDefined("nchanpercore")) {
-            itsParset.replace(param, pstr.str().c_str());
+            itsParset.replace(param, pstr);
         } else {
-            itsParset.add(param, pstr.str().c_str());
+            itsParset.add(param, pstr);
         }
     }
     ASKAPCHECK(itsRequestedFrequencies.size()/nWorkersPerGroup == nchanpercore,"Miss-match nchanpercore is incorrect");
@@ -681,20 +683,15 @@ void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::c
     if (wu_dataset.compare(ms[n]) == 0) {
       // MATCH
       string param = "Images.direction";
-      std::ostringstream pstr;
+      string pstr = "["+printLon(itsTangent[n])+","+printLat(itsTangent[n])+", J2000]";
       // Only J2000 is implemented at the moment.
-      pstr<<"["<<printLon(itsTangent[n])<<", "<<printLat(itsTangent[n])<<", J2000]";
-      ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr.str().c_str());
-      parset.replace(param, pstr.str().c_str());
+      ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
+      parset.replace(param, pstr);
 
       for (size_t img = 0; img < imageNames.size(); ++img) {
         param ="Images."+imageNames[img]+".direction";
-
-        std::ostringstream pstr;
-        // Only J2000 is implemented at the moment.
-        pstr<<"["<<printLon(itsTangent[n])<<", "<<printLat(itsTangent[n])<<", J2000]";
-        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr.str().c_str());
-        parset.replace(param, pstr.str().c_str());
+        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
+        parset.replace(param, pstr);
 
       }
     }
@@ -712,6 +709,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
         std::vector<casacore::MFrequency>::iterator begin_it;
         std::vector<casacore::MFrequency>::iterator end_it;
 
+        ASKAPCHECK(!itsRequestedFrequencies.empty(),"No frequencies requested for ouput");
         begin_it = itsRequestedFrequencies.begin();
         end_it = itsRequestedFrequencies.end()-1;
 
@@ -738,26 +736,27 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    param = "Images.direction";
 
    if ( !parset.isDefined(param) ) {
-       std::ostringstream pstr;
        // Only J2000 is implemented at the moment.
-       pstr<<"["<<printLon(itsTangent[0])<<", "<<printLat(itsTangent[0])<<", J2000]";
-       ASKAPLOG_INFO_STR(logger, "  Advising on parameter (getting from the tangent point on the first measurement set) " << param << ": " << pstr.str().c_str());
-       itsParset.add(param, pstr.str().c_str());
+       string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
+       ASKAPLOG_INFO_STR(logger, "  Advising on parameter (getting from the tangent point on the first measurement set) " << param << ": " << pstr);
+       itsParset.add(param, pstr);
    }
    param = "Images.restFrequency";
 
    if ( !parset.isDefined(param) ) {
-       std::ostringstream pstr;
-       // Only J2000 is implemented at the moment.
-       pstr<<"HI";
-       ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr.str().c_str());
-       parset.add(param, pstr.str().c_str());
+       string pstr = "HI";
+       ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr);
+       parset.add(param, pstr);
    }
 
    for (size_t img = 0; img < imageNames.size(); ++img) {
 
-     if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) cellsizeNeeded = true;
-     if (!parset.isDefined("Images."+imageNames[img]+".shape")) shapeNeeded = true;
+     if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) {
+         cellsizeNeeded = true;
+     }
+     if (!parset.isDefined("Images."+imageNames[img]+".shape")) {
+         shapeNeeded = true;
+     }
 
      param = "Images."+imageNames[img]+".frequency";
      if ( !parset.isDefined(param) && isPrepared == true) {
@@ -765,8 +764,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        char tmp[64];
        // changing this to match adviseParallel
        const double aveFreq = 0.5*(minFrequency+maxFrequency);
-       sprintf(tmp,"[%f,%f]",aveFreq,aveFreq);
-       string val = string(tmp);
+       string val = "["+toString(aveFreq)+","+toString(aveFreq)+"]";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << val);
        parset.add(key,val);
      }
@@ -776,24 +774,19 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
        if (parset.isDefined("Images.direction") ) {
          const std::vector<std::string> direction = parset.getStringVector("Images.direction");
-
          const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
          const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
          const casacore::MVDirection itsDirection = casacore::MVDirection(ra,dec);
 
-         std::ostringstream pstr;
          // Only J2000 is implemented at the moment.
-         pstr<<"["<<printLon(itsDirection)<<", "<<printLat(itsDirection)<<", J2000]";
-         ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << " (obtained from Images.direction) : " << pstr.str().c_str());
-         itsParset.add(param, pstr.str().c_str());
-       }
-       else {
-
-         std::ostringstream pstr;
+         string pstr = "["+printLon(itsDirection)+","+printLat(itsDirection)+", J2000]";
+         ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << " (obtained from Images.direction) : " << pstr);
+         itsParset.add(param, pstr);
+       } else {
          // Only J2000 is implemented at the moment.
-         pstr<<"["<<printLon(itsTangent[0])<<", "<<printLat(itsTangent[0])<<", J2000]";
-         ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << "(obtained from tangent point of first MS): " << pstr.str().c_str());
-         parset.add(param, pstr.str().c_str());
+         string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
+         ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << "(obtained from tangent point of first MS): " << pstr);
+         parset.add(param, pstr);
        }
      }
      param = "Images."+imageNames[img]+".nterms"; // if nterms is set, store it for later
@@ -806,10 +799,9 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
      param = "Images."+imageNames[img]+".nchan";
      if ( !parset.isDefined("Images."+imageNames[img]+".nchan") ) {
-         std::ostringstream pstr;
-         pstr<<1;  // Default nchan is 1
-         ASKAPLOG_INFO_STR(logger, "  Advising on parameter nchan : " << pstr.str().c_str());
-         parset.add(param, pstr.str().c_str());
+         string pstr = "1";  // Default nchan is 1
+         ASKAPLOG_INFO_STR(logger, "  Advising on parameter nchan : " << pstr);
+         parset.add(param, pstr);
 
      }
    }
@@ -817,19 +809,16 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    if (nTerms > 1) { // check required MFS parameters
        param = "visweights"; // set to "MFS" if unset and nTerms > 1
        if (!parset.isDefined(param)) {
-           std::ostringstream pstr;
-           pstr<<"MFS";
-           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (obtained by default - we know no other weighting) : " << pstr.str().c_str());
-           parset.add(param, pstr.str().c_str());
+           string pstr="MFS";
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (obtained by default - we know no other weighting) : " << pstr);
+           parset.add(param, pstr);
        }
 
        param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
        if ((parset.getString("visweights")=="MFS")) {
            if (!parset.isDefined(param)) {
-               char tmp[64];
                const double aveFreq = 0.5*(minFrequency+maxFrequency);
-               sprintf(tmp,"%f",aveFreq);
-               string val = string(tmp);
+               string val = toString(aveFreq);
                ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (using average frequency):  " << val);
                parset.add(param,val);
            }
@@ -850,11 +839,10 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        ASKAPLOG_INFO_STR(logger, "Remaining missing parameters require a pass through the data");
 
        if (!parset.isDefined("tangent")) {
-           std::ostringstream pstr;
-           pstr<<"["<<printLon(itsTangent[0])<<", "<<printLat(itsTangent[0])<<", J2000]";
-           ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << pstr.str().c_str());
-           parset.add("tangent", pstr.str().c_str());
-           parset.add("tangent.advised", pstr.str().c_str());
+           string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
+           ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << pstr);
+           parset.add("tangent", pstr);
+           parset.add("tangent.advised", pstr);
        }
 
        // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
@@ -879,10 +867,9 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
        param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
        if (!parset.isDefined(param)) {
-           std::ostringstream pstr;
-           pstr<<advice.nBeams();
-           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-           parset.add(param, pstr.str().c_str());
+           string pstr = toString(advice.nBeams());
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+           parset.add(param, pstr);
        }
 
        param = "Images.cellsize";
@@ -890,43 +877,40 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        if (parset.isDefined(param)) {
            cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector(param),"arcsec");
        } else if (cellsizeNeeded) {
-           std::ostringstream pstr;
-           pstr<<"["<<cellSize[0]<<"arcsec,"<<cellSize[1]<<"arcsec]";
-           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-           parset.add(param, pstr.str().c_str());
+           string pstr = "["+toString(cellSize[0])+"arcsec,"+toString(cellSize[1])+"arcsec]";
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+           parset.add(param, pstr);
        }
 
        param = "Images.shape"; // if image shape is undefined, use the advice.
        if (shapeNeeded && !parset.isDefined(param)) {
-           std::ostringstream pstr;
            const double fieldSize = advice.squareFieldSize(1); // in deg
            const long lSize = long(fieldSize * 3600 / cellSize[0]) + 1;
            const long mSize = long(fieldSize * 3600 / cellSize[1]) + 1;
-           pstr<<"["<<lSize<<","<<mSize<<"]";
-           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-           parset.add(param, pstr.str().c_str());
+           string pstr = "["+toString(lSize)+","+toString(mSize)+"]";
+           ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+           parset.add(param, pstr);
        }
        string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
        if (gridder!="") {
            param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
            if (!parset.isDefined(param)) {
-               std::ostringstream pstr;
                // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
                if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
-                   pstr<<advice.maxResidualW(); // could use parset.getString("gridder.snapshotimaging.wtolerance");
-                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-                   parset.add(param, pstr.str().c_str());
+                   string pstr = toString(advice.maxResidualW()); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+                   parset.add(param, pstr);
                } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
-                   pstr<<advice.wPercentile();
-                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str() << " with specified percentile value");
-                   parset.add(param, pstr.str().c_str());
+                   string pstr = toString(advice.wPercentile());
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr << " with specified percentile value");
+                   parset.add(param, pstr);
                    // if we're setting from percentile, turn on clipping
                    param = "gridder."+gridder+".wmaxclip";
                    if (!parset.isDefined(param)) parset.add(param, "true");
                } else {
-                   pstr<<advice.maxW();
-                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr.str().c_str());
-                   parset.add(param, pstr.str().c_str());
+                   string pstr = toString(advice.maxW());
+                   ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
+                   parset.add(param, pstr);
                }
            }
        }
@@ -968,10 +952,7 @@ std::vector<std::string> AdviseDI::getDatasets()
         while (itsParset.isDefined(key)) {
             const string value = itsParset.getString(key);
             ms.push_back(value);
-
-            LOFAR::ostringstream ss;
-            ss << "dataset" << idx + 1;
-            key = ss.str();
+            key = "dataset"+toString(idx+1);
             ++idx;
         }
     }

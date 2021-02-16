@@ -35,6 +35,7 @@
 #ifndef SYNTHESIS_VIS_METADATA_STATS_H
 #define SYNTHESIS_VIS_METADATA_STATS_H
 
+#include <askap/measurementequation/PercentileCalculator.h>
 #include <askap/dataaccess/IConstDataAccessor.h>
 #include <askap/dataaccess/BestWPlaneDataAccessor.h>
 #include <casacore/measures/Measures/MDirection.h>
@@ -61,7 +62,8 @@ class VisMetaDataStats : public ISerializable {
 public:
    /// @brief constructor, initialise class
    /// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
-   VisMetaDataStats(bool useFlagged = false, double wpercentile = 0.99);
+   /// @param[in] wpercentile, percentile value to calculate for W distribution
+   explicit VisMetaDataStats(bool useFlagged = false, double wpercentile = 0.99);
 
    /// @brief constructor with explicitly given tangent point
    /// @details We need to know tangent point to estimate the w-term correctly
@@ -74,6 +76,7 @@ public:
    /// the snap-shot imaging.
    /// @param[in] tangent tangent point to be used with snap-shot imaging (for uvw-rotation)
    /// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
+   /// @param[in] wpercentile, percentile value to calculate for W distribution
    explicit VisMetaDataStats(const casacore::MVDirection &tangent, bool useFlagged = false, double wpercentile = 0.99);
 
    /// @brief constructor specific to snap-shot imaging
@@ -85,8 +88,10 @@ public:
    /// @note For a coplanar array the largest residual w-term will always be less than the w-tolerance
    /// which is a threshold for the fitting of a new plane. For non-coplanar array it is not always the
    /// case. This is why a complex two-pass estimation procedure is required.
+   /// @param[in] tangent tangent point to be used with snap-shot imaging (for uvw-rotation)
    /// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)
    /// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
+   /// @param[in] wpercentile, percentile value to calculate for W distribution
    VisMetaDataStats(const casacore::MVDirection &tangent, double wtolerance, bool useFlagged = false, double wpercentile = 0.99);
 
    /// @brief copy constructor
@@ -218,9 +223,6 @@ private:
    /// @brief if true, include flagged data in stats
    bool itsUseFlagged;
 
-   /// @brief percentile of W to calculate in stats
-   double itsWPercentile;
-
    /// @brief adapter dealing with plane fitting
    /// @note This adapter is only used when w-tolerance and tangent points are set. Otherwise,
    /// we set tolerance to a negative value used as a flag to work with the original accessor.
@@ -278,66 +280,7 @@ private:
 
    /// @brief W percentile calculator
    /// @brief helper class to calculate running percentile (approximate, no sort or storage)
-   class PercentileCalculator
-   {
-   public:
-       /// Good value for step is same scale as std dev of data
-       /// Percentile value should be between 0 and 1
-       PercentileCalculator(double percentile=0.95, double step=1000.0):
-           itsPerc(percentile),itsStep(step),itsCount(0),itsValue(0) {
-           }
-
-       /// @brief (re)initialise
-       void init()
-       {
-          itsCount = 0;
-          itsValue = 0;
-       }
-
-       /// @brief return percentile value of the data
-       double value() const { return itsValue;}
-
-       /// @brief return count of values
-       size_t count() const { return itsCount;}
-
-       /// @brief add a datapoint to the stats
-       void add(double data)
-       {
-           if (itsCount++ == 0) {
-               itsValue = data;
-               return;
-           }
-           if (itsValue > data) itsValue -= itsStep * (1.0 - itsPerc);
-           if (itsValue < data) itsValue += itsStep * itsPerc;
-           if (abs(data-itsValue) < itsStep) itsStep /= 2;
-       }
-       /// @brief merge in another dataset using weighted mean
-       void merge(const PercentileCalculator & other)
-       {
-           ASKAPCHECK(itsPerc == other.itsPerc,"Inconsistent percentile values in merge");
-           itsValue = itsValue * itsCount + other.value() * other.count();
-           itsCount += other.count();
-           if (itsCount>0) itsValue /= itsCount;
-       }
-       /// @brief serialise
-       void writeToBlob(LOFAR::BlobOStream& os) const
-       {
-           os << itsPerc << itsStep << (LOFAR::TYPES::uint64)itsCount << itsValue;
-       }
-       /// @brief deserialise
-       void readFromBlob(LOFAR::BlobIStream& is)
-       {
-           LOFAR::TYPES::uint64 count;
-           is >> itsPerc >> itsStep >> count >> itsValue;
-           itsCount = count;
-       }
-
-   private:
-       double itsPerc;
-       double itsStep;
-       size_t itsCount;
-       double itsValue;
-   } itsWPercentileCalculator;
+   PercentileCalculator itsWPercentileCalculator;
 
    // for testing
    friend class VisMetaDataStatsTest;
