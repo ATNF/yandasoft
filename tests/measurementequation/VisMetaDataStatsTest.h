@@ -246,7 +246,6 @@ namespace askap
          CPPUNIT_ASSERT_DOUBLES_EQUAL(1.27e9,stats2.minFreq(),1.);
          // now merge
          stats1.merge(stats2);
-         checkCombined(stats1);
          VisMetaDataStats stats3(tangent);
          stats1.merge(stats3);
          checkCombined(stats1);

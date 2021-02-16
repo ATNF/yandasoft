@@ -410,7 +410,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
   if (itsAccessorAdapter.tolerance() >=0.) {
       ASKAPCHECK(itsTangentSet, "wtolerance has to be set together with the tangent point!")
   }
-  uint nvis = 0;
+  unsigned long nvis = 0;
   if (itsTangentSet) {
       const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &origUVW = acc.rotatedUVW(itsTangent);
 
@@ -420,7 +420,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
       }
 
       const casacore::Vector<casacore::Double> & freq = acc.frequency();
-      if (!itsUseFlagged) {
+      if (itsUseFlagged) {
           for (casacore::uInt row=0; row < acc.nRow(); ++row) {
               const double currentU = casacore::abs(origUVW[row](0)) * reciprocalToShortestWavelength;
               const double currentV = casacore::abs(origUVW[row](1)) * reciprocalToShortestWavelength;
@@ -471,7 +471,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
                       continue;
                   }
                   nvis++;
-                  double reciprocalWavelength = freq(chan) / casacore::C::c;
+                  const double reciprocalWavelength = freq(chan) / casacore::C::c;
                   const double currentU = casacore::abs(origUVW[row](0)) * reciprocalWavelength;
                   const double currentV = casacore::abs(origUVW[row](1)) * reciprocalWavelength;
                   const double currentW = casacore::abs(origUVW[row](2)) * reciprocalWavelength;
@@ -499,7 +499,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
               const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = itsAccessorAdapter.rotatedUVW(itsTangent);
               bool first = true;
               for (casacore::uInt row=0; row < itsAccessorAdapter.nRow(); ++row) {
-                  if (!itsUseFlagged && rowFlag(row)) {
+                  if (rowFlag(row)) {
                       continue;
                   }
                   for (casacore::uInt chan=0; chan<nChan; chan++) {
@@ -529,7 +529,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
            if (!itsUseFlagged && rowFlag(row)) {
                continue;
            }
-           nvis += nChan;
+           nvis += unflaggedChannels;
            const double currentU = casacore::abs(uvw[row](0)) * reciprocalToShortestWavelength;
            const double currentV = casacore::abs(uvw[row](1)) * reciprocalToShortestWavelength;
            const double currentW = casacore::abs(uvw[row](2)) * reciprocalToShortestWavelength;
@@ -557,7 +557,6 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
   } else {
       itsNVis += acc.nRow() * acc.nChannel();
   }
-
 }
 
 /// @brief largest residual w-term (for snap-shotting)
