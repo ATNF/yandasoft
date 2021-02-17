@@ -1,7 +1,7 @@
 /// @file
 ///
-/// @brief Calibration effect: frequency-dependent antenna gains without cross-pol
-/// @details This effect represents bandpass calibration parameters. Note, an
+/// @brief Calibration effect: frequency-dependent antenna leakage
+/// @details This effect represents bandpass leakage calibration parameters. Note, an
 /// exception is thrown if the number of spectral channels in the accessor doesn't match
 /// the dimension of the bandpass parameter
 ///

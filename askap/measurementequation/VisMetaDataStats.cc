@@ -38,6 +38,8 @@
 
 #include <askap/askap_synthesis.h>
 #include <askap/askap/AskapLogging.h>
+#include <casacore/casa/Arrays/ArrayLogical.h>
+
 ASKAP_LOGGER(logger, ".measurementequation.vismetadatastats");
 #include <iomanip>
 
@@ -45,55 +47,62 @@ namespace askap {
 
 namespace synthesis {
 
-/// @brief constructor, initialise class 
-VisMetaDataStats::VisMetaDataStats() : itsTangentSet(false), itsAccessorAdapter(-1.), itsNVis(0ul), itsMaxU(0.), 
-     itsMaxV(0.), itsMaxW(0.), itsMaxResidualW(0.), itsMinFreq(0.), itsMaxFreq(0.),
-     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsRefDirValid(false), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.) {}
+/// @brief constructor, initialise class
+/// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
+/// @param[in] wpercentile, percentile value to calculate for W distribution
+VisMetaDataStats::VisMetaDataStats(bool useFlagged, double wpercentile) : itsTangentSet(false), itsUseFlagged(useFlagged),itsAccessorAdapter(-1.),
+     itsNVis(0ul), itsMaxU(0.), itsMaxV(0.), itsMaxW(0.), itsMaxResidualW(0.), itsMinFreq(0.), itsMaxFreq(0.),
+     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsRefDirValid(false), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.), itsWPercentileCalculator(wpercentile) {}
 
 /// @brief constructor with explicitly given tangent point
 /// @details We need to know tangent point to estimate the w-term correctly
 /// (tangent point is required for uvw-rotation). Unless the tangent point
-/// is chosen in advance, a two-pass iteration over the data is required. 
+/// is chosen in advance, a two-pass iteration over the data is required.
 /// The first iteration is used to find out the centre of the field which
 /// can be used as a tangent point during imaging. The second pass determines
-/// actual stats on the w-term. In the second pass, this class is initialised 
-/// with either this version of the constructor or the version specific for 
+/// actual stats on the w-term. In the second pass, this class is initialised
+/// with either this version of the constructor or the version specific for
 /// the snap-shot imaging.
-/// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)      
-VisMetaDataStats::VisMetaDataStats(const casacore::MVDirection &tangent) : itsTangent(tangent), itsTangentSet(true), itsAccessorAdapter(-1.),
-     itsNVis(0ul), itsMaxU(0.), itsMaxV(0.), itsMaxW(0.), itsMaxResidualW(0.), itsMinFreq(0.), itsMaxFreq(0.), 
-     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsReferenceDir(tangent), itsRefDirValid(true), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.) {} 
+/// @param[in] tangent tangent point to be used with snap-shot imaging (for uvw-rotation)
+/// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
+/// @param[in] wpercentile, percentile value to calculate for W distribution
+VisMetaDataStats::VisMetaDataStats(const casacore::MVDirection &tangent, bool useFlagged, double wpercentile) : itsTangent(tangent), itsTangentSet(true), itsUseFlagged(useFlagged),
+     itsAccessorAdapter(-1.), itsNVis(0ul), itsMaxU(0.), itsMaxV(0.), itsMaxW(0.), itsMaxResidualW(0.), itsMinFreq(0.), itsMaxFreq(0.),
+     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsReferenceDir(tangent), itsRefDirValid(true), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.), itsWPercentileCalculator(wpercentile) {}
 
-   
+
 /// @brief constructor specific to snap-shot imaging
 /// @details For the snap-shot imaging we need to do two passes unless the desired tangent point
 /// can be specified up front. The first pass can be used to find out the centre of the field
 /// which can be used as a tangent point during imaging. The second pass, where the class is setup
-/// with this version of the constructor, can determine the largest residual w-term for the 
+/// with this version of the constructor, can determine the largest residual w-term for the
 /// given tangent point and w-tolerance.
 /// @note For a coplanar array the largest residual w-term will always be less than the w-tolerance
 /// which is a threshold for the fitting of a new plane. For non-coplanar array it is not always the
 /// case. This is why a complex two-pass estimation procedure is required.
 /// @param[in] tangent tangent point to be used with snap-shot imaging (for uvw-rotation)
-/// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)      
-VisMetaDataStats::VisMetaDataStats(const casacore::MVDirection &tangent, double wtolerance) : itsTangent(tangent), itsTangentSet(true), 
-     itsAccessorAdapter(wtolerance,false), 
+/// @param[in] wtolerance threshold triggering fitting of a new plane for snap-shot imaging (wavelengths)
+/// @param[in] useFlagged boolean indicating we take flagged data into account in the stats
+/// @param[in] wpercentile, percentile value to calculate for W distribution
+VisMetaDataStats::VisMetaDataStats(const casacore::MVDirection &tangent, double wtolerance, bool useFlagged, double wpercentile) : itsTangent(tangent),
+     itsTangentSet(true), itsUseFlagged(useFlagged), itsAccessorAdapter(wtolerance,false),
      itsNVis(0ul), itsMaxU(0.), itsMaxV(0.), itsMaxW(0.), itsMaxResidualW(0.), itsMinFreq(0.), itsMaxFreq(0.),
-     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsReferenceDir(tangent), itsRefDirValid(true), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.)
+     itsMaxAntennaIndex(0u), itsMaxBeamIndex(0u), itsReferenceDir(tangent), itsRefDirValid(true), itsFieldBLC(0.,0.), itsFieldTRC(0.,0.),
+     itsWPercentileCalculator(wpercentile)
      {}
 
 
 /// @brief copy constructor
 /// @details An explicit copy constructor is required because accessor adapter is a non-copyable non-trivial type.
 /// This causes problems in the parallel mode only when different mpi ranks may need to clone the statistics
-/// estimator as part of the reduction process. 
+/// estimator as part of the reduction process.
 /// @param[in] other const reference to the object to copy from
 VisMetaDataStats::VisMetaDataStats(const VisMetaDataStats &other) : itsTangent(other.itsTangent), itsTangentSet(other.itsTangentSet),
-   itsAccessorAdapter(other.itsAccessorAdapter.tolerance(), false), itsNVis(other.itsNVis), itsMaxU(other.itsMaxU),
-   itsMaxV(other.itsMaxV), itsMaxW(other.itsMaxW), itsMaxResidualW(other.itsMaxResidualW), itsMinFreq(other.itsMinFreq), 
+   itsUseFlagged(other.itsUseFlagged), itsAccessorAdapter(other.itsAccessorAdapter.tolerance(), false), itsNVis(other.itsNVis), itsMaxU(other.itsMaxU),
+   itsMaxV(other.itsMaxV), itsMaxW(other.itsMaxW), itsMaxResidualW(other.itsMaxResidualW), itsMinFreq(other.itsMinFreq),
    itsMaxFreq(other.itsMaxFreq), itsMaxAntennaIndex(other.itsMaxAntennaIndex),
-   itsMaxBeamIndex(other.itsMaxBeamIndex), itsReferenceDir(other.itsReferenceDir), itsRefDirValid(other.itsRefDirValid), 
-   itsFieldBLC(other.itsFieldBLC), itsFieldTRC(other.itsFieldTRC)
+   itsMaxBeamIndex(other.itsMaxBeamIndex), itsReferenceDir(other.itsReferenceDir), itsRefDirValid(other.itsRefDirValid),
+   itsFieldBLC(other.itsFieldBLC), itsFieldTRC(other.itsFieldTRC), itsWPercentileCalculator(other.itsWPercentileCalculator)
 {
   ASKAPCHECK(!other.itsAccessorAdapter.isAssociated(), "An attempt to copy VisMetaDataStats which has the accessor adapter in the attached state");
 }
@@ -119,10 +128,11 @@ void VisMetaDataStats::reset()
    } else {
        itsRefDirValid = false;
    }
-}  
-   
+   itsWPercentileCalculator.init();
+}
+
 /// @brief aggregate statistics with that accumulated by another instance
-/// @details This class will be run in parallel if the measurement set is distributed. 
+/// @details This class will be run in parallel if the measurement set is distributed.
 /// This method is intended to combine statistics as part of reduction.
 /// @param[in] other an instance of the estimator to take data from
 void VisMetaDataStats::merge(const VisMetaDataStats &other)
@@ -131,10 +141,10 @@ void VisMetaDataStats::merge(const VisMetaDataStats &other)
    if (itsTangentSet) {
        ASKAPCHECK(itsTangent.separation(other.itsTangent)<1e-6, "Different tangent directions are used by merged VisMetaDataStats instances");
    }
-   ASKAPCHECK(fabs(itsAccessorAdapter.tolerance() - other.itsAccessorAdapter.tolerance()) < 1e-6, 
+   ASKAPCHECK(fabs(itsAccessorAdapter.tolerance() - other.itsAccessorAdapter.tolerance()) < 1e-6,
            "Different configuration of w-tolerance detected during VisMetaDataStats merge");
    if (other.nVis() != 0ul) {
-       ASKAPDEBUGASSERT(other.itsRefDirValid);        
+       ASKAPDEBUGASSERT(other.itsRefDirValid);
        if (nVis() == 0ul) {
            // just copy all data fields from other
            itsNVis = other.itsNVis;
@@ -210,7 +220,7 @@ void VisMetaDataStats::merge(const VisMetaDataStats &other)
            // cross checks just in case
            ASKAPDEBUGASSERT(otherBLC.first <= otherTRC.first);
            ASKAPDEBUGASSERT(otherBLC.second <= otherTRC.second);
-           // 
+           //
            if (itsFieldBLC.first > otherBLC.first) {
                itsFieldBLC.first = otherBLC.first;
            }
@@ -222,8 +232,9 @@ void VisMetaDataStats::merge(const VisMetaDataStats &other)
            }
            if (itsFieldTRC.second < otherTRC.second) {
                itsFieldTRC.second = otherTRC.second;
-           }                        
+           }
        }
+       itsWPercentileCalculator.merge(other.itsWPercentileCalculator);
    }
 }
 
@@ -240,7 +251,7 @@ casacore::MVDirection VisMetaDataStats::getOffsetDir(const std::pair<double,doub
   // Note, the accuracy of the shift method doesn't seem to be good enough for some reason.
   // (found while debugging ASKAPSDP-1741)
 }
-   
+
 /// @brief helper method to compute offsets of the given direction w.r.t. the reference direction
 /// @details
 /// @param[in] dir direction measure
@@ -251,12 +262,12 @@ std::pair<double,double> VisMetaDataStats::getOffsets(const casacore::MVDirectio
   const double offset1 = asin(sin(dir.getLong() - itsReferenceDir.getLong()) * cos(dir.getLat()));
   const double offset2 = asin(sin(dir.getLat()) * cos(itsReferenceDir.getLat()) - cos(dir.getLat()) * sin(itsReferenceDir.getLat())
                                            * cos(dir.getLong() - itsReferenceDir.getLong()));
-  return std::pair<double,double>(offset1,offset2);  
+  return std::pair<double,double>(offset1,offset2);
 }
 
-   
+
 /// @brief process one accessor of data updating statistics
-/// @details 
+/// @details
 /// @param[in] acc read-only accessor with data
 void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
 {
@@ -264,20 +275,69 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
       return; // no data - nothing to do
   }
   // for now ignore flagging. Technically, some metadata may be ignored if all corresponding data are flagged, but
-  // it seems to be too much of the complication now. 
-  
+  // it seems to be too much of the complication now.
+
+  // well the time to use the flags may have come...
+  // Note that this is a lot slower, but nearly all the extra time is spent in the acc.flag() call, not here
+  const casacore::Cube<casacore::Bool> flag(itsUseFlagged ? casacore::Cube<casacore::Bool>(0,0,0) : acc.flag());
+  casacore::Vector<casacore::Bool> rowFlag(acc.nRow(),casacore::False);
+
+  // fill row flags - accessor doesn't provide MS row flag, so create them
+  int unflaggedRows = 0;
+  if (!itsUseFlagged) {
+        for (casacore::uInt row = 0; row < acc.nRow(); row++) {
+            if (casacore::allEQ(flag(row,casacore::Slice(),casacore::Slice()),casacore::True)) {
+                rowFlag(row) = casacore::True;
+            } else {
+                unflaggedRows++;
+            }
+        }
+        if (casacore::allEQ(rowFlag,casacore::True)) {
+            // no unflagged data
+            return;
+        }
+  }
+
+  // fill channel flags
+  casacore::uInt nChan = acc.nChannel();
+  casacore::Vector<casacore::Bool> chanFlag(nChan, casacore::False);
+  int unflaggedChannels = 0;
+  if (!itsUseFlagged) {
+      for (casacore::uInt chan = 0; chan < nChan; chan++) {
+          if (casacore::allEQ(flag(casacore::Slice(),chan,casacore::Slice()),casacore::True)) {
+              chanFlag(chan) = casacore::True;
+          } else {
+              unflaggedChannels++;
+          }
+      }
+  }
+
   if (!itsRefDirValid) {
       // estimate reference direction as the first encountered dish pointing
-      itsReferenceDir = acc.dishPointing1()[0];
+      int i = 0;
+      if (!itsUseFlagged) {
+          for (casacore::uInt row = 0; row < acc.nRow(); row++) {
+              if (!rowFlag(row)) {
+                  i = row;
+                  break;
+              }
+          }
+      }
+      itsReferenceDir = acc.dishPointing1()[i];
       itsRefDirValid = true;
   }
-  
+
   const casacore::Vector<casacore::MVDirection> &pointingDir = acc.pointingDir1();
   //ASKAPLOG_DEBUG_STR(logger, "referenceDir = "<<printDirection(itsReferenceDir));
+  bool first = true;
   for (casacore::uInt row=0; row < acc.nRow(); ++row) {
+      if (!itsUseFlagged && rowFlag(row)) {
+          continue;
+      }
        const std::pair<double,double> offsets = getOffsets(pointingDir[row]);
-       if ( (itsNVis == 0ul) && (row == 0) ) {
+       if ( (itsNVis == 0ul) && first ) {
             itsFieldBLC = itsFieldTRC = offsets;
+            first = false;
        } else {
             if (itsFieldBLC.first > offsets.first) {
                 itsFieldBLC.first = offsets.first;
@@ -290,16 +350,41 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
             }
             if (itsFieldTRC.second < offsets.second) {
                 itsFieldTRC.second = offsets.second;
-            }            
+            }
        }
   }
-  ASKAPLOG_DEBUG_STR(logger, "after iteration over "<<acc.nRow()<<" rows blc: "<<std::setprecision(15)<<itsFieldBLC.first<<" "<<itsFieldBLC.second<<" trc: "<<itsFieldTRC.first<<" "<<itsFieldTRC.second);
-  
-  const double currentMaxFreq = casacore::max(acc.frequency());
-  const double currentMinFreq = casacore::min(acc.frequency());
-  const casacore::uInt currentMaxAntennaIndex = casacore::max(casacore::max(acc.antenna1()), casacore::max(acc.antenna2()));
-  const casacore::uInt currentMaxBeamIndex = casacore::max(casacore::max(acc.feed1()), casacore::max(acc.feed2()));
-  
+  //ASKAPLOG_DEBUG_STR(logger, "after iteration over "<<acc.nRow()<<" rows blc: "<<std::setprecision(15)<<itsFieldBLC.first<<" "<<itsFieldBLC.second<<" trc: "<<itsFieldTRC.first<<" "<<itsFieldTRC.second);
+  double currentMaxFreq = 0;
+  double currentMinFreq = -1;
+  for (casacore::uInt chan = 0; chan < nChan; chan++) {
+      if (!itsUseFlagged && chanFlag(chan)) {
+          continue;
+      }
+      const double freq = acc.frequency()(chan);
+      if (freq > currentMaxFreq) {
+          currentMaxFreq = freq;
+      }
+      if (currentMinFreq < 0 || freq < currentMinFreq ) {
+          currentMinFreq = freq;
+      }
+  }
+
+  casacore::uInt currentMaxAntennaIndex = 0;
+  casacore::uInt currentMaxBeamIndex = 0;
+  for (casacore::uInt row = 0; row < acc.nRow(); row++) {
+      if (!itsUseFlagged && rowFlag(row)) {
+          continue;
+      }
+      const casacore::uInt ant = casacore::max(acc.antenna1()(row),acc.antenna2()(row));
+      if (ant > currentMaxAntennaIndex) {
+          currentMaxAntennaIndex = ant;
+      }
+      const casacore::uInt beam = casacore::max(acc.feed1()(row),acc.feed2()(row));
+      if (beam > currentMaxBeamIndex) {
+          currentMaxBeamIndex = beam;
+      }
+  }
+
   if (itsNVis == 0ul) {
       itsMinFreq = currentMinFreq;
       itsMaxFreq = currentMaxFreq;
@@ -321,65 +406,138 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
   }
 
   const double reciprocalToShortestWavelength = currentMaxFreq / casacore::C::c;
-  
+
   if (itsAccessorAdapter.tolerance() >=0.) {
       ASKAPCHECK(itsTangentSet, "wtolerance has to be set together with the tangent point!")
-  } 
-  
+  }
+  unsigned long nvis = 0;
   if (itsTangentSet) {
       const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &origUVW = acc.rotatedUVW(itsTangent);
-      
+
       if (itsAccessorAdapter.tolerance() >= 0.) {
           itsAccessorAdapter.associate(acc);
           ASKAPDEBUGASSERT(acc.nRow() == itsAccessorAdapter.nRow());
       }
-                     
-      for (casacore::uInt row=0; row < acc.nRow(); ++row) {
-           const double currentU = casacore::abs(origUVW[row](0)) * reciprocalToShortestWavelength;
-           const double currentV = casacore::abs(origUVW[row](1)) * reciprocalToShortestWavelength;
-           const double currentW = casacore::abs(origUVW[row](2)) * reciprocalToShortestWavelength;
-           
-           if ((itsNVis == 0ul) && (row == 0)) {
-               itsMaxU = currentU;
-               itsMaxV = currentV;
-               itsMaxW = currentW;
-           } else {
-               if (itsMaxU < currentU) {
-                   itsMaxU = currentU;
-               }
-               if (itsMaxV < currentV) {
-                   itsMaxV = currentV;
-               }
-               if (itsMaxW < currentW) {
-                   itsMaxW = currentW;
-               }               
-           }
-      } 
-      if (itsAccessorAdapter.tolerance() >= 0.) {
-          const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = itsAccessorAdapter.rotatedUVW(itsTangent);
-          for (casacore::uInt row=0; row < itsAccessorAdapter.nRow(); ++row) {
-               const double currentResidualW = casacore::abs(uvw[row](2)) * reciprocalToShortestWavelength;
-               if ((itsNVis == 0ul) && (row == 0)) {
-                   itsMaxResidualW = currentResidualW;
-               } else {
-                   if (itsMaxResidualW < currentResidualW) {
+
+      const casacore::Vector<casacore::Double> & freq = acc.frequency();
+      if (itsUseFlagged) {
+          for (casacore::uInt row=0; row < acc.nRow(); ++row) {
+              const double currentU = casacore::abs(origUVW[row](0)) * reciprocalToShortestWavelength;
+              const double currentV = casacore::abs(origUVW[row](1)) * reciprocalToShortestWavelength;
+              const double currentW = casacore::abs(origUVW[row](2)) * reciprocalToShortestWavelength;
+
+              if ((itsNVis == 0ul) && (row == 0)) {
+                  itsMaxU = currentU;
+                  itsMaxV = currentV;
+                  itsMaxW = currentW;
+              } else {
+                  if (itsMaxU < currentU) {
+                      itsMaxU = currentU;
+                  }
+                  if (itsMaxV < currentV) {
+                      itsMaxV = currentV;
+                  }
+                  if (itsMaxW < currentW) {
+                      itsMaxW = currentW;
+                  }
+              }
+              // Have to do this channel by channel to get distribution of W
+              for (casacore::uInt chan=0; chan<nChan; chan++) {
+                  const double reciprocalWavelength = freq(chan) / casacore::C::c;
+                  itsWPercentileCalculator.add(casacore::abs(origUVW[row](2)) * reciprocalWavelength);
+              }
+          }
+          if (itsAccessorAdapter.tolerance() >= 0.) {
+              const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = itsAccessorAdapter.rotatedUVW(itsTangent);
+              for (casacore::uInt row=0; row < itsAccessorAdapter.nRow(); ++row) {
+                   const double currentResidualW = casacore::abs(uvw[row](2)) * reciprocalToShortestWavelength;
+                   if ((itsNVis == 0ul) && (row == 0)) {
                        itsMaxResidualW = currentResidualW;
-                   }               
-               }               
-          }      
-          itsAccessorAdapter.detach();
+                   } else {
+                       if (itsMaxResidualW < currentResidualW) {
+                           itsMaxResidualW = currentResidualW;
+                       }
+                   }
+              }
+              itsAccessorAdapter.detach();
+          }
+      } else {
+          for (casacore::uInt row=0; row < acc.nRow(); ++row) {
+              if (rowFlag(row)) {
+                  continue;
+              }
+              for (casacore::uInt chan=0; chan<nChan; chan++) {
+                  if (chanFlag(chan)) {
+                      continue;
+                  }
+                  nvis++;
+                  const double reciprocalWavelength = freq(chan) / casacore::C::c;
+                  const double currentU = casacore::abs(origUVW[row](0)) * reciprocalWavelength;
+                  const double currentV = casacore::abs(origUVW[row](1)) * reciprocalWavelength;
+                  const double currentW = casacore::abs(origUVW[row](2)) * reciprocalWavelength;
+
+                  if ((itsNVis == 0ul) && first) {
+                      itsMaxU = currentU;
+                      itsMaxV = currentV;
+                      itsMaxW = currentW;
+                      first = false;
+                  } else {
+                      if (itsMaxU < currentU) {
+                          itsMaxU = currentU;
+                      }
+                      if (itsMaxV < currentV) {
+                          itsMaxV = currentV;
+                      }
+                      if (itsMaxW < currentW) {
+                          itsMaxW = currentW;
+                      }
+                  }
+                  itsWPercentileCalculator.add(currentW);
+              }
+          }
+          if (itsAccessorAdapter.tolerance() >= 0.) {
+              const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = itsAccessorAdapter.rotatedUVW(itsTangent);
+              bool first = true;
+              for (casacore::uInt row=0; row < itsAccessorAdapter.nRow(); ++row) {
+                  if (rowFlag(row)) {
+                      continue;
+                  }
+                  for (casacore::uInt chan=0; chan<nChan; chan++) {
+                      if (chanFlag(chan)) {
+                          continue;
+                      }
+                      const double reciprocalWavelength = freq(chan) / casacore::C::c;
+                      const double currentResidualW = casacore::abs(uvw[row](2)) * reciprocalWavelength;
+                       if ((itsNVis == 0ul) && first) {
+                           itsMaxResidualW = currentResidualW;
+                           first = false;
+                       } else {
+                           if (itsMaxResidualW < currentResidualW) {
+                               itsMaxResidualW = currentResidualW;
+                           }
+                       }
+                   }
+              }
+              itsAccessorAdapter.detach();
+          }
       }
   } else {
       // this is the first pass, do the best effort job as exact tangent point is unknown
       const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = acc.uvw();
+      bool first = true;
       for (casacore::uInt row=0; row < acc.nRow(); ++row) {
+           if (!itsUseFlagged && rowFlag(row)) {
+               continue;
+           }
+           nvis += unflaggedChannels;
            const double currentU = casacore::abs(uvw[row](0)) * reciprocalToShortestWavelength;
            const double currentV = casacore::abs(uvw[row](1)) * reciprocalToShortestWavelength;
            const double currentW = casacore::abs(uvw[row](2)) * reciprocalToShortestWavelength;
-           if ((itsNVis == 0ul) && (row == 0)) {
+           if ((itsNVis == 0ul) && first) {
                itsMaxU = currentU;
                itsMaxV = currentV;
                itsMaxW = currentW;
+               first = false;
            } else {
                if (itsMaxU < currentU) {
                    itsMaxU = currentU;
@@ -394,13 +552,16 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
       }
   }
 
-  itsNVis += acc.nRow() * acc.nChannel();
+  if (!itsUseFlagged) {
+      itsNVis += nvis;
+  } else {
+      itsNVis += acc.nRow() * acc.nChannel();
+  }
 }
 
-         
 /// @brief largest residual w-term (for snap-shotting)
 /// @return largest value of residual w in wavelengths
-double VisMetaDataStats::maxResidualW() const 
+double VisMetaDataStats::maxResidualW() const
 {
   ASKAPCHECK(itsAccessorAdapter.tolerance()>=0., "maxResidualW() called for an object not configured for snap-shot imaging");
   return itsMaxResidualW;
@@ -413,23 +574,23 @@ casacore::MVDirection VisMetaDataStats::centre() const {
   const std::pair<double,double>  cnt((itsFieldTRC.first + itsFieldBLC.first) / 2, (itsFieldTRC.second + itsFieldBLC.second) / 2);
   return getOffsetDir(cnt);
 }
-   
+
 /// @brief largest separation of individual pointing from the centre
 /// @return largest offsets from the centre() in radians (measure of the field size)
-std::pair<double,double> VisMetaDataStats::maxOffsets() const 
+std::pair<double,double> VisMetaDataStats::maxOffsets() const
 {
   ASKAPCHECK(itsRefDirValid, "maxOffset() called before any visibility has been processed, nvis="<<nVis());
   const std::pair<double,double>  result((itsFieldTRC.first - itsFieldBLC.first) / 2, (itsFieldTRC.second - itsFieldBLC.second) / 2);
   ASKAPDEBUGASSERT(result.first >= 0.);
   ASKAPDEBUGASSERT(result.second >= 0.);
   return result;
-}  
+}
 
 // helper operators, we can move them to Base if they're found useful somewhere else
 LOFAR::BlobOStream& operator<<(LOFAR::BlobOStream &os, const casacore::MVDirection &dir) {
   os<<dir.get();
   return os;
-} 
+}
 
 LOFAR::BlobIStream& operator>>(LOFAR::BlobIStream &is, casacore::MVDirection &dir) {
   casacore::Vector<casacore::Double> angles;
@@ -439,8 +600,19 @@ LOFAR::BlobIStream& operator>>(LOFAR::BlobIStream &is, casacore::MVDirection &di
   return is;
 }
 
+// helper operators, we can move them to Base if they're found useful somewhere else
+LOFAR::BlobOStream& operator<<(LOFAR::BlobOStream &os, const PercentileCalculator &wpc) {
+  wpc.writeToBlob(os);
+  return os;
+}
+
+LOFAR::BlobIStream& operator>>(LOFAR::BlobIStream &is, PercentileCalculator &wpc) {
+  wpc.readFromBlob(is);
+  return is;
+}
+
 // increment the number when format changes
-#define VIS_META_DATA_STATS_STREAM_VERSION 1
+#define VIS_META_DATA_STATS_STREAM_VERSION 2
 
 /// @brief write the object to a blob stream
 /// @param[in] os the output stream
@@ -451,7 +623,7 @@ void VisMetaDataStats::writeToBlob(LOFAR::BlobOStream& os) const
   ASKAPCHECK(itsFieldBLC.second <= itsFieldTRC.second, "Inconsistent blc and trc prior to send, difference.second="<<std::setprecision(15)<<itsFieldTRC.second - itsFieldBLC.second);
   os.putStart("VisMetaDataStats",VIS_META_DATA_STATS_STREAM_VERSION);
   os<<itsTangent<<itsTangentSet<<itsAccessorAdapter.tolerance()<<(LOFAR::TYPES::uint64)itsNVis<<itsMaxU<<itsMaxV<<itsMaxW<<itsMaxResidualW<<
-    itsMinFreq<<itsMaxFreq<<itsMaxAntennaIndex<<itsMaxBeamIndex<<itsReferenceDir<<itsRefDirValid<<
+  itsWPercentileCalculator<<itsMinFreq<<itsMaxFreq<<itsMaxAntennaIndex<<itsMaxBeamIndex<<itsReferenceDir<<itsRefDirValid<<
     itsFieldBLC.first<<itsFieldBLC.second<<itsFieldTRC.first<<itsFieldTRC.second;
   os.putEnd();
 }
@@ -462,7 +634,7 @@ void VisMetaDataStats::readFromBlob(LOFAR::BlobIStream& is)
 {
   ASKAPCHECK(!itsAccessorAdapter.isAssociated(), "An attempt to de-serialise VisMetaDataStats with accessor adapter in the attached state");
   const int version = is.getStart("VisMetaDataStats");
-  ASKAPCHECK(version == VIS_META_DATA_STATS_STREAM_VERSION, 
+  ASKAPCHECK(version == VIS_META_DATA_STATS_STREAM_VERSION,
        "Attempting to read from a blob stream an object of the wrong version, expected "<<VIS_META_DATA_STATS_STREAM_VERSION<<
        "got "<<version);
   double wtolerance = -1;
@@ -470,9 +642,9 @@ void VisMetaDataStats::readFromBlob(LOFAR::BlobIStream& is)
   is >> itsTangent >> itsTangentSet >> wtolerance >> nVisBuf;
   itsAccessorAdapter = accessors::BestWPlaneDataAccessor(wtolerance, false);
   itsNVis = (unsigned long)nVisBuf;
-  is >> itsMaxU >> itsMaxV >> itsMaxW >> itsMaxResidualW >> itsMinFreq >> itsMaxFreq >> itsMaxAntennaIndex >> itsMaxBeamIndex >>
-        itsReferenceDir >> itsRefDirValid >> itsFieldBLC.first >> itsFieldBLC.second >> itsFieldTRC.first >> itsFieldTRC.second;     
-  is.getEnd();       
+  is >> itsMaxU >> itsMaxV >> itsMaxW >> itsMaxResidualW >> itsWPercentileCalculator >> itsMinFreq >> itsMaxFreq >> itsMaxAntennaIndex >> itsMaxBeamIndex >>
+        itsReferenceDir >> itsRefDirValid >> itsFieldBLC.first >> itsFieldBLC.second >> itsFieldTRC.first >> itsFieldTRC.second;
+  is.getEnd();
   // consistency check
   ASKAPCHECK(itsFieldBLC.first <= itsFieldTRC.first, "Inconsistent blc and trc received, difference.first="<<std::setprecision(15)<<itsFieldTRC.first - itsFieldBLC.first);
   ASKAPCHECK(itsFieldBLC.second <= itsFieldTRC.second, "Inconsistent blc and trc received, difference.second="<<std::setprecision(15)<<itsFieldTRC.second - itsFieldBLC.second);
@@ -485,9 +657,9 @@ void VisMetaDataStats::readFromBlob(LOFAR::BlobIStream& is)
 /// @return square field size in degrees
 double VisMetaDataStats::squareFieldSize(bool forceCentreAtTangent) const
 {
-  
+
   std::pair<double,double> offsets = maxOffsets();
-  
+
   if (itsTangentSet) {
       // do extra checks to ensure maxOffsets give offsets w.r.t. the tangent point
       ASKAPCHECK(itsRefDirValid, "Reference direction is not valid! There likely to be a logic error.");
@@ -497,11 +669,11 @@ double VisMetaDataStats::squareFieldSize(bool forceCentreAtTangent) const
           offsets.second = casacore::max(itsFieldBLC.second, itsFieldTRC.second);
       }
   }
-    
+
   // primary beam fwhm for a 12m antenna
   const double longestWavelength = casacore::C::c / minFreq(); // in metres
   const double pbFWHM = 1.2 * longestWavelength / 12; // in radians
-  // the guard band (both sides together) is 1.7*FWHM (roughly to the first null)  
+  // the guard band (both sides together) is 1.7*FWHM (roughly to the first null)
   const double sizeInRad =  2. * casacore::max(offsets.first, offsets.second) + 1.7 * pbFWHM;
   return sizeInRad / casacore::C::pi * 180.;
 }
@@ -512,13 +684,12 @@ double VisMetaDataStats::squareFieldSize(bool forceCentreAtTangent) const
 double VisMetaDataStats::squareCellSize() const
 {
   const double largestSpacing = casacore::max(maxU(), maxV());
-  // Nyquist sampling corresponds to 1/2, 1/6 is the minumum used in practice to achieve a reasonable image quality 
+  // Nyquist sampling corresponds to 1/2, 1/6 is the minumum used in practice to achieve a reasonable image quality
   const double cellSizeInRad = 1./largestSpacing/6.;
-  return cellSizeInRad / casacore::C::pi * 6.48e5; 
+  return cellSizeInRad / casacore::C::pi * 6.48e5;
 }
 
 
 } // namespace synthesis
 
 } // namespace askap
-

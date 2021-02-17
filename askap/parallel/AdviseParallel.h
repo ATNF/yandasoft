@@ -47,26 +47,34 @@ namespace synthesis {
 /// and aggregating the result. Most non-trivial actions happen in the parallel mode.
 /// @note It may be a bit untidy to derive this class from MEParallelApp just to reuse a bunch of existing code,
 /// but some subtle features like frequency conversion setup may come handy in the future. The goal is that it should
-/// work with only the single parameter present in the parset which describes the measurement set(s). 
+/// work with only the single parameter present in the parset which describes the measurement set(s).
 /// @ingroup parallel
-class AdviseParallel : public MEParallelApp 
+class AdviseParallel : public MEParallelApp
 {
 public:
    /// @brief Constructor from ParameterSet
    /// @details The parset is used to construct the internal state. We could
    /// also support construction from a python dictionary (for example).
-   /// The command line inputs are needed solely for MPI - currently no
-   /// application specific information is passed on the command line.
-   /// @param comms communication object 
+   /// @param comms communication object
    /// @param parset ParameterSet for inputs
    AdviseParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
+
+   /// @brief initialise from parset
+   /// @details Initialise internal state from parset
+   void init(const LOFAR::ParameterSet& parset);
 
    /// @brief make the estimate
    /// @details This method iterates over one or more datasets, accumulates and aggregates statistics. If
    /// tangent point is not defined, two iterations are performed. The first one is to estimate the tangent
-   /// point and the second to obtain  
+   /// point and the second to obtain statistics
    void estimate();
-   
+
+   /// @brief make the estimate using given parset
+   /// @details This method iterates over one or more datasets, accumulates and aggregates statistics. If
+   /// tangent point is not defined, two iterations are performed. The first one is to estimate the tangent
+   /// point and the second to obtain statistics
+   void estimate(const LOFAR::ParameterSet& parset) { init(parset); estimate();};
+
    /// @brief perform the accumulation for the given dataset
    /// @details This method iterates over the given dataset, predicts visibilities according to the
    /// model and subtracts these model visibilities from the original visibilities in the dataset.
@@ -74,14 +82,14 @@ public:
    /// All actual calculations are done inside this helper method.
    /// @param[in] ms measurement set name
    void calcOne(const std::string &ms);
-      
+
    /// @brief calculate "normal equations", i.e. statistics for this dataset
    virtual void calcNE();
-     
+
    /// @brief summarise stats into log
    /// @details This method just summarises all stats accumulated in the call to estimate() method
    /// into log. Nothing is done for worker process.
-   void summary() const; 
+   void summary() const;
 
    // stubs for pure virtual methods which we don't use
 
@@ -97,15 +105,15 @@ public:
    /// @note An exception is thrown if the estimator is not defined or the method is called from
    /// worker process.
    const VisMetaDataStats& estimator() const;
-   
+
 protected:
-   
+
    /// @brief a hopefully temporary method to define missing fields in parset
    /// @details We reuse some code for general synthesis application, but it requires some
    /// parameters (like gridder) to be defined. This method fills the parset with stubbed fields.
    /// Hopefully, it is a temporary approach.
    /// @param parset ParameterSet for inputs
-   /// @return new parset 
+   /// @return new parset
    static LOFAR::ParameterSet addMissingFields(const LOFAR::ParameterSet& parset);
 
 
@@ -115,22 +123,31 @@ protected:
    /// This helper method encapsulates all actions required to broadcast statistics estimator from
    /// the master to all workers.
    void broadcastStatistics();
-        
+
 private:
-   
+
    /// @brief optional tangent point
    /// @details Desired tangent point may be given up front. It changes the statistics slightly.
    casacore::MVDirection itsTangent;
-   
+
    /// @brief true, if tangent point is defined
    bool itsTangentDefined;
-   
+
    /// @brief w-tolerance for snap-shot imaging
    /// @details Or a negative value if no snap-shot imaging is required.
    double itsWTolerance;
-   
+
+   /// @brief true if flagged data are to be included in the stats
+   bool itsIncludeFlaggedData;
+
+   /// @brief w percentile value to calculate (between 0 and 100)
+   double itsWPercentile;
+
    /// @brief statistics estimator
-  boost::shared_ptr<VisMetaDataStats> itsEstimator;    
+  boost::shared_ptr<VisMetaDataStats> itsEstimator;
+
+  /// @brief local parset copy, to allow override of base parset
+  LOFAR::ParameterSet myParset;
 };
 
 } // namespace synthesis
@@ -138,4 +155,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef SYNTHESIS_ADVISE_PARALLEL_H
-

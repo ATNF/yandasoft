@@ -125,11 +125,11 @@ void CalcCore::doCalc()
         // This is the logic that switches on the combination of channels.
         // Earlier logic has updated the Channels parameter in the parset ....
         bool combineChannels = itsParset.getBool("combinechannels",false);
-        
+
         if (!combineChannels) {
             sel->chooseChannels(1, itsChannel);
         }
-        
+
         IDataConverterPtr conv = ds.createConverter();
         conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
         conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
@@ -207,9 +207,9 @@ casacore::Array<casacore::Complex> CalcCore::getGrid() {
     const string imageName("image"+(*it));
     boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
     return tvg->getGrid();
-} 
+}
 casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
-    
+
     ASKAPCHECK(itsEquation, "Equation not defined");
     ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
@@ -226,11 +226,11 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
     const string imageName("image"+(*it));
     boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getPreconGridder(imageName));
     ASKAPCHECK(tvg,"PreconGridder not defined, make sure preservecf is set to true")
-   
+
     return tvg->getGrid();
 }
 casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
-    
+
     ASKAPCHECK(itsEquation, "Equation not defined");
     ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
@@ -247,7 +247,7 @@ casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
     const string imageName("image"+(*it));
     boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getPSFGridder(imageName));
     ASKAPCHECK(tvg,"PSFGridder not defined")
-   
+
     return tvg->getGrid();
 }
 void CalcCore::calcNE()

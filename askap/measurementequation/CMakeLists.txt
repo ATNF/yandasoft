@@ -33,6 +33,7 @@ MEParsetInterface.cc
 MultiChunkEquation.cc
 NormWienerPreconditioner.cc
 NormalEquationsTypeError.cc
+PercentileCalculator.cc
 PreAvgCalBuffer.cc
 PreAvgCalMEBase.cc
 PreAvgDDCalBuffer.cc
@@ -111,6 +112,7 @@ NormalEquationsTypeError.h
 ParameterizedComponent.h
 ParameterizedMEComponent.h
 ParameterizedMEComponent.tcc
+PercentileCalculator.h
 PreAvgCalBuffer.h
 PreAvgCalMEBase.h
 PreAvgDDCalBuffer.h
