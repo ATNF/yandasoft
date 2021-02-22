@@ -139,15 +139,21 @@ void AdviseDI::prepare() {
     // Read from the configruation the list of datasets to process
     const vector<string> ms = getDatasets();
     ASKAPLOG_INFO_STR(logger,"Data set list is " << ms);
-    unsigned int nWorkers = itsComms.nProcs() - 1;
+    const unsigned int nWorkers = itsComms.nProcs() - 1;
     ASKAPLOG_DEBUG_STR(logger, "nWorkers " << nWorkers);
+    ASKAPCHECK(nWorkers > 0, "This code is intended to be executed in parallel with at least two ranks available");
 
-    unsigned int nWorkersPerGroup = nWorkers/itsComms.nGroups();
-    ASKAPLOG_DEBUG_STR(logger, "nWorkersPerGroup " << nWorkersPerGroup);
-    unsigned int nGroups = itsComms.nGroups();
+    const unsigned int nGroups = itsComms.nGroups();
     ASKAPLOG_DEBUG_STR(logger, "nGroups " << nGroups);
+    ASKAPCHECK(nGroups > 0, "Expect at least one rank group to be available");
+
+    const unsigned int nWorkersPerGroup = nWorkers/nGroups;
+    ASKAPLOG_DEBUG_STR(logger, "nWorkersPerGroup " << nWorkersPerGroup);
+    ASKAPCHECK(nWorkersPerGroup > 0, "The number of workers per group is expected to be positive, i.e. you get less workers than groups");
+
     int nchanpercore = itsParset.getInt32("nchanpercore", 1);
     ASKAPLOG_DEBUG_STR(logger,"nchanpercore " << nchanpercore);
+
     const int nwriters = itsParset.getInt32("nwriters", 1);
     ASKAPLOG_DEBUG_STR(logger,"nwriters " << nwriters);
     frequency_tolerance = itsParset.getDouble("channeltolerance",0.0);
@@ -428,11 +434,14 @@ void AdviseDI::prepare() {
         ASKAPLOG_WARN_STR(logger,"Mismatch: #requested frequencies = "<<itsRequestedFrequencies.size()<<
         ", #workers = "<<nWorkersPerGroup<<", #chan per core = "<<nchanpercore);
         nchanpercore = itsRequestedFrequencies.size()/nWorkersPerGroup;
+        if (nchanpercore == 0) {
+            nchanpercore = 1;
+        }
         ASKAPLOG_WARN_STR(logger,"Trying nchanpercore = "<<nchanpercore);
-        string param = "nchanpercore";
-        string pstr = toString(nchanpercore);
+        const string param = "nchanpercore";
+        const string pstr = toString(nchanpercore);
         ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-        if (itsParset.isDefined("nchanpercore")) {
+        if (itsParset.isDefined(param)) {
             itsParset.replace(param, pstr);
         } else {
             itsParset.add(param, pstr);
