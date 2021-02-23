@@ -124,6 +124,14 @@ protected:
    /// the master to all workers.
    void broadcastStatistics();
 
+   /// @brief set estimator
+   /// @details Normally, the estimator is set inside estimate() call with the right parameters 
+   /// (i.e. depending on whether the tangent point is known or not). For a greater reuse of the code it is
+   /// handy to be able to set a custom estimator and then use calcOne method directly for accumulation. 
+   /// This method sets the estimator (to be reset if estimate() method is called). 
+   /// @param[in] estimator shared pointer to custom estimator to work with
+   void setCustomEstimator(const boost::shared_ptr<VisMetaDataStats> &estimator);
+
 private:
 
    /// @brief optional tangent point
@@ -145,9 +153,6 @@ private:
 
    /// @brief statistics estimator
   boost::shared_ptr<VisMetaDataStats> itsEstimator;
-
-  /// @brief local parset copy, to allow override of base parset
-  LOFAR::ParameterSet itsMyParset;
 };
 
 } // namespace synthesis

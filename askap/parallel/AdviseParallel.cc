@@ -180,7 +180,6 @@ void AdviseParallel::init(const LOFAR::ParameterSet& parset)
    // set w percentile if present
    itsWPercentile = parset.getDouble("wpercentile",99.9)/100.0;
    ASKAPCHECK(itsWPercentile>0 && itsWPercentile<1,"wpercentile value needs to be between 0 and 100");
-   itsMyParset = parset;
    itsNe.reset();
 }
 
@@ -219,6 +218,17 @@ void AdviseParallel::estimate()
    }
    // to synchronise stats held by all workers (wouldn't be necessary if the only thing we wanted was to print summary)
    broadcastStatistics();
+}
+
+/// @brief set estimator
+/// @details Normally, the estimator is set inside estimate() call with the right parameters 
+/// (i.e. depending on whether the tangent point is known or not). For a greater reuse of the code it is
+/// handy to be able to set a custom estimator and then use calcOne method directly for accumulation. 
+/// This method sets the estimator (to be reset if estimate() method is called). 
+/// @param[in] estimator shared pointer to custom estimator to work with
+void AdviseParallel::setCustomEstimator(const boost::shared_ptr<VisMetaDataStats> &estimator)
+{
+   itsEstimator=estimator;
 }
 
 /// @brief helper method to broadcast statistics to all workers
@@ -280,8 +290,8 @@ void AdviseParallel::calcOne(const std::string &ms)
    accessors::IDataSelectorPtr sel=ds.createSelector();
    ASKAPLOG_INFO_STR(logger, "Initialised data selector" );
 
-   sel << itsMyParset;
-   ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << itsMyParset);
+   sel << parset();
+   ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << parset());
    accessors::IDataConverterPtr conv=ds.createConverter();
    ASKAPLOG_INFO_STR(logger, "Initialised converter" );
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
