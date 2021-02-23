@@ -180,7 +180,7 @@ void AdviseParallel::init(const LOFAR::ParameterSet& parset)
    // set w percentile if present
    itsWPercentile = parset.getDouble("wpercentile",99.9)/100.0;
    ASKAPCHECK(itsWPercentile>0 && itsWPercentile<1,"wpercentile value needs to be between 0 and 100");
-   myParset = parset;
+   itsMyParset = parset;
    itsNe.reset();
 }
 
@@ -280,8 +280,8 @@ void AdviseParallel::calcOne(const std::string &ms)
    accessors::IDataSelectorPtr sel=ds.createSelector();
    ASKAPLOG_INFO_STR(logger, "Initialised data selector" );
 
-   sel << myParset;
-   ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << myParset);
+   sel << itsMyParset;
+   ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << itsMyParset);
    accessors::IDataConverterPtr conv=ds.createConverter();
    ASKAPLOG_INFO_STR(logger, "Initialised converter" );
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");

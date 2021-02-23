@@ -147,7 +147,7 @@ private:
   boost::shared_ptr<VisMetaDataStats> itsEstimator;
 
   /// @brief local parset copy, to allow override of base parset
-  LOFAR::ParameterSet myParset;
+  LOFAR::ParameterSet itsMyParset;
 };
 
 } // namespace synthesis
