@@ -139,15 +139,21 @@ void AdviseDI::prepare() {
     // Read from the configruation the list of datasets to process
     const vector<string> ms = getDatasets();
     ASKAPLOG_INFO_STR(logger,"Data set list is " << ms);
-    unsigned int nWorkers = itsComms.nProcs() - 1;
+    const unsigned int nWorkers = itsComms.nProcs() - 1;
     ASKAPLOG_DEBUG_STR(logger, "nWorkers " << nWorkers);
+    ASKAPCHECK(nWorkers > 0, "This code is intended to be executed in parallel with at least two ranks available");
 
-    unsigned int nWorkersPerGroup = nWorkers/itsComms.nGroups();
-    ASKAPLOG_DEBUG_STR(logger, "nWorkersPerGroup " << nWorkersPerGroup);
-    unsigned int nGroups = itsComms.nGroups();
+    const unsigned int nGroups = itsComms.nGroups();
     ASKAPLOG_DEBUG_STR(logger, "nGroups " << nGroups);
+    ASKAPCHECK(nGroups > 0, "Expect at least one rank group to be available");
+
+    const unsigned int nWorkersPerGroup = nWorkers/nGroups;
+    ASKAPLOG_DEBUG_STR(logger, "nWorkersPerGroup " << nWorkersPerGroup);
+    ASKAPCHECK(nWorkersPerGroup > 0, "The number of workers per group is expected to be positive, i.e. you get less workers than groups");
+
     int nchanpercore = itsParset.getInt32("nchanpercore", 1);
     ASKAPLOG_DEBUG_STR(logger,"nchanpercore " << nchanpercore);
+
     const int nwriters = itsParset.getInt32("nwriters", 1);
     ASKAPLOG_DEBUG_STR(logger,"nwriters " << nwriters);
     frequency_tolerance = itsParset.getDouble("channeltolerance",0.0);
@@ -428,11 +434,14 @@ void AdviseDI::prepare() {
         ASKAPLOG_WARN_STR(logger,"Mismatch: #requested frequencies = "<<itsRequestedFrequencies.size()<<
         ", #workers = "<<nWorkersPerGroup<<", #chan per core = "<<nchanpercore);
         nchanpercore = itsRequestedFrequencies.size()/nWorkersPerGroup;
+        if (nchanpercore == 0) {
+            nchanpercore = 1;
+        }
         ASKAPLOG_WARN_STR(logger,"Trying nchanpercore = "<<nchanpercore);
-        string param = "nchanpercore";
-        string pstr = toString(nchanpercore);
+        const string param = "nchanpercore";
+        const string pstr = toString(nchanpercore);
         ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-        if (itsParset.isDefined("nchanpercore")) {
+        if (itsParset.isDefined(param)) {
             itsParset.replace(param, pstr);
         } else {
             itsParset.add(param, pstr);
@@ -654,7 +663,7 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     return rtn;
 }
 vector<int> AdviseDI::matchall(int ms_number,
-casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) {
+casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
     /// return all the input channels in the range
     vector<int> matches;
     for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
@@ -706,8 +715,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
     if (isPrepared == true) {
         ASKAPLOG_DEBUG_STR(logger,"Prepared therefore can add frequency label for the output image");
-        std::vector<casacore::MFrequency>::iterator begin_it;
-        std::vector<casacore::MFrequency>::iterator end_it;
+        std::vector<casacore::MFrequency>::const_iterator begin_it;
+        std::vector<casacore::MFrequency>::const_iterator end_it;
 
         ASKAPCHECK(!itsRequestedFrequencies.empty(),"No frequencies requested for ouput");
         begin_it = itsRequestedFrequencies.begin();
@@ -826,10 +835,12 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        }
    }
 
-   if (!extra) return;
+   if (!extra) {
+       return;
+   }
    // test for general missing parameters:
    // if any of these is missing we run the stats
-   string wMaxGridder = ImagerParallel::wMaxAdviceNeeded(parset);
+   const string wMaxGridder = ImagerParallel::wMaxAdviceNeeded(parset);
    bool missing = !parset.isDefined("nUVWMachines");
    missing |= (cellsizeNeeded && !parset.isDefined("Images.cellsize"));
    missing |= (shapeNeeded && !parset.isDefined("Images.shape"));
@@ -867,7 +878,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
        param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
        if (!parset.isDefined(param)) {
-           string pstr = toString(advice.nBeams());
+           const string pstr = toString(advice.nBeams());
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
            parset.add(param, pstr);
        }
@@ -891,24 +902,26 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
            parset.add(param, pstr);
        }
-       string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
+       const string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
        if (gridder!="") {
            param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
            if (!parset.isDefined(param)) {
                // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
                if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
-                   string pstr = toString(advice.maxResidualW()); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+                   const string pstr = toString(advice.maxResidualW()); // could use parset.getString("gridder.snapshotimaging.wtolerance");
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
                    parset.add(param, pstr);
                } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
-                   string pstr = toString(advice.wPercentile());
+                   const string pstr = toString(advice.wPercentile());
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr << " with specified percentile value");
                    parset.add(param, pstr);
                    // if we're setting from percentile, turn on clipping
                    param = "gridder."+gridder+".wmaxclip";
-                   if (!parset.isDefined(param)) parset.add(param, "true");
+                   if (!parset.isDefined(param)) {
+                       parset.add(param, "true");
+                   }
                } else {
-                   string pstr = toString(advice.maxW());
+                   const string pstr = toString(advice.maxW());
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
                    parset.add(param, pstr);
                }
@@ -935,7 +948,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
 
 // Utility function to get dataset names from parset.
-std::vector<std::string> AdviseDI::getDatasets()
+std::vector<std::string> AdviseDI::getDatasets() const
 {
     if (itsParset.isDefined("dataset") && itsParset.isDefined("dataset0")) {
         ASKAPTHROW(std::runtime_error,
@@ -962,9 +975,8 @@ std::vector<std::string> AdviseDI::getDatasets()
 
 /// the adviseDI should be smart enough to tell the difference between a straight list and
 /// actual frequencies .... or is that too different.
-std::vector<double> AdviseDI::getFrequencies() {
+std::vector<double> AdviseDI::getFrequencies() const {
     std::vector<double> f(3,0);
-    std::vector<string> fstr(3,"0");
 
     if (!itsParset.isDefined("Frequencies")) {
     ASKAPLOG_WARN_STR(logger,
@@ -972,11 +984,12 @@ std::vector<double> AdviseDI::getFrequencies() {
 
     }
     else {
-        fstr = itsParset.getStringVector("Frequencies",true);
+        const std::vector<std::string> fstr = itsParset.getStringVector("Frequencies",true);
+        ASKAPCHECK(fstr.size()>=3, "Require at least 3 elements for frequency");
 
-        f[0] = atof(fstr[0].c_str());
-        f[1] = atof(fstr[1].c_str());
-        f[2] = atof(fstr[2].c_str());
+        f[0] = utility::fromString<float>(fstr[0]);
+        f[1] = utility::fromString<float>(fstr[1]);
+        f[2] = utility::fromString<float>(fstr[2]);
          // just a start and stop - assume no averaging
         if (f[2] == 0) {
            ASKAPLOG_WARN_STR(logger,
@@ -987,14 +1000,13 @@ std::vector<double> AdviseDI::getFrequencies() {
     return f;
 }
 
-std::vector<int> AdviseDI::getChannels() {
+std::vector<int> AdviseDI::getChannels() const {
 
     // channels should now behave more like the historical version
     // <nchan> <start> ...
     //
 
     std::vector<int> c(3,0);
-    std::vector<string> cstr(3,"0");
 
     if (!itsParset.isDefined("Channels")) {
     ASKAPLOG_WARN_STR(logger,
@@ -1002,9 +1014,10 @@ std::vector<int> AdviseDI::getChannels() {
         c[2] = -1;
     }
     else {
-        cstr = itsParset.getStringVector("Channels",true);
-        c[0] = atof(cstr[0].c_str());
-        string wild = "%w";
+        const std::vector<std::string> cstr = itsParset.getStringVector("Channels",true);
+        ASKAPCHECK(cstr.size() >= 2, "Require at least two elements for Channels keyword");
+        c[0] = utility::fromString<float>(cstr[0]);
+        const string wild = "%w";
 
         if (cstr[1].compare(wild) == 0) {
             ASKAPLOG_WARN_STR(logger,
@@ -1013,7 +1026,7 @@ std::vector<int> AdviseDI::getChannels() {
             c[2] = -1; // this now images all the channels
         }
         else {
-            c[1] = atoi(cstr[1].c_str());
+            c[1] = utility::fromString<int>(cstr[1]);
             c[2] = 1; // should maybe allow averaging
         }
 
@@ -1068,7 +1081,7 @@ void AdviseDI::updateComms() {
 
 
 }
-std::vector<int> AdviseDI::getBeams()
+std::vector<int> AdviseDI::getBeams() const
 {
     std::vector<int> bs;
 
@@ -1081,7 +1094,8 @@ std::vector<int> AdviseDI::getBeams()
     }
     return bs;
 }
-double AdviseDI::getBaseFrequencyAllocation(int workerNumber) {
+double AdviseDI::getBaseFrequencyAllocation(int workerNumber) const {
+    ASKAPDEBUGASSERT(workerNumber < itsAllocatedFrequencies.size());
     return itsAllocatedFrequencies[workerNumber][0];
 }
 } // namespace synthesis
