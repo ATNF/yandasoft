@@ -58,7 +58,7 @@ class TmergeApp : public askap::Application
                 "ASKAP program to test normal equation merging " << ASKAP_PACKAGE_VERSION);
 
             // initialise an image accumulator
-            imagemath::LinmosAccumulator<double> accumulator;
+            imagemath::LinmosAccumulator<imtype> accumulator;
 
             // initialise an image accessor
             accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
@@ -91,10 +91,10 @@ class TmergeApp : public askap::Application
             for (uInt dim=0; dim<outShape.nelements(); ++dim) {
                 reference[dim] = outCoordSys.referencePixel()[dim];
             }
-            casa::Vector<double> outPSFVec;
-            casa::Vector<double> outPreconVec;
-            casa::Vector<double> outWeightVec(IPosition(1, outShape.product()),0.);
-            casa::Vector<double> outDataVec(IPosition(1, outShape.product()),0.);
+            casa::Vector<imtype> outPSFVec;
+            casa::Vector<imtype> outPreconVec;
+            casa::Vector<imtype> outWeightVec(IPosition(1, outShape.product()),0.);
+            casa::Vector<imtype> outDataVec(IPosition(1, outShape.product()),0.);
             ne->addSlice(paramName, outPSFVec, outWeightVec, outPreconVec,
                          outDataVec, outShape, reference, outCoordSys);
 
@@ -106,23 +106,26 @@ class TmergeApp : public askap::Application
                 // initialise a model and load the current image
                 Params::ShPtr model;
                 model.reset(new Params);
+                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                model->setUseFloat(true);
+                #endif
                 SynthesisParamsHelper::loadImageParameter(*model,paramName,*ci);
                 ASKAPCHECK(model->size()==1, "Expect single images");
                 ASKAPLOG_INFO_STR(logger, "loaded image with " <<
-                    model->value(paramName).nelements() << " nelements");
+                    model->valueT(paramName).nelements() << " nelements");
 
                 // generate a normal equation and add the model
                 ASKAPLOG_INFO_STR(logger, "merging as a normal eq. data vector");
                 ImagingNormalEquations imageNe = ImagingNormalEquations(*model);
-                const casa::IPosition imageShape(model->value(paramName).shape());
+                const casa::IPosition imageShape(model->shape(paramName));
                 for (uInt dim=0; dim<imageShape.nelements(); ++dim) {
                     reference[dim] = coordSys.referencePixel()[dim];
                 }
-                casa::IPosition vecShape(1, model->value(paramName).nelements());
-                casa::Vector<double> inPSFVec;
-                casa::Vector<double> inPreconVec;
-                casa::Vector<double> inWeightVec(vecShape,1.); // overwritten if linmos is used
-                casa::Vector<double> inDataVec(model->value(paramName).reform(vecShape));
+                casa::IPosition vecShape(1, model->valueT(paramName).nelements());
+                casa::Vector<imtype> inPSFVec;
+                casa::Vector<imtype> inPreconVec;
+                casa::Vector<imtype> inWeightVec(vecShape,1.); // overwritten if linmos is used
+                casa::Vector<imtype> inDataVec(model->valueT(paramName).reform(vecShape));
                 imageNe.addSlice(paramName, inPSFVec, inWeightVec, inPreconVec,
                                  inDataVec, imageShape, reference, coordSys);
 
@@ -132,9 +135,9 @@ class TmergeApp : public askap::Application
             }
 
             // recover mosaics for output
-            casa::Array<double> outPix(ne->dataVector(paramName).reform(outShape));
-            casa::Array<double> outWgtPix(ne->normalMatrixDiagonal(paramName).reform(outShape));
-            casa::Array<double> outSenPix(outShape,1.);
+            casa::Array<imtype> outPix(ne->dataVectorT(paramName).reform(outShape));
+            casa::Array<imtype> outWgtPix(ne->normalMatrixDiagonal(paramName).reform(outShape));
+            casa::Array<imtype> outSenPix(outShape,1.);
 
             std::string outName;
             casa::Array<float> scratch(outShape);
@@ -158,7 +161,11 @@ class TmergeApp : public askap::Application
 
             // write accumulated weight image
             outName = paramName+".wgt";
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            scratch = outWgtPix;
+            #else
             casa::convertArray<float, double>(scratch, outWgtPix);
+            #endif
             iacc.create(outName, outShape, outCoordSys);
             iacc.write(outName,scratch);
             iacc.setUnits(outName,units);
@@ -169,7 +176,11 @@ class TmergeApp : public askap::Application
 
             // write accumulated image
             outName = paramName+".img";
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            scratch = outPix;
+            #else
             casa::convertArray<float, double>(scratch, outPix);
+            #endif
             iacc.create(outName, outShape, outCoordSys);
             iacc.write(outName,scratch);
             iacc.setUnits(outName,units);
@@ -194,7 +205,11 @@ class TmergeApp : public askap::Application
 
             // write de-weighted image
             outName = paramName+"_deweighted.img";
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            scratch = outPix;
+            #else
             casa::convertArray<float, double>(scratch, outPix);
+            #endif
             iacc.create(outName, outShape, outCoordSys);
             iacc.write(outName,scratch);
             iacc.setUnits(outName,units);
@@ -213,4 +228,3 @@ int main(int argc, char *argv[])
     TmergeApp app;
     return app.main(argc, argv);
 }
-

@@ -65,7 +65,8 @@ namespace askap
       /// is the parset to be used in derived classes
       /// @param[in] comms communications object
       /// @param[in] parset parameter set
-      SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
+      /// @param[in] useFloat use float params (instead of double)
+      SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset, bool useFloat=false);
 
       virtual ~SynParallel();
 

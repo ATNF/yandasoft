@@ -65,41 +65,48 @@ namespace askap
 
       CPPUNIT_TEST_SUITE(PreconditionerTests);
       CPPUNIT_TEST(testGaussianTaper);
-      CPPUNIT_TEST(testGaussianTaperCache);      
+      CPPUNIT_TEST(testGaussianTaperCache);
       CPPUNIT_TEST_SUITE_END();
 
-      
+
     public:
-        void testGaussianTaperCache() 
+        void testGaussianTaperCache()
         {
           GaussianTaperCache gtc(25.,15.,-M_PI/18.);
           casacore::Array<casacore::Complex> taper = gtc.taper(casacore::IPosition(4,128,128,1,1));
-          
+
           std::vector<std::string> direction(3);
           direction[0]="12h30m00.0";
           direction[1]="-15.00.00.00";
           direction[2]="J2000";
-        
+
           std::vector<int> shape(2,128);
           std::vector<std::string> cellsize(2,"1arcsec");
           casacore::Vector<casacore::Stokes::StokesTypes> stokes(1, casacore::Stokes::I);
-          
+
           scimath::Params params;
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          params.setUseFloat(true);
+          #endif
           SynthesisParamsHelper::add(params,"psf.test",direction,cellsize,shape,false,1.4e9,
                               1.4e9,1,stokes);
-          
+
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          params.update("psf.test",amplitude(taper));
+          #else
           casacore::Array<double> temp(taper.shape());
           casacore::convertArray<double,float>(temp, amplitude(taper));
           params.update("psf.test",temp);
-          
+          #endif
+
           casacore::Vector<casacore::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.test");
           CPPUNIT_ASSERT(fit.nelements() == 3);
           // the cell size is 1 arcsec, so the tolerance of 0.1 arcsec seems good enough
           CPPUNIT_ASSERT(fabs(fit[0].getValue("arcsec")-25.)<0.1);
           CPPUNIT_ASSERT(fabs(fit[1].getValue("arcsec")-15.)<0.1);
           CPPUNIT_ASSERT(fabs(fit[2].getValue("rad") + M_PI/18.)<0.1);
-          
-            
+
+
         }
         void testGaussianTaper()
         {
@@ -108,7 +115,7 @@ namespace askap
           casacore::Array<float> psf(shape), dirty(shape), pcf;
           psf.set(0.); dirty.set(0.);
           dirty(casacore::IPosition(2,64,64)) = 1.;
-          
+
           casacore::IPosition index(2);
           const double fwhm2sigma = sqrt(8.*log(2.));
           for (index[0] = 0; index[0]<128; ++index[0]) {
@@ -120,16 +127,16 @@ namespace askap
                     psf(index) = expFactor;
                }
           }
-  
+
           gtp.doPreconditioning(psf,dirty,pcf);
-          
+
           casacore::ArrayLattice<float> psfLattice(psf);
           casacore::ArrayLattice<casacore::Complex> scratch(psf.shape());
-          scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(psfLattice)));          
+          scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(psfLattice)));
           casacore::LatticeFFT::cfft2d(scratch, true);
           psfLattice.copyData(casacore::LatticeExpr<float> ( real(scratch) ));
-          
-          
+
+
           casacore::LogIO logger;
           casacore::Fit2D fitter(logger);
           casacore::Vector<casacore::Double> param = fitter.estimate(casacore::Fit2D::GAUSSIAN, psf);
@@ -139,15 +146,15 @@ namespace askap
           CPPUNIT_ASSERT(fitter.fit(psf,sigma) == casacore::Fit2D::OK);
           param = fitter.availableSolution();
 
-          /// @todo We need to revisit normalisation factors at some stage, 
+          /// @todo We need to revisit normalisation factors at some stage,
           /// I am still not happy.
           //std::cout<<param<<std::endl;
-          CPPUNIT_ASSERT(param.size() == 6); 
+          CPPUNIT_ASSERT(param.size() == 6);
           CPPUNIT_ASSERT(std::abs(param[1]-64.)<1e-5);
           CPPUNIT_ASSERT(std::abs(param[2]-64.)<1e-5);
           CPPUNIT_ASSERT(std::abs(param[3]-25.)<1);
           CPPUNIT_ASSERT(std::abs(param[4]-15.)<1);
-          CPPUNIT_ASSERT(std::abs(param[5]/M_PI*180.-100.)<1);          
+          CPPUNIT_ASSERT(std::abs(param[5]/M_PI*180.-100.)<1);
         }
     };
 

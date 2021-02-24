@@ -64,7 +64,7 @@ using namespace askap::accessors;
 /// @param comms communication object
 /// @param parset ParameterSet for inputs
 ContSubtractParallel::ContSubtractParallel(askap::askapparallel::AskapParallel& comms,
-      const LOFAR::ParameterSet& parset) : MEParallelApp(comms,parset)
+      const LOFAR::ParameterSet& parset) : MEParallelApp(comms,parset,true)
 {
   // the stub allows to reuse MEParallelApp code although we're not solving
   // for the normal equations here

@@ -35,6 +35,7 @@
 #include <casacore/casa/Arrays/Cube.h>
 
 #include <askap/scimath/fitting/Axes.h>
+#include <askap/scimath/fitting/Params.h>
 
 #include <boost/shared_ptr.hpp>
 #include <askap/dataaccess/IDataAccessor.h>
@@ -57,7 +58,7 @@ namespace askap
 		/// A gridder puts the synthesis data onto a grid and transforms
 		/// as necessary. To allow all the important possibilities, the
 		/// Fourier transforms are performed here rather than externally.
-		/// 
+		///
 		/// There is a separate class for degridding.
 		/// @ingroup gridding
 		class IVisGridder
@@ -69,7 +70,7 @@ namespace askap
 
 			IVisGridder();
 			virtual ~IVisGridder();
-			
+
 			/// Clone a copy of this Gridder
 			virtual ShPtr clone() = 0;
 
@@ -88,54 +89,54 @@ namespace askap
 
 			/// Form the final output image
 			/// @param out Output double precision image or PSF
-			virtual void finaliseGrid(casacore::Array<double>& out) = 0;
+			virtual void finaliseGrid(casacore::Array<imtype>& out) = 0;
 
 			/// Form the sum of the convolution function squared, multiplied by the weights for each
 			/// different convolution function. This is used in the evaluation of the second derivative.
 			/// @param out Output double precision sum of weights images
-			virtual void finaliseWeights(casacore::Array<double>& out) = 0;
+			virtual void finaliseWeights(casacore::Array<imtype>& out) = 0;
 
 			/// @brief Initialise the degridding
 			/// @param axes axes specifications
 			/// @param image Input image: cube: u,v,pol,chan
 			virtual void initialiseDegrid(const scimath::Axes& axes,
-					const casacore::Array<double>& image) = 0;
+					const casacore::Array<imtype>& image) = 0;
 
 			/// @brief Make context-dependant changes to the gridder behaviour
 			/// @param[in] context context description
 			virtual void customiseForContext(const std::string &context) = 0;
-			
+
 			/// @brief set visibility weights
 			/// @param[in] viswt shared pointer to visibility weights
 			virtual void initVisWeights(const IVisWeights::ShPtr &viswt) = 0;
 
             /// @brief Degrid the visibility data.
-            /// @param[in] acc non-const data accessor to work with  
+            /// @param[in] acc non-const data accessor to work with
             virtual void degrid(accessors::IDataAccessor& acc) = 0;
 
 			/// @brief Finalise
 			virtual void finaliseDegrid() = 0;
-			
+
 			/// @brief static method to create gridder
 			/// @details Each gridder should have a static factory method, which is
 			/// able to create a particular type of the gridder and initialise it with
-			/// the parameters taken form the given parset. It is assumed that the 
+			/// the parameters taken form the given parset. It is assumed that the
 			/// method receives a subset of parameters where the gridder name is already
-			/// taken out. 
+			/// taken out.
 			/// @param[in] parset input parset file
-			/// @return a shared pointer to the gridder instance					 
-			/// @note This method just throws an exception in this basic interface. It is 
-			/// added to ensure that all derived classes have this method defined. We have 
+			/// @return a shared pointer to the gridder instance
+			/// @note This method just throws an exception in this basic interface. It is
+			/// added to ensure that all derived classes have this method defined. We have
 			/// to use a static method as opposed to pure virtual function because we plan to use it
 			/// to create a brand new instance of the gridder (and hence no object would
-			/// exist at that stage)	
+			/// exist at that stage)
 			static ShPtr createGridder(const LOFAR::ParameterSet& parset);
-			
+
 			/// @brief check whether the model is empty
 			/// @details A simple check allows us to bypass heavy calculations if the input model
 			/// is empty (all pixels are zero). This makes sense for degridding only.
 			/// @brief true, if the model is empty
-			virtual bool isModelEmpty() const = 0; 
+			virtual bool isModelEmpty() const = 0;
 		};
 	}
 }

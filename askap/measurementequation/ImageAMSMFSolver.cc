@@ -187,7 +187,7 @@ namespace askap
 	else {
 	  ASKAPLOG_INFO_STR(logger, "No Taylor terms will be solved");
 	}
-	const casacore::IPosition imageShape = ip.value(iph.paramName()).shape();
+	const casacore::IPosition imageShape = ip.shape(iph.paramName());
 	const uint nPol = imageShape.nelements()>=3 ? uint(imageShape(2)) : 1;
 	ASKAPLOG_INFO_STR(logger, "There are " << nPol << " polarisation planes to solve" );
 	nParameters += imageShape.product(); // add up the number of pixels for zero order
@@ -195,7 +195,7 @@ namespace askap
 	for (uInt order=1;order<uInt(tmIt->second);++order) {
 	  // make the helper a Taylor term of the given order
 	  iph.makeTaylorTerm(order);
-	  const casacore::IPosition thisShape = ip.value(iph.paramName()).shape();
+	  const casacore::IPosition thisShape = ip.shape(iph.paramName());
 	  const uint thisNPol = thisShape.nelements()>=3 ? uint(thisShape(2)) : 1;
 	  ASKAPCHECK(thisNPol == nPol, "Number of polarisations are supposed to be consistent for all Taylor terms, order="<<
 		     order<<" has "<<thisNPol<<" polarisation planes");
@@ -244,11 +244,11 @@ namespace askap
 	  ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
 	  ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0,
          "Diagonal not present " << zeroOrderParam);
-	  casacore::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
+	  casacore::Vector<imtype> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
 	  // Setup the preconditioner function vector, if it has been defined
 	  ASKAPCHECK(normalEquations().preconditionerSlice().count(zeroOrderParam)>0,
           "Preconditioner function Slice not present for " << zeroOrderParam);
-	  casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(zeroOrderParam)->second);
+	  casacore::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(zeroOrderParam)->second);
 
 	  ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
 
@@ -277,8 +277,12 @@ namespace askap
 	  // should only need the zeroth order for preconditioning, so set that now.
 	  Array<float> pcfZeroArray;
       if (pcf.shape() > 0) {
+        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+        pcfZeroArray = planeIter.getPlane(pcf);
+        #else
         pcfZeroArray.resize(planeIter.planeShape());
 	    casacore::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
+        #endif
       }
 	  for( uInt order=0; order < limit; ++order) {
 	       ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._initcopy");
@@ -301,23 +305,29 @@ namespace askap
 	    if ((order<this->itsNumberTaylor)||(firstcycle)) {
 	      ASKAPCHECK(normalEquations().normalMatrixSlice().count(thisOrderParam)>0,
 			 "PSF Slice for plane="<< plane<<" and order="<<order<<" is not present");
-	      casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
+	      casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          psfLongVec(order).assign(planeIter.getPlane(slice));
+          #else
 	      psfLongVec(order).resize(planeIter.planeShape());
 	      casacore::convertArray<float, double>(psfLongVec(order), planeIter.getPlane(slice));
+          #endif
 	    }
 
 	    // For the dirty images, we need all terms
-	    ASKAPCHECK(normalEquations().dataVector(thisOrderParam).size()>0,
+	    ASKAPCHECK(normalEquations().dataVectorT(thisOrderParam).size()>0,
             "Data vector not present for cube plane="<<plane<<" and order="<<order);
 	    dirtyLongVec(order).resize(planeIter.planeShape());
-	    casacore::Vector<double> dv = normalEquations().dataVector(thisOrderParam);
-	    casacore::convertArray<float, double>(dirtyLongVec(order), planeIter.getPlane(dv));
+        casacore::Vector<imtype> dv = normalEquations().dataVectorT(thisOrderParam);
+	    #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+        dirtyLongVec(order) = planeIter.getPlane(dv);
+        #else
+        casacore::convertArray<float, double>(dirtyLongVec(order), planeIter.getPlane(dv));
+        #endif
 
 	    // For the clean images, we need only the first nTaylor
-	    if(order<this->itsNumberTaylor) {
-	      cleanVec(order).resize(planeIter.planeShape());
-	      casacore::convertArray<float, double>(cleanVec(order),
-						planeIter.getPlane(ip.value(thisOrderParam)));
+	    if(order < this->itsNumberTaylor) {
+            cleanVec(order).assign(planeIter.getPlane(ip.valueF(thisOrderParam)));
 	    }
 	  } // Loop over order
 
@@ -446,35 +456,32 @@ namespace askap
 	  // major cycle
 	  itsCleaners[imageTag]->state()->setCurrentIter(0);
 
-	  for (uInt order=0; order < itsNumberTaylor; ++order) {
-	    if (this->itsNumberTaylor>1) {
-	      ASKAPLOG_INFO_STR(logger, "Solving for Taylor term " << order);
-	      iph.makeTaylorTerm(order);
-	    }
-	    else {
-	      ASKAPLOG_INFO_STR(logger, "No Taylor terms will be solved");
-	    }
-	    const std::string thisOrderParam = iph.paramName();
+      for (uInt order=0; order < itsNumberTaylor; ++order) {
+          if (this->itsNumberTaylor>1) {
+              ASKAPLOG_INFO_STR(logger, "Solving for Taylor term " << order);
+              iph.makeTaylorTerm(order);
+          }
+          else {
+              ASKAPLOG_INFO_STR(logger, "No Taylor terms will be solved");
+          }
+          const std::string thisOrderParam = iph.paramName();
 
-	    if(saveIntermediate()) {
+          if(saveIntermediate()) {
               ASKAPLOG_DEBUG_STR(logger, "Dirty(" << order << ") shape = " << dirtyVec(order).shape());
-	      saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "residual",
-				     unpadImage(dirtyVec(order)), planeIter.position());
+              saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "residual",
+              unpadImage(dirtyVec(order)), planeIter.position());
               if(firstcycle) {
-                ASKAPLOG_DEBUG_STR(logger, "PSF(" << order << ") shape = " << psfVec(order).shape());
-                saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "psf.image",
-                                       unpadImage(psfVec(order)), planeIter.position());
-                if(order==0&&maskArray.nelements()) {
-                  saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "mask", unpadImage(maskArray),
-                                         planeIter.position());
-                }
-	      }
-	    }
-
-            casacore::Array<float> cleanArray(planeIter.planeShape());
-            casacore::convertArray<float, double>(cleanArray, planeIter.getPlane(ip.value(thisOrderParam)));
-            itsCleaners[imageTag]->setModel(cleanArray, order);
-	  } // end of 'order' loop
+                  ASKAPLOG_DEBUG_STR(logger, "PSF(" << order << ") shape = " << psfVec(order).shape());
+                  saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "psf.image",
+                  unpadImage(psfVec(order)), planeIter.position());
+                  if(order==0&&maskArray.nelements()) {
+                      saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "mask", unpadImage(maskArray),
+                      planeIter.position());
+                  }
+              }
+          }
+          itsCleaners[imageTag]->setModel(planeIter.getPlane(ip.valueF(thisOrderParam)), order);
+      } // end of 'order' loop
 
 	  {
          ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._calldeconvolver");
@@ -505,8 +512,8 @@ namespace askap
 	    const std::string thisOrderParam = iph.paramName();
 	    ASKAPLOG_INFO_STR(logger, "About to get model for plane="<<plane<<" Taylor order="<<order<<
 			      " for image "<<tmIt->first);
-	    planeIter.getPlane(ip.value(thisOrderParam)).nonDegenerate()=unpadImage(itsCleaners[imageTag]->model(order));
-	  }
+        planeIter.getPlane(ip.valueT(thisOrderParam)).nonDegenerate()=unpadImage(itsCleaners[imageTag]->model(order));
+      }
 	  // add extra parameters (cross-terms) to the to-be-fixed list
 	  for (uInt order = itsNumberTaylor; order<uInt(tmIt->second); ++order) {
 	    // make the helper to correspond to the given order

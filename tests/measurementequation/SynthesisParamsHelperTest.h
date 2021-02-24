@@ -77,6 +77,9 @@ namespace askap
           std::cout << "Starting copyParameter test" << std::endl;
           std::cout << "Building the Global Model" << std::endl;
           askap::scimath::Params SourceParams;
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          SourceParams.setUseFloat(true);
+          #endif
           std::vector<std::string> direction(3);
           direction[0]="12h30m00.0";
           direction[1]="-15.00.00.00";
@@ -108,17 +111,20 @@ namespace askap
           std::cout<<"world: " << world << std::endl;
 
           // setting all the values of the "Global" model to 4.0
-          SourceParams.value("testsrc").set(4.0);
+          SourceParams.valueT("testsrc").set(4.0);
           // will also set a particular sky position to 5.0
           //
           // set a pixel iterator that does not have the higher dimensions
           casacore::IPosition pos(4,int(SourceShape[0]/2),int(SourceShape[0]/2),0,0);
-          SourceParams.value("testsrc")(pos) = 5.0;
+          SourceParams.valueT("testsrc")(pos) = 5.0;
 
           // this is the local is the local model
           std::cout << "Building the Local Model" << std::endl;
 
           askap::scimath::Params SinkParams;
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          SinkParams.setUseFloat(true);
+          #endif
 
           direction[0]="12h30m00.0";
           direction[1]="-14.00.00.00"; // different poinrinf
@@ -128,7 +134,7 @@ namespace askap
           SynthesisParamsHelper::add(SinkParams,"testsrc",direction,cellsize,SinkShape,false,1.4e9,
                                      1.4e9,1,stokes);
 
-          SinkParams.value("testsrc").set(1.0);
+          SinkParams.valueT("testsrc").set(1.0);
 
           std::cout << "copyImageParameter regidding" << std::endl;
 
@@ -137,7 +143,7 @@ namespace askap
 
           // now lets look at the params
 
-          casacore::Array<double> arr = SinkParams.value("testsrc");
+          casacore::Array<imtype> arr = SinkParams.valueT("testsrc");
           const casacore::IPosition OutShape = arr.shape();
 
           //std::cout << "Global Shape before " << SourceShape[0] << "," << SourceShape[1] << std::endl;
@@ -155,11 +161,11 @@ namespace askap
 
           casacore::IPosition pos2(4,int(blcPixel(0)),int(blcPixel(1)),0,0);
 
-          double before = SourceParams.value("testsrc")(pos);
-          double after = SinkParams.value("testsrc")(pos2);
+          double before = SourceParams.valueT("testsrc")(pos);
+          double after = SinkParams.valueT("testsrc")(pos2);
           std::cout << " Tolerance = " << tol << std::endl;
-          std::cout << " Before = " << SourceParams.value("testsrc")(pos) << std::endl;
-          std::cout << " After = " << SinkParams.value("testsrc")(pos2) << std::endl;
+          std::cout << " Before = " << SourceParams.valueT("testsrc")(pos) << std::endl;
+          std::cout << " After = " << SinkParams.valueT("testsrc")(pos2) << std::endl;
           std::cout << " Before - After == " << before - after << std::endl;
           CPPUNIT_ASSERT(before - after < tol);
 
@@ -229,13 +235,17 @@ namespace askap
         void testGaussianPreconditioner()
         {
            askap::scimath::Params params;
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           params.setUseFloat(true);
+           #endif
+
            makeParameter(params,"psf.testsrc",1);
            const askap::scimath::Axes axes = params.axes("psf.testsrc");
            CPPUNIT_ASSERT(axes.hasDirection());
            casacore::Vector<casacore::Double> increments = axes.directionAxis().increment();
            CPPUNIT_ASSERT(increments.nelements() == 2);
            CPPUNIT_ASSERT(fabs(fabs(increments[0])-fabs(increments[1]))<1e-6);
-           casacore::IPosition shape = params.value("psf.testsrc").shape();
+           casacore::IPosition shape = params.shape("psf.testsrc");
            CPPUNIT_ASSERT(shape.nonDegenerate().nelements() == 2);
            CPPUNIT_ASSERT(shape[0] == shape[1]);
            casacore::Array<float> dirty(shape,0.);
@@ -250,9 +260,13 @@ namespace askap
            gp.doPreconditioning(psfArray,dirty,pcfArray);
 
            // update the parameter
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           params.update("psf.testsrc",psfArray);
+           #else
            casacore::Array<double> temp(psfArray.shape());
            casacore::convertArray<double,float>(temp,psfArray);
            params.update("psf.testsrc",temp);
+           #endif
            //
 
            casacore::Vector<casacore::Quantum<double> > fit = SynthesisParamsHelper::fitBeam(params,0.05,"psf.testsrc");
@@ -271,6 +285,9 @@ namespace askap
         void testFacetCreationAndMerging()
         {
            askap::scimath::Params params;
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           params.setUseFloat(true);
+           #endif
            makeParameter(params,"testsrc",2,128);
            // checking the content
            std::map<std::string,int> facetmap;
@@ -292,11 +309,14 @@ namespace askap
         void testClipImage()
         {
            askap::scimath::Params params;
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           params.setUseFloat(true);
+           #endif
            const int facetStep = 128;
            makeParameter(params,"testsrc",2,facetStep);
-           params.value("testsrc.facet.0.0").set(1.);
+           params.valueT("testsrc.facet.0.0").set(1.);
            SynthesisParamsHelper::clipImage(params,"testsrc.facet.0.0");
-           casacore::Array<double> arr = params.value("testsrc.facet.0.0");
+           casacore::Array<imtype> arr = params.valueT("testsrc.facet.0.0");
            const casacore::IPosition shape = arr.shape();
            ASKAPDEBUGASSERT(shape.nelements()>=2);
            casacore::IPosition index(shape.nelements(),0);
@@ -326,6 +346,9 @@ namespace askap
         void doCoordinateAlignmentTest(const int facetStep, const int nFacets)
         {
            askap::scimath::Params params;
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           params.setUseFloat(true);
+           #endif
            makeParameter(params,"testsrc",nFacets,facetStep);
            // adding a merged image
            SynthesisParamsHelper::add(params,"testsrc",nFacets);
@@ -377,7 +400,7 @@ namespace askap
                      const std::string &patchName, const int patchSize,
                      casacore::IPosition &blc, casacore::IPosition &trc)
         {
-           const casacore::Array<double> fullImage = params.value(fullName);
+           const casacore::Array<imtype> fullImage = params.valueT(fullName);
 
            blc = fullImage.shape();
            trc = fullImage.shape();
@@ -389,7 +412,7 @@ namespace askap
                 trc[i] -= 1;
            }
 
-           const casacore::IPosition patchShape = params.value(patchName).shape();
+           const casacore::IPosition patchShape = params.shape(patchName);
            ASKAPDEBUGASSERT(patchShape.nelements()>=2);
            ASKAPDEBUGASSERT((patchSize<=patchShape[0]) && (patchSize<=patchShape[1]));
 

@@ -51,8 +51,8 @@ using namespace askap::synthesis;
 /// @details sets communication object and parameter set
 /// @param[in] comms communication object
 /// @param[in] parset parameter set
-MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
-   MEParallel(comms,parset), itsDataColName(parset.getString("datacolumn", "DATA")),
+MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset, bool useFloat) :
+   MEParallel(comms,parset,useFloat), itsDataColName(parset.getString("datacolumn", "DATA")),
    itsUVWMachineCacheSize(1), itsUVWMachineCacheTolerance(1e-6)
 {
    // set up image handler, needed for both master and worker

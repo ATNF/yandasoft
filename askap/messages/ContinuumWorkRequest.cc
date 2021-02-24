@@ -109,6 +109,9 @@ void ContinuumWorkRequest::readFromBlob(LOFAR::BlobIStream& is)
     is >> hasParams;
     if (hasParams) {
         itsParams.reset(new askap::scimath::Params());
+        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+        itsParams->setUseFloat(true);
+        #endif
         is >> *itsParams;
     } else {
         itsParams.reset();

@@ -81,7 +81,7 @@ int main(int argc, const char** argv)
         // Put everything in scope to ensure that all destructors are called
         // before the final message
         {
-                    cmdlineparser::Parser parser; // a command line parser
+            cmdlineparser::Parser parser; // a command line parser
             // command line parameter
             cmdlineparser::FlaggedParameter<std::string> inputsPar("-inputs",
                     "tgridding.in");
@@ -94,7 +94,7 @@ int main(int argc, const char** argv)
 
             LOFAR::ParameterSet parset(parsetFile);
             LOFAR::ParameterSet subset(parset.isDefined("Cimager.gridder") ? parset.makeSubset("Cimager.") : parset);
-            
+
             ASKAPLOG_INFO_STR(logger, "Setting up the gridder to test and the model");
             boost::shared_ptr<TestCFGenPerformance> tester = TestCFGenPerformance::createGridder(subset.makeSubset("gridder.AWProject."));
             ASKAPCHECK(tester, "Gridder is not defined");
@@ -103,11 +103,14 @@ int main(int argc, const char** argv)
             std::vector<boost::shared_ptr<TestCFGenPerformance> > testers(nthreads);
             ASKAPLOG_INFO_STR(logger, "Will attempt to run "<<nthreads<<" instances in parallel");
             for (int i=0; i<nthreads; ++i) {
-                 testers[i] = tester->clone(); 
+                 testers[i] = tester->clone();
             }
             #endif
-            { 
+            {
                scimath::Params model;
+               #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+               model.setUseFloat(true);
+               #endif
                boost::shared_ptr<scimath::Params> modelPtr(&model, utility::NullDeleter());
                SynthesisParamsHelper::setUpImages(modelPtr,subset.makeSubset("Images."));
                ASKAPLOG_INFO_STR(logger, "Model contains the following elements: "<<model);
@@ -116,17 +119,17 @@ int main(int argc, const char** argv)
                ASKAPLOG_INFO_STR(logger, "Using "<<names[0]<<" to setup gridder");
                #ifdef _OPENMP
                for (int i=0; i<nthreads; ++i) {
-                    testers[i]->initialiseGrid(model.axes(names[0]),model.value(names[0]).shape(),false);
+                    testers[i]->initialiseGrid(model.axes(names[0]),model.shape(names[0]),false);
                }
                #else
-               tester->initialiseGrid(model.axes(names[0]),model.value(names[0]).shape(),false);            
+               tester->initialiseGrid(model.axes(names[0]),model.shape(names[0]),false);
                #endif
-               // all additional memory used to hold the model is now released 
+               // all additional memory used to hold the model is now released
             }
             #ifdef _OPENMP
             #pragma omp parallel default(shared)
-            { 
-               #pragma omp for 
+            {
+               #pragma omp for
                for (int i=0; i<nthreads; ++i) {
                  testers[i]->run();
                }
@@ -155,4 +158,3 @@ int main(int argc, const char** argv)
 
     return 0;
 }
-

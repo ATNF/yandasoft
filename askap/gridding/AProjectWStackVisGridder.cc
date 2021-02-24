@@ -52,19 +52,19 @@ namespace synthesis {
 
 AProjectWStackVisGridder::AProjectWStackVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
         const double wmax, const int nwplanes, const double,
-        const int overSample, const int maxSupport, const int limitSupport, 
+        const int overSample, const int maxSupport, const int limitSupport,
         const int maxFeeds,
-        const int maxFields, 
+        const int maxFields,
         const double pointingTol, const double paTol,
-        const double freqTol,       
+        const double freqTol,
         const bool frequencyDependent, const std::string& name) :
     AProjectGridderBase(maxFeeds,maxFields,pointingTol, paTol, freqTol),
-    WStackVisGridder(wmax, nwplanes), 
+    WStackVisGridder(wmax, nwplanes),
     itsReferenceFrequency(0.0),
     itsIllumination(illum),
     itsMaxFeeds(maxFeeds), itsMaxFields(maxFields),
     itsFreqDep(frequencyDependent)
-{	
+{
     ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport>0, "Maximum support must be greater than 0")
     ASKAPDEBUGASSERT(itsIllumination);
@@ -110,7 +110,7 @@ void AProjectWStackVisGridder::initialiseSumOfWeights()
 {
     // this method is hopefully just a temporary stub until we figure out a better way of
     // managing a cache of convolution functions. It skips initialisation if itsSupport is
-    // not zero, which means that some initialisation has been done before. 
+    // not zero, which means that some initialisation has been done before.
     // Note, it is not a very good way of doing things!
     if (itsSupport == 0) {
         WStackVisGridder::initialiseSumOfWeights();
@@ -122,17 +122,17 @@ void AProjectWStackVisGridder::initialiseSumOfWeights()
 /// Initialize the indices into the cube.
 void AProjectWStackVisGridder::initIndices(const accessors::IConstDataAccessor& acc) {
     ASKAPTRACE("AProjectWStackVisGridder::initIndices");
-    
+
     // this calculates current field id
     indexField(acc);
 
     const int nSamples = acc.nRow();
-    const int nChan = acc.nChannel();      
+    const int nChan = acc.nChannel();
     const int nPol = acc.nPol();
 
     itsCMap.resize(nSamples, nPol, nChan);
     itsCMap.set(0);
- 
+
     itsGMap.resize(nSamples, nPol, nChan);
     itsGMap.set(0);
 
@@ -161,7 +161,7 @@ void AProjectWStackVisGridder::initIndices(const accessors::IConstDataAccessor& 
                 ASKAPCHECK(index>-1, "CMap index less than zero");
 
                 itsCMap(i, pol, chan) = index;
-                
+
                 /// Calculate the index into the grids
                 itsGMap(i, pol, chan) = getWPlane(w*freq);
             }
@@ -197,10 +197,10 @@ void AProjectWStackVisGridder::initialiseGrid(const scimath::Axes& axes,
 /// @param axes axes specifications
 /// @param image Input image: cube: u,v,pol,chan
 void AProjectWStackVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casacore::Array<double>& image)
+        const casacore::Array<imtype>& image)
 {
     ASKAPTRACE("AProjectWStackVisGridder::initialiseDegrid");
-    WStackVisGridder::initialiseDegrid(axes,image);      
+    WStackVisGridder::initialiseDegrid(axes,image);
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
@@ -228,7 +228,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
     const int nSamples = acc.nRow();
 
     validateCFCache(acc, hasSymmetricIllumination);
-        
+
     casacore::MVDirection out = getImageCentre();
 
     /// We have to calculate the lookup function converting from
@@ -274,7 +274,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 
                 //itsIllumination->getPattern(acc.frequency()[chan], pattern,
                 //        rwSlopes()(0, feed, currentField()),
-                //        rwSlopes()(1, feed, currentField()), 
+                //        rwSlopes()(1, feed, currentField()),
                 //        parallacticAngle);
 
                 /// Now convolve the disk with itself using an FFT
@@ -292,13 +292,13 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                     }
                 }
                 if(peak>0.0) {
-                    pattern.pattern()*=casacore::DComplex(1.0/peak);
+                    pattern.pattern()*=imtypeComplex(1.0/peak);
                 }
                 // The maximum will be 1.0
                 ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casacore::max(pattern.pattern()));
-                scimath::fft2d(pattern.pattern(), true);	
+                scimath::fft2d(pattern.pattern(), true);
                 // Now correct for normalization of FFT
-                pattern.pattern()*=casacore::DComplex(1.0/(double(nx)*double(ny)));
+                pattern.pattern()*=imtypeComplex(1.0/(double(nx)*double(ny)));
                 ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casacore::sum(pattern.pattern()));
 
                 if (itsSupport==0) {
@@ -333,7 +333,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 
                 // Since we are decimating, we need to rescale by the
                 // decimation factor
-                const double rescale=double(itsOverSample*itsOverSample);
+                const imtype rescale=imtype(itsOverSample*itsOverSample);
                 const int cSize=2*itsSupport+1;
                 for (int fracu=0; fracu<itsOverSample; fracu++) {
                     for (int fracv=0; fracv<itsOverSample; fracv++) {
@@ -352,10 +352,10 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                         } // for iy
                         //
                         //ASKAPLOG_DEBUG_STR(logger, "convolution function for channel "<<chan<<
-                        //   " plane="<<plane<<" has an integral of "<<sum(itsConvFunc[plane]));						
+                        //   " plane="<<plane<<" has an integral of "<<sum(itsConvFunc[plane]));
                         //
                     } // for fracv
-                } // for fracu								
+                } // for fracu
             } // for chan
         } // if !isDone
     } // for row
@@ -368,7 +368,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 // 1. For each plane of the convolution function, transform to image plane
 // and multiply by conjugate to get abs value squared.
 // 2. Sum all planes weighted by the weight for that convolution function.
-void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
+void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
 
     ASKAPTRACE("AProjectWStackVisGridder::finaliseWeights");
     ASKAPLOG_DEBUG_STR(logger, "Calculating sum of weights image");
@@ -389,7 +389,7 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
     const int cceny = cny/2;
 
     /// This is the output array before sinc padding
-    casacore::Array<double> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
+    casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
 
     // for debugging
@@ -418,10 +418,10 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
             // so the total field of view is itsOverSample times larger than the
             // original field of view.
             /// Work space
-            casacore::Matrix<casacore::DComplex> thisPlane(cnx, cny);
+            casacore::Matrix<imtypeComplex> thisPlane(cnx, cny);
             thisPlane.set(0.0);
             const std::pair<int,int> cfOffset = getConvFuncOffset(iz);
-            
+
             ASKAPDEBUGASSERT((int(itsConvFunc[plane].nrow()) - 1) / 2 == itsSupport);
             ASKAPDEBUGASSERT(itsConvFunc[plane].nrow() % 2 == 1);
             ASKAPDEBUGASSERT(itsConvFunc[plane].nrow() == itsConvFunc[plane].ncolumn());
@@ -432,19 +432,19 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
 	                 const int yPos = iy + cceny + cfOffset.second;
 	                 if ((xPos<0) || (yPos<0) || (xPos>=int(thisPlane.nrow())) || (yPos>=int(thisPlane.ncolumn()))) {
 	                     continue;
-	                 }                
+	                 }
                      thisPlane(xPos, yPos)=itsConvFunc[plane](ix+itsSupport, iy+itsSupport);
                 }
             }
 
             //	  	  ASKAPLOG_DEBUG_STR(logger, "Convolution function["<< iz << "] peak = "<< peak);
             scimath::fft2d(thisPlane, false);
-            thisPlane*=casacore::DComplex(nx*ny);
+            thisPlane*=imtypeComplex(nx*ny);
             const double peak=real(casacore::max(casacore::abs(thisPlane)));
             // ASKAPLOG_DEBUG_STR(logger, "Transform of convolution function["<< iz << "] peak = "<< peak);
 
             if(peak>0.0) {
-                thisPlane*=casacore::DComplex(1.0/peak);
+                thisPlane*=imtypeComplex(1.0/peak);
             }
 
             // Now we need to cut out only the part inside the field of view
@@ -466,32 +466,32 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<double>& out) {
         } // if has data
     } // loop over convolution functions
     scimath::PaddingUtils::fftPad(cOut, out, paddingFactor());
-    ASKAPLOG_DEBUG_STR(logger, 
-            "Finished finalising the weights, the sum over all convolution functions is "<<totSumWt);	
+    ASKAPLOG_DEBUG_STR(logger,
+            "Finished finalising the weights, the sum over all convolution functions is "<<totSumWt);
 }
 
 int AProjectWStackVisGridder::cIndex(int row, int pol, int chan) {
     return itsCMap(row, pol, chan);
 }
 
-void AProjectWStackVisGridder::correctConvolution(casacore::Array<double>& /*grid*/) {
+void AProjectWStackVisGridder::correctConvolution(casacore::Array<imtype>& /*grid*/) {
 }
 
 /// @brief static method to create gridder
 /// @details Each gridder should have a static factory method, which is
 /// able to create a particular type of the gridder and initialise it with
-/// the parameters taken form the given parset. It is assumed that the 
+/// the parameters taken form the given parset. It is assumed that the
 /// method receives a subset of parameters where the gridder name is already
-/// taken out. 
+/// taken out.
 /// @param[in] parset input parset file
-/// @return a shared pointer to the gridder instance					 
+/// @return a shared pointer to the gridder instance
 IVisGridder::ShPtr AProjectWStackVisGridder::createGridder(const LOFAR::ParameterSet& parset)
 {
   return createAProjectGridder<AProjectWStackVisGridder>(parset);
 }
 
 /// @brief assignment operator (not to be called)
-/// @details It is defined as private, so we can't call it inadvertently 
+/// @details It is defined as private, so we can't call it inadvertently
 /// @param[in] other input object
 /// @return reference to itself
 AProjectWStackVisGridder& AProjectWStackVisGridder::operator=(const AProjectWStackVisGridder &)

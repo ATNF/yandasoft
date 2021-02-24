@@ -65,23 +65,23 @@ namespace askap
 
 				/// Clone a copy of this Gridder
 				virtual IVisGridder::ShPtr clone();
-				
+
 				/// @brief static method to get the name of the gridder
 				/// @details We specify parameters per gridder type in the parset file.
 				/// This method returns the gridder name which should be used to extract
 				/// a subset of parameters for createGridder method.
-				static inline std::string gridderName() { return "SphFunc";}				
-				
+				static inline std::string gridderName() { return "SphFunc";}
+
 				/// @brief static method to create gridder
 			    /// @details Each gridder should have a static factory method, which is
 			    /// able to create a particular type of the gridder and initialise it with
-			    /// the parameters taken form the given parset. It is assumed that the 
+			    /// the parameters taken form the given parset. It is assumed that the
 			    /// method receives a subset of parameters where the gridder name is already
-			    /// taken out. 
+			    /// taken out.
 			    /// @param[in] parset input parset file
 			    /// @return a shared pointer to the gridder instance
 			    static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
-				
+
 
 			protected:
 				/// @brief Initialize the convolution function
@@ -94,23 +94,23 @@ namespace askap
 
 				/// Correct for gridding convolution function
 				/// @param image image to be corrected
-				virtual void correctConvolution(casacore::Array<double>& image);
+				virtual void correctConvolution(casacore::Array<imtype>& image);
 
 				/// Calculate prolate spheroidal function
 				/// @param nu Argument for spheroidal function
 				inline double grdsf(double nu) const { return itsSphFunc(nu); }
-				    
+
 				//double grdsf1(double nu) const;
-				
+
 				/// @brief calculator of spheroidal function
 				scimath::SpheroidalFunction itsSphFunc;
-	
+
 				/// @brief whether to iterpolate the spheroidal function at nu=1
                 /// @details The function is undefined and set to zero at nu=1,
                 /// but that is not the numerical limit. Setting itsInterp true
                 /// will use neighbouring values to estimate it (to 2nd order).
 				bool itsInterp;
-	
+
 				/// @brief iterpolate the spheroidal function at nu=1
                 /// @details The function is undefined and set to zero at nu=1,
                 /// but that is not the numerical limit. Setting itsInterp true
@@ -120,7 +120,7 @@ namespace askap
                 void interpolateEdgeValues(casacore::Vector<T> &func);
 
 			private:
-			
+
 				/// @brief prolate spheroidal alpha parameter
                 double itsAlpha;
 

@@ -76,7 +76,7 @@ namespace askap
       // Now set up monitor
       itsMonitor = boost::shared_ptr<DeconvolverMonitor<Float> >(new DeconvolverMonitor<Float>());
     }
-    
+
     void ImageFistaSolver::configure(const LOFAR::ParameterSet &parset) {
       ASKAPASSERT(this->itsMonitor);
       this->itsMonitor->configure(parset);
@@ -92,7 +92,7 @@ namespace askap
 	defaultScales[2]=16.0;
 	defaultScales[2]=32.0;
 	std::vector<float> scales=parset.getFloatVector("scales", defaultScales);
-	
+
 	ASKAPLOG_INFO_STR(decfistalogger, "Constructing Multiscale basis function with scales " << scales);
         Bool orthogonal=parset.getBool("orthogonal", "false");
 
@@ -100,12 +100,12 @@ namespace askap
                                                                                           orthogonal));
       }
     }
-    
+
     void ImageFistaSolver::init()
     {
       resetNormalEquations();
     }
-    
+
     void ImageFistaSolver::setBasisFunction(BasisFunction<Float>::ShPtr bf) {
       itsBasisFunction=bf;
     }
@@ -115,82 +115,82 @@ namespace askap
     }
 
     /// @brief Solve for parameters, updating the values kept internally
-    /// The solution is constructed from the normal equations. The parameters named 
+    /// The solution is constructed from the normal equations. The parameters named
     /// image* are interpreted as images and solved for.
     /// @param[in] ip current model (to be updated)
     /// @param[in] quality Solution quality information
     bool ImageFistaSolver::solveNormalEquations(askap::scimath::Params& ip, askap::scimath::Quality& quality)
     {
-      
+
       // Solving A^T Q^-1 V = (A^T Q^-1 A) P
       uint nParameters=0;
-      
+
       // Find all the free parameters beginning with image
       vector<string> names(ip.completions("image"));
       map<string, uint> indices;
-      
+
       for (vector<string>::const_iterator  it=names.begin();it!=names.end();it++)
 	{
 	  const std::string name="image"+*it;
 	  if(ip.isFree(name)) {
 	    indices[name]=nParameters;
-	    nParameters+=ip.value(name).nelements();
+	    nParameters+=ip.valueT(name).nelements();
 	  }
 	}
       ASKAPCHECK(nParameters>0, "No free parameters in ImageFistaSolver");
-      
+
       for (map<string, uint>::const_iterator indit=indices.begin();indit!=indices.end();++indit)
 	{
 	  // Axes are dof, dof for each parameter
 	  //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
-	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
+	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
 	       planeIter.hasMore(); planeIter.next()) {
-	    
+
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0,
 		       "Diagonal not present for " << indit->first);
-	    casacore::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
-	    ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
+	    casacore::Vector<imtype> diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+	    ASKAPCHECK(normalEquations().dataVectorT(indit->first).size()>0,
 		       "Data vector not present for " << indit->first);
-	    casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
+	    casacore::Vector<imtype> dv = normalEquations().dataVectorT(indit->first);
 	    ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
 		       "PSF Slice not present for " << indit->first);
-	    casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+	    casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	    ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
                "Preconditioner fuction Slice not present for " << indit->first);
-	    casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
-	    
+	    casacore::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+
 	    if (planeIter.tag()!="") {
 	      // it is not a single plane case, there is something to report
 	      ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
 				" tagged as "<<planeIter.tag());
 	    }
-	    
+
 	    casacore::Array<float> dirtyArray = padImage(planeIter.getPlane(dv));
 	    casacore::Array<float> psfArray = padImage(planeIter.getPlane(slice));
-	    casacore::Array<float> fistaArray = padImage(planeIter.getPlane(ip.value(indit->first)));
-	    casacore::Array<float> maskArray(dirtyArray.shape());
+        casacore::Array<float> fistaArray = padImage(planeIter.getPlane(ip.valueT(indit->first)));
+        casacore::Array<float> maskArray(dirtyArray.shape());
 	    ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
 			      dirtyArray.shape()<<" after padding");
 
 	    // send an anternative preconditioner function, if it isn't empty.
 	    casacore::Array<float> pcfArray;
         if (pcf.shape() > 0) {
-	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());     
+	      ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
 	      pcfArray = padImage(planeIter.getPlane(pcf));
         }
-	    
+
 	    // Precondition the PSF and DIRTY images before solving.
 	    if(doPreconditioning(psfArray,dirtyArray,pcfArray)) {
-	      // Normalize	         
-	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
+	      // Normalize
+	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray,
 			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	      // Store the new PSF in parameter class to be saved to disk later
 	      saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "psf.image", unpadImage(psfArray),
 				     planeIter.position());
 	    } // if there was preconditioning
 	    else {
-	      // Normalize	         
-	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray, 
+	      // Normalize
+	      doNormalization(padDiagonal(planeIter.getPlane(diag)),tol(),psfArray,dirtyArray,
 			      boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	    }
 	    // optionally clip the image and psf if there was padding
@@ -198,28 +198,28 @@ namespace askap
 	    clipImage(dirtyArray);
 	    clipImage(psfArray);
 	    ASKAPLOG_INFO_STR(logger, "Peak data vector flux (derivative) after clipping "<<max(dirtyArray));
-	    
+
 	    // This takes up some memory and we have to ship the residual image out inside
-	    // the parameter class. Therefore, we may not need this functionality in the 
+	    // the parameter class. Therefore, we may not need this functionality in the
 	    // production version (or may need to implement it in a different way).
 	    saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "residual",
 				   unpadImage(dirtyArray), planeIter.position());
-	    
+
 	    // uncomment the code below to save the mask
 	    saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
 				   planeIter.position());
-	    
-	    
-	    
+
+
+
 	    // Startup costs so little it's better to create a new
-	    // deconvolver each time we need it	    
+	    // deconvolver each time we need it
 	    boost::shared_ptr<DeconvolverFista<float, casacore::Complex> >
 	      fistaDec(new DeconvolverFista<float, casacore::Complex>(dirtyArray, psfArray));
-	    ASKAPDEBUGASSERT(fistaDec);     
+	    ASKAPDEBUGASSERT(fistaDec);
 	    fistaDec->setMonitor(itsMonitor);
 	    fistaDec->setControl(itsControl);
 	    fistaDec->setWeight(maskArray);
-	    
+
 	    if(itsBasisFunction) {
 	      itsBasisFunction->initialise(dirtyArray.shape());
 	      fistaDec->setBasisFunction(itsBasisFunction);
@@ -231,19 +231,19 @@ namespace askap
 	    // By convention, iterations are counted from scratch each
 	    // major cycle
 	    fistaDec->state()->setCurrentIter(0);
-	    
+
             fistaDec->setModel(fistaArray);
 
 	    ASKAPLOG_INFO_STR(logger, "Starting FISTA deconvolution");
 	    // FISTA is not incremental so we need to set the
-	    // background image which remains fixed during one 
+	    // background image which remains fixed during one
 	    // deconvolve step
 	    fistaDec->deconvolve();
 	    ASKAPLOG_INFO_STR(logger, "Peak flux of the FISTA image "
 			      << max(fistaDec->model()));
 	    ASKAPLOG_INFO_STR(logger, "Peak residual of FISTA image "
 			      << max(abs(fistaDec->dirty())));
-	    
+
 	    const std::string deconvolverKey = indit->first + planeIter.tag();
 	    const std::string peakResParam = std::string("peak_residual.") + deconvolverKey;
 	    if (ip.has(peakResParam)) {
@@ -252,26 +252,26 @@ namespace askap
 	      ip.add(peakResParam, fistaDec->state()->peakResidual());
 	    }
 	    ip.fix(peakResParam);
-            planeIter.getPlane(ip.value(indit->first)).nonDegenerate() = unpadImage(fistaDec->model());
+            planeIter.getPlane(ip.valueT(indit->first)).nonDegenerate() = unpadImage(fistaDec->model());
 	  } // loop over all planes of the image cube
 	} // loop over map of indices
-      
+
       quality.setDOF(nParameters);
       quality.setRank(0);
       quality.setCond(0.0);
       quality.setInfo("Fista deconvolver");
-      
+
       /// Save the PSF and Weight
-      saveWeights(ip);      
+      saveWeights(ip);
       savePSF(ip);
-      
+
       return true;
     };
-    
+
     Solver::ShPtr ImageFistaSolver::clone() const
     {
       return Solver::ShPtr(new ImageFistaSolver(*this));
     }
-    
+
   }
 }

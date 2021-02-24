@@ -48,7 +48,7 @@ namespace askap
         /// @details A parset file provides a definition of all elements of the
         /// simulation. The worker number can be denoted by the string %w.
         /// Any definition may be redirected to another parset file using
-        /// the definition key. For example, 
+        /// the definition key. For example,
         /// @code
         /// Csimulator.dataset              =       ASKAP_spw_temporal%w.ms
         ///
@@ -118,7 +118,7 @@ namespace askap
             public:
 
                 /// @brief Constructor from ParameterSet
-                /// @details 
+                /// @details
                 /// @param comms communication object
                 /// @param parset ParameterSet for inputs
                 SimParallel(askap::askapparallel::AskapParallel& comms,
@@ -142,19 +142,19 @@ namespace askap
                 /// the visibility data and simulating using a composite model containing
                 /// both components and images. This method replaces the input equation
                 /// with the sum of the input equation and some other equation also passed
-                /// as a parameter. It takes care of equation types and instantiates 
+                /// as a parameter. It takes care of equation types and instantiates
                 /// adapters if necessary.
                 /// @param[in] equation a non-const reference to the shared pointer holding
                 /// an equation to update
                 /// @param[in] other a const reference to the shared pointer holding
                 /// an equation to be added
                 /// @param[in] it iterator over the dataset (this is a legacy of the current
-                /// design of the imaging code, when equation requires an iterator. It should 
+                /// design of the imaging code, when equation requires an iterator. It should
                 /// get away at some stage)
                 /// @note This method can be moved somewhere else, as it may be needed in
                 /// some other places as well
                 static void addEquation(boost::shared_ptr<scimath::Equation> &equation,
-                        const boost::shared_ptr<IMeasurementEquation const> &other, 
+                        const boost::shared_ptr<IMeasurementEquation const> &other,
                         const accessors::IDataSharedIter &it);
 
             protected:
@@ -167,8 +167,8 @@ namespace askap
                 /// @param[in] parset ParameterSet for inputs
                 /// @return noise variance per visibility in Jy
                 double getNoise(const LOFAR::ParameterSet& parset) const;
-                
-            
+
+
                 /// @brief a helper method to corrupt the data (opposite to calibration)
                 /// @details Applying gains require different operations depending on
                 /// the type of the measurement equation (accessor-based or iterator-based).
@@ -177,7 +177,7 @@ namespace askap
                 /// @param[in] equation a non-const reference to the shared pointer holding
                 /// an equation to update
                 /// @param[in] it iterator over the dataset (this is a legacy of the current
-                /// design of the imaging code, when equation requires an iterator. It should 
+                /// design of the imaging code, when equation requires an iterator. It should
                 /// get away at some stage)
                 void corruptEquation(boost::shared_ptr<scimath::Equation> &equation,
                         const accessors::IDataSharedIter &it);
@@ -186,7 +186,7 @@ namespace askap
                 /// @details This is a helper method to read in seed used to set up random number generator.
                 /// It applies nesessary substitution rules.
                 /// @param[in] parname name of the parameter
-                /// @param[in] defval default value (as string)                
+                /// @param[in] defval default value (as string)
                 /// @return seed
                 casacore::Int getSeed(const std::string &parname,const std::string &defval) const;
 
@@ -196,13 +196,13 @@ namespace askap
 
                 /// MeasurementSet pointer - we need this to flush the MS to disk
                 boost::shared_ptr<casacore::MeasurementSet> itsMs;
-                
+
                 /// @brief model is read by the master and distributed?
                 /// @details Depending on the model file name (containing %w or not), the model
                 /// can either be read in the master and distributed across the workers or read
                 /// by workers directly. This data member is true, if the model is read by the master
                 bool itsModelReadByMaster;
-                
+
                 /// @brief ms is written by master?
                 /// @details There are two mode of operations. Each worker can write its own ms
                 /// or workers can send data to the master for writing. This flag determines the
@@ -230,29 +230,29 @@ namespace askap
                 /// Predict data for current model
                 /// @param ds Data set to predict for
                 void predict(const std::string& ds);
-                                
+
                 /// Predict data for current model
                 /// @param it data iterator to store the result to
                 void predict(accessors::IDataSharedIter &it);
 
-                /// @brief noise variance 
+                /// @brief noise variance
                 /// @details If noise is simulated, this field contains the noise variance in Jy^2.
                 /// Otherwise it is negative (i.e. undefined)
                 double itsNoiseVariance;
- 
+
                 /// @brief flag to check parameters for noise calculation
                 /// @details Parameters like integration time, antenna dish sizes and spectral resolution can
                 /// in principle change during the simulated observations. While this can be handle by the measurement
                 /// set, current way to calculate noise implies that consistency checks are sometimes needed after every new scan.
                 /// if this flag is true, such checks are performed.
                 mutable bool itsDoChecksForNoise;
-                
+
                 /// @brief solution source to get calibration data from
                 /// @details This object is initialised by workers. It knows how to
                 /// retrieve calibration solutions (from a parset file, casa table or a database).
                 /// Uninitialised shared pointer means that no calibration is simulated
                 boost::shared_ptr<accessors::ICalSolutionConstSource> itsSolutionSource;
-                
+
         };
 
     }

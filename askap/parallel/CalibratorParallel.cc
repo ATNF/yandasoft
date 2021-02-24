@@ -119,7 +119,7 @@ using namespace askap::askapparallel;
 /// @param[in] parset ParameterSet for inputs
 CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset),
+      MEParallelApp(comms,parset,false),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsSolveBandpassLeakage(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsBeamIndependentLeakages(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
@@ -803,7 +803,7 @@ void CalibratorParallel::solveNE()
           for (std::vector<std::string>::const_iterator it = namesEq.begin();
                it != namesEq.end(); ++it) {
               const std::string parname = *it;
-              localModel.add(parname, itsModel->value(parname));
+              localModel.add(parname, itsModel->valueT(parname));
               // NOTE: We do not fix model parameters here,
               //       and thus will be solving for all unknowns (including the flagged data!).
           }

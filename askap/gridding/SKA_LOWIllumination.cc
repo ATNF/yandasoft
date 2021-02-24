@@ -181,7 +181,7 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
     }
 
     //ASKAPCHECK(sum > 0., "Integral of the aperture should be non-zero");
-    //pattern.pattern() *= casacore::DComplex(1.0/float(sum),0.);
+    //pattern.pattern() *= imtypeComplex(1.0/float(sum),0.);
 
 }
 

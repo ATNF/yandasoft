@@ -98,12 +98,12 @@ namespace askap
                 /// Form the sum of the convolution function squared, multiplied by the weights for each
                 /// different convolution function. This is used in the evaluation of the second derivative.
                 /// @param out Output double precision grid
-                virtual void finaliseWeights(casacore::Array<double>& out);
+                virtual void finaliseWeights(casacore::Array<imtype>& out);
 
                 /*
                 /// Form the final output image or PSF
                 /// @param out Output double precision image or PSF
-                virtual void finaliseGrid(casacore::Array<double>& out);
+                virtual void finaliseGrid(casacore::Array<imtype>& out);
                 */
 
                 /// @brief Initialise the gridding
@@ -118,7 +118,7 @@ namespace askap
                 /// @param axes axes specifications
                 /// @param image Input image: cube: u,v,pol,chan
                 virtual void initialiseDegrid(const scimath::Axes& axes,
-                        const casacore::Array<double>& image);
+                        const casacore::Array<imtype>& image);
 
                 /// @brief static method to get the name of the gridder
                 /// @details We specify parameters per gridder type in the parset file.
@@ -161,7 +161,7 @@ namespace askap
 
                 /// Correct for gridding convolution function
                 /// @param image image to be corrected
-                virtual void correctConvolution(casacore::Array<double>& image);
+                virtual void correctConvolution(casacore::Array<imtype>& image);
 
             private:
                 /// @brief assignment operator (not to be called)

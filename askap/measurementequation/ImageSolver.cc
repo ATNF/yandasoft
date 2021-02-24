@@ -104,7 +104,7 @@ namespace askap
 	/// size before this method is called. Pass a void shared pointer (default) to skip
 	/// mask-related functionality. Hint: use utility::NullDeleter to wrap a shared pointer
 	/// over an existing array reference.
-    float ImageSolver::doNormalization(const casacore::Vector<double>& diag, const float& tolerance,
+    float ImageSolver::doNormalization(const casacore::Vector<imtype>& diag, const float& tolerance,
                       casacore::Array<float>& psf, float psfRefPeak, casacore::Array<float>& dirty,
 				      const boost::shared_ptr<casacore::Array<float> > &mask) const
     {
@@ -238,7 +238,7 @@ namespace askap
         if (ip.isFree(name))
         {
           indices[name]=nParameters;
-          nParameters+=ip.value(name).nelements();
+          nParameters+=ip.valueT(name).nelements();
         }
       }
       ASKAPCHECK(nParameters>0, "No free parameters in ImageSolver");
@@ -247,38 +247,46 @@ namespace askap
           !=indices.end(); indit++) {
         // Axes are dof, dof for each parameter
         //casacore::IPosition arrShape(itsParams->value(indit->first).shape());
-        for (scimath::MultiDimArrayPlaneIter planeIter(ip.value(indit->first).shape());
+        for (scimath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
              planeIter.hasMore(); planeIter.next()) {
 
              ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for solution");
-             casacore::Vector<double>  diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
-             ASKAPCHECK(normalEquations().dataVector(indit->first).size()>0,
+             casacore::Vector<imtype>  diag(normalEquations().normalMatrixDiagonal().find(indit->first)->second);
+             ASKAPCHECK(normalEquations().dataVectorT(indit->first).size()>0,
                  "Data vector not present for solution");
-             casacore::Vector<double> dv = normalEquations().dataVector(indit->first);
+             casacore::Vector<imtype> dv = normalEquations().dataVectorT(indit->first);
 	         ASKAPCHECK(normalEquations().normalMatrixSlice().count(indit->first)>0,
                  "PSF Slice not present");
-             casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
+             casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(indit->first)->second);
 	         ASKAPCHECK(normalEquations().preconditionerSlice().count(indit->first)>0,
                  "Preconditioner Slice not present");
-             casacore::Vector<double> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
+             casacore::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(indit->first)->second);
 
              if (planeIter.tag() != "") {
                  // it is not a single plane case, there is something to report
                  ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
                                            " tagged as "<<planeIter.tag());
              }
-
-	         casacore::Array<float> dirtyArray(planeIter.planeShape());
+             casacore::Array<float> pcfArray;
+	         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+             casacore::Array<float> dirtyArray(planeIter.getPlane(dv).copy());
+             casacore::Array<float> psfArray(planeIter.getPlane(slice).copy());
+             if (pcf.shape() > 0) {
+               ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
+               pcfArray = planeIter.getPlane(pcf.copy());
+             }
+             #else
+             casacore::Array<float> dirtyArray(planeIter.planeShape());
              casacore::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
              casacore::Array<float> psfArray(planeIter.planeShape());
              casacore::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
-             // some preconditioners use the PSF do generate the filter, so only
+             // some preconditioners use the PSF to generate the filter, so only
              // set this up if it is needed.
-             casacore::Array<float> pcfArray;
              if (pcf.shape() > 0) {
                ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
                casacore::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
              }
+             #endif
 
              // Do the preconditioning
              const bool wasPreconditioning = doPreconditioning(psfArray,dirtyArray,pcfArray);
@@ -308,11 +316,15 @@ namespace askap
              }
              // end of the code storing residual image
 
-	         casacore::Vector<double> value(planeIter.getPlaneVector(ip.value(indit->first)));
+             casacore::Vector<imtype> value(planeIter.getPlaneVector(ip.valueT(indit->first)));
              const casacore::Vector<float> dirtyVector(dirtyArray.reform(value.shape()));
+	         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+             value += dirtyVector;
+             #else
              for (uint elem=0; elem<dv.nelements(); ++elem) {
                   value(elem) += dirtyVector(elem);
              }
+             #endif
         } // iteration over image planes (polarisation, spectral channels)
       } // iteration over free image parameters (e.g. facets)
       quality.setDOF(nParameters);
@@ -336,7 +348,7 @@ namespace askap
     /// "psf" or "weights"
     /// @param[in] nePart part of the normal equations to save (map of vectors)
     void ImageSolver::saveNEPartIntoParameter(askap::scimath::Params& ip, const std::string &prefix,
-                      const std::map<std::string, casacore::Vector<double> > &nePart) const
+                      const std::map<std::string, casacore::Vector<imtype> > &nePart) const
     {
       ASKAPTRACE("ImageSolver::saveNEPartIntoParameter");
 
@@ -344,14 +356,14 @@ namespace askap
       const vector<string> names(ip.completions("image"));
       for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
            const std::string name = "image" + *it;
-           std::map<std::string, casacore::Vector<double> >::const_iterator parIt = nePart.find(name);
+           std::map<std::string, casacore::Vector<imtype> >::const_iterator parIt = nePart.find(name);
 
            if (parIt != nePart.end()) {
                std::map<std::string, casacore::IPosition>::const_iterator shpIt = normalEquations().shape().find(name);
                ASKAPDEBUGASSERT(shpIt != normalEquations().shape().end());
                const casacore::IPosition arrShape(shpIt->second);
                std::string parName = prefix + *it;
-               casacore::Array<double> temp(parIt->second.reform(arrShape));
+               casacore::Array<imtype> temp(parIt->second.reform(arrShape));
                if (ip.has(parName)) {
                    ip.update(parName, temp);
                } else {
@@ -382,6 +394,11 @@ namespace askap
       ASKAPCHECK(imgName.size()>5,
                  "Image parameter name should have something appended to word image")
 	  const string parName = prefix + imgName.substr(5);
+      #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+      casacore::Array<float> tmpArr(arr.shape());
+      casacore::convertArray<float,double>(tmpArr,arr);
+      saveArrayIntoParameter(ip, imgName, shape, prefix, tmpArr, pos);
+      #else
 	  if (!ip.has(parName)) {
 	      // create an empty parameter with the full shape
           ASKAPLOG_INFO_STR(logger, "Create an empty parameter " << parName << " with the full shape " << shape);
@@ -389,6 +406,7 @@ namespace askap
 	      ip.add(parName, shape, axes);
 	  }
       ip.update(parName, arr, pos);
+      #endif
     }
 
     /// @brief helper method to save a given array
@@ -405,9 +423,25 @@ namespace askap
               const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr,
               const casacore::IPosition &pos)
     {
+      ASKAPDEBUGTRACE("ImageSolver::saveArrayIntoParameter");
+
+      ASKAPDEBUGASSERT(imgName.find("image")==0);
+      ASKAPCHECK(imgName.size()>5,
+                 "Image parameter name should have something appended to word image")
+  	  const string parName = prefix + imgName.substr(5);
+      #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+  	  if (!ip.has(parName)) {
+  	      // create an empty parameter with the full shape
+            ASKAPLOG_INFO_STR(logger, "Create an empty parameter " << parName << " with the full shape " << shape);
+            scimath::Axes axes(ip.axes(imgName));
+  	      ip.add(parName, shape, axes);
+  	  }
+      ip.update(parName, arr, pos);
+      #else
       casacore::Array<double> tmpArr(arr.shape());
       casacore::convertArray<double,float>(tmpArr,arr);
       saveArrayIntoParameter(ip, imgName, shape, prefix, tmpArr, pos);
+      #endif
     }
 
     /// @note itsPreconditioner is not cloned, only the ShPtr is.

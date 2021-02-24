@@ -29,7 +29,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Tim Cornwell <tim.cornwell@csiro.au>
-/// 
+///
 
 // Include own header file first
 #include <askap/parallel/SynParallel.h>
@@ -76,11 +76,14 @@ namespace askap
   namespace synthesis
   {
 
-    SynParallel::SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) : 
+    SynParallel::SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset, bool useFloat) :
                          itsComms(comms), itsParset(parset)
     {
       itsModel.reset(new Params());
       ASKAPCHECK(itsModel, "Model not defined correctly");
+      #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          itsModel->setUseFloat(useFloat);
+      #endif
 
       // setup frequency frame
       const std::string freqFrame = parset.getString("freqframe","topo");
@@ -95,12 +98,12 @@ namespace askap
           itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::BARY);
       } else {
           ASKAPTHROW(AskapError, "Unsupported frequency frame "<<freqFrame);
-      }    
+      }
       const std::string parString = itsComms.isParallel() ? "parallel" : "serial";
       std::string mwString = itsComms.isWorker() ? "worker" : "master";
       if (itsComms.isWorker() && itsComms.isMaster()) {
           mwString += "&master";
-      } 
+      }
       ASKAPLOG_INFO_STR(logger, "SynParallel in "<<parString<<" mode("<<mwString<<"), rank = "<<itsComms.rank()<<
                         " nProcs="<<itsComms.nProcs());
     }
@@ -143,7 +146,7 @@ namespace askap
             std::vector<std::string> names2distribute;
             std::vector<std::string> names2keep;
             names2distribute.reserve(names.size());
-            names2keep.reserve(names.size());            
+            names2keep.reserve(names.size());
             for (std::vector<std::string>::const_iterator ci = names.begin(); ci!=names.end(); ++ci) {
                  // distribute only parameters starting with "image" for now
                  if (ci->find("image") == 0) {
@@ -164,13 +167,13 @@ namespace askap
                 ASKAPCHECK(names2keep.size() > 0, "The model has too few parameters ("<<
                       names2keep.size()<<")");
             }
-            
+
             std::vector<std::string> currentNames;
             currentNames.reserve(itsComms.nGroups() + nPerGroup - 1 + names2keep.size());
             scimath::Params buffer;
             for (size_t group = 0, index = 0; group<itsComms.nGroups(); ++group, index+=nPerGroup) {
-                 const size_t nPerCurrentGroup = (group + 1 < itsComms.nGroups()) ? 
-                          nPerGroup : names2distribute.size() - index; 
+                 const size_t nPerCurrentGroup = (group + 1 < itsComms.nGroups()) ?
+                          nPerGroup : names2distribute.size() - index;
                  ASKAPDEBUGASSERT((names2distribute.size() > index) || (names2distribute.size() == 0));
                  if (nPerCurrentGroup != nPerGroup) {
                      ASKAPLOG_WARN_STR(logger, "An unbalanced distribution of the model has been detected. "
@@ -234,7 +237,7 @@ namespace askap
             size_t currentGroup = itsComms.nGroups(); // just a flag that group index is not found
             for (size_t group = 0; group< itsComms.nGroups(); ++group) {
                  if (itsComms.inGroup(group)) {
-                     ASKAPCHECK(currentGroup == itsComms.nGroups(), 
+                     ASKAPCHECK(currentGroup == itsComms.nGroups(),
                            "Each worker can belong to one and only one group! "
                            "For some reason it belongs to groups "<<currentGroup<<" and "<<group);
                      currentGroup = group;
@@ -242,7 +245,7 @@ namespace askap
             }
             ASKAPCHECK(currentGroup < itsComms.nGroups(), "The worker at rank="<<itsComms.rank()<<
                        "does not seem to belong to any group!");
-            ASKAPLOG_INFO_STR(logger, 
+            ASKAPLOG_INFO_STR(logger,
                  "Wait to receive from the master a part of the model appropriate for the group "<<
                  currentGroup);
             itsComms.useGroupOfWorkers(currentGroup);
@@ -261,7 +264,7 @@ namespace askap
         ASKAPLOG_DEBUG_STR(logger, "Current model held by the worker: "<<*itsModel);
       }
     }
-      
+
     /// @brief actual implementation of the model broadcast
     /// @details This method is only supposed to be called from the master.
     /// @param[in] model the model to send
@@ -281,8 +284,8 @@ namespace askap
     }
 
     /// @brief actual implementation of the model receive
-    /// @details This method is only supposed to be called from workers. 
-    /// There should be one to one match between the number of calls to 
+    /// @details This method is only supposed to be called from workers.
+    /// There should be one to one match between the number of calls to
     /// broadcastModelImpl and receiveModelImpl.
     /// @param[in] model the model to fill
     void SynParallel::receiveModelImpl(scimath::Params &model)
@@ -300,7 +303,7 @@ namespace askap
         in >> model;
         in.getEnd();
     }
-    
+
     /// @brief helper method to identify model parameters to broadcast
     /// @details We use itsModel to buffer some derived images like psf, weights, etc
     /// which are not required for prediffers. It just wastes memory and CPU time if
@@ -315,7 +318,7 @@ namespace askap
        ASKAPDEBUGASSERT(itsModel);
        return itsModel->names();
     }
-    
+
 
     std::string SynParallel::substitute(const std::string& s) const
     {
@@ -325,13 +328,13 @@ namespace askap
     /// @brief helper method to create and configure gridder
     /// @details It is expected to be called from the constructor of derived classes
     /// @param[in] comms communications object
-    /// @param[in] parset parameter set      
-    IVisGridder::ShPtr SynParallel::createGridder(const askap::askapparallel::AskapParallel& comms, 
+    /// @param[in] parset parameter set
+    IVisGridder::ShPtr SynParallel::createGridder(const askap::askapparallel::AskapParallel& comms,
                            const LOFAR::ParameterSet& parset)
     {
        // Create the gridder using a factory acting on a parameterset
        IVisGridder::ShPtr gridder = VisGridderFactory::make(parset);
-       ASKAPCHECK(gridder, "Gridder is not defined correctly");              
+       ASKAPCHECK(gridder, "Gridder is not defined correctly");
        if (comms.isParallel()) {
            const int rankStoringCF = parset.getInt32("rankstoringcf", 1);
            if (comms.rank() == rankStoringCF) {
@@ -351,26 +354,26 @@ namespace askap
        }
        return gridder;
     }
-    
+
     /// @brief read the models from parset file to the given params object
     /// @details The model can be composed from both images and components. This
     /// method populates Params object by adding model data read from the parset file.
     /// The model is given by shared pointer because the same method can be used for both
     /// simulations and calibration (the former populates itsModel, the latter populates
-    /// itsPerfectModel) 
+    /// itsPerfectModel)
     /// @param[in] pModel shared pointer to the params object (must exist)
     void SynParallel::readModels(const scimath::Params::ShPtr &pModel) const
     {
       ASKAPTRACE("SynParallel::readModels");
 
       ASKAPCHECK(pModel, "model is not initialised prior to call to SynParallel::readModels");
-      
+
       LOFAR::ParameterSet parset(itsParset);
-  
+
       if (itsParset.isDefined("sources.definition")) {
           parset = LOFAR::ParameterSet(substitute(itsParset.getString("sources.definition")));
       }
-      
+
       const std::vector<std::string> sources = parset.getStringVector("sources.names");
       std::set<std::string> loadedImageModels;
       for (size_t i=0; i<sources.size(); ++i) {
@@ -380,21 +383,21 @@ namespace askap
 	       ASKAPCHECK(parset.isDefined(compPar) != parset.isDefined(modelPar),
 	            "The model should be defined with either image (via "<<modelPar<<") or components (via "<<
 	             compPar<<"), not both");
-	       // 
+	       //
            if (parset.isDefined(modelPar)) {
                const std::vector<std::string> vecModels = parset.getStringVector(modelPar);
-               const int nTaylorTerms = parset.getInt32(std::string("sources.")+sources[i]+".nterms",1);                                                      
+               const int nTaylorTerms = parset.getInt32(std::string("sources.")+sources[i]+".nterms",1);
                ASKAPCHECK(nTaylorTerms>0, "Number of Taylor terms is supposed to be a positive number, you gave "<<
                          nTaylorTerms);
                if (nTaylorTerms>1) {
                    ASKAPLOG_INFO_STR(logger,"Simulation from model presented by Taylor series (a.k.a. MFS-model) with "<<
                                nTaylorTerms<<" terms");
-               }              
-               ASKAPCHECK((vecModels.size() == 1) || (int(vecModels.size()) == nTaylorTerms), 
+               }
+               ASKAPCHECK((vecModels.size() == 1) || (int(vecModels.size()) == nTaylorTerms),
                     "Number of model images given by "<<modelPar<<" should be either 1 or one per taylor term, you gave "<<
                     vecModels.size()<<" nTaylorTerms="<<nTaylorTerms);
                ImageParamsHelper iph("image."+sources[i]);
-               // for simulations we don't need cross-terms 
+               // for simulations we don't need cross-terms
                for (int order = 0; order<nTaylorTerms; ++order) {
                     if (nTaylorTerms > 1) {
                         // this is an MFS case, setup Taylor terms
@@ -406,7 +409,7 @@ namespace askap
                         // only base name is given, need to add taylor suffix
                         model += iph.suffix();
                     }
-                                        
+
                     if (std::find(loadedImageModels.begin(),loadedImageModels.end(),model) != loadedImageModels.end()) {
                         ASKAPLOG_INFO_STR(logger, "Model " << model << " has already been loaded, reusing it for "<< sources[i]);
                         if (vecModels.size()!=1) {
@@ -432,7 +435,7 @@ namespace askap
                 }
            }
       }
-      ASKAPLOG_INFO_STR(logger, "Successfully read models");      
+      ASKAPLOG_INFO_STR(logger, "Successfully read models");
     }
   }
 }

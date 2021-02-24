@@ -80,12 +80,11 @@ WProjectVisGridder::WProjectVisGridder(const double wmax,
                                        const int limitSupport,
                                        const std::string& name,
                                        const float alpha,
-                                       const bool useDouble,
                                        const bool shareCF) :
         WDependentGridderBase(wmax, nwplanes, alpha),
         itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
         itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false),
-        itsDoubleCF(useDouble), itsShareCF(shareCF)
+        itsShareCF(shareCF)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport > 0, "Maximum support must be greater than 0")
@@ -109,7 +108,7 @@ WProjectVisGridder::WProjectVisGridder(const WProjectVisGridder &other) :
         itsCutoff(other.itsCutoff), itsLimitSupport(other.itsLimitSupport),
         itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
         itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
-        itsCutoffAbs(other.itsCutoffAbs),itsDoubleCF(other.itsDoubleCF),
+        itsCutoffAbs(other.itsCutoffAbs),
         itsShareCF(other.itsShareCF) {}
 
 
@@ -310,16 +309,12 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
     // We pad here to do sinc interpolation of the convolution
     // function in uv space
-    casacore::Matrix<casacore::DComplex> thisPlane;
-    if (itsDoubleCF) thisPlane.reference(getCFBuffer());
-    casacore::Matrix<casacore::Complex> thisPlaneF;
-    if (!itsDoubleCF) thisPlaneF.reference(getCFBufferF());
+    casacore::Matrix<imtypeComplex> thisPlane(getCFBuffer());
     ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx)||thisPlaneF.nrow() == casacore::uInt(nx));
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny)||thisPlaneF.ncolumn() == casacore::uInt(ny));
 
     for (int iw = 0; iw < nWPlanes(); ++iw) {
-        if (itsDoubleCF) thisPlane.set(0.0);
-        else thisPlaneF.set(0.0);
+        thisPlane.set(0.0);
 
         //const double w = isPSFGridder() ? 0. : 2.0f*casacore::C::pi*getWTerm(iw);
         const double w = 2.0f * casacore::C::pi * getWTerm(iw);
@@ -342,16 +337,10 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     ASKAPDEBUGASSERT(iy - qny / 2 + ny / 2 < ny);
                     ASKAPDEBUGASSERT(ix + nx / 2 >= qnx / 2);
                     ASKAPDEBUGASSERT(iy + ny / 2 >= qny / 2);
-                    if (itsDoubleCF) {
-                        thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
-                        casacore::DComplex(wt * cos(phase), -wt * sin(phase));
-                    } else {
-                        thisPlaneF(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
-                        casacore::Complex(wt * cos(phase), -wt * sin(phase));
-
-                    }
-                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=casacore::DComplex(wt*cos(phase));
+                    thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
+                    imtypeComplex(wt * cos(phase), -wt * sin(phase));
                 }
+                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=imtypeComplex(wt*cos(phase));
             }
         }
 
@@ -361,8 +350,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
         // Now we have to calculate the Fourier transform to get the
         // convolution function in uv space
-        if (itsDoubleCF) scimath::fft2d(thisPlane, true);
-        else scimath::fft2d(thisPlaneF, true);
+        scimath::fft2d(thisPlane, true);
 
         /*
             for (uint xx=0;xx<thisPlane.nrow();++xx) {
@@ -384,7 +372,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         CFSupport cfSupport(itsSupport);
 
         if (isSupportPlaneDependent() || (itsSupport == 0)) {
-            cfSupport = (itsDoubleCF ? extractSupport(thisPlane) : extractSupport(thisPlaneF));
+            cfSupport = extractSupport(thisPlane);
             const int support = cfSupport.itsSize;
 
             ASKAPCHECK(support*itsOverSample < nx / 2,
@@ -435,8 +423,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                         //        conj(thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
                         //              (iy + cfSupport.itsOffsetV) * itsOverSample + fracv + ny / 2));
                         //} else {
-                        itsConvFunc[plane](ix + support, iy + support) =
-                            (itsDoubleCF ? thisPlane(kx, ky): thisPlaneF(kx, ky));
+                        itsConvFunc[plane](ix + support, iy + support) =thisPlane(kx, ky);
                         //}
                     }
                 }
@@ -479,8 +466,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
     ASKAPCHECK(itsSupport > 0, "Support not calculated correctly");
     // we can free up the memory because for WProject gridder this method is called only once!
-    if (itsDoubleCF) itsCFBuffer.reset();
-    else itsCFBufferF.reset();
+    itsCFBuffer.reset();
 
     // Save the CF to the cache
     if (itsShareCF) {
@@ -669,18 +655,10 @@ void WProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
 /// @brief obtain buffer used to create convolution functions
 /// @return a reference to the buffer held as a shared pointer
-casacore::Matrix<casacore::DComplex> WProjectVisGridder::getCFBuffer() const
+casacore::Matrix<imtypeComplex> WProjectVisGridder::getCFBuffer() const
 {
     ASKAPDEBUGASSERT(itsCFBuffer);
     return *itsCFBuffer;
-}
-
-/// @brief obtain buffer used to create convolution functions
-/// @return a reference to the buffer held as a shared pointer
-casacore::Matrix<casacore::Complex> WProjectVisGridder::getCFBufferF() const
-{
-    ASKAPDEBUGASSERT(itsCFBufferF);
-    return *itsCFBufferF;
 }
 
 /// @brief assignment operator

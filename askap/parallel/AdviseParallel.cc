@@ -156,7 +156,7 @@ private:
 /// @param comms communication object
 /// @param parset ParameterSet for inputs
 AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
-    MEParallelApp(comms, addMissingFields(parset)), itsTangentDefined(false)
+    MEParallelApp(comms, addMissingFields(parset),true), itsTangentDefined(false)
 {
    init(parset);
 }
