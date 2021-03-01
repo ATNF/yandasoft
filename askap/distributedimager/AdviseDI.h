@@ -130,6 +130,19 @@ namespace askap {
             /// obtain frequency reference frame
             inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
 
+        protected:
+
+            /// @brief obtain metadata stats for one dataset
+            /// @details Hopefully this is a temporary method until this class (or the whole imager) can be
+            /// redesigned, at least to avoid accessing measurement set from first principles. Currently, this
+            /// method adds to uglyness of the code - it uses the functionality of the base class (i.e. the originally
+            /// written estimator) to get the basic info for a single measurement set without relying on the correct
+            /// parallel distribution. The returned statistics is valid until the next call to this method or until 
+            /// the full parallel advise is done. 
+            /// @param[in] ms measurement set to work with
+            /// @return const reference to the object populated with resulted metadata statistics
+            const VisMetaDataStats& computeVisMetaDataStats(const std::string &ms);
+
         private:
 
             bool isPrepared;

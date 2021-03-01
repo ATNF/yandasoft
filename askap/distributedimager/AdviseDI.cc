@@ -133,6 +133,29 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
     itsWorkUnitCount=0;
 }
 
+/// @brief obtain metadata stats for one dataset
+/// @details Hopefully this is a temporary method until this class (or the whole imager) can be
+/// redesigned, at least to avoid accessing measurement set from first principles. Currently, this
+/// method adds to uglyness of the code - it uses the functionality of the base class (i.e. the originally
+/// written estimator) to get the basic info for a single measurement set without relying on the correct
+/// parallel distribution. The returned statistics is valid until the next call to this method or until 
+/// the full parallel advise is done. 
+/// @param[in] ms measurement set to work with
+/// @return const reference to the object populated with resulted metadata statistics
+const VisMetaDataStats& AdviseDI::computeVisMetaDataStats(const std::string &ms) 
+{
+   // a very basic estimator with all defaults - we currently use it only to get tangent point
+   boost::shared_ptr<VisMetaDataStats> stats(new VisMetaDataStats());
+   // work with this estimator until the next call to this method or until the proper parallel procedure is performed 
+   // via estimate() - note, it seems to be tied down to the original design of cimager and doesn't map on what the 
+   // current imager is doing / its distribution pattern
+   setCustomEstimator(stats);
+   // now analyse given measurement set
+   calcOne(ms);
+   // in principle we could've returned stats as it would be the same, but it is cleaner this way, shared pointer is kept in the base class
+   return estimator();
+}
+
 void AdviseDI::prepare() {
     // this assumes only a sinlge spectral window - must generalise
     ASKAPLOG_INFO_STR(logger,"Running prepare");
@@ -219,7 +242,25 @@ void AdviseDI::prepare() {
         effectiveBW[n].resize(0);
         resolution[n].resize(0);
         centre[n].resize(0);
-    // Open the input measurement set
+
+        
+        /*
+        // MV: the design of this class is very ugly from C++ point of view, it needs to be redesigned to get more
+        // structure if we want to extend it further (or even debug - I suspect the issues I am working with now is
+        // just a tip of an iceberg). Also, it needs to access MSs through standard interfaces and mimic the same access patterns
+        // as the actual imager (or do appropriate estimates). To address the immediate problem of too simplistic interpretation of
+        // MSs, I simply added another iteration through data accessor interface provided by base class (and btw, the association rather than
+        // inheritance may be more appropriate here, with possible refactoring). This essentially would introduce another iteration over 
+        // metadata. But, in this simplistic form, when only tangent point is required, data won't be touched, so hopefully no huge performance
+        // penalty. Besides, this additional code is well encapsulated keeping (additional) technical debt to a minimum.
+        {
+          ASKAPLOG_DEBUG_STR(logger, "Assessing " << ms[n] << " via the standard interfaces, ms.size() = "<<ms.size());
+          const VisMetaDataStats &mdStats = computeVisMetaDataStats(ms[n]);
+        }
+        // 
+        */
+
+        // Open the input measurement set
         ASKAPLOG_DEBUG_STR(logger, "Opening " << ms[n] << " filecount " << n );
         const casacore::MeasurementSet in(ms[n]);
         const casacore::ROMSColumns srcCols(in);
@@ -258,6 +299,16 @@ void AdviseDI::prepare() {
 
         totChanIn = totChanIn + thisChanIn;
 
+        /*
+        // MV: see comments above, this is a somewhat ugly approach to get the correct phase centre
+        itsTangent.push_back(mdStats.centre()); 
+        itsDirVec.push_back(casa::Vector<casacore::MDirection>(1,casacore::MDirection(itsTangent[n], casacore::MDirection::J2000)));
+        const casacore::Vector<casacore::MDirection> oldDirVec(fc.phaseDirMeasCol()(0));
+        ASKAPLOG_DEBUG_STR(logger, "Tangent point for "<<ms[n]<<" : "<<printDirection(itsTangent[n])<<
+                           " (J2000), old way: "<<printDirection(oldDirVec(0).getValue())<<" (J2000)");
+        */
+
+        // the old way to get phase centre/tangent:
         itsDirVec.push_back(fc.phaseDirMeasCol()(0));
         itsTangent.push_back(itsDirVec[n](0).getValue());
 
@@ -544,6 +595,7 @@ void AdviseDI::prepare() {
                         wu.set_localChannel(lc[lc_part]);
                         wu.set_globalChannel(globalChannel);
                         wu.set_dataset(ms[set]);
+                        ASKAPDEBUGASSERT(work < itsAllocatedWork.size());
                         itsAllocatedWork[work].push_back(wu);
                         itsWorkUnitCount++;
                         ASKAPLOG_DEBUG_STR(logger,"MATCH Found desired freq " << thisAllocation[frequency] \
@@ -576,6 +628,8 @@ void AdviseDI::prepare() {
 
                 wu.set_localChannel(-1);
                 wu.set_globalChannel(-1);
+ 
+                ASKAPDEBUGASSERT(work < itsAllocatedWork.size());
                 itsAllocatedWork[work].push_back(wu);
                 itsWorkUnitCount++;
 
@@ -626,6 +680,7 @@ void AdviseDI::prepare() {
     }
     for (int grp = 1; grp < itsComms.nGroups(); grp++) {
         for (int wrk = 0; wrk < nWorkersPerGroup; wrk++) {
+            ASKAPDEBUGASSERT(grp*nWorkersPerGroup + wrk < itsAllocatedWork.size());
             itsAllocatedWork[grp*nWorkersPerGroup+wrk] = itsAllocatedWork[wrk];
 
             itsWorkUnitCount=itsWorkUnitCount + itsAllocatedWork[wrk].size();
@@ -635,14 +690,12 @@ void AdviseDI::prepare() {
         }
     }
 
-
-
-
-
     isPrepared = true;
     ASKAPLOG_DEBUG_STR(logger, "Prepared the advice");
 }
+
 cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
+    ASKAPCHECK(id >= 0 && id < itsAllocatedWork.size(), "Requested work id = "<<id<<" is outside of bounds, itsAllocatedWork.size() = "<<itsAllocatedWork.size());
     cp::ContinuumWorkUnit rtn;
     if (itsAllocatedWork[id].empty() == true) {
         ASKAPLOG_WARN_STR(logger, "Stack is empty for " << id+1);
@@ -770,10 +823,9 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
      param = "Images."+imageNames[img]+".frequency";
      if ( !parset.isDefined(param) && isPrepared == true) {
        const string key="Images."+imageNames[img]+".frequency";
-       char tmp[64];
        // changing this to match adviseParallel
        const double aveFreq = 0.5*(minFrequency+maxFrequency);
-       string val = "["+toString(aveFreq)+","+toString(aveFreq)+"]";
+       const string val = "["+toString(aveFreq)+","+toString(aveFreq)+"]";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << val);
        parset.add(key,val);
      }
