@@ -163,6 +163,8 @@ AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const
 
 void AdviseParallel::init(const LOFAR::ParameterSet& parset)
 {
+   // update the parset in the base class
+   setParset(addMissingFields(parset));
    itsWTolerance = parset.getDouble("wtolerance",-1.);
    if (parset.isDefined("tangent")) {
        const std::vector<std::string> direction = parset.getStringVector("tangent");
@@ -221,10 +223,10 @@ void AdviseParallel::estimate()
 }
 
 /// @brief set estimator
-/// @details Normally, the estimator is set inside estimate() call with the right parameters 
+/// @details Normally, the estimator is set inside estimate() call with the right parameters
 /// (i.e. depending on whether the tangent point is known or not). For a greater reuse of the code it is
-/// handy to be able to set a custom estimator and then use calcOne method directly for accumulation. 
-/// This method sets the estimator (to be reset if estimate() method is called). 
+/// handy to be able to set a custom estimator and then use calcOne method directly for accumulation.
+/// This method sets the estimator (to be reset if estimate() method is called).
 /// @param[in] estimator shared pointer to custom estimator to work with
 void AdviseParallel::setCustomEstimator(const boost::shared_ptr<VisMetaDataStats> &estimator)
 {

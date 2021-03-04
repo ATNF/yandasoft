@@ -44,13 +44,13 @@ namespace askap
 {
   namespace synthesis
   {
-    /// @brief Support for parallel algorithms 
+    /// @brief Support for parallel algorithms
     ///
     /// @details Support for parallel applications in the area.
     /// An application is derived from this abstract base. The model used is that the
     /// application has many workers and one master, running in separate MPI processes
     /// or in one single thread. The master is the master so the number of processes
-    /// is one more than the number of workers. 
+    /// is one more than the number of workers.
     ///
     /// If the number of nodes is 1 then everything occurs in the same process with
     /// no overall for transmission of model.
@@ -60,11 +60,11 @@ namespace askap
     {
   public:
 
-      /// @brief Constructor 
+      /// @brief Constructor
       /// @details The first parameter is needed solely for MPI, the second
       /// is the parset to be used in derived classes
       /// @param[in] comms communications object
-      /// @param[in] parset parameter set      
+      /// @param[in] parset parameter set
       SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
 
       virtual ~SynParallel();
@@ -97,31 +97,35 @@ namespace askap
       /// derived classes (e.g. ImagerParallel) where a different behavior is needed.
       /// @return a vector with parameters to broadcast
       virtual std::vector<std::string> parametersToBroadcast() const;
-  
+
       /// @brief actual implementation of the model broadcast
       /// @details This method is only supposed to be called from the master.
       /// @param[in] model the model to send
       void broadcastModelImpl(const scimath::Params &model);
 
       /// @brief actual implementation of the model receive
-      /// @details This method is only supposed to be called from workers. 
-      /// There should be one to one match between the number of calls to 
+      /// @details This method is only supposed to be called from workers.
+      /// There should be one to one match between the number of calls to
       /// broadcastModelImpl and receiveModelImpl.
       /// @param[in] model the model to fill
       void receiveModelImpl(scimath::Params &model);
-      
-      
+
+
       /// @brief obtain parameter set
       /// @details to be used in derived classes
       /// @return reference to the parameter set object
       inline const LOFAR::ParameterSet& parset() const { return itsParset;}
 
-      /// @brief read the models from parset file to the given params object
+      /// @brief set parameter set
+      /// @details to be used in derived classes
+      /// @param[in] parset the new parameter set to use
+      inline void setParset(const LOFAR::ParameterSet& parset) { itsParset = parset;}
+
       /// @details The model can be composed from both images and components. This
       /// method populates Params object by adding model data read from the parset file.
       /// The model is given by shared pointer because the same method can be used for both
       /// simulations and calibration (the former populates itsModel, the latter populates
-      /// itsPerfectModel) 
+      /// itsPerfectModel)
       /// @param[in] pModel shared pointer to the params object (must exist)
       void readModels(const scimath::Params::ShPtr &pModel) const;
 
@@ -137,17 +141,17 @@ namespace askap
       /// @brief helper method to create and configure gridder
       /// @details It is expected to be called from the constructor of derived classes
       /// @param[in] comms communications object
-      /// @param[in] parset parameter set      
-      static IVisGridder::ShPtr createGridder(const askap::askapparallel::AskapParallel& comms, 
+      /// @param[in] parset parameter set
+      static IVisGridder::ShPtr createGridder(const askap::askapparallel::AskapParallel& comms,
                            const LOFAR::ParameterSet& parset);
   private:
       /// @brief parameter set to get the parameters from
       LOFAR::ParameterSet itsParset;
- 
+
       /// @brief reference frame for frequency
       /// @details We may want to simulate/image in different reference frames.
       /// This field contains the reference frame selected in the parset.
-      casacore::MFrequency::Ref itsFreqRefFrame;    
+      casacore::MFrequency::Ref itsFreqRefFrame;
     };
 
   }
