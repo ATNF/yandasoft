@@ -428,9 +428,9 @@ void ContinuumWorker::compressWorkUnits() {
                 ASKAPLOG_DEBUG_STR(logger, "contiguous channel detected: count " << contiguousCount);
                 startUnit.set_nchan(contiguousCount); // update the nchan count for this workunit
                 // Now need to update the parset details
-                char channelParam[64];
-                sprintf(channelParam, "[%d,%d]", contiguousCount,startUnit.get_localChannel());
-                startParset.replace("Channels",channelParam);
+                string ChannelParam = "["+toString(contiguousCount)+","+toString(startUnit.get_localChannel())+"]";
+                ASKAPLOG_DEBUG_STR(logger, "compressWorkUnit: ChannelParam = "<<ChannelParam);
+                startParset.replace("Channels",ChannelParam);
             }
             else { // no longer contiguous channels reset the count
                 contiguousCount = 0;
@@ -459,9 +459,9 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
 
   // This also needs to set the frequencies and directions for all the images
-  ASKAPLOG_DEBUG_STR(logger, "In processWorkUnit");
+  ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit");
   LOFAR::ParameterSet unitParset = itsParset;
-  ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In process workunit)" << (itsParset.getStringVector("dataset", true)));
+  ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In preProcess workunit)" << (itsParset.getStringVector("dataset", true)));
 
   const bool localsolve = unitParset.getBool("solverpercore", false);
 
@@ -470,8 +470,8 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // Channel numbers are zero based
   const int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
   string ChannelPar = "["+toString(n)+","+toString(wu.get_localChannel())+"]";
-  const bool perbeam = unitParset.getBool("perbeam", true);
 
+  const bool perbeam = unitParset.getBool("perbeam", true);
   if (!perbeam) {
     string param = "beams";
     string bstr = "[" + toString(wu.get_beam()) + "]";
@@ -486,7 +486,15 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
     ChannelPar="[1,0]";
   }
 
-  unitParset.replace("Channels", ChannelPar);
+  // only add channel selection for valid workunits and topo frame
+  // other frames have shifted channel allocations which can't be handled this way
+  // if combinechannels==false the Channel parameter is only used for advise
+  ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
+  unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
+  unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
+  if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
+      unitParset.replace("Channels", ChannelPar);
+  }
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
   itsAdvisor->addMissingParameters(unitParset);
@@ -497,8 +505,8 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   ASKAPLOG_DEBUG_STR(logger, "Storing parset");
   itsParsets.insert(itsParsets.begin(),unitParset);
   // itsParsets.push_back(unitParset);
-  ASKAPLOG_DEBUG_STR(logger, "Finished processWorkUnit");
-  ASKAPLOG_DEBUG_STR(logger, "Parset Reports (leaving processWorkUnit): " << (itsParset.getStringVector("dataset", true)));
+  ASKAPLOG_DEBUG_STR(logger, "Finished preProcessWorkUnit");
+  ASKAPLOG_DEBUG_STR(logger, "Parset Reports (leaving preProcessWorkUnit): " << (itsParset.getStringVector("dataset", true)));
 
 }
 
