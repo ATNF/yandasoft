@@ -182,116 +182,116 @@ TableVisGridder::~TableVisGridder() {
 
     if (itsNumberGridded>0) {
         if (isPSFGridder()) {
-            ASKAPLOG_DEBUG_STR(logger, "TableVisGridder PSF gridding statistics");
-            ASKAPLOG_DEBUG_STR(logger, "   PSF samples gridded       = "
+            ASKAPLOG_INFO_STR(logger, "TableVisGridder PSF gridding statistics");
+            ASKAPLOG_INFO_STR(logger, "   PSF samples gridded       = "
                               << itsSamplesGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (psf)     = "
+            ASKAPLOG_INFO_STR(logger, "   Visibility vectors flagged (psf)     = "
                               << itsVectorsFlagged);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax (psf) = "
+            ASKAPLOG_INFO_STR(logger, "   Visibility vectors with |w|>wmax (psf) = "
                               << itsVectorsWFlagged);
-            ASKAPLOG_DEBUG_STR(logger, "   Total time for PSF gridding   = "
+            ASKAPLOG_INFO_STR(logger, "   Total time for PSF gridding   = "
                 << itsTimeGridded << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   PSF gridding time         = " << 1e6
+            ASKAPLOG_INFO_STR(logger, "   PSF gridding time         = " << 1e6
                  *itsTimeGridded/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time converting for PSF = "
+            ASKAPLOG_INFO_STR(logger, "   Total time converting for PSF = "
                 << itsTimeCoordinates << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time building CFs and indices for PSF = "
+            ASKAPLOG_INFO_STR(logger, "   Total time building CFs and indices for PSF = "
                 << itsTimeConvFunctions << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   PSF coord conversion      = "
+            ASKAPLOG_INFO_STR(logger, "   PSF coord conversion      = "
                   << 1e6 * itsTimeCoordinates/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   PSF CFs and indices      = "
+            ASKAPLOG_INFO_STR(logger, "   PSF CFs and indices      = "
                   << 1e6 * itsTimeConvFunctions/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
-            ASKAPLOG_DEBUG_STR(logger, "   Points gridded (psf)        = "
+            ASKAPLOG_INFO_STR(logger, "   " << GridKernel::info());
+            ASKAPLOG_INFO_STR(logger, "   Points gridded (psf)        = "
                   << itsNumberGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Time per point (psf)        = " << 1e9
+            ASKAPLOG_INFO_STR(logger, "   Time per point (psf)        = " << 1e9
                   *itsTimeGridded/itsNumberGridded << " (ns)");
-            ASKAPLOG_DEBUG_STR(logger, "   Performance for PSF         = "
+            ASKAPLOG_INFO_STR(logger, "   Performance for PSF         = "
                 << 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
         }
         else if (isPCFGridder()) {
-            ASKAPLOG_DEBUG_STR(logger, "TableVisGridder PreConditioner Function gridding statistics");
-            ASKAPLOG_DEBUG_STR(logger, "   PCF samples gridded       = "
+            ASKAPLOG_INFO_STR(logger, "TableVisGridder PreConditioner Function gridding statistics");
+            ASKAPLOG_INFO_STR(logger, "   PCF samples gridded       = "
                               << itsSamplesGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged (pcf)     = "
+            ASKAPLOG_INFO_STR(logger, "   Visibility vectors flagged (pcf)     = "
                               << itsVectorsFlagged);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax (pcf) = "
+            ASKAPLOG_INFO_STR(logger, "   Visibility vectors with |w|>wmax (pcf) = "
                               << itsVectorsWFlagged);
-            ASKAPLOG_DEBUG_STR(logger, "   Total time for PCF gridding   = "
+            ASKAPLOG_INFO_STR(logger, "   Total time for PCF gridding   = "
                 << itsTimeGridded << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   PCF gridding time         = " << 1e6
+            ASKAPLOG_INFO_STR(logger, "   PCF gridding time         = " << 1e6
                  *itsTimeGridded/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time converting for PCF = "
+            ASKAPLOG_INFO_STR(logger, "   Total time converting for PCF = "
                 << itsTimeCoordinates << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time building CFs and indices for PCF = "
+            ASKAPLOG_INFO_STR(logger, "   Total time building CFs and indices for PCF = "
                 << itsTimeConvFunctions << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   PCF coord conversion      = "
+            ASKAPLOG_INFO_STR(logger, "   PCF coord conversion      = "
                   << 1e6 * itsTimeCoordinates/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   PCF CFs and indices      = "
+            ASKAPLOG_INFO_STR(logger, "   PCF CFs and indices      = "
                   << 1e6 * itsTimeConvFunctions/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
-            ASKAPLOG_DEBUG_STR(logger, "   Points gridded (pcf)        = "
+            ASKAPLOG_INFO_STR(logger, "   " << GridKernel::info());
+            ASKAPLOG_INFO_STR(logger, "   Points gridded (pcf)        = "
                   << itsNumberGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Time per point (pcf)        = " << 1e9
+            ASKAPLOG_INFO_STR(logger, "   Time per point (pcf)        = " << 1e9
                   *itsTimeGridded/itsNumberGridded << " (ns)");
-            ASKAPLOG_DEBUG_STR(logger, "   Performance for PCF         = "
+            ASKAPLOG_INFO_STR(logger, "   Performance for PCF         = "
                 << 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
         }
         else {
-            ASKAPLOG_DEBUG_STR(logger, "TableVisGridder gridding statistics");
-            ASKAPLOG_DEBUG_STR(logger, "   Samples gridded       = "
+            ASKAPLOG_INFO_STR(logger, "TableVisGridder gridding statistics");
+            ASKAPLOG_INFO_STR(logger, "   Samples gridded       = "
                          << itsSamplesGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors flagged       = "
+            ASKAPLOG_INFO_STR(logger, "   Visibility vectors flagged       = "
                           << itsVectorsFlagged);
-             ASKAPLOG_DEBUG_STR(logger, "   Visibility vectors with |w|>wmax = "
+             ASKAPLOG_INFO_STR(logger, "   Visibility vectors with |w|>wmax = "
                            << itsVectorsWFlagged);
-            ASKAPLOG_DEBUG_STR(logger, "   Total time gridding   = "
+            ASKAPLOG_INFO_STR(logger, "   Total time gridding   = "
                          << itsTimeGridded << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   Gridding time         = " << 1e6
+            ASKAPLOG_INFO_STR(logger, "   Gridding time         = " << 1e6
                   *itsTimeGridded/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time converting = "
+            ASKAPLOG_INFO_STR(logger, "   Total time converting = "
                 << itsTimeCoordinates << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   Total time building CFs and indices = "
+            ASKAPLOG_INFO_STR(logger, "   Total time building CFs and indices = "
                 << itsTimeConvFunctions << " (s)");
-            ASKAPLOG_DEBUG_STR(logger, "   Coord conversion      = "
+            ASKAPLOG_INFO_STR(logger, "   Coord conversion      = "
                   << 1e6 * itsTimeCoordinates/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   CFs and indices      = "
+            ASKAPLOG_INFO_STR(logger, "   CFs and indices      = "
                   << 1e6 * itsTimeConvFunctions/itsSamplesGridded << " (us) per sample");
-            ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
-            ASKAPLOG_DEBUG_STR(logger, "   Points gridded        = "
+            ASKAPLOG_INFO_STR(logger, "   " << GridKernel::info());
+            ASKAPLOG_INFO_STR(logger, "   Points gridded        = "
                 << itsNumberGridded);
-            ASKAPLOG_DEBUG_STR(logger, "   Time per point        = " << 1e9
+            ASKAPLOG_INFO_STR(logger, "   Time per point        = " << 1e9
                 *itsTimeGridded/itsNumberGridded << " (ns)");
-            ASKAPLOG_DEBUG_STR(logger, "   Performance           = "
+            ASKAPLOG_INFO_STR(logger, "   Performance           = "
                 << 8.0 * 1e-9 * itsNumberGridded/itsTimeGridded << " GFlops");
         }
     }
     if (itsNumberDegridded>0) {
-        ASKAPLOG_DEBUG_STR(logger, "TableVisGridder degridding statistics");
-        ASKAPLOG_DEBUG_STR(logger, "   Samples degridded     = "
+        ASKAPLOG_INFO_STR(logger, "TableVisGridder degridding statistics");
+        ASKAPLOG_INFO_STR(logger, "   Samples degridded     = "
                 << itsSamplesDegridded);
-        ASKAPLOG_DEBUG_STR(logger, "   Total time degridding = "
+        ASKAPLOG_INFO_STR(logger, "   Total time degridding = "
                 << itsTimeDegridded << " (s)");
-        ASKAPLOG_DEBUG_STR(logger, "   Degridding time       = " << 1e6
+        ASKAPLOG_INFO_STR(logger, "   Degridding time       = " << 1e6
                 *itsTimeDegridded/itsSamplesDegridded << " (us) per sample");
-        ASKAPLOG_DEBUG_STR(logger, "   Total time converting = "
+        ASKAPLOG_INFO_STR(logger, "   Total time converting = "
                 << itsTimeCoordinates << " (s)");
-        ASKAPLOG_DEBUG_STR(logger, "   Total time building CFs and indices = "
+        ASKAPLOG_INFO_STR(logger, "   Total time building CFs and indices = "
                 << itsTimeConvFunctions << " (s)");
-        ASKAPLOG_DEBUG_STR(logger, "   Coord conversion      = "
+        ASKAPLOG_INFO_STR(logger, "   Coord conversion      = "
                   << 1e6 * itsTimeCoordinates/itsSamplesDegridded << " (us) per sample");
-        ASKAPLOG_DEBUG_STR(logger, "   CFs and indices      = "
+        ASKAPLOG_INFO_STR(logger, "   CFs and indices      = "
                   << 1e6 * itsTimeConvFunctions/itsSamplesDegridded << " (us) per sample");
-        ASKAPLOG_DEBUG_STR(logger, "   " << GridKernel::info());
-        ASKAPLOG_DEBUG_STR(logger, "   Points degridded      = "
+        ASKAPLOG_INFO_STR(logger, "   " << GridKernel::info());
+        ASKAPLOG_INFO_STR(logger, "   Points degridded      = "
                 << itsNumberDegridded);
-        ASKAPLOG_DEBUG_STR(logger, "   Time per point        = " << 1e9
+        ASKAPLOG_INFO_STR(logger, "   Time per point        = " << 1e9
                 *itsTimeDegridded/itsNumberDegridded << " (ns)");
-        ASKAPLOG_DEBUG_STR(logger, "   Performance           = "
+        ASKAPLOG_INFO_STR(logger, "   Performance           = "
                 << 8.0 * 1e-9 * itsNumberDegridded/itsTimeDegridded << " GFlops");
     }
     if (itsMaxPointingSeparation > 0.) {
-        ASKAPLOG_DEBUG_STR(logger, "   Samples rejected due to MaxPointingSeparation = "<<
+        ASKAPLOG_INFO_STR(logger, "   Samples rejected due to MaxPointingSeparation = "<<
                                    itsRowsRejectedDueToMaxPointingSeparation);
     }
     if(unusedGridder()) {
@@ -301,11 +301,11 @@ TableVisGridder::~TableVisGridder() {
       }
     }
     else {
-      ASKAPLOG_DEBUG_STR(logger, "   Padding factor    = " << paddingFactor());
+      ASKAPLOG_INFO_STR(logger, "   Padding factor    = " << paddingFactor());
       if (itsTrackWeightPerOversamplePlane) {
-          ASKAPLOG_DEBUG_STR(logger, "   Weights were tracked per oversampling plane");
+          ASKAPLOG_INFO_STR(logger, "   Weights were tracked per oversampling plane");
       } else {
-          ASKAPLOG_DEBUG_STR(logger, "   First oversampling plane was used to compute weights");
+          ASKAPLOG_INFO_STR(logger, "   First oversampling plane was used to compute weights");
       }
       logUnusedSpectralPlanes();
       logCFCacheStats();
