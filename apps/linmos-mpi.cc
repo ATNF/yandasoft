@@ -591,33 +591,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         curpos = deweightIter.position();
         accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);
       }
-      // set one of the input images as a reference for metadata (the first by default)
-      uint psfref = 0;
-      string units;
-      Vector<Quantum<double> > psf;
-      if (comms.isMaster()) {
-          if (parset.isDefined("psfref")) psfref = parset.getUint("psfref");
-
-          ASKAPLOG_INFO_STR(logger, "Getting brightness info for the output image from input number " << psfref);
-          // get pixel units from the selected reference image
-          units = iacc.getUnits(inImgNames[psfref]);
-          ASKAPLOG_INFO_STR(logger, "Got units as " << units);
-
-          ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
-          // get psf beam information from the selected reference image
-          Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
-          if (psftmp.nelements()<3) {
-            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-            ": beamInfo needs at least 3 elements. Not writing PSF");
-          }
-          else if ((psftmp[0].getValue("rad")==0) || (psftmp[1].getValue("rad")==0)) {
-            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-              ": beamInfo invalid. Not writing PSF");
-          }
-          else {
-            psf = psftmp;
-          }
-      }
       // write accumulated images and weight images
       ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
       casa::IPosition outShape = accumulator.outShape();
@@ -635,38 +608,20 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             comms.receive((void *) &buf,sizeof(int),from);
           }
       }
+
       casa::IPosition loc(outShape.nelements(),0);
       loc[3] = channel;
       ASKAPLOG_INFO_STR(logger, " - location " << loc);
       iacc.write(outImgName,outPix,outMask,loc);
-      bool lastIter = (channel == lastChannel);
-      if (comms.isMaster() && lastIter) {
-          iacc.setUnits(outImgName,units);
-
-          if (psf.nelements()>=3)
-          iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-      }
       if (accumulator.outWgtDuplicates()[outImgName]) {
           ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
       } else {
-
           iacc.write(outWgtName,outWgtPix,outMask,loc);
-          if (comms.isMaster() && lastIter) {
-              iacc.setUnits(outWgtName,units);
-              if (psf.nelements()>=3)
-              iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-          }
       }
       if (accumulator.doSensitivity()) {
-
           iacc.write(outSenName,outSenPix,outMask,loc);
-          if (comms.isMaster() && lastIter) {
-              iacc.setUnits(outSenName,units);
-
-              if (psf.nelements()>=3)
-              iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-          }
       }
+
       if (!collective && serialWrite) {
           if (comms.rank() < comms.nProcs()-1) { // last rank does not use this method
             int buf;
@@ -674,6 +629,48 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             comms.send((void *) &buf,sizeof(int),to);
           }
       }
+    }
+    // Update header when all the writing is done
+    comms.barrier();
+    if (comms.isMaster()) {
+        // set one of the input images as a reference for metadata (the first by default)
+        const uint psfref = parset.getUint("psfref",0);
+
+        ASKAPLOG_INFO_STR(logger, "Getting brightness info for the output image from input number " << psfref);
+        // get pixel units from the selected reference image
+        const string units = iacc.getUnits(inImgNames[psfref]);
+        ASKAPLOG_INFO_STR(logger, "Got units as " << units);
+
+        ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
+        // get psf beam information from the selected reference image
+        Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
+        bool psfValid = false;
+        if (psf.nelements()<3) {
+          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
+          ": beamInfo needs at least 3 elements. Not writing PSF");
+        } else if ((psf[0].getValue("rad")==0) || (psf[1].getValue("rad")==0)) {
+          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
+            ": beamInfo invalid. Not writing PSF");
+        } else {
+          psfValid = true;
+        }
+
+        iacc.setUnits(outImgName,units);
+        if (psfValid) {
+            iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+        }
+        if (!accumulator.outWgtDuplicates()[outImgName]) {
+            iacc.setUnits(outWgtName,units);
+            if (psfValid) {
+                iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+        }
+        if (accumulator.doSensitivity()) {
+            iacc.setUnits(outSenName,units);
+            if (psfValid) {
+                iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+        }
     }
   }
 }

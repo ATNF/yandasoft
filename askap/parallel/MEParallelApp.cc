@@ -52,7 +52,7 @@ using namespace askap::synthesis;
 /// @param[in] comms communication object
 /// @param[in] parset parameter set
 MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
-   MEParallel(comms,parset),
+   MEParallel(comms,parset), itsDataColName(parset.getString("datacolumn", "DATA")),
    itsUVWMachineCacheSize(1), itsUVWMachineCacheTolerance(1e-6)
 {
    // set up image handler, needed for both master and worker
@@ -61,9 +61,14 @@ MEParallelApp::MEParallelApp(askap::askapparallel::AskapParallel& comms, const L
    // set up default reference frame
    SynthesisParamsHelper::setDefaultFreqFrame(getFreqRefFrame());
 
+   // MV: we used to have column selection inside the following if-statement as
+   // only workers access measurement sets in proper master-worker design. 
+   // New imager violates it, hence technically it should not have been derived from
+   // mw-framework classes! Some technical debt here. Moving its initialisation to the 
+   // initalisation at construction solves the immediate problem, however ms substitution
+   // still will not work correctly (and never was).
    if (itsComms.isWorker()) {
-       /// Get the list of measurement sets and the column to use.
-       itsDataColName = parset.getString("datacolumn", "DATA");
+       /// Get the list of measurement sets
        itsMs = parset.getStringVector("dataset");
 //       ASKAPCHECK(itsMs.size()>0, "Need dataset specification");
 

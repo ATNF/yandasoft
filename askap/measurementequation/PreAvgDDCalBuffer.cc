@@ -352,10 +352,18 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
   const casacore::Vector<casacore::uInt> &beam2 = acc.feed2();
   const casacore::Vector<casacore::uInt> &antenna1 = acc.antenna1();
   const casacore::Vector<casacore::uInt> &antenna2 = acc.antenna2(); 
-  
+
+  // bufLenPerDir will often equal acc.nRow(), but not always (e.g. when are auto-correlations are present)
+  const int bufLenPerDir = itsPolXProducts.getModelMeasProductShape()(0) / itsPolXProducts.nDir();
+  // do a quick sanity check
+  ASKAPASSERT(bufLenPerDir*itsPolXProducts.nDir()*(itsPolXProducts.nDir()+1)/2 == 
+              itsPolXProducts.getModelProductShape()(0));
+
   ASKAPCHECK(fdp || (nChannel() == 1), 
      "Only single spectral channel is supported by the pre-averaging calibration buffer in the frequency-independent mode");
   for (casacore::uInt row = 0; row<acc.nRow(); ++row) {
+       // could simply force beam1 and beam2 to zero...
+       ASKAPCHECK(beam1[row] == 0, "DD calibration is only set up for single-beam data");
        if ((beam1[row] != beam2[row]) || (antenna1[row] == antenna2[row])) {
            // cross-beam correlations and auto-correlations are not supported
            itsVisTypeIgnored += acc.nChannel() * acc.nPol();
@@ -400,25 +408,25 @@ void PreAvgDDCalBuffer::accumulate(const IConstDataAccessor &acc,
 
                           // DDCALTAG -- loop over dir may be more efficient on the outside
                           for (casacore::uInt dir = 0; dir<itsNDir; ++dir) {
-                              itsPolXProducts.addModelMeasProduct(bufRow+dir*acc.nRow(), bufChan, pol, pol2,
+                              itsPolXProducts.addModelMeasProduct(bufRow+dir*bufLenPerDir, bufChan, pol, pol2,
                                   weight * std::conj(modelVis(row+dir*acc.nRow(),chan,pol)) *
                                                      measuredVis(row,chan,pol2));
                           }
     
                           if (pol2<=pol) {
                               for (casacore::uInt dir = 0; dir<itsNDir; ++dir) {
-                                  itsPolXProducts.addModelProduct(bufRow+dir*acc.nRow(), bufChan, pol, pol2,
+                                  itsPolXProducts.addModelProduct(bufRow+dir*bufLenPerDir, bufChan, pol, pol2,
                                       weight * std::conj(modelVis(row+dir*acc.nRow(),chan,pol)) *
                                                          modelVis(row+dir*acc.nRow(),chan,pol2));
                               }
                               // generate any model cross products and put after the main buffers
-                              casacore::uInt rowOffset = itsNDir*acc.nRow();
+                              casacore::uInt rowOffset = itsNDir*bufLenPerDir;
                               for (casacore::uInt dir = 0; dir<itsNDir-1; ++dir) {
                                    for (casacore::uInt dir2 = dir+1; dir2<itsNDir; ++dir2) {
                                        itsPolXProducts.addModelProduct(bufRow+rowOffset, bufChan, pol, pol2,
                                            weight * std::conj(modelVis(row+dir*acc.nRow(),chan,pol)) *
                                                               modelVis(row+dir2*acc.nRow(),chan,pol2));
-                                       rowOffset += acc.nRow();
+                                       rowOffset += bufLenPerDir;
                                    }
                               }
                           }

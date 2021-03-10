@@ -163,6 +163,8 @@ AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const
 
 void AdviseParallel::init(const LOFAR::ParameterSet& parset)
 {
+   // update the parset in the base class
+   setParset(addMissingFields(parset));
    itsWTolerance = parset.getDouble("wtolerance",-1.);
    if (parset.isDefined("tangent")) {
        const std::vector<std::string> direction = parset.getStringVector("tangent");
@@ -221,10 +223,10 @@ void AdviseParallel::estimate()
 }
 
 /// @brief set estimator
-/// @details Normally, the estimator is set inside estimate() call with the right parameters 
+/// @details Normally, the estimator is set inside estimate() call with the right parameters
 /// (i.e. depending on whether the tangent point is known or not). For a greater reuse of the code it is
-/// handy to be able to set a custom estimator and then use calcOne method directly for accumulation. 
-/// This method sets the estimator (to be reset if estimate() method is called). 
+/// handy to be able to set a custom estimator and then use calcOne method directly for accumulation.
+/// This method sets the estimator (to be reset if estimate() method is called).
 /// @param[in] estimator shared pointer to custom estimator to work with
 void AdviseParallel::setCustomEstimator(const boost::shared_ptr<VisMetaDataStats> &estimator)
 {
@@ -278,27 +280,29 @@ void AdviseParallel::calcOne(const std::string &ms)
 {
    casacore::Timer timer;
    timer.mark();
-   ASKAPLOG_INFO_STR(logger, "Performing iteration to accumulate metadata statistics for " << ms );
+   ASKAPLOG_INFO_STR(logger, "Performing iteration to accumulate metadata statistics for " << ms);
    ASKAPDEBUGASSERT(itsEstimator);
 
    accessors::TableDataSource ds(ms, accessors::TableDataSource::MEMORY_BUFFERS, dataColumn());
 
-   ASKAPLOG_INFO_STR(logger, "Initialised accessor" );
+   ASKAPLOG_DEBUG_STR(logger, "Initialised accessor");
    ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
 
-   ASKAPLOG_INFO_STR(logger, "Initialised UVW cache" );
+   ASKAPLOG_DEBUG_STR(logger, "Initialised UVW cache");
    accessors::IDataSelectorPtr sel=ds.createSelector();
-   ASKAPLOG_INFO_STR(logger, "Initialised data selector" );
+   ASKAPDEBUGASSERT(sel);
+   ASKAPLOG_DEBUG_STR(logger, "Initialised data selector");
 
    sel << parset();
    ASKAPLOG_DEBUG_STR(logger, "Filled selector\n" << parset());
    accessors::IDataConverterPtr conv=ds.createConverter();
-   ASKAPLOG_INFO_STR(logger, "Initialised converter" );
+   ASKAPDEBUGASSERT(conv);
+   ASKAPLOG_DEBUG_STR(logger, "Initialised converter");
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
    conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
    conv->setEpochFrame(); // time since 0 MJD
    accessors::IDataSharedIter it=ds.createIterator(sel, conv);
-   ASKAPLOG_INFO_STR(logger, "Initialised iterator" );
+   ASKAPLOG_DEBUG_STR(logger, "Initialised iterator");
    for (; it.hasMore(); it.next()) {
         // iteration over the dataset
         itsEstimator->process(*it);
@@ -306,7 +310,7 @@ void AdviseParallel::calcOne(const std::string &ms)
    }
 
    ASKAPLOG_INFO_STR(logger, "Finished iteration for "<< ms << " in "<< timer.real()
-                   << " seconds ");
+                   << " seconds");
 }
 
 /// @brief calculate "normal equations", i.e. statistics for this dataset
