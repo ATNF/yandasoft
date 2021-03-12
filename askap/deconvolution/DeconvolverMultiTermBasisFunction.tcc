@@ -754,6 +754,7 @@ namespace askap {
 
                     if (nBases>1) {
                         // init scratch space for mask
+                        #pragma omp single
                         mask = Matrix<T>(weights.shape(),0.0);
                         // Check mask base for contiguity
                         if (!mask.contiguousStorage()) {
@@ -850,6 +851,7 @@ namespace askap {
                                 }
 
                             } else {
+                                #pragma omp single
                                 maskref.reference(this->itsMask(base));
                             }
 
@@ -905,8 +907,8 @@ namespace askap {
 
                                 #pragma omp single
                                 {
-                                                coefficients(term1).resize(this->dirty(0).shape().nonDegenerate());
-                                                coefficients(term1).set(T(0.0));
+                                    coefficients(term1).resize(this->dirty(0).shape().nonDegenerate());
+                                    coefficients(term1).set(T(0.0));
                                 }
 
                                 for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
@@ -928,6 +930,7 @@ namespace askap {
                                 #pragma omp single
                                 TimerStart[4] = MPI_Wtime();
 
+                                #pragma omp single
                                 res = coefficients(0);
 
                                 if (haveMask) {
@@ -1064,7 +1067,7 @@ namespace askap {
 
                                     absMaxPosOMP(maxVal, maxPos, res);
                                 }
-                                // TODO: Do I need this barrier?
+                                // TODO: Do I need this barrier? No - absmax already has one
                                 #pragma omp barrier
 
                                 #pragma omp single
