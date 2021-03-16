@@ -411,7 +411,9 @@ void ContinuumWorker::compressWorkUnits() {
     LOFAR::ParameterSet startParset = itsParsets[0];
 
     unsigned int contiguousCount = 1;
-
+    if (workUnits.size() == 1) {
+        ASKAPLOG_WARN_STR(logger,"Asked to compress channels but workunit count 1");
+    }
     for ( int count = 1; count < workUnits.size(); count++) {
 
         ContinuumWorkUnit nextUnit = workUnits[count];
@@ -450,10 +452,15 @@ void ContinuumWorker::compressWorkUnits() {
         }
 
     }
-    ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
-    ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
-    workUnits = compressedList;
-    itsParsets = compressedParsets;
+    if (compressedList.size() > 0) {
+        ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
+        ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
+        workUnits = compressedList;
+        itsParsets = compressedParsets;
+    }
+    else {
+        ASKAPLOG_WARN_STR(logger,"No compression performed");
+    }
 }
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
