@@ -150,10 +150,7 @@ namespace askap
 
     askap::scimath::Params ImageFFTEquation::defaultParameters()
     {
-      Params ip;
-      #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-      ip.setUseFloat(true);
-      #endif
+      Params ip(true);
       ip.add("image");
       return ip;
     }

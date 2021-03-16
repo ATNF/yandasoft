@@ -71,10 +71,7 @@ int main(int argc, char **argv) {
      SynthesisParamsHelper::setUpImageHandler(parset);
 
      // load image into params
-     askap::scimath::Params::ShPtr params (new scimath::Params());
-     #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-     params->setUseFloat(true);
-     #endif
+     askap::scimath::Params::ShPtr params (new scimath::Params(true));
      SynthesisParamsHelper::loadImages(params,parset.makeSubset("Images."));
 
      // fit beam

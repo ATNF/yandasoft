@@ -84,10 +84,7 @@ namespace askap
           std::vector<std::string> cellsize(2,"1arcsec");
           casacore::Vector<casacore::Stokes::StokesTypes> stokes(1, casacore::Stokes::I);
 
-          scimath::Params params;
-          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          params.setUseFloat(true);
-          #endif
+          scimath::Params params(true);
           SynthesisParamsHelper::add(params,"psf.test",direction,cellsize,shape,false,1.4e9,
                               1.4e9,1,stokes);
 

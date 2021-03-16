@@ -79,11 +79,8 @@ namespace askap
     SynParallel::SynParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset, bool useFloat) :
                          itsComms(comms), itsParset(parset)
     {
-      itsModel.reset(new Params());
+      itsModel.reset(new Params(useFloat));
       ASKAPCHECK(itsModel, "Model not defined correctly");
-      #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          itsModel->setUseFloat(useFloat);
-      #endif
 
       // setup frequency frame
       const std::string freqFrame = parset.getString("freqframe","topo");

@@ -105,10 +105,7 @@ class TmergeApp : public askap::Application
 
                 // initialise a model and load the current image
                 Params::ShPtr model;
-                model.reset(new Params);
-                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                model->setUseFloat(true);
-                #endif
+                model.reset(new Params(true));
                 SynthesisParamsHelper::loadImageParameter(*model,paramName,*ci);
                 ASKAPCHECK(model->size()==1, "Expect single images");
                 ASKAPLOG_INFO_STR(logger, "loaded image with " <<

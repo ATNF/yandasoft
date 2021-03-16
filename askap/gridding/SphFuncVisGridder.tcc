@@ -43,7 +43,7 @@ namespace askap
       ASKAPASSERT(length>3);
 
       //func(0) = func(1) + (func(1)-func(2)) + (func(1)-2.0*func(2)+func(3));
-      func(0) = imtype(3.) * (func(1) - func(2)) + func(3);
+      func(0) = T(3.) * (func(1) - func(2)) + func(3);
       if (length%2==1) { // nu=1 for the last element as well
         func(length-1) = func(0);
       }

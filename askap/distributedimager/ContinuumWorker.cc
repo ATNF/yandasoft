@@ -1316,11 +1316,8 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
-        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-            blankParams->setUseFloat(true);
-        #endif
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
 
 
@@ -1357,11 +1354,8 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
-        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-            blankParams->setUseFloat(true);
-        #endif
 
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
 

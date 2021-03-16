@@ -93,10 +93,7 @@ namespace askap
         imageAxes.addStokesAxis(casacore::Vector<casacore::Stokes::StokesTypes>(1,casacore::Stokes::I));
         imageAxes.add("FREQUENCY",1.4e9,1.4e9);
 
-        params1.reset(new Params);
-        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-        params1->setUseFloat(true);
-        #endif
+        params1.reset(new Params(true));
         casacore::Array<double> imagePixels1(casacore::IPosition(4, npix, npix, 1, 1));
         imagePixels1.set(0.0);
         imagePixels1(casacore::IPosition(4, npix/2, npix/2, 0, 0))=1.0;
@@ -105,10 +102,7 @@ namespace askap
 
         p1.reset(new ImageFFTEquation(*params1, idi));
 
-        params2.reset(new Params);
-        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-        params2->setUseFloat(true);
-        #endif
+        params2.reset(new Params(true));
         casacore::Array<double> imagePixels2(casacore::IPosition(4, npix, npix, 1, 1));
         imagePixels2.set(0.0);
         imagePixels2(casacore::IPosition(4, npix/2, npix/2, 0, 0))=0.9;

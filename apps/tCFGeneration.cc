@@ -107,10 +107,7 @@ int main(int argc, const char** argv)
             }
             #endif
             {
-               scimath::Params model;
-               #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-               model.setUseFloat(true);
-               #endif
+               scimath::Params model(true);
                boost::shared_ptr<scimath::Params> modelPtr(&model, utility::NullDeleter());
                SynthesisParamsHelper::setUpImages(modelPtr,subset.makeSubset("Images."));
                ASKAPLOG_INFO_STR(logger, "Model contains the following elements: "<<model);

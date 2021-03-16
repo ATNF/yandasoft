@@ -35,7 +35,7 @@
 #include <casacore/casa/Arrays/Cube.h>
 
 #include <askap/scimath/fitting/Axes.h>
-#include <askap/scimath/fitting/Params.h>
+#include <askap/askap/AskapImageType.h>
 
 #include <boost/shared_ptr.hpp>
 #include <askap/dataaccess/IDataAccessor.h>

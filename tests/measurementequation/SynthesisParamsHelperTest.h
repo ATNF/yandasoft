@@ -76,10 +76,7 @@ namespace askap
 
           std::cout << "Starting copyParameter test" << std::endl;
           std::cout << "Building the Global Model" << std::endl;
-          askap::scimath::Params SourceParams;
-          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          SourceParams.setUseFloat(true);
-          #endif
+          askap::scimath::Params SourceParams(true);
           std::vector<std::string> direction(3);
           direction[0]="12h30m00.0";
           direction[1]="-15.00.00.00";
@@ -121,10 +118,7 @@ namespace askap
           // this is the local is the local model
           std::cout << "Building the Local Model" << std::endl;
 
-          askap::scimath::Params SinkParams;
-          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          SinkParams.setUseFloat(true);
-          #endif
+          askap::scimath::Params SinkParams(true);
 
           direction[0]="12h30m00.0";
           direction[1]="-14.00.00.00"; // different poinrinf
@@ -234,10 +228,7 @@ namespace askap
 
         void testGaussianPreconditioner()
         {
-           askap::scimath::Params params;
-           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           params.setUseFloat(true);
-           #endif
+           askap::scimath::Params params(true);
 
            makeParameter(params,"psf.testsrc",1);
            const askap::scimath::Axes axes = params.axes("psf.testsrc");
@@ -284,10 +275,7 @@ namespace askap
 
         void testFacetCreationAndMerging()
         {
-           askap::scimath::Params params;
-           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           params.setUseFloat(true);
-           #endif
+           askap::scimath::Params params(true);
            makeParameter(params,"testsrc",2,128);
            // checking the content
            std::map<std::string,int> facetmap;
@@ -308,10 +296,7 @@ namespace askap
 
         void testClipImage()
         {
-           askap::scimath::Params params;
-           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           params.setUseFloat(true);
-           #endif
+           askap::scimath::Params params(true);
            const int facetStep = 128;
            makeParameter(params,"testsrc",2,facetStep);
            params.valueT("testsrc.facet.0.0").set(1.);
@@ -345,10 +330,7 @@ namespace askap
         /// @param[in] nFacets number of facets along each axis
         void doCoordinateAlignmentTest(const int facetStep, const int nFacets)
         {
-           askap::scimath::Params params;
-           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           params.setUseFloat(true);
-           #endif
+           askap::scimath::Params params(true);
            makeParameter(params,"testsrc",nFacets,facetStep);
            // adding a merged image
            SynthesisParamsHelper::add(params,"testsrc",nFacets);
