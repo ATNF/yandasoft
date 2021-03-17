@@ -254,7 +254,7 @@ namespace askap
                                                             const double cutoff = 0.05,
                                                             const std::string &name = "");
 
-        static casacore::Vector<casacore::Quantum<double> > fitBeam(casacore::Array<double> &psfArray,
+        static casacore::Vector<casacore::Quantum<double> > fitBeam(casacore::Array<imtype> &psfArray,
                                                             const scimath::Axes &axes,
                                                             const double cutoff = 0.05);
 
@@ -269,7 +269,7 @@ namespace askap
         /// @param[in] ip parameters
         /// @param[in] name name of the facet parameter (with suffix like .facet.0.0)
         /// @return an array of doubles representing a subimage of the merged image
-        static casacore::Array<double> getFacet(askap::scimath::Params &ip, const string &name);
+        static casacore::Array<imtype> getFacet(askap::scimath::Params &ip, const string &name);
 
         /// @brief Add a set of parameters from a parset
         /// @param ip Parameters

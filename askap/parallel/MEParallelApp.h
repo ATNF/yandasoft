@@ -1,6 +1,6 @@
 /// @file
 ///
-/// MEParallelApp: Support for parallel applications using the measurement 
+/// MEParallelApp: Support for parallel applications using the measurement
 /// equation classes. This code implements common behavior for imaging, calibration and
 /// continuum subtraction. Unlike MEParallel it has some application-specific code in
 /// addition to parallelism.
@@ -48,7 +48,7 @@ namespace askap {
 
 namespace synthesis {
 
-/// @brief support for parallel applications using the measurement equation classes. 
+/// @brief support for parallel applications using the measurement equation classes.
 /// @details This code implements common behavior for imaging, calibration and
 /// continuum subtraction. Unlike MEParallel it has some application-specific code in
 /// addition to parallelism.
@@ -56,19 +56,20 @@ namespace synthesis {
 class MEParallelApp : public MEParallel
 {
 public:
-   /// @brief constructor 
+   /// @brief constructor
    /// @details sets communication object and parameter set
    /// @param[in] comms communication object
    /// @param[in] parset parameter set
-   MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
+   MEParallelApp(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset,
+                bool useFloat = false);
 
 protected:
-   
+
    /// @brief obtain data column name
    /// @details to be used in derived classes
    /// @return reference to the string with the data column name
    inline const std::string& dataColumn() const { return itsDataColName;}
-   
+
    /// @brief obtain the array of names for all measurement sets
    /// @details to be used in derived classes
    /// @return reference to the vector of strings with the file names
@@ -78,17 +79,17 @@ protected:
    /// @details to be used in derived classes
    /// @return number of uvw-machines in the cache
    inline size_t uvwMachineCacheSize() const { return itsUVWMachineCacheSize; }
-   
+
    /// @brief obtain direction tolerance for uvw-machine cache
    /// @details to be used in derived classes
    /// @return direction tolerance (in radians) for uvw machine cache
    inline double uvwMachineCacheTolerance() const { return itsUVWMachineCacheTolerance; }
-   
+
    /// @brief obtain gridder
    /// @details to be used in derived classes
    /// @return shared pointer to the gridder template
    inline IVisGridder::ShPtr gridder() const { return itsGridder; }
-   
+
 
 protected:
    /// @brief set the list of measurement sets
@@ -98,24 +99,24 @@ protected:
    /// in the parset
    /// @param[in] ms vector with measurement sets
    inline void setMeasurementSets(const std::vector<std::string>& ms) { itsMs = ms;}
-   
-private:   
+
+private:
 
    /// @brief name of the data column to use.
    std::string itsDataColName;
 
    /// Names of measurement sets, one per prediffer
-   std::vector<std::string> itsMs;	
-   
+   std::vector<std::string> itsMs;
+
    /// @brief uvw machine cache size
    size_t itsUVWMachineCacheSize;
-      
+
    /// @brief direction tolerance (in radians) for uvw machine cache
    double itsUVWMachineCacheTolerance;
 
    /// @brief gridder to be used
-   IVisGridder::ShPtr itsGridder;		    			  	
-}; 
+   IVisGridder::ShPtr itsGridder;
+};
 
 } // namespace synthesis
 
@@ -123,4 +124,3 @@ private:
 
 
 #endif // #ifndef ME_PARALLEL_APP_H
-

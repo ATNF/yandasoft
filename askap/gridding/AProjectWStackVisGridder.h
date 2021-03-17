@@ -1,6 +1,6 @@
 /// @file
 ///
-/// AProjectWStackVisGridder: Grids visibility data using the self-convolution of 
+/// AProjectWStackVisGridder: Grids visibility data using the self-convolution of
 /// the antenna illumination pattern.
 ///
 /// @copyright (c) 2007 CSIRO
@@ -42,13 +42,13 @@ namespace askap
 {
   namespace synthesis
   {
-    /// @brief Gridder that is appropriate for mosaicing. 
+    /// @brief Gridder that is appropriate for mosaicing.
     ///
     /// @details The visibilities are gridded using a convolution
-    /// function derived from the antenna illumination pattern, 
+    /// function derived from the antenna illumination pattern,
     /// appropriately shifted in position for each feed.
     ///
-    /// To correct for the w term in the full synthesis measurement equation 
+    /// To correct for the w term in the full synthesis measurement equation
     /// the data are first partitioned in w and then gridded onto separate
     /// planes. At the end, all planes are Fourier transformed and stacked
     /// after multiplication by the w-dependent complex phasor image.
@@ -72,20 +72,20 @@ namespace askap
       /// @param maxFields Maximum number of fields allowed
       /// @param pointingTol Pointing tolerance in radians
       /// @param paTol Parallactic angle tolerance in radians
-      /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value 
-      ///        means the frequency axis is ignored 
+      /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value
+      ///        means the frequency axis is ignored
       /// @param frequencyDependent Frequency dependent gridding?
       /// @param name Name of table to save convolution function into
-      /// @note cutoff parameter (after nwplanes) is missing, because it is not required 
+      /// @note cutoff parameter (after nwplanes) is missing, because it is not required
       /// for this gridder. We however want to have the same signatures for both mosaicing gridders.
       AProjectWStackVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
           const double wmax, const int nwplanes, const double cutoff, const int overSample,
           const int maxSupport, const int limitSupport,
-			       const int maxFeeds=1, const int maxFields=1, 
+			       const int maxFeeds=1, const int maxFields=1,
 			       const double pointingTol=0.0001,
 			       const double paTol=0.01,
 			       const double freqTol = 1e-6,
-			       const bool frequencyDependent=true, 
+			       const bool frequencyDependent=true,
           const std::string& name=std::string(""));
 
       /// @brief copy constructor
@@ -93,14 +93,14 @@ namespace askap
       /// and this copy.
       /// @param[in] other input object
       AProjectWStackVisGridder(const AProjectWStackVisGridder &other);
-    
+
       /// Clone a copy of this Gridder
       virtual IVisGridder::ShPtr clone();
 
       /// Form the sum of the convolution function squared, multiplied by the weights for each
       /// different convolution function. This is used in the evaluation of the second derivative.
       /// @param out Output double precision grid
-      virtual void finaliseWeights(casacore::Array<double>& out);
+      virtual void finaliseWeights(casacore::Array<imtype>& out);
 
       /// @brief Initialise the gridding
       /// @param axes axes specifications
@@ -109,27 +109,27 @@ namespace askap
       virtual void initialiseGrid(const scimath::Axes& axes,
               const casacore::IPosition& shape, const bool dopsf=true,
 			  const bool dopcf=false);
-   
+
       /// @brief Initialise the degridding
       /// @param axes axes specifications
       /// @param image Input image: cube: u,v,pol,chan
       virtual void initialiseDegrid(const scimath::Axes& axes,
-              const casacore::Array<double>& image);
+              const casacore::Array<imtype>& image);
 
       /// @brief static method to get the name of the gridder
       /// @details We specify parameters per gridder type in the parset file.
       /// This method returns the gridder name which should be used to extract
       /// a subset of parameters for createGridder method.
-      static inline std::string gridderName() { return "AProjectWStack";}	
+      static inline std::string gridderName() { return "AProjectWStack";}
 
       /// @brief static method to create gridder
       /// @details Each gridder should have a static factory method, which is
       /// able to create a particular type of the gridder and initialise it with
-      /// the parameters taken form the given parset. It is assumed that the 
+      /// the parameters taken form the given parset. It is assumed that the
       /// method receives a subset of parameters where the gridder name is already
-      /// taken out. 
+      /// taken out.
       /// @param[in] parset input parset file
-      /// @return a shared pointer to the gridder instance					 
+      /// @return a shared pointer to the gridder instance
       static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
   protected:
@@ -140,7 +140,7 @@ namespace askap
       /// This method accepts no parameters as itsShape, itsNWPlanes, etc should have already
       /// been initialised by the time this method is called.
       virtual void initialiseSumOfWeights();
-  
+
       /// @brief Initialise the indices
       /// @param[in] acc const accessor to work with
       virtual void initIndices(const accessors::IConstDataAccessor& acc);
@@ -157,16 +157,16 @@ namespace askap
 
       /// Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casacore::Array<double>& image);
+      virtual void correctConvolution(casacore::Array<imtype>& image);
 
   private:
       /// @brief assignment operator (not to be called)
-      /// @details It is defined as private, so we can't call it inadvertently 
+      /// @details It is defined as private, so we can't call it inadvertently
       /// @param[in] other input object
       /// @return reference to itself
       AProjectWStackVisGridder& operator=(const AProjectWStackVisGridder &other);
 
-      /// Reference frequency for illumination pattern. 
+      /// Reference frequency for illumination pattern.
       double itsReferenceFrequency;
       /// Antenna illumination model
       boost::shared_ptr<IBasicIllumination const> itsIllumination;
@@ -183,7 +183,7 @@ namespace askap
       /// Mapping from row, pol, and channel to planes of convolution function
       casacore::Cube<int> itsCMap;
       /// Cube of slopes
-      casacore::Cube<double> itsSlopes;            
+      casacore::Cube<double> itsSlopes;
     };
 
   }

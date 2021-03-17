@@ -153,6 +153,7 @@ ContinuumWorker::~ContinuumWorker()
 
 void ContinuumWorker::run(void)
 {
+
   // Send the initial request for work
   ContinuumWorkRequest wrequest;
 
@@ -464,7 +465,6 @@ void ContinuumWorker::compressWorkUnits() {
 }
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
-
   // This also needs to set the frequencies and directions for all the images
   ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit");
   LOFAR::ParameterSet unitParset = itsParset;
@@ -485,9 +485,10 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
     unitParset.replace(param, bstr);
   }
 
-
   const bool usetmpfs = unitParset.getBool("usetmpfs", false);
+
   if (usetmpfs && !localsolve) // only do this here if in continuum mode
+
   {
     cacheWorkUnit(wu, unitParset);
     ChannelPar="[1,0]";
@@ -504,6 +505,7 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   }
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
+
   itsAdvisor->addMissingParameters(unitParset);
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
@@ -1193,7 +1195,7 @@ void ContinuumWorker::processChannels()
 
       ASKAPLOG_INFO_STR(logger,"Adding model.slice");
       ASKAPCHECK(rootImager.params()->has("image.slice"), "Params are missing image.slice parameter");
-      rootImager.params()->add("model.slice", rootImager.params()->value("image.slice"));
+      rootImager.params()->add("model.slice", rootImager.params()->valueT("image.slice"));
       ASKAPCHECK(rootImager.params()->has("model.slice"), "Params are missing model.slice parameter");
 
       if (dumpgrids) {
@@ -1321,9 +1323,8 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
-
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
 
 
@@ -1360,7 +1361,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
 
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
@@ -1431,10 +1432,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   } else // Write image
   {
     ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    const casacore::Array<double> imagePixels(params->value("model.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsImageCube->writeSlice(floatImagePixels, chan);
+    itsImageCube->writeSlice(params->valueF("model.slice"), chan);
   }
 
 
@@ -1445,11 +1443,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else {
     // Write PSF
       if (!itsParset.getBool("dumpgrids",false)) {
-          ASKAPLOG_INFO_STR(logger, "Writing PSF");
-          const casacore::Array<double> imagePixels(params->value("psf.slice"));
-          casacore::Array<float> floatImagePixels(imagePixels.shape());
-          casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-          itsPSFCube->writeSlice(floatImagePixels, chan);
+          itsPSFCube->writeSlice(params->valueF("psf.slice"), chan);
       }
   }
   if (!params->has("residual.slice")) {
@@ -1459,10 +1453,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   {
     // Write residual
     ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    const casacore::Array<double> imagePixels(params->value("residual.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsResidualCube->writeSlice(floatImagePixels, chan);
+    itsResidualCube->writeSlice(params->valueF("residual.slice"), chan);
   }
 
   if (!params->has("weights.slice")) {
@@ -1472,39 +1463,33 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else
   {
     ASKAPLOG_INFO_STR(logger, "Writing Weights");
-    const casacore::Array<double> imagePixels(params->value("weights.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsWeightsCube->writeSlice(floatImagePixels, chan);
+    itsWeightsCube->writeSlice(params->valueF("weights.slice"), chan);
   }
   // Write the grids
 
   if (params->has("grid.slice")) {
     ASKAPLOG_INFO_STR(logger, "Writing Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
-    casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+    casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
     itsGriddedVis->writeSlice(grid,chan);
   }
   if (params->has("pcf.slice")) {
       ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
       const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
-      casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+      casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
       itsPCFCube->writeSlice(grid,chan);
   }
   if (params->has("psfgrid.slice")) {
         ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
         const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
-        casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+        casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
         itsPSFGridCube->writeSlice(grid,chan);
   }
   if (params->has("psf.raw.slice"))
   {
       if (itsParset.getBool("dumpgrids", false)) {
         ASKAPLOG_INFO_STR(logger, "Writing un-normalised PSF");
-        const casacore::Array<double> imagePixels(params->value("psf.raw.slice"));
-        casacore::Array<float> floatImagePixels(imagePixels.shape());
-        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-        itsPSFCube->writeSlice(floatImagePixels, chan);
+        itsPSFCube->writeSlice(params->valueF("psf.raw.slice"), chan);
       }
   }
   if (itsParset.getBool("restore", false)) {
@@ -1526,21 +1511,14 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       // Write preconditioned PSF image
       {
         ASKAPLOG_INFO_STR(logger, "Writing preconditioned PSF");
-        const casacore::Array<double> imagePixels(params->value("psf.image.slice"));
-        casacore::Array<float> floatImagePixels(imagePixels.shape());
-        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-        itsPSFimageCube->writeSlice(floatImagePixels, chan);
+        itsPSFimageCube->writeSlice(params->valueF("psf.image.slice"), chan);
       }
     }
 
     // Write Restored image
 
     ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
-    const casacore::Array<double> imagePixels(params->value("image.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsRestoredCube->writeSlice(floatImagePixels, chan);
-
+    itsRestoredCube->writeSlice(params->valueF("image.slice"), chan);
   }
 
 }

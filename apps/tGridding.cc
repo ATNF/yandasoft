@@ -91,29 +91,29 @@ int main(int argc, const char** argv)
 
             LOFAR::ParameterSet parset(parsetFile);
             LOFAR::ParameterSet subset(parset.isDefined("Cimager.gridder") ? parset.makeSubset("Cimager.") : parset);
-            
+
             ASKAPLOG_INFO_STR(logger, "Setting up the gridder to test and the model");
             IVisGridder::ShPtr gridder = VisGridderFactory::make(subset);
             ASKAPCHECK(gridder, "Gridder is not defined");
-            scimath::Params model;
+            scimath::Params model(true);
             boost::shared_ptr<scimath::Params> modelPtr(&model, utility::NullDeleter());
             SynthesisParamsHelper::setUpImages(modelPtr,subset.makeSubset("Images."));
             ASKAPLOG_INFO_STR(logger, "Model contains the following elements: "<<model);
-            
+
             const int nCycles = subset.getInt32("ncycles", 1);
             ASKAPCHECK(nCycles > 0, "Number of iterations over the dataset is supposed to be positive, you have "<<nCycles);
             const std::string dataset = subset.getString("dataset");
             ASKAPLOG_INFO_STR(logger, "Dataset "<<dataset<<" will be used");
             const int cacheSize = subset.getInt32("nUVWMachines",1);
             ASKAPCHECK(cacheSize > 0, "uvw-machine cache size should be positive");
-            const double cacheTolerance = SynthesisParamsHelper::convertQuantity(subset.getString("uvwMachineDirTolerance", 
+            const double cacheTolerance = SynthesisParamsHelper::convertQuantity(subset.getString("uvwMachineDirTolerance",
                                                    "1e-6rad"),"rad");
             const int nCopies = subset.getInt32("ncopies",1);
-            ASKAPCHECK(nCopies > 0, "number of copies should be positive");            
+            ASKAPCHECK(nCopies > 0, "number of copies should be positive");
             ASKAPLOG_INFO_STR(logger, "Will run "<<nCopies<<" copies of gridding jobs");
-            
+
             accessors::TableDataSource ds(dataset, accessors::TableDataSource::MEMORY_BUFFERS, "DATA");
-            ds.configureUVWMachineCache(size_t(cacheSize),cacheTolerance);                          
+            ds.configureUVWMachineCache(size_t(cacheSize),cacheTolerance);
             accessors::IDataSelectorPtr sel=ds.createSelector();
             sel << subset;
             accessors::IDataConverterPtr conv=ds.createConverter();
@@ -121,7 +121,7 @@ int main(int argc, const char** argv)
             conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
             // ensure that time is counted in seconds since 0 MJD
             conv->setEpochFrame();
-            
+
             ASKAPLOG_INFO_STR(logger, "Instantiating and initialising gridders");
             const size_t nImages = model.names().size();
             std::vector<IVisGridder::ShPtr> gridderList(nImages * nCopies);
@@ -131,7 +131,7 @@ int main(int argc, const char** argv)
                  const size_t modelIndex = i % nImages;
                  const std::string imageName = model.names()[modelIndex];
                  const Axes axes(model.axes(imageName));
-                 gridderList[i]->initialiseGrid(axes,model.value(imageName).shape(), false);
+                 gridderList[i]->initialiseGrid(axes,model.shape(imageName), false);
                  gridderList[i]->customiseForContext(imageName);
             }
             for (int cycle = 0; cycle < nCycles; ++cycle) {
@@ -143,7 +143,7 @@ int main(int argc, const char** argv)
                       accBuffer.rwVisibility().set(0.);
                       accBuffer.rwVisibility() -= it->visibility();
                       accBuffer.rwVisibility() *= float(-1.);
-                      size_t tempCounter = 0; 
+                      size_t tempCounter = 0;
                       #ifdef _OPENMP
                       #pragma omp parallel default(shared)
                       {
@@ -158,9 +158,9 @@ int main(int argc, const char** argv)
                       #endif
                       counterGrid += tempCounter;
                  }
-                 ASKAPLOG_INFO_STR(logger, "Finished gridding pass, number of rows gridded is "<<counterGrid);                 
+                 ASKAPLOG_INFO_STR(logger, "Finished gridding pass, number of rows gridded is "<<counterGrid);
             }
-            
+
         }
         stats.logSummary();
         ///==============================================================================
@@ -182,4 +182,3 @@ int main(int argc, const char** argv)
 
     return 0;
 }
-        

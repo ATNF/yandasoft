@@ -157,11 +157,11 @@ namespace askap
         IVisGridder::ShPtr getResidualGridder(std::string name) const {
             return itsResidualGridders[name];
         };
-        
+
         IVisGridder::ShPtr getPreconGridder(std::string name) const {
             return itsPreconGridders[name];
         };
-        
+
         IVisGridder::ShPtr getPSFGridder(std::string name) const {
             return itsPSFGridders[name];
         };
@@ -169,7 +169,7 @@ namespace askap
         /// DDCALTAG
         /// Set the number of DD calibration directions
         void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
- 
+
       private:
 
       /// Pointer to prototype gridder

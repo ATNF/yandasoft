@@ -119,7 +119,7 @@ using namespace askap::askapparallel;
 /// @param[in] parset ParameterSet for inputs
 DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset),
+      MEParallelApp(comms,parset,false),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsNormaliseGains(false), itsSolutionInterval(-1.),
@@ -256,7 +256,7 @@ DDCalibratorParallel::DDCalibratorParallel(askap::askapparallel::AskapParallel& 
         }
 
       }
-#endif 
+#endif
 
   }
   if (itsComms.isWorker()) {
@@ -559,7 +559,7 @@ void DDCalibratorParallel::createCalibrationME(const IDataSharedIter &dsi,
             const std::pair<casa::uInt, std::string> chanInfo = accessors::CalParamNameHelper::extractChannelInfo(baseParName);
             curChan = chanInfo.first;
             baseParName = chanInfo.second;
-            // in the distributed bandpass case this worker can only deal with a subset of channels. 
+            // in the distributed bandpass case this worker can only deal with a subset of channels.
             // I (MV) not sure it is a correct way to just ignore channels outside of the current rank's work unit,
             // but just do it for now as it reverts to the old behaviour for such channels and we don't use ccalibrator for bandpass anyway
             // for ASKAP. I must say that the code became quite messy with all these various use cases
@@ -858,7 +858,7 @@ void DDCalibratorParallel::rotatePhases()
        const casacore::Short dir = accessors::CalParamNameHelper::parseParam(parname).first.beam();
        const casacore::uInt index = itsSolveBandpass ?
            accessors::CalParamNameHelper::extractChannelInfo(parname).first : dir;
-       
+
        if (parname.find("gain.g11") != std::string::npos) {
            itsModel->update(parname,
                  itsModel->complexValue(parname)*refPhaseTerms(casacore::IPosition(2,index,0)));
@@ -1000,7 +1000,7 @@ void DDCalibratorParallel::writeModel(const std::string &postfix)
       ASKAPCHECK(postfix == "", "postfix parameter is not supposed to be used in the calibration code");
 
       ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
-      
+
       // solution accessor, shared pointer is uninitialised if solution ID hasn't been obtained
       boost::shared_ptr<ICalSolutionAccessor> solAcc;
 

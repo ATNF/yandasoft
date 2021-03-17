@@ -66,8 +66,8 @@ using namespace askap::scimath;
 namespace askap {
 namespace synthesis {
 
-MEParallel::MEParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
-        SynParallel(comms, parset)
+MEParallel::MEParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset, bool useFloat) :
+        SynParallel(comms, parset, useFloat)
 {
     itsSolver = Solver::ShPtr(new Solver);
     itsNe = ImagingNormalEquations::ShPtr(new ImagingNormalEquations(*itsModel));

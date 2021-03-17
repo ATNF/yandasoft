@@ -113,11 +113,15 @@ void ImageCleaningSolver::setPaddingFactor(float padding)
 /// here.
 /// @param[in] image input image (to be padded, with double precision at the moment)
 /// @return padded image converted to floats
-casacore::Array<float> ImageCleaningSolver::padImage(const casacore::Array<double> &image) const
+casacore::Array<float> ImageCleaningSolver::padImage(const casacore::Array<imtype> &image) const
 {
   casacore::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.);
   casacore::Array<float> subImage = scimath::PaddingUtils::extract(result,paddingFactor());
+  #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+  subImage = image;
+  #else
   casacore::convertArray<float, double>(subImage, image);
+  #endif
   return result;
 }
 
@@ -140,14 +144,14 @@ void ImageCleaningSolver::clipImage(casacore::Array<float> &img) const
 /// the output array is flattened into a 1D vector
 /// @param[in] diag diagonal array
 /// @return flattened padded vector
-casacore::Vector<double> ImageCleaningSolver::padDiagonal(const casacore::Array<double> &diag) const
+casacore::Vector<imtype> ImageCleaningSolver::padDiagonal(const casacore::Array<imtype> &diag) const
 {
   if (scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()) == diag.shape()) {
-      return casacore::Vector<double>(diag.reform(casacore::IPosition(1,diag.nelements())));
+      return casacore::Vector<imtype>(diag.reform(casacore::IPosition(1,diag.nelements())));
   }
-  casacore::Array<double> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),0.);
+  casacore::Array<imtype> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),0.);
   scimath::PaddingUtils::extract(result,paddingFactor()) = diag;
-  return casacore::Vector<double>(result.reform(casacore::IPosition(1,result.nelements())));
+  return casacore::Vector<imtype>(result.reform(casacore::IPosition(1,result.nelements())));
 }
 
 
@@ -156,12 +160,16 @@ casacore::Vector<double> ImageCleaningSolver::padDiagonal(const casacore::Array<
 /// here.
 /// @param[in] image input padded image (with single precision at the moment)
 /// @return image of original (unpadded) shape converted to double precision
-casacore::Array<double> ImageCleaningSolver::unpadImage(const casacore::Array<float> &image) const
+casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<float> &image) const
 {
   casacore::Array<float> wrapper(image);
   const casacore::Array<float> subImage = scimath::PaddingUtils::extract(wrapper,paddingFactor());
-  casacore::Array<double> result(subImage.shape());
-  casacore::convertArray<double,float>(result,subImage);
+  casacore::Array<imtype> result(subImage.shape());
+  #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+  result = subImage;
+  #else
+  casacore::convertArray<imtype,float>(result,subImage);
+  #endif
   return result;
 }
 

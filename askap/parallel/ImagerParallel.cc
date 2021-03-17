@@ -91,7 +91,7 @@ namespace askap
 
     ImagerParallel::ImagerParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset),
+      MEParallelApp(comms,parset,true),
       itsExportSensitivityImage(false), itsExpSensitivityCutoff(0.)
     {
       if (itsComms.isMaster())
@@ -286,8 +286,7 @@ namespace askap
               parset.add("wpercentile", wpercentile);
               parset.add("wpercentile.advised", wpercentile);
           }
-      }
-
+        }
     }
 
     /// test whether to advise on wmax, which can require an extra pass over the data.
@@ -300,7 +299,7 @@ namespace askap
       wGridders.push_back("AWProject");
       wGridders.push_back("AProjectWStack");
       for(std::vector<std::string>::const_iterator i = wGridders.begin(); i != wGridders.end(); ++i) {
-          if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax")) {
+          if ((parset.getString("gridder")==*i) && !parset.isDefined("gridder."+*i+".wmax") ) {
               return *i;
           }
       }
@@ -321,7 +320,6 @@ namespace askap
           parset.remove("wtolerance");
           parset.remove("wtolerance.advised");
       }
-
       if (parset.isDefined("wpercentile.advised")) {
           parset.remove("wpercentile");
           parset.remove("wpercentile.advised");
@@ -661,14 +659,14 @@ namespace askap
       // we could have returned some special value (e.g. negative), but throw exception for now
       ASKAPCHECK(ine, "Current code to calculate peak residuals works for imaging-specific normal equations only");
       double peak = -1.;
-      const std::map<string, casacore::Vector<double> >& dataVector = ine->dataVector();
-      const std::map<string, casacore::Vector<double> >& diag = ine->normalMatrixDiagonal();
-      for (std::map<string, casacore::Vector<double> >::const_iterator ci = dataVector.begin();
+      const std::map<string, casacore::Vector<imtype> >& dataVector = ine->dataVector();
+      const std::map<string, casacore::Vector<imtype> >& diag = ine->normalMatrixDiagonal();
+      for (std::map<string, casacore::Vector<imtype> >::const_iterator ci = dataVector.begin();
            ci!=dataVector.end(); ++ci) {
            if (ci->first.find("image") == 0) {
                // this is an image
                ASKAPASSERT(ci->second.nelements() != 0);
-               std::map<std::string, casacore::Vector<double> >::const_iterator diagIt =
+               std::map<std::string, casacore::Vector<imtype> >::const_iterator diagIt =
                             diag.find(ci->first);
                ASKAPDEBUGASSERT(diagIt != diag.end());
                const double maxDiag = casacore::max(diagIt->second);
@@ -706,13 +704,13 @@ namespace askap
       const std::string outParName = "sensitivity" + wtImage.substr(7);
       scimath::Axes axes = itsModel->axes(wtImage);
       //
-      casacore::Array<double> wtArr = itsModel->value(wtImage);
+      casacore::Array<imtype> wtArr = itsModel->valueT(wtImage);
+      casacore::Array<imtype> sensitivityArr(wtArr.shape());
       const double cutoff = casacore::max(wtArr) * itsExpSensitivityCutoff;
-      casacore::Array<double> sensitivityArr(wtArr.shape());
 
       for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
-           const casacore::Vector<double> wtPlane = iter.getPlaneVector(wtArr);
-           casacore::Vector<double> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
+           const casacore::Vector<imtype> wtPlane = iter.getPlaneVector(wtArr);
+           casacore::Vector<imtype> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
            for (casacore::uInt elem = 0; elem < wtPlane.nelements(); ++elem) {
                 const double wt = wtPlane[elem];
                 if (wt > cutoff) {

@@ -99,7 +99,7 @@ namespace askap
 		// completions should return only free parameters according to its code in Code/Base
 		ASKAPDEBUGASSERT(ip.isFree(name));
 		*it = name; // append the common part to the front of the parameter name
-		nParameters+=ip.value(name).nelements();
+		nParameters+=ip.valueT(name).nelements();
 	}
 
 	ASKAPCHECK(nParameters>0, "No free parameters in ImageRestoreSolver");
@@ -146,7 +146,7 @@ namespace askap
 	    ImageParamsHelper iph(tmIt->first);
 	    // nOrders is the number of separate image cubes (e.g. Taylor terms)
 	    nOrders = tmIt->second;
- 
+
 	    // obtain name with just the taylor suffix, if present (i.e. no facet suffixes)
 		if(nOrders>1) {
 		    // facetmap has been setup with the full names, so need to use those here
@@ -155,7 +155,7 @@ namespace askap
 	    const std::string name = iph.taylorName();
 
 	    if (facetmap[name] == 1) {
- 
+
 	        // this is not a faceting case, restore the image in situ and add residuals
 		    if(nOrders == 1) {
 	            ASKAPLOG_INFO_STR(logger, "Restoring " << tmIt->first );
@@ -167,7 +167,7 @@ namespace askap
 	        // preconditioning to calculate restoring beam size.
 	        // needs to be set before addResiduals to support facets
 	        itsModelNeedsConvolving = true;
-	       
+
 	        // add residuals
 	        addResiduals(ip, tmIt->first, nOrders);
 
@@ -184,14 +184,14 @@ namespace askap
 			    if(nOrders>1) {
 			      iph.makeTaylorTerm(order);
 			    }
-	    
+
 	            // this is a single facet of a larger image, just fill in the bigger image with the model
 	            ASKAPLOG_INFO_STR(logger, "Inserting facet " << iph.paramName()<<" into merged image "<<name);
-	            casa::Array<double> patch = SynthesisParamsHelper::getFacet(ip,iph.paramName());
-	            const casa::Array<double> model = scimath::PaddingUtils::centeredSubArray(ip.value(iph.paramName()),
+                casa::Array<imtype> patch = SynthesisParamsHelper::getFacet(ip,iph.paramName());
+	            const casa::Array<imtype> model = scimath::PaddingUtils::centeredSubArray(ip.valueT(iph.paramName()),
 	                                            patch.shape());
 	            patch = model;
-	
+
 	        }
 
 	    }
@@ -291,7 +291,7 @@ namespace askap
         } else {
           name = facetname;
         }
-        const casa::IPosition shape = ip.value(name).shape();
+        const casa::IPosition shape = ip.shape(name);
         const scimath::Axes axes = ip.axes(name);
 
 	    // The following need to be done once and only once for each order (i.e. once for all planeIter)
@@ -321,7 +321,7 @@ namespace askap
 			    }
 	            std::string imagename = iph.taylorName();
 	            ASKAPLOG_INFO_STR(logger, "Preparing to restore "<<imagename);
-            
+
                 // when convolving model images with the restoring beam and
                 // adding residuals, the full, merged model needs to be used.
                 std::string name;
@@ -330,49 +330,61 @@ namespace askap
                 } else {
                   name = facetname;
                 }
-         
+
 	            ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
                     "Diagonal not present " << name);
-	            casa::Vector<double> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
-	            ASKAPCHECK(normalEquations().dataVector(name).size()>0,
+	            casa::Vector<imtype> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
+	            ASKAPCHECK(normalEquations().dataVectorT(name).size()>0,
                     "Data vector not present " << name);
-	            casa::Vector<double> dv = normalEquations().dataVector(name);
+	            casa::Vector<imtype> dv = normalEquations().dataVectorT(name);
 	            ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0,
                     "PSF Slice not present " << name);
-                casa::Vector<double> slice(normalEquations().normalMatrixSlice().find(name)->second);
+                casa::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(name)->second);
 	            ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
                     "Preconditioner fuction Slice not present for " << name);
-	            casa::Vector<double> pcf(normalEquations().preconditionerSlice().find(name)->second);
-         
+	            casa::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(name)->second);
+
                 if (planeIter.tag()!="") {
                     // it is not a single plane case, there is something to report
                     ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
                                            " tagged as "<<planeIter.tag());
-         
+
                 }
-         
+
 	            ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casa::max(dv));
-         
+
+                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                casa::Array<float> dirtyArray(planeIter.getPlane(dv).copy());
+                #else
                 casa::Array<float> dirtyArray(planeIter.planeShape());
 	            casa::convertArray<float, double>(dirtyArray,planeIter.getPlane(dv));
-        
+                #endif
+
 	            ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" and plane "<<
 	                     planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
-         
+
+                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                casa::Array<float> psfArray(planeIter.getPlane(slice).copy());
+                #else
                 casa::Array<float> psfArray(planeIter.planeShape());
                 casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
-         
+                #endif
+
 	            // send an anternative preconditioner function, if it isn't empty.
 	            // whether the psf or pcf is used, preconditioning needs to be the same for all Taylor terms
                 if (order == 0) {
                     psfZeroArray = psfArray;
                     if (pcf.shape() > 0) {
 	                    ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
+                        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                        pcfArray.assign(planeIter.getPlane(pcf));
+                        #else
                         pcfArray.resize(planeIter.planeShape());
 	                    casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
+                        #endif
                     }
                 }
-         
+
                 // uninitialised mask shared pointer means that we don't need it (i.e. no weight equalising)
                 boost::shared_ptr<casa::Array<float> > mask;
                 if (itsEqualiseNoise) {
@@ -387,20 +399,20 @@ namespace askap
                 // Save unnormalised PSF
                 saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
                 planeIter.position());
-                
+
                 // Do the preconditioning
                 psfWorkArray = psfZeroArray;
                 doPreconditioning(psfWorkArray,dirtyArray,pcfArray);
                 psfWorkArray = psfZeroArray;
                 doPreconditioning(psfWorkArray,psfArray,pcfArray);
-         
+
                 // Normalize by the diagonal of Taylor term 0
                 if (order == 0) {
                     itsPSFZeroCentre = doNormalization(planeIter.getPlaneVector(diag),tol(),psfArray,dirtyArray,mask);
 	            } else {
                     doNormalization(planeIter.getPlaneVector(diag),tol(),psfArray,itsPSFZeroCentre,dirtyArray,mask);
 	            }
-         
+
 	            // we have to do noise equalisation for final residuals after preconditioning
 	            if (itsEqualiseNoise) {
 	                const casa::IPosition vecShape(1,dirtyArray.nelements());
@@ -438,20 +450,20 @@ namespace askap
 
                 casa::Array<float> dirtyArray(dirtyVector(order));
                 casa::Array<float> psfArray(psfVector(order));
-            
+
 			    if(nOrders>1) {
 			      iph.makeTaylorTerm(order);
 			    }
 	            std::string imagename = iph.taylorName();
 	            ASKAPLOG_INFO_STR(logger, "Restoring "<<imagename);
-            
+
                 // when convolving model images with the restoring beam and
                 // adding residuals, the full, merged model needs to be used.
                 std::string name;
-                casa::Array<double> out;
+                casa::Array<imtype> out;
                 if (facetname == "") {
                   name = imagename;
-                  out.reference(ip.value(name));
+                  out.reference(ip.valueT(name));
                 } else {
                   name = facetname;
                   out.reference(SynthesisParamsHelper::getFacet(ip,name));
@@ -476,16 +488,20 @@ namespace askap
   	                saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
   	 	   		           planeIter.position());
                 }
-         
+
 	            // Add the residual image
                 // First, convolve the model image to the resolution of the synthesised beam if not already done.
                 casa::Vector<casa::Quantum<double> > restoringBeam;
                 if (itsModelNeedsConvolving) {
-         
+
                     if (itsBeamHelper.fitRequired()) {
                         ASKAPLOG_INFO_STR(logger, "Fitting of Restoring beam required");
+                        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                        casa::Array<float>& psfDArray(psfArray);
+                        #else
                         casa::Array<double> psfDArray(psfArray.shape());
                         casa::convertArray<double, float>(psfDArray, psfArray);
+                        #endif
                         ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
                         restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes, itsBeamHelper.cutoff());
                         ASKAPDEBUGASSERT(restoringBeam.size() == 3);
@@ -508,7 +524,7 @@ namespace askap
                     // for some reason update makes the parameter free as well
                     ip.fix(imagename);
                 }
-         
+
                 // The following can probably be done once.
                 // Even for facets, if addResiduals is called separately for each facet
 
@@ -516,9 +532,14 @@ namespace askap
 	            // doing element by element adding explicitly.
 	            const casa::IPosition outSliceShape = planeIter.planeShape(out.shape());
 	            // convertedResidual contains just one plane of residuals
+                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                casa::Array<float> convertedResidual(scimath::PaddingUtils::centeredSubArray(dirtyArray,
+	                         outSliceShape));
+                #else
 	            casa::Array<double> convertedResidual(outSliceShape);
 	            convertArray(convertedResidual, scimath::PaddingUtils::centeredSubArray(dirtyArray,
 	                         outSliceShape));
+                #endif
 	            // figure out where to put the slice to (can't use planeIter functionality directly because out
 	            // array can have a different shape
 	            casa::IPosition blc(out.shape().nelements(),0);
@@ -533,7 +554,7 @@ namespace askap
 	                 }
 	            }
 	            // copy stuff
-	            Array<double> outSlice = out(blc,trc);
+                Array<imtype> outSlice = out(blc,trc);
 	            outSlice += convertedResidual;
 
 	        } // order loop

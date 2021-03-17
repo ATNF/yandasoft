@@ -131,7 +131,7 @@ namespace askap
 
     }
 
-    void WStackVisGridder::multiply(casacore::Array<casacore::DComplex>& scratch, int i)
+    void WStackVisGridder::multiply(casacore::Array<imtypeComplex>& scratch, int i)
     {
       ASKAPDEBUGTRACE("WStackVisGridder::multiply");
       /// These are the actual cell sizes used
@@ -142,10 +142,10 @@ namespace askap
       const int ny=itsShape(1);
 
       const float w=2.0f*casacore::C::pi*getWTerm(i);
-      casacore::ArrayIterator<casacore::DComplex> it(scratch, 2);
+      casacore::ArrayIterator<imtypeComplex> it(scratch, 2);
       while (!it.pastEnd())
       {
-        casacore::Matrix<casacore::DComplex> mat(it.array());
+        casacore::Matrix<imtypeComplex> mat(it.array());
 
         /// @todo Optimise multiply loop
         for (int iy=0; iy<ny; iy++)
@@ -161,7 +161,7 @@ namespace askap
               const float r2=x2+y2;
               if (r2<1.0) {
                   const float phase=w*(1.0-sqrt(1.0-r2));
-                  mat(ix, iy)*=casacore::DComplex(cos(phase), -sin(phase));
+                  mat(ix, iy)*=imtypeComplex(cos(phase), -sin(phase));
               }
             }
           }
@@ -171,7 +171,7 @@ namespace askap
     }
 
     /// This is the default implementation
-    void WStackVisGridder::finaliseGrid(casacore::Array<double>& out)
+    void WStackVisGridder::finaliseGrid(casacore::Array<imtype>& out)
     {
       ASKAPTRACE("WStackVisGridder::finaliseGrid");
       if (isPSFGridder()) {
@@ -186,7 +186,7 @@ namespace askap
       }
       ASKAPDEBUGASSERT(itsGrid.size()>0);
       // buffer for the result as doubles
-      casacore::Array<double> dBuffer(itsGrid[0].shape());
+      casacore::Array<imtype> dBuffer(itsGrid[0].shape());
       ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
 
       /// Loop over all grids Fourier transforming and accumulating
@@ -195,8 +195,8 @@ namespace askap
       {
         if (casacore::max(casacore::amplitude(itsGrid[i]))>0.0)
         {
-          casacore::Array<casacore::DComplex> scratch(itsGrid[i].shape());
-          casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch,itsGrid[i]);
+          casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
+          casacore::convertArray<imtypeComplex,casacore::Complex>(scratch,itsGrid[i]);
           scimath::fft2d(scratch, false);
           multiply(scratch, i);
 
@@ -210,12 +210,12 @@ namespace askap
       }
       // Now we can do the convolution correction
       correctConvolution(dBuffer);
-      dBuffer *= double(dBuffer.shape()(0))*double(dBuffer.shape()(1));
+      dBuffer *= imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
       out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
     }
 
     void WStackVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casacore::Array<double>& in)
+        const casacore::Array<imtype>& in)
     {
       ASKAPTRACE("WStackVisGridder::initialiseDegrid");
       itsShape = scimath::PaddingUtils::paddedShape(in.shape(),paddingFactor());
@@ -232,19 +232,19 @@ namespace askap
         itsModelIsEmpty=false;
         ASKAPLOG_INFO_STR(logger, "Filling " << nWPlanes()
                            << " planes of W stack with model");
-        casacore::Array<double> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,0.);
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
         for (int i=0; i<nWPlanes(); ++i)
         {
-          casacore::Array<casacore::DComplex> work(itsShape);
+          casacore::Array<imtypeComplex> work(itsShape);
           toComplex(work, scratch);
           multiply(work, i);
           /// Need to conjugate to get sense of w correction correct
           work = casacore::conj(work);
           scimath::fft2d(work, true);
           itsGrid[i].resize(itsShape);
-          casacore::convertArray<casacore::Complex,casacore::DComplex>(itsGrid[i],work);
+          casacore::convertArray<casacore::Complex,imtypeComplex>(itsGrid[i],work);
         }
       } else {
         itsModelIsEmpty=true;

@@ -63,7 +63,7 @@ namespace askap
 		/// (d) solve the merged normal equations
 		/// (e) distribute the model to all prediffers and return to (b)
 		///
-		/// The caller is responsible for ensuring that the model is transferred correctly 
+		/// The caller is responsible for ensuring that the model is transferred correctly
 		/// before a CalcNE and after a SolveNE. For example:
 		/// @code
 		///		for (int cycle=0;cycle<nCycles;cycle++)
@@ -87,12 +87,14 @@ namespace askap
 		{
 			public:
 
-				/// @brief Constructor 
+				/// @brief Constructor
 				/// @details The first parameter is needed solely for MPI, the second
                 /// is the parset to be used in derived classes
 				/// @param[in] comms communication object
-				/// @param[in] parset parameter set      				
-				MEParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset);
+				/// @param[in] parset parameter set
+                /// @param[in] useFloat use float params (instead of double)
+				MEParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset,
+                            bool useFloat);
 
 				virtual ~MEParallel();
 
@@ -111,18 +113,18 @@ namespace askap
 
                 /// @brief Receive the normal equations from all workers into this master
                 void receiveNE();
-            
+
                 /// @brief Return the shared pointer to the Imaging Normal Equations
                 askap::scimath::INormalEquations::ShPtr getNE() const {
                     return itsNe;
-                
+
                 };
-            
+
                 /// @brief Set the shared pointer to the Imaging Normal Equations
                 askap::scimath::INormalEquations::ShPtr setNE(askap::scimath::INormalEquations::ShPtr ne)  {
                     itsNe = ne;
                     return itsNe;
-                    
+
                 };
 
                 /// @brief Perform a reduction for normal equations from all
@@ -130,10 +132,10 @@ namespace askap
                 void reduceNE(askap::scimath::INormalEquations::ShPtr ne);
 
 			protected:
-		
+
                 // Point-to-point send normal equations
                 // @param[in] ne    pointer to normal equations to send
-                // @param[in] dest  rank of process to send normal equations to    
+                // @param[in] dest  rank of process to send normal equations to
                 void sendNormalEquations(const askap::scimath::INormalEquations::ShPtr ne, int dest);
 
                 // Point-to-point receive normal equations
@@ -147,7 +149,7 @@ namespace askap
 
 				/// Holder for the solver
 				askap::scimath::Solver::ShPtr itsSolver;
-				
+
 				/// Holder for the equation
 				askap::scimath::Equation::ShPtr itsEquation;
 		};

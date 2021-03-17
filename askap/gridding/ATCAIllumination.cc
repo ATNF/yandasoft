@@ -1,4 +1,4 @@
-/// @file 
+/// @file
 /// @brief ATCA L-band illumination model
 /// @details This class represents a ATCA L-band illumination model.
 /// It includes a disk with Jamesian illumination and optionally feed leg shadows.
@@ -46,10 +46,10 @@ using namespace askap::synthesis;
 /// @param[in] blockage a diameter of the central hole in metres
 ATCAIllumination::ATCAIllumination(double diam, double blockage) :
   itsDiameter(diam), itsBlockage(blockage), itsDoTapering(false), itsDoFeedLegs(false),
-  itsDoFeedLegWedges(false) 
+  itsDoFeedLegWedges(false)
 {
   ASKAPDEBUGASSERT(diam>0);
-  ASKAPDEBUGASSERT(blockage>=0);  
+  ASKAPDEBUGASSERT(blockage>=0);
   ASKAPDEBUGASSERT(diam > blockage);
 }
 
@@ -70,20 +70,20 @@ void ATCAIllumination::simulateTapering(double maxDefocusingPhase)
 /// @param[in] rotation angle in radians of the feed lag shadows with respect to u,v axes
 /// @param[in] shadowingFactor attenuation of the illumination caused by feed legs, assign
 /// zero to get a total blockage.
-void ATCAIllumination::simulateFeedLegShadows(double width, double rotation, 
+void ATCAIllumination::simulateFeedLegShadows(double width, double rotation,
                                               double shadowingFactor)
 {
   itsDoFeedLegs = true;
   itsFeedLegsHalfWidth = width/2.;
   itsFeedLegsRotation = rotation;
   itsFeedLegsShadowing = shadowingFactor;
-  ASKAPCHECK((shadowingFactor<=1.) && (shadowingFactor>=0.), 
-	     "shadowingFactor is supposed to be from [0,1] interval, you have "<<shadowingFactor); 
-}  
+  ASKAPCHECK((shadowingFactor<=1.) && (shadowingFactor>=0.),
+	     "shadowingFactor is supposed to be from [0,1] interval, you have "<<shadowingFactor);
+}
 
 /// @brief switch on the simulation of feed leg wedges
 /// @details This method assigns the parameters of the feed leg wedges and allows
-/// their simulation. 
+/// their simulation.
 /// @param[in] wedgeShadowingFactor1 additional attenuation inside the wedge for the feed
 /// leg which is rotated to u axis by the angle specified in simulateFeedLegShadows.
 /// @param[in] wedgeShadowingFactor2 the same as wedgeShadowingFactor1, but for orthogonal
@@ -91,7 +91,7 @@ void ATCAIllumination::simulateFeedLegShadows(double width, double rotation,
 /// @param[in] wedgeOpeningAngle opening angle of the wedge in radians
 /// @param[in] wedgeStartingRadius starting radius in metres of the wedge
 /// @note simulateFeedLegShadows should also be called prior to the first use of this object.
-void ATCAIllumination::simulateFeedLegWedges(double wedgeShadowingFactor1, double wedgeShadowingFactor2, 
+void ATCAIllumination::simulateFeedLegWedges(double wedgeShadowingFactor1, double wedgeShadowingFactor2,
 					     double wedgeOpeningAngle, double wedgeStartingRadius)
 {
   itsDoFeedLegWedges = true;
@@ -99,13 +99,13 @@ void ATCAIllumination::simulateFeedLegWedges(double wedgeShadowingFactor1, doubl
   itsFeedLegsWedgeShadowing2 = wedgeShadowingFactor2;
   itsWedgeOpeningAngle = wedgeOpeningAngle;
   itsWedgeStartingRadius = wedgeStartingRadius;
-  ASKAPCHECK((wedgeShadowingFactor1<=1.) && (wedgeShadowingFactor1>=0.), 
-	     "wedgeShadowingFactor1 is supposed to be from [0,1] interval, you have "<<wedgeShadowingFactor1); 
-  ASKAPCHECK((wedgeShadowingFactor2<=1.) && (wedgeShadowingFactor2>=0.), 
-	     "wedgeShadowingFactor2 is supposed to be from [0,1] interval, you have "<<wedgeShadowingFactor2); 
-  ASKAPCHECK((wedgeOpeningAngle < M_PI/2.) && (wedgeOpeningAngle > 0), 
+  ASKAPCHECK((wedgeShadowingFactor1<=1.) && (wedgeShadowingFactor1>=0.),
+	     "wedgeShadowingFactor1 is supposed to be from [0,1] interval, you have "<<wedgeShadowingFactor1);
+  ASKAPCHECK((wedgeShadowingFactor2<=1.) && (wedgeShadowingFactor2>=0.),
+	     "wedgeShadowingFactor2 is supposed to be from [0,1] interval, you have "<<wedgeShadowingFactor2);
+  ASKAPCHECK((wedgeOpeningAngle < M_PI/2.) && (wedgeOpeningAngle > 0),
 	     "Opening angle is supposed to be from the (0, pi/2) interval, you have "<<wedgeOpeningAngle);
-}   
+}
 
 
 /// @brief helper method used inside the calculation of Jamesian illumination
@@ -135,7 +135,7 @@ double ATCAIllumination::outerJamesian(double fractionalRadius)
 
 /// @brief a helper method to return 1D illumination
 /// @details There are some build in parameters of the taper. We may need to expose them
-/// to the class interface in the future, but currently this method doesn't use the 
+/// to the class interface in the future, but currently this method doesn't use the
 /// data members and hence made static.
 /// @param[in] fractionalRadius radius given as a fraction of dish radius
 /// @return amplitude of illumination
@@ -147,8 +147,8 @@ double ATCAIllumination::jamesian(double fractionalRadius)
   // constants were taken from Tim's glish script
   const double cd=0.3;
   const double transitionFractionalRadius = 0.4;
-  
-  const double value = (fractionalRadius < transitionFractionalRadius ? 
+
+  const double value = (fractionalRadius < transitionFractionalRadius ?
 			innerJamesian(fractionalRadius) / innerJamesian(transitionFractionalRadius) :
 			outerJamesian(fractionalRadius) / outerJamesian(transitionFractionalRadius));
   return value * (1. - cd * (1. - fractionalRadius));
@@ -156,18 +156,18 @@ double ATCAIllumination::jamesian(double fractionalRadius)
 
 
 /// @brief obtain illumination pattern
-/// @details This is the main method which populates the 
+/// @details This is the main method which populates the
 /// supplied uv-pattern with the values corresponding to the model
-/// represented by this object. It has to be overridden in the 
+/// represented by this object. It has to be overridden in the
 /// derived classes. An optional phase slope can be applied to
 /// simulate offset pointing.
 /// @param[in] freq frequency in Hz for which an illumination pattern is required
 /// @param[in] pattern a UVPattern object to fill
 /// @param[in] l angular offset in the u-direction (in radians)
 /// @param[in] m angular offset in the v-direction (in radians)
-/// @param[in] pa parallactic angle, or strictly speaking the angle between 
+/// @param[in] pa parallactic angle, or strictly speaking the angle between
 /// uv-coordinate system and the system where the pattern is defined (unused)
-void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l, 
+void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const
 {
     // zero value of the pattern by default
@@ -191,12 +191,12 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
   const casacore::uInt oversample = pattern.overSample();
   const double cellU = pattern.uCellSize()/oversample;
   const double cellV = pattern.vCellSize()/oversample;
- 
-  ASKAPCHECK(itsDoFeedLegWedges ? itsDoFeedLegs : true, 
+
+  ASKAPCHECK(itsDoFeedLegWedges ? itsDoFeedLegs : true,
 	     "you can only switch on simulation of feed leg wedges with the simulation of feed legs");
   ASKAPDEBUGASSERT(!itsDoFeedLegWedges || (itsWedgeStartingRadius < itsDiameter/2.));
-  ASKAPDEBUGASSERT(!itsDoFeedLegs || (itsFeedLegsHalfWidth < itsDiameter/2.));  
- 
+  ASKAPDEBUGASSERT(!itsDoFeedLegs || (itsFeedLegsHalfWidth < itsDiameter/2.));
+
   // calculate beam offset
   double l = 0.0;
   double m = 0.0;
@@ -206,43 +206,43 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
           cos(beamCentre.getLat()) * sin(imageCentre.getLat()) *
           cos(beamCentre.getLong() - imageCentre.getLong());
   }
-  
+
   // scaled l and m to take the calculations out of the loop
-  // these quantities are effectively dimensionless 
+  // these quantities are effectively dimensionless
   const double lScaled = 2.*casacore::C::pi*cellU *l;
   const double mScaled = 2.*casacore::C::pi*cellV *m;
-  
+
   // zero value of the pattern by default
   pattern.pattern().set(0.);
-  
-  ASKAPCHECK(std::abs(std::abs(cellU/cellV)-1.)<1e-7, 
+
+  ASKAPCHECK(std::abs(std::abs(cellU/cellV)-1.)<1e-7,
 	     "Rectangular cells are not supported at the moment");
-  
+
   const double cell = std::abs(cellU*(casacore::C::c/freq));
-  
-  const double dishRadiusInCells = itsDiameter/(2.0*cell);  
-  
+
+  const double dishRadiusInCells = itsDiameter/(2.0*cell);
+
   // squares of the disk and blockage area radii
   const double rMaxSquared = casacore::square(dishRadiusInCells);
-  const double rMinSquared = casacore::square(itsBlockage/(2.0*cell));     
-  
+  const double rMinSquared = casacore::square(itsBlockage/(2.0*cell));
+
   // feed legs/wedges length parameters
   const double feedLegsHalfWidthInCells = itsFeedLegsHalfWidth / cell;
   const double wedgeStartingRadiusInCells = itsWedgeStartingRadius / cell;
-  
+
   // sizes of the grid to fill with pattern values
   const casacore::uInt nU = pattern.uSize();
   const casacore::uInt nV = pattern.vSize();
-  
-  ASKAPCHECK((casacore::square(double(nU)) > rMaxSquared) || 
+
+  ASKAPCHECK((casacore::square(double(nU)) > rMaxSquared) ||
 	     (casacore::square(double(nV)) > rMaxSquared),
 	     "The pattern buffer passed to ATCAIllumination::getPattern is too small for the given model. "
 	     "Sizes should be greater than "<<sqrt(rMaxSquared)<<" on each axis, you have "
 	     <<nU<<" x "<<nV);
-  
+
   // maximum possible support for this class corresponds to the dish size
   pattern.setMaxSupport(1+2*casacore::uInt(dishRadiusInCells)/oversample);
-  
+
   double sum=0.; // normalisation factor
   for (casacore::uInt iU=0; iU<nU; ++iU) {
     const double offsetU = double(iU)-double(nU)/2.;
@@ -266,11 +266,11 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
 	}
 	if (itsDoFeedLegs) {
 	  // rotated offsets
-	  const double dU = cos(itsFeedLegsRotation+pa)*offsetU + 
+	  const double dU = cos(itsFeedLegsRotation+pa)*offsetU +
 	    sin(itsFeedLegsRotation+pa)*offsetV;
-	  const double dV = -sin(itsFeedLegsRotation+pa)*offsetU + 
-	    cos(itsFeedLegsRotation+pa)*offsetV;				                        
-	  // decrease the illumination within the feed leg shadows                  
+	  const double dV = -sin(itsFeedLegsRotation+pa)*offsetU +
+	    cos(itsFeedLegsRotation+pa)*offsetV;
+	  // decrease the illumination within the feed leg shadows
 	  if ((std::abs(dU) < feedLegsHalfWidthInCells) ||
 	      (std::abs(dV) < feedLegsHalfWidthInCells)) {
 	    value *= double(itsFeedLegsShadowing);
@@ -281,39 +281,39 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
 						      wedgeAngleTan*std::abs(dU - wedgeStartingRadiusInCells))) {
 	      value *= double(itsFeedLegsShadowing * itsFeedLegsWedgeShadowing1);
 	    }
-	    
+
 	    if ((dU < -wedgeStartingRadiusInCells) && (std::abs(dV) <
 						       wedgeAngleTan*std::abs(dU + wedgeStartingRadiusInCells))) {
 	      value *= double(itsFeedLegsShadowing * itsFeedLegsWedgeShadowing1);
 	    }
-	    
+
 	    if ((dV > wedgeStartingRadiusInCells) && (std::abs(dU) <
 						      wedgeAngleTan*std::abs(dV - wedgeStartingRadiusInCells))) {
 	      value *= double(itsFeedLegsShadowing * itsFeedLegsWedgeShadowing2);
 	    }
-	    
+
 	    if ((dV < -wedgeStartingRadiusInCells) && (std::abs(dU) <
 						       wedgeAngleTan*std::abs(dV + wedgeStartingRadiusInCells))) {
 	      value *= double(itsFeedLegsShadowing * itsFeedLegsWedgeShadowing2);
-	    }                                                    
+	    }
 	  }
 	}
-	
-	
+
+
 	// add up the norm contribution and assign the final value
 	//sum += casacore::abs(value);
 	sum += std::real(std::conj(value)*value);
 	// Now apply the phase slope related to pointing offset
 	const double phase = lScaled*offsetU + mScaled*offsetV;
-	pattern(iU, iV) = value*casacore::DComplex(cos(phase), -sin(phase));
+	pattern(iU, iV) = imtypeComplex(value)*imtypeComplex(cos(phase), -sin(phase));
       }
     }
   }
-  
+
   // We need to divide by the sum squared so that the convolution is normalized to unity
   ASKAPCHECK(sum > 0., "Integral of the pattern should be non-zero");
   sum = sqrt(sum);
-  pattern.pattern() *= casacore::DComplex(double(nU)*double(nV)/double(sum),0.);
+  pattern.pattern() *= imtypeComplex(double(nU)*double(nV)/double(sum),0.);
 }
 
 /// @brief check whether the pattern is symmetric
@@ -329,9 +329,8 @@ bool ATCAIllumination::isSymmetric() const
 /// @details Some illumination patterns need to be generated in the image domain, and given
 /// the standard usage (FFT to image-domain for combination with other functions) any image
 /// domain function may as well stay in the image domain. So check the state before doing the FFT.
-/// @return false 
+/// @return false
 bool ATCAIllumination::isImageBased() const
 {
   return false;
 }
-

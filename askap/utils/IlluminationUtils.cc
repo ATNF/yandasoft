@@ -1,5 +1,5 @@
 /// @file
-/// 
+///
 /// @brief utilities related to illumination pattern
 /// @details This class is written for experiments with eigenbeams and synthetic beams.
 ///
@@ -62,23 +62,23 @@ namespace askap {
 namespace synthutils {
 
 /// @brief constructor
-/// @details 
-/// @param[in] illum illumination pattern to work with 
+/// @details
+/// @param[in] illum illumination pattern to work with
 /// @param[in] size desired image size
-/// @param[in] cellsize uv-cell size 
-/// @param[in] oversample oversampling factor (default 1) 
+/// @param[in] cellsize uv-cell size
+/// @param[in] oversample oversampling factor (default 1)
 IlluminationUtils::IlluminationUtils(const boost::shared_ptr<synthesis::IBasicIllumination> &illum,
         size_t size, double cellsize, size_t oversample) :
-        itsElementIllumination(illum), itsIllumination(illum), itsSize(size), 
+        itsElementIllumination(illum), itsIllumination(illum), itsSize(size),
         itsCellSize(cellsize), itsOverSample(oversample)
 {}
 
 
-/// @brief constructor from a parset file 
+/// @brief constructor from a parset file
 /// @details
-/// This version extracts all required parameters from the supplied parset file 
+/// This version extracts all required parameters from the supplied parset file
 /// using the same factory, which provides illumination patterns for gridders.
-/// @param[in] parset parset file name 
+/// @param[in] parset parset file name
 IlluminationUtils::IlluminationUtils(const std::string &parset)
 {
   LOFAR::ParameterSet params(parset);
@@ -86,13 +86,13 @@ IlluminationUtils::IlluminationUtils(const std::string &parset)
   itsCellSize = params.getDouble("cellsize");
 
 
-  const int size = params.getInt32("size"); 
+  const int size = params.getInt32("size");
   ASKAPCHECK(size>0,"Size is supposed to be positive, you have "<<size);
   itsSize = size_t(size);
-  
+
   const int oversample = params.getInt32("oversample");
   ASKAPCHECK(oversample>0,"Oversample is supposed to be positive, you have "<<oversample);
-  itsOverSample = size_t(oversample);  
+  itsOverSample = size_t(oversample);
 }
 
 /// @brief switch to the single element case
@@ -106,7 +106,7 @@ void IlluminationUtils::useSingleElement()
 /// @param[in] offsets a matrix with offsets of the elements (number of columns should be 2,
 /// number of rows is the number of elements).
 /// @param[in] weights a vector of complex weights
-void IlluminationUtils::useSyntheticPattern(const casa::Matrix<double> &offsets, 
+void IlluminationUtils::useSyntheticPattern(const casa::Matrix<double> &offsets,
                             const casa::Vector<casa::Complex> &weights)
 {
   ASKAPASSERT(itsElementIllumination);
@@ -120,9 +120,9 @@ void IlluminationUtils::useSyntheticPattern(const casa::Matrix<double> &offsets,
   itsIllumination.reset(new synthesis::BasicCompositeIllumination(itsElementIllumination,
                    elementOffsets, weights));
 }
-   
+
 /// @brief save the pattern into an image
-/// @details 
+/// @details
 /// @param[in] name file name
 /// @param[in] what type of the image requested, e.g. amplitude (default),
 /// real, imag, phase, complex. Minimum match applies.
@@ -132,30 +132,34 @@ void IlluminationUtils::save(const std::string &name, const std::string &what)
    const double freq=1.4e9;
    synthesis::UVPattern pattern(itsSize, itsSize, itsCellSize, itsCellSize, itsOverSample);
    itsIllumination->getPattern(freq, pattern);
-   
+
    casa::Matrix<double> xform(2,2);
    xform = 0.; xform.diagonal() = 1.;
    casa::Vector<casa::String> names(2);
    names[0]="U"; names[1]="V";
-   
+
    casa::Vector<double> increment(2);
    increment[0]=-itsCellSize/double(itsOverSample);
    increment[1]=itsCellSize/double(itsOverSample);
-   
+
    casa::LinearCoordinate linear(names, casa::Vector<casa::String>(2,"lambda"),
-          casa::Vector<double>(2,0.), increment, xform, 
+          casa::Vector<double>(2,0.), increment, xform,
           casa::Vector<double>(2,double(itsSize)/2));
-   
+
    casa::CoordinateSystem coords;
-   coords.addCoordinate(linear);    
-   
+   coords.addCoordinate(linear);
+
+   #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+   casa::Array<casa::Complex> buf(pattern.pattern());
+   #else
    casa::Array<casa::Complex> buf(pattern.pattern().shape());
    casa::convertArray<casa::Complex, casa::DComplex>(buf,pattern.pattern());
+   #endif
    saveComplexImage(name,coords,buf,what);
 }
 
 /// @brief save the voltage pattern into an image
-/// @details 
+/// @details
 /// @param[in] name file name
 /// @param[in] what type of the image requested, e.g. amplitude (default),
 /// real, imag, phase, complex. Minimum match applies.
@@ -167,10 +171,10 @@ void IlluminationUtils::saveVP(const std::string &name, const std::string &what)
    const double freq=1.4e9;
    synthesis::UVPattern pattern(itsSize, itsSize, itsCellSize, itsCellSize, itsOverSample);
    itsIllumination->getPattern(freq, pattern);
-   casa::Array<casa::DComplex> scratch(pattern.pattern().copy());
+   casa::Array<imtypeComplex> scratch(pattern.pattern().copy());
    scimath::fft2d(scratch,false);
    scratch/=casa::max(casa::abs(scratch));
-   
+
    casa::Matrix<double> xform(2,2);
    xform = 0.; xform.diagonal() = 1.;
    double angularCellSize = double(itsOverSample)/itsCellSize/double(itsSize);
@@ -178,34 +182,38 @@ void IlluminationUtils::saveVP(const std::string &name, const std::string &what)
    blc[0]=blc[1]=itsSize*(itsOverSample-1)/itsOverSample/2;
    casa::IPosition length(scratch.shape());
    length[0]=length[1]=itsSize/itsOverSample;
-   casa::Array<casa::DComplex> slice = scratch(casa::Slicer(blc,length));
+   casa::Array<imtypeComplex> slice = scratch(casa::Slicer(blc,length));
    casa::DirectionCoordinate azel(casa::MDirection::AZEL, casa::Projection::SIN, 0.,0.,
-                 -angularCellSize, angularCellSize, 
+                 -angularCellSize, angularCellSize,
                  xform, length[0]/2, length[1]/2);
-      
+
    casa::CoordinateSystem coords;
-   coords.addCoordinate(azel);    
+   coords.addCoordinate(azel);
+   #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+   casa::Array<casa::Complex> buf(slice);
+   #else
    casa::Array<casa::Complex> buf(slice.shape());
    casa::convertArray<casa::Complex, casa::DComplex>(buf,slice);
+   #endif
    saveComplexImage(name,coords,buf,what);
  }
 
 /// @brief save complex array into an image
-/// @details 
+/// @details
 /// @param[in] name file name
 /// @param[in] coords coordinate system
 /// @param[in] arr array to take the data from
 /// @param[in] what type of the image requested, e.g. amplitude (default),
 /// real, imag, phase, complex. Minimum match applies.
-void IlluminationUtils::saveComplexImage(const std::string &name, 
-            const casa::CoordinateSystem &coords, 
+void IlluminationUtils::saveComplexImage(const std::string &name,
+            const casa::CoordinateSystem &coords,
             const casa::Array<casa::Complex> &arr,
             const std::string &what)
 {
   if (what.find("complex") == 0) {
        casa::PagedImage<casa::Complex> result(casa::TiledShape(arr.shape()), coords, name);
-       casa::ArrayLattice<casa::Complex> patternLattice(arr);                
-       result.setUnits("Jy/pixel");             
+       casa::ArrayLattice<casa::Complex> patternLattice(arr);
+       result.setUnits("Jy/pixel");
    } else {
        casa::PagedImage<casa::Float> result(casa::TiledShape(arr.shape()), coords, name);
        casa::Array<casa::Float> workArray;
@@ -223,11 +231,10 @@ void IlluminationUtils::saveComplexImage(const std::string &name,
        }
        casa::ArrayLattice<casa::Float> patternLattice(workArray);
        result.copyData(patternLattice);
-       result.setUnits("Jy/pixel");             
+       result.setUnits("Jy/pixel");
    }
 }
 
 }
 
 }
-

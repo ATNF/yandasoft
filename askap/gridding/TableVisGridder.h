@@ -112,7 +112,7 @@ namespace askap
 
       /// Form the final output image
       /// @param out Output double precision image or PSF
-      virtual void finaliseGrid(casacore::Array<double>& out);
+      virtual void finaliseGrid(casacore::Array<imtype>& out);
 
       /// @brief store given grid
       /// @details This is a helper method for debugging, it stores the amplitude of a given
@@ -127,13 +127,13 @@ namespace askap
       /// function. This is used in the evaluation of the position
       /// dependent sensitivity
       /// @param out Output double precision sum of weights images
-      virtual void finaliseWeights(casacore::Array<double>& out);
+      virtual void finaliseWeights(casacore::Array<imtype>& out);
 
       /// @brief Initialise the degridding
       /// @param axes axes specifications
       /// @param image Input image: cube: u,v,pol,chan
       virtual void initialiseDegrid(const scimath::Axes& axes,
-          const casacore::Array<double>& image);
+          const casacore::Array<imtype>& image);
 
       /// @brief Make context-dependant changes to the gridder behaviour
       /// @param context context
@@ -401,7 +401,7 @@ protected:
 
       /// @brief Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casacore::Array<double>& image) = 0;
+      virtual void correctConvolution(casacore::Array<imtype>& image) = 0;
 
       /// @brief Conversion helper function
       /// @details Copies in to out expanding double into complex values and
@@ -409,7 +409,7 @@ protected:
       /// @param[out] out complex output array
       /// @param[in] in double input array
       /// @param[in] padding padding factor
-      static void toComplex(casacore::Array<casacore::DComplex>& out, const casacore::Array<double>& in,
+      static void toComplex(casacore::Array<imtypeComplex>& out, const casacore::Array<imtype>& in,
                      const float padding = 1.);
 
       /// @brief Conversion helper function
@@ -418,7 +418,7 @@ protected:
       /// @param[out] out real output array
       /// @param[in] in complex input array
       /// @param[in] padding padding factor
-      static void toDouble(casacore::Array<double>& out, const casacore::Array<casacore::DComplex>& in,
+      static void toDouble(casacore::Array<imtype>& out, const casacore::Array<imtypeComplex>& in,
                     const float padding = 1.);
 
       /// @brief a helper method to initialize gridding of the PSF

@@ -1,12 +1,12 @@
 /// @file
-/// 
+///
 /// @brief Unit tests for GainCalibrationEquation.
 /// @details GainCalibrationEquation just multiplies by a gain matrix
 /// visibilities produced by another measurement equation. It also generates
 /// normal equations, which allow to solve for unknowns in the gain matrix.
 /// The tests given in this file attempt to predict a visibility data set
 /// with some calibration errors and then solve for them.
-/// 
+///
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -61,20 +61,20 @@ namespace askap
   namespace synthesis
   {
     using utility::toString;
-    
+
     class CalibrationMETest : public CppUnit::TestFixture
     {
       CPPUNIT_TEST_SUITE(CalibrationMETest);
       /*
       CPPUNIT_TEST(testSolveNoPreAvg);
       CPPUNIT_TEST(testSolveBPNoPreAvg);
-      CPPUNIT_TEST(testSolvePreAvg);      
+      CPPUNIT_TEST(testSolvePreAvg);
       CPPUNIT_TEST(testSolvePreAvg2);
       */
       CPPUNIT_TEST(testSolveBPPreAvgSVD);
       CPPUNIT_TEST(testSolveBPPreAvgLSQR);
       CPPUNIT_TEST_SUITE_END();
-      
+
       private:
         typedef CalibrationME<Sum<Product<NoXPolGain, IdentityComponent,
                   IdentityComponent>, ZeroComponent> > METype;
@@ -84,11 +84,11 @@ namespace askap
         boost::shared_ptr<Params> params1, params2;
         accessors::SharedIter<accessors::DataIteratorStub> idi;
 
-      protected:        
-        
+      protected:
+
         /// @brief helper method to take care of absolute phase uncertainty
         /// @param[in] shared pointer to parameters to update
-        /// @param[in] chan if non-negative, rotation will be done for this channel and bandpass 
+        /// @param[in] chan if non-negative, rotation will be done for this channel and bandpass
         /// calibration is assumed. Otherwise, normal gain calibration is implied
         static void rotatePhase(const boost::shared_ptr<Params> &params, const int chan = -1) {
           CPPUNIT_ASSERT(params);
@@ -97,27 +97,27 @@ namespace askap
           const casacore::uInt refAnt = 0;
           const std::string refParamName = baseName + ".g11."+toString(refAnt)+".0" + (chan < 0 ? std::string() :
                       std::string(".") + toString(chan));
-          const casacore::Complex refPhaseTerm = casacore::polar(1.f, 
+          const casacore::Complex refPhaseTerm = casacore::polar(1.f,
                   -arg(params->complexValue(refParamName)));
-                       
+
           std::vector<std::string> freeNames(params->freeNames());
           for (std::vector<std::string>::const_iterator it=freeNames.begin();
                                               it!=freeNames.end();++it)  {
                const std::string parname = *it;
                if (parname.find("gain") == 0) {
-                   CPPUNIT_ASSERT(params->has(parname));                    
+                   CPPUNIT_ASSERT(params->has(parname));
                    params->update(parname,
-                        params->complexValue(parname)*refPhaseTerm);                                 
+                        params->complexValue(parname)*refPhaseTerm);
                } else if (parname.find("bp.gain") == 0) {
                    CPPUNIT_ASSERT(chan >= 0);
                    if (accessors::CalParamNameHelper::extractChannelInfo(parname).first == casacore::uInt(chan)) {
                        params->update(parname,
-                           params->complexValue(parname)*refPhaseTerm);                                 
+                           params->complexValue(parname)*refPhaseTerm);
                    }
                }
           }
         }
-        
+
         /// @brief check gain parameters
         /// @details This method checks that all gain parameters in params2 are
         /// equal to the values from params1.
@@ -126,33 +126,33 @@ namespace askap
           CPPUNIT_ASSERT(params1);
           CPPUNIT_ASSERT(params2);
           const std::string baseName = (isBP ? accessors::CalParamNameHelper::bpPrefix() : std::string()) + "gain";
-          
-          // checking that solved gains should be close to 1 for g11 
+
+          // checking that solved gains should be close to 1 for g11
           // and to 0.9 for g22 (we don't have data to solve for the second
           // polarisation, so it should be left unchanged)
           std::vector<std::string> completions(params2->completions(baseName));
           for (std::vector<std::string>::const_iterator it=completions.begin();
                                                 it!=completions.end();++it)  {
-               const std::string parname = baseName+*it;                                 
-                              
+               const std::string parname = baseName+*it;
+
                if (it->find(".g22") == 0) {
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(1.0,params2->scalarValue(parname),3e-7);
                } else if (it->find(".g11") == 0) {
-                   const casacore::Complex diff = params2->complexValue(parname)- 
-                          (isBP ? params1->complexValue(accessors::CalParamNameHelper::extractChannelInfo("gain"+*it).second) : 
+                   const casacore::Complex diff = params2->complexValue(parname)-
+                          (isBP ? params1->complexValue(accessors::CalParamNameHelper::extractChannelInfo("gain"+*it).second) :
                           params1->complexValue(parname));
-                   //std::cout<<parname<<" "<<diff<<" "<<abs(diff)<<std::endl;        
+                   //std::cout<<parname<<" "<<diff<<" "<<abs(diff)<<std::endl;
                    CPPUNIT_ASSERT_DOUBLES_EQUAL(0.,abs(diff),3e-7);
                } else {
                  ASKAPTHROW(AskapError, "an invalid gain parameter "<<parname<<" has been detected");
                }
           }
         }
-        
+
         /// @brief prepare data and parameters
         /// @details This method predicts the data using "perfect" gains and fixes parameters which
         /// are not to be solved for. Technically, these operations can be put into setUp, but
-        /// doing them in each unit test may be better because some exceptions may be thrown         
+        /// doing them in each unit test may be better because some exceptions may be thrown
         void initDataAndParameters() {
            // Predict with the "perfect" parameters"
            eq1->predict();
@@ -162,32 +162,32 @@ namespace askap
                 if (it->find("gain") != 0) {
                     params2->fix(*it);
                 }
-           }         
+           }
         }
-        
-      public:        
+
+      public:
         void setUp()
         {
           idi = boost::shared_ptr<accessors::DataIteratorStub>(new accessors::DataIteratorStub(1));
           accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*idi);
           ASKAPASSERT(da.itsStokes.nelements() == 1);
           da.itsStokes[0] = casacore::Stokes::XX;
-          
+
           const casacore::uInt nAnt = 30;
           //const casacore::uInt nAnt1 = 6;
           const double realGains[nAnt] = {1.1, 0.9, 1.05, 0.87, 1.333,
-                                          1.1, 1.0, 1.0, -1.0, 0.3, 
+                                          1.1, 1.0, 1.0, -1.0, 0.3,
                                          -0.5, 1.1, 0.9, 0.98, 1.03,
                                          -0.3, -1.1, 0.9, 1.1, 1.05,
                                           1.0, -0.3, 1.1, 0.3, 1.8,
-                                          0.5, -0.7, 1.054, 1.0, 1.1}; 
+                                          0.5, -0.7, 1.054, 1.0, 1.1};
           const double imagGains[nAnt] = {0.0, 0., -0.05, 0.587, 0.,
-                                          0., -0.1, 0.02, -0.1, 0.84, 
+                                          0., -0.1, 0.02, -0.1, 0.84,
                                           0.86, 0.1, 0.1, 0., 0.03,
                                          -0.84, 0., 0., -0.1, -0.05,
                                           0.2, 0.9, 1.1, 0.3, -0.1,
-                                         -0.9, 0.72, -0.04, 0.05, -0.1}; 
-          
+                                         -0.9, 0.72, -0.04, 0.05, -0.1};
+
           params1.reset(new Params);
           params1->add("flux.i.cena", 100.);
           params1->add("direction.ra.cena", 0.5*casacore::C::arcsec);
@@ -216,13 +216,13 @@ namespace askap
                params2->add("gain.g22."+toString(ant)+".0",1.0);
                params2->fix("gain.g22."+toString(ant)+".0");
           }
-       
+
           p2.reset(new ComponentEquation(*params2, idi));
           //eq2.reset(new METype(*params2,idi,p2));
 
         }
-        
-        void testSolvePreAvg() 
+
+        void testSolvePreAvg()
         {
           initDataAndParameters();
           typedef CalibrationME<NoXPolGain, PreAvgCalMEBase> PreAvgMEType;
@@ -237,12 +237,12 @@ namespace askap
                GenericNormalEquations ne;
                preAvgEq->calcEquations(ne);
                Quality q;
-               LinearSolver solver; 
+               LinearSolver solver;
                solver.addNormalEquations(ne);
                solver.setAlgorithm("SVD");
                const boost::shared_ptr<Params> params = preAvgEq->rwParameters();
                CPPUNIT_ASSERT(params);
-               solver.solveNormalEquations(*params,q);  
+               solver.solveNormalEquations(*params,q);
                rotatePhase(params);
           }
           params2 = preAvgEq->parameters().clone();
@@ -251,7 +251,7 @@ namespace askap
 
         /// @brief another way to handle parameters in major cycle
         /// @note Actual calculations are supposed to be identical to testSolvePreAvg2
-        void testSolvePreAvg2() 
+        void testSolvePreAvg2()
         {
           initDataAndParameters();
           typedef CalibrationME<NoXPolGain, PreAvgCalMEBase> PreAvgMEType;
@@ -267,10 +267,10 @@ namespace askap
                preAvgEq->setParameters(*params2);
                preAvgEq->calcEquations(ne);
                Quality q;
-               LinearSolver solver; 
+               LinearSolver solver;
                solver.addNormalEquations(ne);
                solver.setAlgorithm("SVD");
-               solver.solveNormalEquations(*params2,q);  
+               solver.solveNormalEquations(*params2,q);
                rotatePhase(params2);
                //std::cout<<iter<<" "<<params2->complexValue("gain.g11.0.0")<<std::endl;
           }
@@ -283,22 +283,22 @@ namespace askap
           for (size_t iter=0; iter<5; ++iter) {
                // Calculate gradients using "imperfect" parameters"
                GenericNormalEquations ne;
-            
+
                eq2.reset(new METype(*params2,idi,p2));
-            
+
                eq2->calcEquations(ne);
                Quality q;
                LinearSolver solver1;
                solver1.addNormalEquations(ne);
                solver1.setAlgorithm("SVD");
-               solver1.solveNormalEquations(*params2,q);  
-               //std::cout<<q<<std::endl;               
-                              
+               solver1.solveNormalEquations(*params2,q);
+               //std::cout<<q<<std::endl;
+
                // taking care of the absolute phase uncertainty
                rotatePhase(params2);
           //std::cout<<*params2<<std::endl;
           }
-          checkSolution();        
+          checkSolution();
         }
 
         void testSolveBPPreAvgSVD()
@@ -310,7 +310,7 @@ namespace askap
         {
             testSolveBPPreAvg("LSQR");
         }
-        
+
         void testSolveBPNoPreAvg()
         {
           initDataAndParameters();
@@ -329,26 +329,26 @@ namespace askap
           for (size_t iter=0; iter<5; ++iter) {
                // Calculate gradients using "imperfect" parameters"
                GenericNormalEquations ne;
-            
+
                BPMEType bpEq(*params2,idi,p2);
-            
+
                bpEq.calcEquations(ne);
                Quality q;
                LinearSolver solver1;
                solver1.addNormalEquations(ne);
                solver1.setAlgorithm("SVD");
-               solver1.solveNormalEquations(*params2,q);  
-               //std::cout<<q<<std::endl;               
-                              
+               solver1.solveNormalEquations(*params2,q);
+               //std::cout<<q<<std::endl;
+
                // taking care of the absolute phase uncertainty
-               for (casacore::uInt chan = 0; chan<idi->nChannel(); ++chan) {               
+               for (casacore::uInt chan = 0; chan<idi->nChannel(); ++chan) {
                     rotatePhase(params2,int(chan));
                }
           //std::cout<<*params2<<std::endl;
           }
-          checkSolution(true);                           
+          checkSolution(true);
         }
-        
+
       private:
         void testSolveBPPreAvg(const std::string& solverType)
         {
@@ -393,9 +393,8 @@ namespace askap
         }
 
    };
-    
+
   } // namespace synthesis
 } // namespace askap
 
 #endif // #ifndef CALIBRATION_ME_TEST_H
-

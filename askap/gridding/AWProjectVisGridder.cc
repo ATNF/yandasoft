@@ -224,7 +224,7 @@ void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casac
 /// @param axes axes specifications
 /// @param image Input image: cube: u,v,pol,chan
 void AWProjectVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casacore::Array<double>& image)
+        const casacore::Array<imtype>& image)
 {
     ASKAPTRACE("AWProjectVisGridder::initialiseDegrid");
     WProjectVisGridder::initialiseDegrid(axes, image);
@@ -342,7 +342,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     */
 
     UVPattern &pattern = uvPattern();
-    casacore::Matrix<casacore::DComplex> thisPlane = getCFBuffer();
+    casacore::Matrix<imtypeComplex> thisPlane = getCFBuffer();
     ASKAPDEBUGASSERT(thisPlane.nrow() == nx);
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == ny);
     const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
@@ -391,11 +391,11 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                                 const double phase = w * (1.0 - sqrt(1.0 - r2));
                                 // grid correction is temporary disabled as otherwise the fluxes are overestimated
                                 // for polarised beams this should be J*J'
-                                const casacore::DComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
-                                //*casacore::DComplex(ccfx(ix)*ccfy(iy));
+                                const imtypeComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
+                                //*imtypeComplex(ccfx(ix)*ccfy(iy));
                                 // this ensures the oversampling is done
-                                thisPlane(ix, iy) = wt * casacore::DComplex(cos(phase), -sin(phase));
-                                //thisPlane(ix, iy)=wt*casacore::DComplex(cos(phase));
+                                thisPlane(ix, iy) = wt * imtypeComplex(cos(phase), -sin(phase));
+                                //thisPlane(ix, iy)=wt*imtypeComplex(cos(phase));
                                 maxCF += casacore::abs(wt);
                             }
                         }
@@ -412,7 +412,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                     scimath::fft2d(thisPlane, true);
 
                     // Now correct for normalization of FFT
-                    thisPlane *= casacore::DComplex(1.0 / (double(nx) * double(ny)));
+                    thisPlane *= imtypeComplex(1.0 / (double(nx) * double(ny)));
                     // use this norm later on during normalisation
                     const double thisPlaneNorm = sum(real(thisPlane));
                     ASKAPDEBUGASSERT(thisPlaneNorm > 0.);
@@ -495,7 +495,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                                     ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
                                     ASKAPDEBUGASSERT(ox >= 0);
                                     ASKAPDEBUGASSERT(ox < int(thisPlane.nrow()));
-                                    itsConvFunc[plane](ix + support, iy + support) = rescale * thisPlane(ox,oy);
+                                    itsConvFunc[plane](ix + support, iy + support) = imtype(rescale) * thisPlane(ox,oy);
                                 }
                             }
 
@@ -586,7 +586,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 /// 1. For each plane of the convolution function, transform to image plane
 /// and multiply by conjugate to get abs value squared.
 /// 2. Sum all planes weighted by the weight for that convolution function.
-void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
+void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
 {
     ASKAPTRACE("AWProjectVisGridder::finaliseWeights");
     ASKAPLOG_DEBUG_STR(logger, "Calculating sum of weights image");
@@ -625,7 +625,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
     */
 
     /// This is the output array before sinc padding
-    casacore::Array<double> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
+    casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
 
     // for debugging
@@ -657,7 +657,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
             // so the total field of view is itsOverSample times larger than the
             // original field of view.
             /// Work space
-            casacore::Matrix<casacore::DComplex> thisPlane(cnx, cny);
+            casacore::Matrix<imtypeComplex> thisPlane(cnx, cny);
             thisPlane.set(0.0);
 
             // use either support determined for this particular plane or a generic one,
@@ -682,7 +682,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
             }
 
             scimath::fft2d(thisPlane, false);
-            thisPlane *= casacore::DComplex(cnx * cny);
+            thisPlane *= imtypeComplex(cnx * cny);
 
             // Now we need to cut out only the part inside the field of view
             for (int chan = 0; chan < nChan; chan++) {
@@ -697,7 +697,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
 
                         for (int iy = 0; iy < cny; iy++) {
                             ip(1) = iy;
-                            const casacore::DComplex val = thisPlane(ix, iy);
+                            const imtypeComplex val = thisPlane(ix, iy);
                             cOut(ip) += double(wt) * casacore::real(val * conj(val));//*ccfx(ix)*ccfy(iy);
                         }
                     }
@@ -717,7 +717,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<double>& out)
 
 /// Correct for gridding convolution function
 /// @param image image to be corrected
-void AWProjectVisGridder::correctConvolution(casacore::Array<double>& /*image*/)
+void AWProjectVisGridder::correctConvolution(casacore::Array<imtype>& /*image*/)
 {
     //SphFuncVisGridder::correctConvolution(image);
 
@@ -753,21 +753,21 @@ void AWProjectVisGridder::correctConvolution(casacore::Array<double>& /*image*/)
          const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
          ccfy(iy) = grdsf(nuy);
     }
-    casacore::Matrix<casacore::DComplex> buffer(nx,ny);
+    casacore::Matrix<imtypeComplex> buffer(nx,ny);
     for (casacore::Int ix = 0; ix < nx; ++ix) {
          for (casacore::Int iy = 0; iy < ny; ++iy) {
               buffer(ix,iy) = ccfx(ix)*ccfy(iy);
          }
     }
     scimath::fft2d(buffer, true);
-    buffer *= casacore::DComplex(1./(double(nx)*double(ny)));
+    buffer *= imtypeComplex(1./(double(nx)*double(ny)));
     for (casacore::Int x = 0; x < nx; ++x) {
          for (casacore::Int y = 0; y < ny; ++y) {
               buffer(x,y) *= conj(buffer(x,y));
          }
     }
     scimath::fft2d(buffer, false);
-    buffer *= casacore::DComplex(double(nx)*double(ny));
+    buffer *= imtypeComplex(double(nx)*double(ny));
 
 
     for (casacore::ArrayIterator<double> it(image, 2); !it.pastEnd(); it.next()) {

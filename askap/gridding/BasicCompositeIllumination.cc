@@ -158,14 +158,14 @@ void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern,
                                     cellV *feedOffset(1)*offsetV);
                   weight+=itsWeights[iFeed]*casacore::Complex(cos(phase), -sin(phase));
 			 }
-			 pattern(iU, iV) *= casacore::DComplex(weight);
+			 pattern(iU, iV) *= imtypeComplex(weight);
 			 sum += std::abs(weight);
 		}
 	}
 	
 	
     ASKAPCHECK(sum > 0., "Integral of the synthetic pattern should be non-zero");
-    pattern.pattern() *= casacore::DComplex(float(nU)*float(nV)/float(sum),0.); 
+    pattern.pattern() *= imtypeComplex(float(nU)*float(nV)/float(sum),0.); 
 }
 
 /// @brief check whether the pattern is symmetric

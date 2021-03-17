@@ -306,10 +306,10 @@ void CalcCore::check()
     const ImagingNormalEquations &checkRef =
     dynamic_cast<const ImagingNormalEquations&>(*itsNe);
 
-    casacore::Vector<double> diag(checkRef.normalMatrixDiagonal(names[0]));
-    casacore::Vector<double> dv = checkRef.dataVector(names[0]);
-    casacore::Vector<double> slice(checkRef.normalMatrixSlice(names[0]));
-    casacore::Vector<double> pcf(checkRef.preconditionerSlice(names[0]));
+    casacore::Vector<imtype> diag(checkRef.normalMatrixDiagonal(names[0]));
+    casacore::Vector<imtype> dv = checkRef.dataVectorT(names[0]);
+    casacore::Vector<imtype> slice(checkRef.normalMatrixSlice(names[0]));
+    casacore::Vector<imtype> pcf(checkRef.preconditionerSlice(names[0]));
 
     ASKAPLOG_DEBUG_STR(logger, "Max data: " << max(dv) << " Max PSF: " << max(slice) << " Normalised: " << max(dv)/max(slice));
 

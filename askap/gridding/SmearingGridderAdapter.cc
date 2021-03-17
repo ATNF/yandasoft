@@ -1,7 +1,7 @@
 /// @file
 ///
-/// @brief Gridder adapter to simulate smearing effects 
-/// @details When in the degridding mode, this adapter runs the wrapped 
+/// @brief Gridder adapter to simulate smearing effects
+/// @details When in the degridding mode, this adapter runs the wrapped
 /// gridder at finer time and frequency resolution and averages the result
 /// to simulate bandwidth at time-average smearing. This can be done for both
 /// simulation and the forward prediction step of the ordinary imaging.
@@ -47,7 +47,7 @@ using namespace askap::accessors;
 /// @details
 /// @param[in] gridder a shared pointer to the gridder to be wrapped by this adapter
 /// @param[in] bandwidth effective bandwidth of a single spectral channel (we don't have access to it and
-/// in general it may be different from spectral resolution), same units as used in the other part of 
+/// in general it may be different from spectral resolution), same units as used in the other part of
 /// the gridding package (Hz)
 /// @param[in] nFreqSteps number of frequency points in the simulation (default is 1, i.e. no simulation)
 /// @note time-average smearing is not yet implemented
@@ -59,7 +59,7 @@ SmearingGridderAdapter::SmearingGridderAdapter(const boost::shared_ptr<IVisGridd
   itsGridder = gridder->clone();
   ASKAPCHECK(itsNFreqSteps > 0, "SmearingGridderAdapter should only be initialised with a positive number of frequency integration steps");
   ASKAPCHECK(itsBandwidth > 0, "SmearingGridderAdapter should only be initialised with a positive bandwidth");
-}           
+}
 
 
 /// @brief copy constructor
@@ -67,17 +67,17 @@ SmearingGridderAdapter::SmearingGridderAdapter(const boost::shared_ptr<IVisGridd
 /// which is a non-trivial type
 /// @param[in] other an object to copy from
 SmearingGridderAdapter::SmearingGridderAdapter(const SmearingGridderAdapter &other) :
-    itsBandwidth(other.itsBandwidth), itsNFreqSteps(other.itsNFreqSteps), itsModelIsEmpty(other.itsModelIsEmpty)   
-{   
-  ASKAPCHECK(other.itsGridder, 
+    itsBandwidth(other.itsBandwidth), itsNFreqSteps(other.itsNFreqSteps), itsModelIsEmpty(other.itsModelIsEmpty)
+{
+  ASKAPCHECK(other.itsGridder,
       "copy constructor of SmearingGridderAdapter got an object somehow set up with an empty gridder");
-  itsGridder = other.itsGridder->clone();  
-}  
-   
+  itsGridder = other.itsGridder->clone();
+}
+
 /// @brief clone a copy of this gridder
 /// @return shared pointer to the clone
-boost::shared_ptr<IVisGridder> SmearingGridderAdapter::clone() 
-{  
+boost::shared_ptr<IVisGridder> SmearingGridderAdapter::clone()
+{
   boost::shared_ptr<SmearingGridderAdapter> newOne(new SmearingGridderAdapter(*this));
   return newOne;
 }
@@ -104,7 +104,7 @@ void SmearingGridderAdapter::grid(accessors::IConstDataAccessor& acc)
 
 /// @brief form the final output image
 /// @param[in] out output double precision image or PSF
-void SmearingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
+void SmearingGridderAdapter::finaliseGrid(casacore::Array<imtype>& out)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->finaliseGrid(out);
@@ -114,7 +114,7 @@ void SmearingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
 /// @details Form the sum of the convolution function squared, multiplied by the weights for each
 /// different convolution function. This is used in the evaluation of the second derivative.
 /// @param[in] out output double precision sum of weights images
-void SmearingGridderAdapter::finaliseWeights(casacore::Array<double>& out)
+void SmearingGridderAdapter::finaliseWeights(casacore::Array<imtype>& out)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->finaliseWeights(out);
@@ -124,7 +124,7 @@ void SmearingGridderAdapter::finaliseWeights(casacore::Array<double>& out)
 /// @param[in] axes axes specifications
 /// @param[in] image input image cube: u,v,pol,chan
 void SmearingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
-					const casacore::Array<double>& image)
+					const casacore::Array<imtype>& image)
 {
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->initialiseDegrid(axes,image);
@@ -138,7 +138,7 @@ void SmearingGridderAdapter::customiseForContext(const std::string &context)
    ASKAPDEBUGASSERT(itsGridder);
    itsGridder->customiseForContext(context);
 }
-			
+
 /// @brief set visibility weights
 /// @param[in] viswt shared pointer to visibility weights
 void SmearingGridderAdapter::initVisWeights(const IVisWeights::ShPtr &viswt)
@@ -148,19 +148,19 @@ void SmearingGridderAdapter::initVisWeights(const IVisWeights::ShPtr &viswt)
 }
 
 /// @brief degrid the visibility data.
-/// @param[in] acc non-const data accessor to work with  
+/// @param[in] acc non-const data accessor to work with
 void SmearingGridderAdapter::degrid(accessors::IDataAccessor& acc)
 {
    ASKAPDEBUGASSERT(itsGridder);
    if (itsNFreqSteps < 2) {
        // void operation, as we have a single integration step only
-       itsGridder->degrid(acc); 
+       itsGridder->degrid(acc);
    } else {
        // we need a new adapter here allowing to change frequency information
        // this part is to be written
        SmearingAccessorAdapter accBuffer(acc);
        accBuffer.useFrequencyBuffer();
-       const casacore::uInt centralStep = itsNFreqSteps / 2; 
+       const casacore::uInt centralStep = itsNFreqSteps / 2;
        ASKAPDEBUGASSERT(centralStep > 0);
        const double freqInc = itsBandwidth / double(itsNFreqSteps - 1);
        // for an odd number of integration steps we get one point exactly at the centre of the channel,
@@ -173,10 +173,10 @@ void SmearingGridderAdapter::degrid(accessors::IDataAccessor& acc)
             // do the integration via Trapezium method
             // first deal with the first and the last point because we scale down the result later
             const casacore::uInt step = (it == 0 ? 0 : (it == 1 ? itsNFreqSteps - 1 : it - 1));
-            ASKAPDEBUGASSERT(step < itsNFreqSteps); 
+            ASKAPDEBUGASSERT(step < itsNFreqSteps);
             // fill the new frequency vector
             for (casacore::uInt chan = 0; chan<nChan; ++chan) {
-                 accBuffer.rwFrequency()[chan] = acc.frequency()[chan] + freqOff + 
+                 accBuffer.rwFrequency()[chan] = acc.frequency()[chan] + freqOff +
                           double(casacore::Int(step) - casacore::Int(centralStep)) * freqInc;
             }
             itsGridder->degrid(accBuffer);
@@ -186,7 +186,7 @@ void SmearingGridderAdapter::degrid(accessors::IDataAccessor& acc)
                 accBuffer.rwVisibility() *= float(0.5);
             }
        }
-       acc.rwVisibility() = accBuffer.visibility() / float(itsNFreqSteps - 1);       
+       acc.rwVisibility() = accBuffer.visibility() / float(itsNFreqSteps - 1);
    }
 }
 
@@ -205,5 +205,3 @@ bool SmearingGridderAdapter::isModelEmpty() const
 {
   return itsModelIsEmpty;
 }
-
-

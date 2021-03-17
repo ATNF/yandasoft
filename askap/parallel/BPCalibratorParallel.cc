@@ -110,7 +110,7 @@ using askap::operator<<;
 /// @param[in] comms communication object
 /// @param[in] parset ParameterSet for inputs
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
-          const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset)),
+          const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset),false),
       itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false),
       itsSolveBandpass(false), itsSolveLeakage(false)
 {
