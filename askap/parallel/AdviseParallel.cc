@@ -197,7 +197,7 @@ void AdviseParallel::estimate()
        // we only need one iteration here
    } else {
        // the first iteration is just to get an estimate for the tangent point
-       itsEstimator.reset(new VisMetaDataStats(false,itsWPercentile));
+       itsEstimator.reset(new VisMetaDataStats(true,itsWPercentile));
    }
    calcNE();
    if (!itsTangentDefined) {
