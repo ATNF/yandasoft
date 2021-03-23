@@ -905,8 +905,9 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        }
 
        // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
+       bool snapShot = parset.getBool("gridder.snapshotimaging",false);
        param = "gridder.snapshotimaging.wtolerance";
-       if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
+       if (snapShot && parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
            string wtolerance = parset.getString(param);
            ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
            parset.add("wtolerance", wtolerance);

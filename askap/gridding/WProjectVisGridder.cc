@@ -374,10 +374,10 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         if (isSupportPlaneDependent() || (itsSupport == 0)) {
             cfSupport = extractSupport(thisPlane);
             const int support = cfSupport.itsSize;
-
-            ASKAPCHECK(support*itsOverSample < nx / 2,
+            // fail here if the cutoff level is on the edge of the image
+            ASKAPCHECK((support+1)*itsOverSample < nx / 2,
                        "Overflowing convolution function for w-plane " << iw <<
-                       " - increase maxSupport or decrease overSample; support=" <<
+                       " - increase maxSupport or cutoff or decrease overSample; support=" <<
                        support << " oversample=" << itsOverSample << " nx=" << nx);
             cfSupport.itsSize = limitSupportIfNecessary(support);
 
@@ -398,6 +398,27 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
         const int cSize = 2 * support + 1;
 
+        // work out range of kx, ky and see if they will overflow the array
+        int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
+        int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
+        int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
+        int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
+        int overflow = 0;
+        if (kxmin<0) {
+            overflow = -kxmin;
+        }
+        if (kxmax>=nx) {
+            overflow = std::max(overflow, kxmax-(nx-1));
+        }
+        if (kymin<0) {
+            overflow = std::max(overflow, -kymin);
+        }
+        if (kymax>=ny) {
+            overflow = std::max(overflow, kymax-(ny-1));
+        }
+
+        ASKAPCHECK(overflow==0,"Convolution function overflowing - increase maxsupport or cutoff or decrease oversample, overflow="<<overflow);
+
         for (int fracu = 0; fracu < itsOverSample; ++fracu) {
             for (int fracv = 0; fracv < itsOverSample; ++fracv) {
                 const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
@@ -411,13 +432,15 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     for (int ix = -support; ix <= support; ++ix) {
                         const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
                         const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
-                        ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
-                        ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
-                        ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                        ASKAPDEBUGASSERT(kx >= 0);
-                        ASKAPDEBUGASSERT(ky >= 0);
-                        ASKAPDEBUGASSERT(kx < nx);
-                        ASKAPDEBUGASSERT(ky < ny);
+                        // these are not needed as they can never fail
+                        //ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
+                        //ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
+                        //ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
+                        // Can we move these outside the loop? Yes.
+                        //ASKAPDEBUGASSERT(kx >= 0);
+                        //ASKAPDEBUGASSERT(ky >= 0);
+                        //ASKAPDEBUGASSERT(kx < nx);
+                        //ASKAPDEBUGASSERT(ky < ny);
                         //if (w < 0) {
                         //    itsConvFunc[plane](ix + support, iy + support) =
                         //        conj(thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
