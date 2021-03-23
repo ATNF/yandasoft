@@ -197,7 +197,7 @@ void AdviseParallel::estimate()
        // we only need one iteration here
    } else {
        // the first iteration is just to get an estimate for the tangent point
-       itsEstimator.reset(new VisMetaDataStats(false,itsWPercentile));
+       itsEstimator.reset(new VisMetaDataStats(true,itsWPercentile));
    }
    calcNE();
    if (!itsTangentDefined) {
@@ -209,9 +209,9 @@ void AdviseParallel::estimate()
        broadcastModel();
        receiveModel();
        ASKAPCHECK(params()->has("tangent"), "tangent is not defined. There is likely to be a problem with model broadcast/receive");
-       const casacore::Vector<casacore::Double> tangent = params()->value("tangent");
+       const casacore::Vector<imtype> tangent = params()->valueT("tangent");
        ASKAPCHECK(tangent.nelements() == 2, "Expect a 2-element vector for tangent, you have "<<tangent);
-       itsTangent = casacore::MVDirection(tangent);
+       itsTangent = casacore::MVDirection(tangent(0),tangent(1));
        itsTangentDefined = true;
        ASKAPLOG_INFO_STR(logger, "Using tangent "<<printDirection(itsTangent)<<" (estimated most central direction)");
        // now all ranks should have the same value of itsTangent & itsTangentDefined, ready for the second iteration
