@@ -244,9 +244,7 @@ void AdviseDI::prepare() {
         resolution[n].resize(0);
         centre[n].resize(0);
 
-
-        /*
-        // MV: the design of this class is very ugly from C++ point of view, it needs to be redesigned to get more
+        // MV: the design of this class is very ugly from the C++ point of view, it needs to be redesigned to get more
         // structure if we want to extend it further (or even debug - I suspect the issues I am working with now is
         // just a tip of an iceberg). Also, it needs to access MSs through standard interfaces and mimic the same access patterns
         // as the actual imager (or do appropriate estimates). To address the immediate problem of too simplistic interpretation of
@@ -254,12 +252,9 @@ void AdviseDI::prepare() {
         // inheritance may be more appropriate here, with possible refactoring). This essentially would introduce another iteration over
         // metadata. But, in this simplistic form, when only tangent point is required, data won't be touched, so hopefully no huge performance
         // penalty. Besides, this additional code is well encapsulated keeping (additional) technical debt to a minimum.
-        {
-          ASKAPLOG_DEBUG_STR(logger, "Assessing " << ms[n] << " via the standard interfaces, ms.size() = "<<ms.size());
-          const VisMetaDataStats &mdStats = computeVisMetaDataStats(ms[n]);
-        }
+        ASKAPLOG_DEBUG_STR(logger, "Assessing " << ms[n] << " via the standard interfaces");
+        const VisMetaDataStats &mdStats = computeVisMetaDataStats(ms[n]);
         //
-        */
 
         // Open the input measurement set
         ASKAPLOG_DEBUG_STR(logger, "Opening " << ms[n] << " filecount " << n );
@@ -300,18 +295,18 @@ void AdviseDI::prepare() {
 
         totChanIn = totChanIn + thisChanIn;
 
-        /*
+        
         // MV: see comments above, this is a somewhat ugly approach to get the correct phase centre
         itsTangent.push_back(mdStats.centre());
         itsDirVec.push_back(casa::Vector<casacore::MDirection>(1,casacore::MDirection(itsTangent[n], casacore::MDirection::J2000)));
         const casacore::Vector<casacore::MDirection> oldDirVec(fc.phaseDirMeasCol()(0));
         ASKAPLOG_DEBUG_STR(logger, "Tangent point for "<<ms[n]<<" : "<<printDirection(itsTangent[n])<<
                            " (J2000), old way: "<<printDirection(oldDirVec(0).getValue())<<" (J2000)");
-        */
+        
 
         // the old way to get phase centre/tangent:
-        itsDirVec.push_back(fc.phaseDirMeasCol()(0));
-        itsTangent.push_back(itsDirVec[n](0).getValue());
+        //itsDirVec.push_back(fc.phaseDirMeasCol()(0));
+        //itsTangent.push_back(itsDirVec[n](0).getValue());
 
         // Read the position on Antenna 0
         Array<casacore::Double> posval;
@@ -910,8 +905,9 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        }
 
        // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
+       bool snapShot = parset.getBool("gridder.snapshotimaging",false);
        param = "gridder.snapshotimaging.wtolerance";
-       if (parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
+       if (snapShot && parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
            string wtolerance = parset.getString(param);
            ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
            parset.add("wtolerance", wtolerance);
