@@ -39,4 +39,15 @@ tests/data/simulation/synthregression/synthprogrunner.pyc
 tests/data/simulation/synthregression/temp_parset.in
 tests/data/simulation/synthregression/weights.field1/
 tests/data/simulation/synthregression/wtermtest.pyc
+tests/data/simulation/synthregression/wtermtest_template_mod.in
+tests/data/simulation/synthregression/result.dat
+tests/data/simulation/synthregression/synthregression*.out
+tests/data/simulation/synthregression/*.ms
+tests/data/simulation/synthregression/*.pyc
+tests/data/simulation/synthregression/image.*
+tests/data/simulation/synthregression/mask.*
+tests/data/simulation/synthregression/psf.*
+tests/data/simulation/synthregression/residual.*
+tests/data/simulation/synthregression/sensitivity.*
+tests/data/simulation/synthregression/weights.*
 
