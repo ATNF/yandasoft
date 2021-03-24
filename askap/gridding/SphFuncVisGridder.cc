@@ -96,64 +96,32 @@ namespace askap
       }
       itsConvFunc.resize(itsOverSample*itsOverSample);
 
-      if (isPCFGridder()) {
+      /// This must be changed for non-MFS
 
-        // A simple grid kernel for use in setting up the preconditioner function.
-        // Set up as a nearest neighbour gridder (based partly on the Box gridder).
-        // Gridding weight is written to the real part, gridding support is written
-        // to the imaginary part.
-
-        itsSupport=1;
-        const int cSize=2*itsSupport+1;
-        const int cCenter=(cSize-1)/2;
-
-        // This gridding function is divided out of the psf & dirty image
-        // before preconditioning, so ideally the support should be reduced
-        // back the pixel/s it falls in. Settng to 3 to be conservative.
-        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
-            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
-                const int plane=fracu+itsOverSample*fracv;
-                ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
-                itsConvFunc[plane].resize(cSize, cSize);
-                itsConvFunc[plane].set(0.0);
-                // are fracu and fracv being correctly used here?
-                // I think they should be -ve, since the offset in nux & nuy is +ve.
-                const int ix = -float(fracu)/float(itsOverSample);
-                const int iy = -float(fracv)/float(itsOverSample);
-                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casacore::Complex(1.0, 3.0);
-            }
-        }
-
-      } else {
-
-        /// This must be changed for non-MFS
-
-        const int cSize=2*itsSupport + 1; // 7;
-        for (int fracv=0; fracv<itsOverSample; ++fracv) {
-          for (int fracu=0; fracu<itsOverSample; ++fracu) {
-            const int plane=fracu+itsOverSample*fracv;
-            ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
-            itsConvFunc[plane].resize(cSize, cSize);
-            itsConvFunc[plane].set(0.0);
-            casacore::Vector<imtypeComplex> bufx(cSize);
-            casacore::Vector<imtypeComplex> bufy(cSize);
-            for (int ix=0; ix<cSize; ++ix) {
-              const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
-              bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
-            }
+      const int cSize=2*itsSupport + 1; // 7;
+      for (int fracv=0; fracv<itsOverSample; ++fracv) {
+        for (int fracu=0; fracu<itsOverSample; ++fracu) {
+          const int plane=fracu+itsOverSample*fracv;
+          ASKAPDEBUGASSERT(plane>=0 && plane<int(itsConvFunc.size()));
+          itsConvFunc[plane].resize(cSize, cSize);
+          itsConvFunc[plane].set(0.0);
+          casacore::Vector<imtypeComplex> bufx(cSize);
+          casacore::Vector<imtypeComplex> bufy(cSize);
+          for (int ix=0; ix<cSize; ++ix) {
+            const double nux=std::abs(double(itsOverSample*(ix-itsSupport)+fracu))/double(itsSupport*itsOverSample);
+            bufx(ix)=grdsf(nux)*std::pow(1.0-nux*nux, itsAlpha);
+          }
+          for (int iy=0; iy<cSize; ++iy) {
+            const double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
+            bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
+          }
+          for (int ix=0; ix<cSize; ++ix) {
             for (int iy=0; iy<cSize; ++iy) {
-              const double nuy=std::abs(double(itsOverSample*(iy-itsSupport)+fracv))/double(itsSupport*itsOverSample);
-              bufy(iy)=grdsf(nuy)*std::pow(1.0-nuy*nuy, itsAlpha);
+              itsConvFunc[plane](ix, iy)=bufx(ix)*bufy(iy);
             }
-            for (int ix=0; ix<cSize; ++ix) {
-              for (int iy=0; iy<cSize; ++iy) {
-                itsConvFunc[plane](ix, iy)=bufx(ix)*bufy(iy);
-              }
-            }
-          } // for fracu
-        } // for fracv
-
-      }
+          }
+        } // for fracu
+      } // for fracv
 
       // force normalization for all fractional offsets (or planes)
       for (size_t plane = 0; plane<itsConvFunc.size(); ++plane) {
@@ -178,8 +146,6 @@ namespace askap
       casacore::Vector<double> ccfy(itsShape(1));
       ASKAPDEBUGASSERT(itsShape(0)>1);
       ASKAPDEBUGASSERT(itsShape(1)>1);
-
-      if (isPCFGridder()) return;
 
       // initialise buffers to enable a filtering of the correction
       // function in Fourier space.

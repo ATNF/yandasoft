@@ -187,62 +187,6 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         initConvFuncOffsets(nWPlanes());
     }
 
-    if (isPCFGridder()) {
-
-      // A simple grid kernel for use in setting up the preconditioner function.
-      // Set up as a nearest neighbour gridder (based partly on the Box gridder).
-      // Gridding weight is written to the real part, gridding support is written
-      // to the imaginary part.
-      // It is assumed that any non-zero cfSupport.itsOffsetU or
-      // cfSupport.itsOffsetV will be taken care of in gridding/preconditioning
-      // with an appropriate use of the wKernelPix data.
-
-      itsSupport=1;
-      const int cSize=2*itsSupport+1;
-      const int cCenter=(cSize-1)/2;
-
-      // Use the w & oversampling setup as the main grid kernels.
-      for (int iw = 0; iw < nWPlanes(); ++iw) {
-
-        // Store the main kernel size (in pixels) in the imag part.
-        // What size should be stored? From some simple fits:
-        //   1e-2 cutoff: support ~ sqrt( 7^2 + (w.theta^2)^2 )
-        //   1e-3 cutoff: support ~ 6.02 + 1.14*w.theta^2
-        // Preconditioning happens after "deconvolving" the anti-aliasing part
-        // of the kernel. When w=0 this should reduce the support from the
-        // nominal value of 7, however for larger w kernels it won't (in fact
-        // it may result in the gridded data ringing out across the uv plane).
-        // So do we want to limit the support when w.Theta ~ 0 but keep +/-3 for
-        // larger kernels? I don't know that this is right, but it's a start.
-        float wThetaPix = fabs(getWTerm(iw)) / (itsUVCellSize(0) * itsUVCellSize(0));
-        float wKernelPix;
-        if (wThetaPix < 1) {
-          wKernelPix = 3;
-        } else if (itsCutoff < 0.01) {
-          wKernelPix = 6 + 1.14*wThetaPix;
-        } else {
-          wKernelPix = sqrt( 49 + wThetaPix*wThetaPix );
-        }
-
-        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
-            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
-                const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
-                ASKAPDEBUGASSERT(plane < int(itsConvFunc.size()));
-                itsConvFunc[plane].resize(cSize, cSize);
-                itsConvFunc[plane].set(0.0);
-                // are fracu and fracv being correctly used here?
-                // I think they should be -ve, since the offset in nux & nuy is +ve.
-                const int ix = -float(fracu)/float(itsOverSample);
-                const int iy = -float(fracv)/float(itsOverSample);
-                itsConvFunc[plane](ix + cCenter, iy + cCenter) =  casacore::Complex(1.0, wKernelPix);
-            }
-        }
-
-      }
-
-      return;
-    }
-
     if (itsShareCF && theirCFCache.size()>0) {
         // we already have what we need
         itsSupport = 1;
@@ -374,10 +318,10 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         if (isSupportPlaneDependent() || (itsSupport == 0)) {
             cfSupport = extractSupport(thisPlane);
             const int support = cfSupport.itsSize;
-            // fail here if the cutoff level is on the edge of the image
-            ASKAPCHECK((support+1)*itsOverSample < nx / 2,
+
+            ASKAPCHECK(support*itsOverSample < nx / 2,
                        "Overflowing convolution function for w-plane " << iw <<
-                       " - increase maxSupport or cutoff or decrease overSample; support=" <<
+                       " - increase maxSupport or decrease overSample; support=" <<
                        support << " oversample=" << itsOverSample << " nx=" << nx);
             cfSupport.itsSize = limitSupportIfNecessary(support);
 
@@ -398,27 +342,6 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
 
         const int cSize = 2 * support + 1;
 
-        // work out range of kx, ky and see if they will overflow the array
-        int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
-        int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
-        int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
-        int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
-        int overflow = 0;
-        if (kxmin<0) {
-            overflow = -kxmin;
-        }
-        if (kxmax>=nx) {
-            overflow = std::max(overflow, kxmax-(nx-1));
-        }
-        if (kymin<0) {
-            overflow = std::max(overflow, -kymin);
-        }
-        if (kymax>=ny) {
-            overflow = std::max(overflow, kymax-(ny-1));
-        }
-
-        ASKAPCHECK(overflow==0,"Convolution function overflowing - increase maxsupport or cutoff or decrease oversample, overflow="<<overflow);
-
         for (int fracu = 0; fracu < itsOverSample; ++fracu) {
             for (int fracv = 0; fracv < itsOverSample; ++fracv) {
                 const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
@@ -432,15 +355,13 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     for (int ix = -support; ix <= support; ++ix) {
                         const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
                         const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
-                        // these are not needed as they can never fail
-                        //ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
-                        //ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
-                        //ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                        // Can we move these outside the loop? Yes.
-                        //ASKAPDEBUGASSERT(kx >= 0);
-                        //ASKAPDEBUGASSERT(ky >= 0);
-                        //ASKAPDEBUGASSERT(kx < nx);
-                        //ASKAPDEBUGASSERT(ky < ny);
+                        ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
+                        ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
+                        ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
+                        ASKAPDEBUGASSERT(kx >= 0);
+                        ASKAPDEBUGASSERT(ky >= 0);
+                        ASKAPDEBUGASSERT(kx < nx);
+                        ASKAPDEBUGASSERT(ky < ny);
                         //if (w < 0) {
                         //    itsConvFunc[plane](ix + support, iy + support) =
                         //        conj(thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,

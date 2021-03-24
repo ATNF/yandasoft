@@ -381,9 +381,8 @@ namespace askap
            bool isMFS = (imageName.find(".taylor.") != std::string::npos);
            bool isTT0 = (imageName.find(".taylor.0") != std::string::npos);
            if (isTT0 || !isMFS) {
-             // Should this be a clone of the psf or the image?
-             //itsPreconGridders[imageName] = itsGridder->clone();
-             itsPreconGridders[imageName] = itsPSFGridders[imageName]->clone();
+             boost::shared_ptr<BoxVisGridder> pcfGridder(new BoxVisGridder);
+             itsPreconGridders[imageName] = pcfGridder;
            }
         }
         if (itsCoordSystems.count(imageName) == 0) {

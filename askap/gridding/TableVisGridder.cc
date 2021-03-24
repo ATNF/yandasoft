@@ -485,6 +485,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // inside the section protected by the lock and make a copy of the returned vector
    const casacore::Vector<casacore::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
 
+   // only needed when setting up a precondtioning function (PCF)
+   const casacore::Vector<casacore::RigidVector<double, 3> > &inUVW = acc.uvw();
+
    #ifdef _OPENMP_WORKING_WORKING_WORKING
    boost::unique_lock<boost::mutex> lock(itsMutex);
    const casa::Vector<double> delay = acc.uvwRotationDelay(tangentPoint, imageCentre).copy();
@@ -566,6 +569,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    }
 
    const uint iDDOffset = itsSourceIndex * nSamples;
+   const double const0 = 1.0 / (casacore::C::c * itsUVCellSize(0));
+   const double const1 = 1.0 / (casacore::C::c * itsUVCellSize(1));
+   const double const2 = 1.0 / (casacore::C::c * itsUVCellSize(0) * itsUVCellSize(0));
 
    for (uint i=0; i<nSamples; ++i) {
        if (itsMaxPointingSeparation > 0.) {
@@ -612,7 +618,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
            }
 
            /// Scale U,V to integer pixels plus fractional terms
-           const double uScaled=frequencyList[chan]*outUVW(i)(0)/(casacore::C::c *itsUVCellSize(0));
+           const double uScaled=frequencyList[chan]*const0 * outUVW(i)(0);
            int iu = askap::nint(uScaled);
            int fracu=askap::nint(itsOverSample*(double(iu)-uScaled));
            if (fracu<0) {
@@ -630,7 +636,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    " iu="<<iu<<" oversample="<<itsOverSample<<" fracu="<<fracu);
            iu+=itsShape(0)/2;
 
-           const double vScaled=frequencyList[chan]*outUVW(i)(1)/(casacore::C::c *itsUVCellSize(1));
+           const double vScaled=frequencyList[chan]*const1 * outUVW(i)(1);
            int iv = askap::nint(vScaled);
            int fracv=askap::nint(itsOverSample*(double(iv)-vScaled));
            if (fracv<0) {
@@ -824,22 +830,25 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                            } // end if psf needs to be done
                            /// Grid the preconditioner function?
                            if (isPCFGridder()) {
-                                casacore::Complex uVis(1.,0.);
-                                uVis *= visNoiseWt;
-                                // We don't want different preconditioning for different Taylor terms.
-                                //if (itsVisWeight) {
-                                //    uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
-                                //}
 
-                                // storing w information in the imaginary part of the PCF,
-                                // so make them add with conjugate symmetry.
+                                // lambda = casacore::C::c / frequencyList[chan]
+                                imtype wThetaPix = frequencyList[chan]*const2 * fabs(inUVW(i)(2));
+                                imtype wKernelPix;
+                                if (wThetaPix < 1) {
+                                  wKernelPix = 3;
+                                } else {
+                                  wKernelPix = 6 + 1.14*wThetaPix;
+                                }
+                                
+                                casacore::Complex uVis(visNoiseWt,visNoiseWt*wKernelPix);
+
+                                // storing w information in the imaginary part of fft(PCF).
+                                // PCF is real, so make sure fft(PCF) has conjugate symmetry.
                                 if ((ivOffset<itsShape(1)/2 && iuOffset>=itsShape(0)/2) ||
                                     (ivOffset<=itsShape(1)/2 && iuOffset<itsShape(0)/2)) {
-                                //if (isPCFGridder() && ivOffset<itsShape(1)/2) {
-                                  casacore::Matrix<casacore::Complex> conjFunc = conj(convFunc);
-                                  GridKernel::grid(its2dGrid, conjFunc, uVis, iuOffset, ivOffset, support);
+                                    GridKernel::grid(its2dGrid, convFunc, conj(uVis), iuOffset, ivOffset, support);
                                 } else {
-                                  GridKernel::grid(its2dGrid, convFunc, uVis, iuOffset, ivOffset, support);
+                                    GridKernel::grid(its2dGrid, convFunc, uVis, iuOffset, ivOffset, support);
                                 }
 
                                 itsSamplesGridded+=1.0;
