@@ -203,6 +203,7 @@ namespace askap
           {
             if (casacore::abs(mat(ix, iy))>0.0)
             {
+              // update the imaginary part but not the real part
               mat(ix, iy) = imtypeComplex(real(mat(ix, iy)), imag(mat(ix, iy)) * wKernelPix);
             }
           }
