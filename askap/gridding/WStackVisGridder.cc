@@ -172,11 +172,12 @@ namespace askap
 
     void WStackVisGridder::updatew(casacore::Array<imtypeComplex>& scratch, int i)
     {
-      ASKAPDEBUGTRACE("WStackVisGridder::multiply");
+      ASKAPDEBUGTRACE("WStackVisGridder::updatew");
+      ASKAPDEBUGASSERT(itsUVCellSize(0)>0);
 
       // estimate the size of the projection in uv (would-be w-proj kernel size)
       //  - need to know if getWTerm returns the full w or smaller due to snapshotting
-      imtype wThetaPix = fabs(getWTerm(i)) / (itsUVCellSize(0) * itsUVCellSize(0));
+      const imtype wThetaPix = static_cast<imtype>(fabs(getWTerm(i)) / (itsUVCellSize(0) * itsUVCellSize(0)));
       imtype wKernelPix;
       if (wThetaPix < 1) {
         wKernelPix = 3;
@@ -195,7 +196,7 @@ namespace askap
       {
         casacore::Matrix<imtypeComplex> mat(it.array());
 
-        /// @todo Optimise multiply loop
+        /// @todo Optimise loop
         for (int iy=0; iy<ny; iy++)
         {
           for (int ix=0; ix<nx; ix++)
@@ -285,7 +286,7 @@ namespace askap
         }
         // Now we can do the convolution correction
         correctConvolution(dBuffer);
-        dBuffer *= imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
+        dBuffer *= static_cast<imtype>(dBuffer.shape()(0)*dBuffer.shape()(1));
         out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
 
       }
