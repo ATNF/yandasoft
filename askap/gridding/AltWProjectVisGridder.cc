@@ -185,7 +185,7 @@ void AltWProjectVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     }
     // Now we can do the convolution correction
     correctConvolution(dBuffer);
-    dBuffer*=imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
+    dBuffer *= static_cast<imtype>(dBuffer.shape()(0))*static_cast<imtype>(dBuffer.shape()(1));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
     passThrough++;
 }

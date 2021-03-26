@@ -208,7 +208,7 @@ namespace askap
       }
       // Now we can do the convolution correction
       correctConvolution(dBuffer);
-      dBuffer *= static_cast<imtype>(dBuffer.shape()(0)*dBuffer.shape()(1));
+      dBuffer *= static_cast<imtype>(dBuffer.shape()(0))*static_cast<imtype>(dBuffer.shape()(1));
       out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
 
     }
