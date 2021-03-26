@@ -115,7 +115,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
 {
    ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
-   ASKAPCHECK(support>0, "Maximum support must be greater than 0");
+   ASKAPCHECK(support>=0, "Maximum support must be zero or greater");
    ASKAPCHECK(padding>0, "Padding factor must be greater than 0");
 }
 
@@ -498,7 +498,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // Now time the gridding
    timer.mark();
 
-   ASKAPCHECK(itsSupport>0, "Support must be greater than 0");
+   ASKAPCHECK(itsSupport>=0, "Support must be zero or greater");
    ASKAPCHECK(itsUVCellSize.size()==2, "UV cell sizes not yet set");
 
    const uint nSamples = acc.nRow();
@@ -730,7 +730,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    // we now use support size for this given plane in the CF cache; itsSupport is a maximum
                    // support across all CFs (this allows plane-dependent support size)
                    const int support = (int(convFunc.nrow()) - 1) / 2;
-                   ASKAPCHECK(support > 0, "Support must be greater than zero, CF["<<cInd<<"] has shape="<<
+                   ASKAPCHECK(support >= 0, "Support must be zero or greater, CF["<<cInd<<"] has shape="<<
                               convFunc.shape()<<" giving a support of "<<support);
 
                    // This seems to be the quickest way to get a reference to the matrix we want

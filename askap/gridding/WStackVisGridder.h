@@ -117,6 +117,11 @@ namespace askap
 				/// @param i Index
 				void multiply(casacore::Array<imtypeComplex>& scratch, int i);
 
+				/// Increase PCF support accumulations
+				/// @param scratch To be updated
+				/// @param i Index
+				void updatew(casacore::Array<imtypeComplex>& scratch, int i);
+
 				/// Mapping from row, pol, and channel to planes of grid
 				casacore::Cube<int> itsGMap;
             private:

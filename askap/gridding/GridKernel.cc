@@ -63,9 +63,10 @@ void GridKernel::grid(casacore::Matrix<casacore::Complex>& grid,
     casacore::Float rVis = cVis.real();
     casacore::Float iVis = cVis.imag();
 #endif
-	for (int suppv = -support; suppv < +support; suppv++) {
+	for (int suppv = -support; suppv <= support; suppv++) {
+		// point to the start of the current v column
 		const int voff = suppv + support;
-		const int uoff = -support + support;
+		const int uoff = 0;
 #ifdef ASKAP_GRID_WITH_BLAS
         casacore::Complex *wtPtr = &convFunc(uoff, voff);
         casacore::Complex *gridPtr = &(grid(iu - support, iv + suppv));
@@ -74,21 +75,21 @@ void GridKernel::grid(casacore::Matrix<casacore::Complex>& grid,
         // Writing the multiply in real/imag is twice as fast with gcc
         casacore::Float *wtPtrF = reinterpret_cast<casacore::Float *> (&convFunc(uoff, voff));
         casacore::Float *gridPtrF = reinterpret_cast<casacore::Float *> (&grid(iu - support, iv + suppv));
-        for (int suppu = -support; suppu < +support; suppu++, wtPtrF+=2, gridPtrF+=2) {
+        for (int suppu = -support; suppu <= support; suppu++, wtPtrF+=2, gridPtrF+=2) {
             gridPtrF[0] += rVis * wtPtrF[0] - iVis * wtPtrF[1];
             gridPtrF[1] += rVis * wtPtrF[1] + iVis * wtPtrF[0];
     	}
 #endif
 	}
 #else
-	for (int suppv=-support; suppv<+support; suppv++)
+	for (int suppv = -support; suppv <= support; suppv++)
 	{
-		const int voff=suppv+support;
-		for (int suppu=-support; suppu<+support; suppu++)
+		const int voff = suppv + support;
+		for (int suppu = -support; suppu <= support; suppu++)
 		{
-			const int uoff=suppu+support;
-			casacore::Complex wt=convFunc(uoff, voff);
-			grid(iu+suppu, iv+suppv)+=cVis*wt;
+			const int uoff = suppu + support;
+			casacore::Complex wt = convFunc(uoff, voff);
+			grid(iu+suppu, iv+suppv) += cVis * wt;
 		}
 	}
 #endif
@@ -103,9 +104,10 @@ void GridKernel::degrid(casacore::Complex& cVis,
 	/// data using the convolution function as the weighting function.
 	cVis = 0.0;
 #if defined ( ASKAP_GRID_WITH_POINTERS ) || defined ( ASKAP_GRID_WITH_BLAS )
-	for (int suppv = -support; suppv < +support; suppv++) {
+	for (int suppv = -support; suppv <= support; suppv++) {
+		// point to the start of the current v column
 		const int voff = suppv + support;
-		const int uoff = -support + support;
+		const int uoff = 0;
         const casacore::Complex *wtPtr = &convFunc(uoff, voff);
         const casacore::Complex *gridPtr = &(grid(iu - support, iv + suppv));
 #ifdef ASKAP_GRID_WITH_BLAS
@@ -115,21 +117,21 @@ void GridKernel::degrid(casacore::Complex& cVis,
 #else
         // Writing the multiply in real/imag is twice as fast with gcc
         // Doing the 'reinterpret_cast' thing to avoid complex like in grid, doesn't help here.
-        for (int suppu = -support; suppu < +support; suppu++, wtPtr++, gridPtr++) {
+        for (int suppu = -support; suppu <= support; suppu++, wtPtr++, gridPtr++) {
             cVis += casacore::Complex( (*wtPtr).real()*(*gridPtr).real()+(*wtPtr).imag()*(*gridPtr).imag(),
                                   -(*wtPtr).real()*(*gridPtr).imag()+(*wtPtr).imag()*(*gridPtr).real());
 		}
 #endif
 	}
 #else
-	for (int suppv=-support; suppv<+support; suppv++)
+	for (int suppv = -support; suppv <= support; suppv++)
 	{
-		const int voff=suppv+support;
-		for (int suppu=-support; suppu<+support; suppu++)
+		const int voff = suppv + support;
+		for (int suppu = -support; suppu <= support; suppu++)
 		{
-			const int uoff=suppu+support;
-			casacore::Complex wt=convFunc(uoff, voff);
-			cVis+=wt*conj(grid(iu+suppu, iv+suppv));
+			const int uoff = suppu + support;
+			casacore::Complex wt = convFunc(uoff, voff);
+			cVis += wt * conj(grid(iu+suppu, iv+suppv));
 		}
 	}
 #endif
