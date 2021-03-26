@@ -434,12 +434,23 @@ namespace askap
       // Now we loop through all the data
       ASKAPLOG_DEBUG_STR(logger, "Starting degridding model and gridding residuals" );
       size_t counterGrid = 0, counterDegrid = 0;
+      std::vector<accessors::MemBufferDataAccessor> accs;
+      std::vector<accessors::MemBufferDataAccessor>::iterator newIt;
       for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
       {
         // buffer-accessor, used as a replacement for proper buffers held in the subtable
         // effectively, an array with the same shape as the visibility cube is held by this class
+      
         MemBufferDataAccessor accBuffer(*itsIdi);
-
+        // buffer all the input allocation
+        accs.push_back(accBuffer);
+      }
+      
+      // iterate through the buffer
+      // FIXME: I have to cleanly deal with this - I could move the buffering to inside the gridder
+      // 
+      for (newIt=accs.begin(); newIt != accs.end(); newIt++) {
+        MemBufferDataAccessor accBuffer = *newIt;
         // Accumulate model visibility for all models
         accBuffer.rwVisibility().set(0.0);
         if (somethingHasToBeDegridded) {
