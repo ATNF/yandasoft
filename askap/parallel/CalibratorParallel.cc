@@ -425,6 +425,7 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
 std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(const LOFAR::ParameterSet& parset) {
     std::map<std::string, std::string> params;
     if (parset.isDefined("solver.LSQR.alpha")) params["alpha"] = parset.getString("solver.LSQR.alpha");
+    if (parset.isDefined("solver.LSQR.alpha_leak")) params["alpha_leak"] = parset.getString("solver.LSQR.alpha_leak");
     if (parset.isDefined("solver.LSQR.norm"))  params["norm"] = parset.getString("solver.LSQR.norm");
     if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
