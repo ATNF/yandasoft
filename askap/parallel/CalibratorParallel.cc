@@ -804,7 +804,7 @@ void CalibratorParallel::solveNE()
           for (std::vector<std::string>::const_iterator it = namesEq.begin();
                it != namesEq.end(); ++it) {
               const std::string parname = *it;
-              localModel.add(parname, itsModel->valueT(parname));
+              localModel.add(parname, itsModel->value(parname));
               // NOTE: We do not fix model parameters here,
               //       and thus will be solving for all unknowns (including the flagged data!).
           }
