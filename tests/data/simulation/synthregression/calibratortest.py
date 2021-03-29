@@ -342,7 +342,7 @@ def runTestsSmoothnessConstraintsParallel():
 
     #------------------------------------------------------------------------------
     # Compare the output results.
-    tol = 1.e-6
+    tol = 1.e-4
     compareGains(result_w1, result_w4, tol)
     compareGains(result_w1, result_w10, tol)
     compareGains(result_w4, result_w10, tol)
