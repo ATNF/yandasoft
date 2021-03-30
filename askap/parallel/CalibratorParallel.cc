@@ -431,6 +431,7 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
     if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
     if (parset.isDefined("solver.LSQR.parallelMatrix")) params["parallelMatrix"] = parset.getString("solver.LSQR.parallelMatrix");
+    if (parset.isDefined("solver.LSQR.normalizeColumns")) params["normalizeColumns"] = parset.getString("solver.LSQR.normalizeColumns");
 
     // Smoothing constraints parameters.
     if (parset.isDefined("solver.LSQR.smoothing")) params["smoothing"] = parset.getString("solver.LSQR.smoothing");
