@@ -33,7 +33,7 @@
 #ifndef ASKAP_SYNTHESIS_SIMULATOR_H
 #define ASKAP_SYNTHESIS_SIMULATOR_H
 
-//# Includes
+//casacore includes
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Quanta/Quantum.h>
@@ -41,6 +41,10 @@
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
+
+// boost includes
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace askap
 {
@@ -51,7 +55,7 @@ namespace askap
         /// @details Cloned from casacore::NewMSSimulator to allow substantial changes.
         /// @ingroup simulation
 
-        class Simulator
+        class Simulator : public boost::noncopyable
         {
             public:
 
@@ -72,9 +76,6 @@ namespace askap
                 /// Constructor from existing MS
                 /// @param ms Existing MeasurementSet object
                 explicit Simulator(casacore::MeasurementSet& ms);
-
-                // Destructor
-                ~Simulator();
 
                 /// @brief Set the antenna and array data. 
                 /// @details These are written immediately to the
@@ -248,17 +249,6 @@ namespace askap
 
             private:
 
-                /// @brief Copy constructor
-                /// @details made private to avoid it being called inadvertently
-                /// @param mss Simulator to be copied
-                explicit Simulator(const Simulator & mss);
-
-                /// @brief assignment operator
-                /// @details made private to avoid it being called inadvertently
-                /// @param mss Simulator to be assigned from 
-                /// @return reference to itself
-                Simulator & operator=(const Simulator & mss);
-
                 /// Fractional blockage limit
                 double fractionBlockageLimit_p;
                 /// Elevation limit
@@ -279,7 +269,7 @@ namespace askap
                 double t_offset_p;
 
                 /// Measurement set points
-                casacore::MeasurementSet* ms_p;
+                boost::shared_ptr<casacore::MeasurementSet> itsMS;
 
 
                 /// Restore default values

@@ -34,7 +34,7 @@
 // ASKAPsoft includes
 #include <askap/askap_synthesis.h>
 #include <askap/askap/AskapLogging.h>
-ASKAP_LOGGER(logger, ".parallel");
+ASKAP_LOGGER(logger, ".simulator");
 
 #include <askap/askap/AskapError.h>
 #include <askap/askap/AskapUtil.h>
@@ -139,7 +139,7 @@ void Simulator::defaults()
 
 Simulator::Simulator(const casacore::String& MSName, int bucketSize,
                      int tileNcorr, int tileNchan) :
-        ms_p(0), itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
+        itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
     try {
         defaults();
@@ -176,11 +176,15 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
         // These columns contain the bulk of the data so save them in a tiled way
         {
             // Get nr of rows in a tile.
-            if (tileNcorr <= 0) tileNcorr = 1;
+            if (tileNcorr <= 0) {
+                tileNcorr = 1;
+            }
 
-            if (tileNchan <= 0) tileNchan = 1;
+            if (tileNchan <= 0) {
+                tileNchan = 1;
+            }
 
-            int nrowTile = std::max(1, bucketSize / (8 * tileNcorr * tileNchan));
+            const int nrowTile = std::max(1, bucketSize / (8 * tileNcorr * tileNchan));
             TiledShapeStMan dataMan("TiledData",
                                     IPosition(3, tileNcorr,
                                               tileNchan, nrowTile));
@@ -190,7 +194,7 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
                              dataMan);
         }
         {
-            int nrowTile = std::max(1, bucketSize / (4 * 8));
+            const int nrowTile = std::max(1, bucketSize / (4 * 8));
             TiledShapeStMan dataMan("TiledWeight",
                                     IPosition(2, 4, nrowTile));
             newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::SIGMA),
@@ -200,13 +204,13 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
         }
 
         // Now we can create the MeasurementSet and add the (empty) subtables
-        ms_p = new MeasurementSet(newMS, 0);
-        ms_p->createDefaultSubtables(Table::New);
-        ms_p->flush();
+        itsMS.reset(new MeasurementSet(newMS, 0));
+        itsMS->createDefaultSubtables(Table::New);
+        itsMS->flush();
 
         // Set the TableInfo
         {
-            TableInfo& info(ms_p->tableInfo());
+            TableInfo& info(itsMS->tableInfo());
             info.setType(TableInfo::type(TableInfo::MEASUREMENTSET));
             info.setSubType(String("simulator"));
             info.readmeAddLine("This is a MeasurementSet Table holding simulated astronomical observations");
@@ -221,26 +225,21 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
 }
 
 Simulator::Simulator(casacore::MeasurementSet& theMS) :
-        ms_p(0), itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
+        itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
     defaults();
 
-    ms_p = new MeasurementSet(theMS);
+    itsMS.reset(new MeasurementSet(theMS));
 
-    ASKAPLOG_INFO_STR(logger, "Opening MeasurementSet " << ms_p->tableName() << " with "
-                          << ms_p->nrow() << " rows");
+    ASKAPLOG_INFO_STR(logger, "Opening MeasurementSet " << itsMS->tableName() << " with "
+                          << itsMS->nrow() << " rows");
 
-    TableDesc td(ms_p->tableDesc());
+    TableDesc td(itsMS->tableDesc());
     {
-        MSColumns msc(*ms_p);
+        MSColumns msc(*itsMS);
         MSSpWindowColumns& spwc = msc.spectralWindow();
         ASKAPLOG_INFO_STR(logger, "   last spectral window ID = " << spwc.nrow());
     }
-}
-
-Simulator::Simulator(const Simulator & mss)
-{
-    operator=(mss);
 }
 
 void Simulator::initAnt(const casacore::String& telescope, const casacore::Vector<double>& x,
@@ -275,7 +274,7 @@ void Simulator::initAnt(const casacore::String& telescope, const casacore::Vecto
         ASKAPLOG_INFO_STR(logger, "Using longitude-latitude coordinates for the antennas");
         longlat2global(xx, yy, zz, mRefLocation, x, y, z);
     } else {
-        ASKAPLOG_INFO_STR(logger, "Unknown coordinate system type: " << coordsystem);
+        ASKAPTHROW(AskapError, "Unknown coordinate system type: " << coordsystem);
     }
     
     for (size_t i = 0; i<dishDiameter.size(); ++i) {
@@ -297,10 +296,10 @@ void Simulator::initAnt(const casacore::String& telescope, const casacore::Vecto
         antId(i) = i;
     }
 
-    MSColumns msc(*ms_p);
+    MSColumns msc(*itsMS);
     MSAntennaColumns& antc = msc.antenna();
     Int numOfAnt = antc.nrow();
-    MSAntenna& ant = ms_p->antenna();
+    MSAntenna& ant = itsMS->antenna();
 
     ant.addRow(nAnt); // make nAnt rows
     Slicer antSlice(IPosition(1, numOfAnt),
@@ -322,28 +321,27 @@ void Simulator::local2global(casacore::Vector<double>& xGeo, casacore::Vector<do
                              const casacore::Vector<double>& xLocal, const casacore::Vector<double>& yLocal,
                              const casacore::Vector<double>& zLocal)
 {
-    uInt nn = xLocal.nelements();
+    const uInt nn = xLocal.nelements();
     xGeo.resize(nn);
     yGeo.resize(nn);
     zGeo.resize(nn);
 
     MPosition::Convert loc2(mRefLocation, MPosition::ITRF);
     MPosition locitrf(loc2());
-    Vector<double> xyz = locitrf.get("m").getValue();
+    const Vector<double> xyz = locitrf.get("m").getValue();
 
-    Vector<double> ang = locitrf.getAngle("rad").getValue();
-    double d1, d2;
-    d1 = ang(0);
-    d2 = ang(1);
-    double cosLong = cos(d1);
-    double sinLong = sin(d1);
-    double cosLat = cos(d2);
-    double sinLat = sin(d2);
+    const Vector<double> ang = locitrf.getAngle("rad").getValue();
+    const double d1 = ang(0); 
+    const double d2 = ang(1);
+    const double cosLong = cos(d1);
+    const double sinLong = sin(d1);
+    const double cosLat = cos(d2);
+    const double sinLat = sin(d2);
 
     for (uInt i = 0; i < nn; i++) {
 
-        double xG1 = -sinLat * yLocal(i) + cosLat * zLocal(i);
-        double yG1 = xLocal(i);
+        const double xG1 = -sinLat * yLocal(i) + cosLat * zLocal(i);
+        const double yG1 = xLocal(i);
 
         xGeo(i) = cosLong * xG1 - sinLong * yG1 + xyz(0);
         yGeo(i) = sinLong * xG1 + cosLong * yG1 + xyz(1);
@@ -369,25 +367,24 @@ void Simulator::initFields(const casacore::String& sourceName,
                            const casacore::MDirection& sourceDirection,
                            const casacore::String& calCode)
 {
-    MSColumns msc(*ms_p);
+    ASKAPASSERT(itsMS);
+    MSColumns msc(*itsMS);
     MSFieldColumns& fieldc = msc.field();
     Int baseFieldID = fieldc.nrow();
 
     ASKAPLOG_INFO_STR(logger, "Creating new field " << sourceName << ", ID " << baseFieldID
                       + 1);
 
-    ms_p->field().addRow(1); //SINGLE DISH CASE
+    itsMS->field().addRow(1); //SINGLE DISH CASE
     fieldc.name().put(baseFieldID, sourceName);
     fieldc.code().put(baseFieldID, calCode);
     fieldc.time().put(baseFieldID, 0.0);
     fieldc.numPoly().put(baseFieldID, 0);
     fieldc.sourceId().put(baseFieldID, 0);
-    Vector<MDirection> direction(1);
-    direction(0) = sourceDirection;
+    const casacore::Vector<MDirection> direction(1, sourceDirection);
     fieldc.delayDirMeasCol().put(baseFieldID, direction);
     fieldc.phaseDirMeasCol().put(baseFieldID, direction);
     fieldc.referenceDirMeasCol().put(baseFieldID, direction);
-
 }
 
 void Simulator::initSpWindows(const casacore::String& spWindowName, const int& nChan,
@@ -396,8 +393,7 @@ void Simulator::initSpWindows(const casacore::String& spWindowName, const int& n
 {
     ASKAPCHECK(fabs(freqInc.getValue("Hz")-freqRes.getValue("Hz"))<1, "freqInc="<<freqInc<<" and freqRes="<<
                     freqRes<<" look different");
-    Vector<Int> stokesTypes(4);
-    stokesTypes = Stokes::Undefined;
+    Vector<Int> stokesTypes(4, Stokes::Undefined);
     String myStokesString = stokesString;
     Int nCorr = 0;
 
@@ -406,19 +402,18 @@ void Simulator::initSpWindows(const casacore::String& spWindowName, const int& n
             myStokesString.del(0, 1);
         }
 
-        if (myStokesString.length() == 0)
+        if (myStokesString.length() == 0) {
             break;
+        }
 
         stokesTypes(j) = Stokes::type(myStokesString.at(0, 2));
         myStokesString.del(0, 2);
         nCorr = j + 1;
 
-        if (stokesTypes(j) == Stokes::Undefined) {
-            ASKAPLOG_INFO_STR(logger, " Undefined polarization type in input");
-        }
+        ASKAPCHECK(stokesTypes(j) != Stokes::Undefined, "Undefined polarization type in input");
     }
 
-    MSColumns msc(*ms_p);
+    MSColumns msc(*itsMS);
     MSSpWindowColumns& spwc = msc.spectralWindow();
     MSDataDescColumns& ddc = msc.dataDescription();
     MSPolarizationColumns& polc = msc.polarization();
@@ -426,9 +421,9 @@ void Simulator::initSpWindows(const casacore::String& spWindowName, const int& n
     ASKAPLOG_DEBUG_STR(logger, "Creating new spectral window " << spWindowName << ", ID "
                           << baseSpWID + 1);
     // fill spectralWindow table
-    ms_p->spectralWindow().addRow(1);
-    ms_p->polarization().addRow(1);
-    ms_p->dataDescription().addRow(1);
+    itsMS->spectralWindow().addRow(1);
+    itsMS->polarization().addRow(1);
+    itsMS->dataDescription().addRow(1);
     spwc.numChan().put(baseSpWID, nChan);
     spwc.name().put(baseSpWID, spWindowName);
     spwc.netSideband().fillColumn(1);
@@ -444,8 +439,8 @@ void Simulator::initSpWindows(const casacore::String& spWindowName, const int& n
     bandwidth = freqInc.getValue("Hz");
     ddc.spectralWindowId().put(baseSpWID, baseSpWID);
     ddc.polarizationId().put(baseSpWID, baseSpWID);
-    double vStartFreq(startFreq.getValue("Hz"));
-    double vFreqInc(freqInc.getValue("Hz"));
+    const double vStartFreq(startFreq.getValue("Hz"));
+    const double vFreqInc(freqInc.getValue("Hz"));
 
     for (Int chan = 0; chan < nChan; chan++) {
         freqs(chan) = vStartFreq + chan * vFreqInc;
@@ -488,15 +483,13 @@ void Simulator::initSpWindows(const casacore::String& spWindowName, const int& n
 void Simulator::initFeeds(const casacore::String& mode, const casacore::Vector<double>& x,
                           const casacore::Vector<double>& y, const casacore::Vector<casacore::String>& pol)
 {
-    MSColumns msc(*ms_p);
+    ASKAPASSERT(itsMS);
+    MSColumns msc(*itsMS);
     MSAntennaColumns& antc = msc.antenna();
-    Int nAnt = antc.nrow();
-
-    if (nAnt <= 0) {
-        ASKAPLOG_INFO_STR(logger, "Simulator::initFeeds: must call initAnt() first");
-    }
-
+    const Int nAnt = antc.nrow();
     Int nFeed = x.nelements();
+
+    ASKAPCHECK(nAnt > 0, "Simulator::initFeeds: must call initAnt() first");
 
     String feedPol0 = "R", feedPol1 = "L";
     Bool isList = False;
@@ -521,7 +514,7 @@ void Simulator::initFeeds(const casacore::String& mode, const casacore::Vector<d
         }
     }
 
-    Int nRow = nFeed * nAnt;
+    const Int nRow = nFeed * nAnt;
     Vector<Int> feedAntId(nRow);
     Vector<Int> feedId(nRow);
     Vector<Int> feedSpWId(nRow);
@@ -596,10 +589,10 @@ void Simulator::initFeeds(const casacore::String& mode, const casacore::Vector<d
 
     // fill Feed table - don't check to see if any of the positions match
     MSFeedColumns& feedc = msc.feed();
-    Int numFeeds = feedc.nrow();
+    const Int numFeeds = feedc.nrow();
     Slicer feedSlice(IPosition(1, numFeeds), IPosition(1, nRow + numFeeds - 1),
                      IPosition(1, 1), Slicer::endIsLast);
-    ms_p->feed().addRow(nRow);
+    itsMS->feed().addRow(nRow);
     feedc.antennaId().putColumnRange(feedSlice, feedAntId);
     feedc.feedId().putColumnRange(feedSlice, feedId);
     feedc.spectralWindowId().putColumnRange(feedSlice, feedSpWId);
@@ -618,19 +611,6 @@ void Simulator::initFeeds(const casacore::String& mode, const casacore::Vector<d
     }
 
     ASKAPLOG_INFO_STR(logger, "Added rows to FEED table");
-}
-
-Simulator::~Simulator()
-{
-}
-
-Simulator & Simulator::operator=(const Simulator & other)
-{
-    if (this == &other) return *this;
-
-    ASKAPTHROW(AskapError, "Copy constructor or assignment operator of Simulator are not supposed to be called");
-    // copy state...
-    return *this;
 }
 
 void Simulator::settimes(const casacore::Quantity& qIntegrationTime,
@@ -653,13 +633,14 @@ void Simulator::observe(const casacore::String& sourceName,
                         const casacore::Quantity& qStartTime,
                         const casacore::Quantity& qStopTime)
 {
-    MSColumns msc(*ms_p);
+    ASKAPASSERT(itsMS);
+    MSColumns msc(*itsMS);
 
     // Do we have antenna information?
     MSAntennaColumns& antc = msc.antenna();
     ASKAPCHECK(antc.nrow() > 0, "Antenna information not yet defined");
 
-    Int nAnt = antc.nrow();
+    const Int nAnt = antc.nrow();
     Vector<double> antDiam;
     antc.dishDiameter().getColumn(antDiam);
     Matrix<double> antXYZ(3, nAnt);
@@ -672,7 +653,8 @@ void Simulator::observe(const casacore::String& sourceName,
     MSFeedColumns& feedc = msc.feed();
     ASKAPCHECK(feedc.nrow() > 0, "Feed information not yet defined");
 
-    Int nFeed = feedc.nrow() / nAnt;
+    const Int nFeed = feedc.nrow() / nAnt;
+    ASKAPCHECK(nFeed > 0, "We supposed to have the same feed information per antenna, you have "<<feedc.nrow()<<" rows and "<<nAnt<<" antennas");
 
     // Spectral window
     MSSpWindowColumns& spwc = msc.spectralWindow();
@@ -698,15 +680,16 @@ void Simulator::observe(const casacore::String& sourceName,
 
     MSPolarizationColumns& polc = msc.polarization();
     baseSpWID = existingSpWID;
-    double startFreq, freqInc;
-    Vector<double> resolution;
+    double startFreq;
+
     spwc.refFrequency().get(baseSpWID, startFreq);
+    Vector<double> resolution;
     spwc.resolution().get(baseSpWID, resolution);
-    freqInc = resolution(0);
-    Int nChan = resolution.nelements();
+    const double freqInc = resolution(0);
+    const Int nChan = resolution.nelements();
     Matrix<Int> corrProduct;
     polc.corrProduct().get(baseSpWID, corrProduct);
-    Int nCorr = corrProduct.ncolumn();
+    const Int nCorr = corrProduct.ncolumn();
     {
         ASKAPLOG_INFO_STR(logger, "Spectral window : " << spWindowName);
         ASKAPLOG_INFO_STR(logger, "   reference frequency : " << startFreq / 1.0e9 << "GHz");
@@ -762,7 +745,7 @@ void Simulator::observe(const casacore::String& sourceName,
     Cube<RigidVector<double, 2> > beam_offsets;
     Vector<String> antenna_mounts;
     { // to close MSIter, when the job is done
-        MSFeedParameterExtractor msfpe_tmp(*ms_p);
+        MSFeedParameterExtractor msfpe_tmp(*itsMS);
         beam_offsets = msfpe_tmp.getBeamOffsets();
         antenna_mounts = msfpe_tmp.antennaMounts();
     }
@@ -798,7 +781,7 @@ void Simulator::observe(const casacore::String& sourceName,
 
     // fill Observation Table for every call. Eventually we should fill
     // in the schedule information
-    MSObservation& obs = ms_p->observation();
+    MSObservation& obs = itsMS->observation();
     MSObservationColumns& obsc = msc.observation();
     Int nobsrow = obsc.nrow();
     obs.addRow();
@@ -809,18 +792,22 @@ void Simulator::observe(const casacore::String& sourceName,
     obsc.timeRange().put(nobsrow, timeRange);
     obsc.observer().put(nobsrow, "ASKAP simulator");
 
-    Int row = ms_p->nrow() - 1;
+    Int row = itsMS->nrow() - 1;
     Int maxObsId = -1;
     Int maxArrayId = 0;
     {
         Vector<Int> tmpids(row + 1);
         tmpids = msc.observationId().getColumn();
 
-        if (tmpids.nelements() > 0) maxObsId = max(tmpids);
+        if (tmpids.nelements() > 0) {
+            maxObsId = max(tmpids);
+        }
 
         tmpids = msc.arrayId().getColumn();
 
-        if (tmpids.nelements() > 0) maxArrayId = max(tmpids);
+        if (tmpids.nelements() > 0) {
+            maxArrayId = max(tmpids);
+        }
     }
 
     double Time = Tstart;
@@ -830,7 +817,7 @@ void Simulator::observe(const casacore::String& sourceName,
     uInt nSubElevation = 0;
 
     // Start scan number from last one (if there was one)
-    Int nMSRows = ms_p->nrow();
+    Int nMSRows = itsMS->nrow();
 
     // init counters past end
     Int scan = -1;
@@ -843,29 +830,21 @@ void Simulator::observe(const casacore::String& sourceName,
     scan++;
 
     // We can extend the ms just once
-    Int nBaselines;
-
-    if (autoCorrelationWt_p > 0.0) {
-        nBaselines = nAnt * (nAnt + 1) / 2;
-    } else {
-        nBaselines = nAnt * (nAnt - 1) / 2;
-    }
+    const Int nBaselines = autoCorrelationWt_p > 0.0 ? nAnt * (nAnt + 1) / 2 : nAnt * (nAnt - 1) / 2;
 
     Int nNewRows = nBaselines * nFeed;
-    Int nIntegrations = max(1, Int(0.5 + (Tend - Tstart) / Tint));
+    const Int nIntegrations = max(1, Int(0.5 + (Tend - Tstart) / Tint));
     nNewRows *= nIntegrations;
 
     // We need to do addition in this order to get a new TSM file.
 
     // ... Next extend the table
     ASKAPLOG_INFO_STR(logger, "Adding " << nNewRows << " rows");
-    ms_p->addRow(nNewRows);
+    itsMS->addRow(nNewRows);
 
-    Matrix<Complex> data(nCorr, nChan);
-    data.set(Complex(0.0));
+    Matrix<Complex> data(nCorr, nChan, Complex(0.,0.));
 
-    Matrix<Bool> flag(nCorr, nChan);
-    flag = False;
+    Matrix<Bool> flag(nCorr, nChan, False);
 
     ASKAPLOG_INFO_STR(logger, "Calculating uvw coordinates for " << nIntegrations << " integrations");
 
@@ -956,14 +935,13 @@ void Simulator::observe(const casacore::String& sourceName,
             // Rotate antennas to correct frame
             Matrix<double> antUVW(3, nAnt);
 
-            for (Int ant1 = 0; ant1 < nAnt; ant1++)
+            for (Int ant1 = 0; ant1 < nAnt; ant1++) {
                 antUVW.column(ant1) = product(trans, antXYZ.column(ant1));
+            }
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
                 const double x1 = antUVW(0, ant1), y1 = antUVW(1, ant1), z1 = antUVW(2, ant1);
-                Int startAnt2 = ant1 + 1;
-
-                if (autoCorrelationWt_p > 0.0) startAnt2 = ant1;
+                const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     row++;
@@ -1025,15 +1003,12 @@ void Simulator::observe(const casacore::String& sourceName,
             // go back and flag weights based on shadowing
             // Future option: we could increase sigma based on
             // fraction shadowed.
-            Matrix<Bool> trueFlag(nCorr, nChan);
-            trueFlag = True;
+            Matrix<Bool> trueFlag(nCorr, nChan, True);
 
             Int reRow = startingRow;
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
-                Int startAnt2 = ant1 + 1;
-
-                if (autoCorrelationWt_p > 0.0) startAnt2 = ant1;
+                 const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     reRow++;
@@ -1061,7 +1036,7 @@ void Simulator::observe(const casacore::String& sourceName,
 
                 if (firstTime) {
                     firstTime = False;
-                    double ha1 = msd.hourAngle() * 180.0 / C::pi / 15.0;
+                    const double ha1 = msd.hourAngle() * 180.0 / C::pi / 15.0;
                     ASKAPLOG_INFO_STR(logger, "Starting conditions for antenna 1: ");
                     ASKAPLOG_INFO_STR(logger, "     time = " << formatTime(Time));
                     ASKAPLOG_INFO_STR(logger, "     scan = " << scan + 1);
@@ -1075,9 +1050,7 @@ void Simulator::observe(const casacore::String& sourceName,
             reRow = startingRow;
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
-                Int startAnt2 = ant1 + 1;
-
-                if (autoCorrelationWt_p > 0.0) startAnt2 = ant1;
+                 const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     reRow++;
@@ -1092,12 +1065,11 @@ void Simulator::observe(const casacore::String& sourceName,
 
             Int numpointrows = nAnt;
             MSPointingColumns& pointingc = msc.pointing();
-            Int numPointing = pointingc.nrow();
-            ms_p->pointing().addRow(numpointrows);
+            const Int numPointing = pointingc.nrow();
+            itsMS->pointing().addRow(numpointrows);
             numpointrows += numPointing;
-            double Tint = qIntegrationTime_p.getValue("s");
-            Vector<MDirection> direction(1);
-            direction(0) = fieldCenter;
+            const double Tint = qIntegrationTime_p.getValue("s");
+            Vector<MDirection> direction(1, fieldCenter);
 
             for (Int m = numPointing; m < (numPointing + nAnt); m++) {
                 pointingc.numPoly().put(m, 0);
@@ -1119,7 +1091,7 @@ void Simulator::observe(const casacore::String& sourceName,
         msd.setAntenna(0);
         Vector<double> azel = msd.azel().getAngle("rad").getValue("rad");
 
-        double ha1 = msd.hourAngle() * 180.0 / C::pi / 15.0;
+        const double ha1 = msd.hourAngle() * 180.0 / C::pi / 15.0;
         ASKAPLOG_INFO_STR(logger, "Stopping conditions for antenna 1: ");
         ASKAPLOG_INFO_STR(logger, "     time = " << formatTime(Time));
         ASKAPLOG_INFO_STR(logger, "     scan = " << scan + 1);
@@ -1155,8 +1127,8 @@ void Simulator::blockage(double &fraction1, double &fraction2,
         fraction1 = min(1.0, square(fabs(diam2) / fabs(diam1)));
         fraction2 = min(1.0, square(fabs(diam1) / fabs(diam2)));
     } else {
-        double c = separation / (0.5 * fabs(diam1));
-        double s = fabs(diam2) / fabs(diam1);
+        const double c = separation / (0.5 * fabs(diam1));
+        const double s = fabs(diam2) / fabs(diam1);
         double sinb = sqrt(2.0 * (square(c * s) + square(c) + square(s)) - pow(c, 4.0) - pow(s, 4.0) - 1.0)
                       / (2.0 * c);
         double sina = sinb / s;
@@ -1166,20 +1138,22 @@ void Simulator::blockage(double &fraction1, double &fraction2,
         sinb = min(1.0, sinb);
         sina = min(1.0, sina);
 
-        double b = asin(sinb);
-        double a = asin(sina);
-        double area = (square(s) * a + b) - (square(s) * sina * cos(a) + sinb * cos(b));
+        const double b = asin(sinb);
+        const double a = asin(sina);
+        const double area = (square(s) * a + b) - (square(s) * sina * cos(a) + sinb * cos(b));
         fraction1 = area / C::pi;
         fraction2 = fraction1 / square(s);
     }
 
     // if antenna1 is in behind, w is > 0, 2 is NOT shadowed
-    if (uvw(2) > 0.0) fraction2 = 0.0;
+    if (uvw(2) > 0.0) {
+        fraction2 = 0.0;
+    }
 
     // if antenna1 is in front, w is < 0, 1 is NOT shadowed
-    if (uvw(2) < 0.0) fraction1 = 0.0;
-
-    return;
+    if (uvw(2) < 0.0) {
+        fraction1 = 0.0;
+    }
 }
 
 String Simulator::formatDirection(const casacore::MDirection& direction)
