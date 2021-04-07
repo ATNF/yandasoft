@@ -131,21 +131,21 @@ namespace askap
                 /// @param fraclimit Maximim tolerable blockage (fraction) e.g. 0.1
                 void setFractionBlockageLimit(const double fraclimit)
                 {
-                    fractionBlockageLimit_p = fraclimit;
+                    itsFractionBlockageLimit = fraclimit;
                 }
 
                 /// @brief Set minimum allowed elevation before flagging
                 /// @param ellimit Minimum allowed elevation e.g. "8deg"
                 void setElevationLimit(const casacore::Quantity& ellimit)
                 {
-                    elevationLimit_p = ellimit;
+                    itsElevationLimit = ellimit;
                 }
 
                 /// @brief Set autocorrelation weight (zero for no auto's)
                 /// @param autocorrwt Weight of autocorrelation data
                 void setAutoCorrelationWt(const float autocorrwt)
                 {
-                    autoCorrelationWt_p = autocorrwt;
+                    itsAutoCorrelationWt = autocorrwt;
                 }
 
                 /// @brief set noise rms (used to scale SIGMA column)
@@ -250,30 +250,37 @@ namespace askap
             private:
 
                 /// Fractional blockage limit
-                double fractionBlockageLimit_p;
+                double itsFractionBlockageLimit;
+
                 /// Elevation limit
-                casacore::Quantity elevationLimit_p;
-                /// Autocorrelation weight
-                float autoCorrelationWt_p;
+                casacore::Quantity itsElevationLimit;
+
+                /// Autocorrelation weight, negative value or zero means no autos are simulated
+                float itsAutoCorrelationWt;
+
                 /// Telescope name
-                casacore::String telescope_p;
-                /// Integration time as a Quantity
-                casacore::Quantity qIntegrationTime_p;
+                casacore::String itsTelescopeName;
+
+                /// Integration time in seconds
+                double itsIntegrationTime;
+
                 /// Use hour angles?
-                bool useHourAngle_p;
+                bool itsUseHourAngle;
+
                 /// Is the hour angle defined?
-                bool hourAngleDefined_p;
+                bool itsHourAngleDefined;
+
                 /// Reference time
-                casacore::MEpoch mRefTime_p;
-                /// Offset time as a double
-                double t_offset_p;
+                casacore::MEpoch itsRefTime;
+
+                /// Offset time as a double in seconds
+                double itsTimeOffset;
 
                 /// Measurement set points
                 boost::shared_ptr<casacore::MeasurementSet> itsMS;
 
-
-                /// Restore default values
-                void defaults();
+                /// @return today's epoch 
+                static casacore::MEpoch today();
                 
                 /// @brief dish diameter (to get noise)
                 /// @details We have a simplified noise model at the moment with the constant noise

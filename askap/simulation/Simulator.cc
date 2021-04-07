@@ -122,27 +122,22 @@ struct MSFeedParameterExtractor : protected MSIter {
     using MSIter::allBeamOffsetsZero;
 };
 
-void Simulator::defaults()
+casacore::MEpoch Simulator::today()  
 {
-    fractionBlockageLimit_p = 1e-6;
-    elevationLimit_p = Quantity(8.0, "deg");
-    autoCorrelationWt_p = 1.0;
-    telescope_p = "Unknown";
-    qIntegrationTime_p = Quantity(10.0, "s");
-    useHourAngle_p = True;
-    Quantity today;
-    MVTime::read(today, "today");
-    mRefTime_p = MEpoch(today, MEpoch::UTC);
-    itsNoiseRMS = 1.;
-    itsRelAntennaWeight.assign(casacore::Vector<double>());
+   Quantity todayQ;
+   MVTime::read(todayQ, "today");
+   return MEpoch(todayQ, MEpoch::UTC);
 }
 
 Simulator::Simulator(const casacore::String& MSName, int bucketSize,
                      int tileNcorr, int tileNchan) :
+        itsFractionBlockageLimit(1e-6), itsElevationLimit(Quantity(8., "deg")),
+        itsAutoCorrelationWt(1.), itsTelescopeName("unknown"),
+        itsIntegrationTime(10.), itsUseHourAngle(true), itsHourAngleDefined(false),
+        itsRefTime(today()), itsTimeOffset(0.), 
         itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
     try {
-        defaults();
 
         // make MS with standard columns
         TableDesc msDesc(MS::requiredTableDesc());
@@ -225,10 +220,12 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
 }
 
 Simulator::Simulator(casacore::MeasurementSet& theMS) :
+        itsFractionBlockageLimit(1e-6), itsElevationLimit(Quantity(8., "deg")),
+        itsAutoCorrelationWt(1.), itsTelescopeName("unknown"),
+        itsIntegrationTime(10.), itsUseHourAngle(true), itsHourAngleDefined(false),
+        itsRefTime(today()), itsTimeOffset(0.), 
         itsDishDiamForNoise(-1.), itsChanBandwidthForNoise(-100.), itsNoiseRMS(1.)
 {
-    defaults();
-
     itsMS.reset(new MeasurementSet(theMS));
 
     ASKAPLOG_INFO_STR(logger, "Opening MeasurementSet " << itsMS->tableName() << " with "
@@ -248,7 +245,7 @@ void Simulator::initAnt(const casacore::String& telescope, const casacore::Vecto
                         const casacore::Vector<casacore::String>& mount, const casacore::Vector<casacore::String>& name,
                         const casacore::String& coordsystem, const casacore::MPosition& mRefLocation)
 {
-    telescope_p = telescope;
+    itsTelescopeName = telescope;
 
     Int nAnt = x.nelements();
 
@@ -617,15 +614,15 @@ void Simulator::settimes(const casacore::Quantity& qIntegrationTime,
                          const bool useHourAngle,
                          const casacore::MEpoch& mRefTime)
 {
-    qIntegrationTime_p = qIntegrationTime;
-    useHourAngle_p = useHourAngle;
-    mRefTime_p = mRefTime;
+    itsIntegrationTime = qIntegrationTime.getValue("s");
+    itsUseHourAngle = useHourAngle;
+    itsRefTime = mRefTime;
 
-    if (useHourAngle_p) {
-        hourAngleDefined_p = False;
+    if (itsUseHourAngle) {
+        itsHourAngleDefined = false;
     }
 
-    t_offset_p = 0.0;
+    itsTimeOffset = 0.0;
 }
 
 void Simulator::observe(const casacore::String& sourceName,
@@ -755,27 +752,27 @@ void Simulator::observe(const casacore::String& sourceName,
     // Now we know where we are and where we are pointing, we can do the time calculations
     double Tstart, Tend, Tint;
     {
-        Tint = qIntegrationTime_p.getValue("s");
+        Tint = itsIntegrationTime;
 
         MEpoch::Ref tref(MEpoch::TAI);
-        MEpoch::Convert tconvert(mRefTime_p, tref);
+        MEpoch::Convert tconvert(itsRefTime, tref);
         MEpoch taiRefTime = tconvert();
 
         // until the qStartTime represents the starting Hour Angle
-        if (useHourAngle_p && !hourAngleDefined_p) {
-            msd.setEpoch(mRefTime_p);
+        if (itsUseHourAngle && !itsHourAngleDefined) {
+            msd.setEpoch(itsRefTime);
             msd.setFieldCenter(fieldCenter);
-            t_offset_p = - msd.hourAngle() * 3600.0 * 180.0 / C::pi / 15.0; // in seconds
-            hourAngleDefined_p = True;
+            itsTimeOffset = - msd.hourAngle() * 3600.0 * 180.0 / C::pi / 15.0; // in seconds
+            itsHourAngleDefined = true;
             ASKAPLOG_INFO_STR(logger, "Times specified are interpreted as hour angles for first source observed");
-            ASKAPLOG_INFO_STR(logger, "     offset in time = " << t_offset_p / 3600.0 << " hours from "
+            ASKAPLOG_INFO_STR(logger, "     offset in time = " << itsTimeOffset / 3600.0 << " hours from "
                                   << formatTime(taiRefTime.get("s").getValue("s")));
         }
 
         Tstart = qStartTime.getValue("s") +
-                 taiRefTime.get("s").getValue("s") + t_offset_p;
+                 taiRefTime.get("s").getValue("s") + itsTimeOffset;
         Tend = qStopTime.getValue("s") +
-               taiRefTime.get("s").getValue("s") + t_offset_p;
+               taiRefTime.get("s").getValue("s") + itsTimeOffset;
         ASKAPLOG_INFO_STR(logger, "Time range - start : " << formatTime(Tstart) << " stop  : " << formatTime(Tend));
     }
 
@@ -785,7 +782,7 @@ void Simulator::observe(const casacore::String& sourceName,
     MSObservationColumns& obsc = msc.observation();
     Int nobsrow = obsc.nrow();
     obs.addRow();
-    obsc.telescopeName().put(nobsrow, telescope_p);
+    obsc.telescopeName().put(nobsrow, itsTelescopeName);
     Vector<double> timeRange(2);
     timeRange(0) = Tstart;
     timeRange(1) = Tend;
@@ -830,7 +827,7 @@ void Simulator::observe(const casacore::String& sourceName,
     scan++;
 
     // We can extend the ms just once
-    const Int nBaselines = autoCorrelationWt_p > 0.0 ? nAnt * (nAnt + 1) / 2 : nAnt * (nAnt - 1) / 2;
+    const Int nBaselines = itsAutoCorrelationWt > 0.0 ? nAnt * (nAnt + 1) / 2 : nAnt * (nAnt - 1) / 2;
 
     Int nNewRows = nBaselines * nFeed;
     const Int nIntegrations = max(1, Int(0.5 + (Tend - Tstart) / Tint));
@@ -941,7 +938,7 @@ void Simulator::observe(const casacore::String& sourceName,
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
                 const double x1 = antUVW(0, ant1), y1 = antUVW(1, ant1), z1 = antUVW(2, ant1);
-                const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
+                const Int startAnt2 = itsAutoCorrelationWt > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     row++;
@@ -967,11 +964,11 @@ void Simulator::observe(const casacore::String& sourceName,
                         blockage(fractionBlocked1, fractionBlocked2,
                                  uvwvec, antDiam(ant1), antDiam(ant2));
 
-                        if (fractionBlocked1 > fractionBlockageLimit_p) {
+                        if (fractionBlocked1 > itsFractionBlockageLimit) {
                             isShadowed(ant1) = True;
                         }
 
-                        if (fractionBlocked2 > fractionBlockageLimit_p) {
+                        if (fractionBlocked2 > itsFractionBlockageLimit) {
                             isShadowed(ant2) = True;
                         }
                     }
@@ -990,7 +987,7 @@ void Simulator::observe(const casacore::String& sourceName,
                     Float wt = 1 / square(sigma1);
 
                     if (ant1 == ant2) {
-                        wt *= autoCorrelationWt_p;
+                        wt *= itsAutoCorrelationWt;
                     }
 
                     Vector<Float> tmp(nCorr); tmp = wt;
@@ -1008,7 +1005,7 @@ void Simulator::observe(const casacore::String& sourceName,
             Int reRow = startingRow;
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
-                 const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
+                 const Int startAnt2 = itsAutoCorrelationWt > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     reRow++;
@@ -1030,7 +1027,7 @@ void Simulator::observe(const casacore::String& sourceName,
                 msd.setAntenna(ant1);
                 azel = msd.azel().getAngle("rad").getValue("rad");
 
-                if (azel(1) < elevationLimit_p.getValue("rad")) {
+                if (azel(1) < itsElevationLimit.getValue("rad")) {
                     isTooLow(ant1) = True;
                 }
 
@@ -1050,7 +1047,7 @@ void Simulator::observe(const casacore::String& sourceName,
             reRow = startingRow;
 
             for (Int ant1 = 0; ant1 < nAnt; ant1++) {
-                 const Int startAnt2 = autoCorrelationWt_p > 0.0 ? ant1 : ant1 + 1;
+                 const Int startAnt2 = itsAutoCorrelationWt > 0.0 ? ant1 : ant1 + 1;
 
                 for (Int ant2 = startAnt2; ant2 < nAnt; ant2++) {
                     reRow++;
@@ -1068,7 +1065,7 @@ void Simulator::observe(const casacore::String& sourceName,
             const Int numPointing = pointingc.nrow();
             itsMS->pointing().addRow(numpointrows);
             numpointrows += numPointing;
-            const double Tint = qIntegrationTime_p.getValue("s");
+            const double Tint = itsIntegrationTime;
             Vector<MDirection> direction(1, fieldCenter);
 
             for (Int m = numPointing; m < (numPointing + nAnt); m++) {
@@ -1103,7 +1100,7 @@ void Simulator::observe(const casacore::String& sourceName,
     ASKAPLOG_INFO_STR(logger, (row + 1) << " visibilities simulated ");
     ASKAPLOG_INFO_STR(logger, nShadowed << " visibilities flagged due to shadowing ");
     ASKAPLOG_INFO_STR(logger, nSubElevation << " visibilities flagged due to elevation limit of " <<
-                      elevationLimit_p.getValue("deg") << " degrees ");
+                      itsElevationLimit.getValue("deg") << " degrees ");
 
 }
 
@@ -1194,7 +1191,7 @@ double Simulator::areaTimesSqrtBT() const
               "Automatic noise estimate is impossible. Please override with explicit value of 'rms' or 'variance'");
    ASKAPLOG_INFO_STR(logger, " Using channel bandwidth of "<<itsChanBandwidthForNoise/1e3<<" kHz to estimate noise per visibility");
 
-   const double inttime = qIntegrationTime_p.getValue("s");
+   const double inttime = itsIntegrationTime;
    ASKAPCHECK(inttime > 0., "Integration time is supposed to be positive. You have "<<inttime<<" seconds");
    return casacore::C::pi*casacore::square(itsDishDiamForNoise)/4.*sqrt(itsChanBandwidthForNoise*inttime);
 }
