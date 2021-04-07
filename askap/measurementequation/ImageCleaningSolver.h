@@ -127,6 +127,16 @@ protected:
    /// @return flattened padded vector
    casacore::Vector<imtype> padDiagonal(const casacore::Array<imtype> &diag) const;
 
+   /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+   /// @param[in] osfactor extra oversampling factor
+   /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
+   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+   void oversample(casacore::Array<float> &pixelArray, const float osfactor=2.) const;
+
+   /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+   /// @param[in] osfactor extra oversampling factor
+   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+   void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=2.) const;
 
 
 private:

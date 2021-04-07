@@ -34,6 +34,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagemultiscalesolver");
 // need it just for null deleter
 #include <askap/askap/AskapUtil.h>
 
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/profile/AskapProfiler.h>
 
@@ -183,13 +184,6 @@ namespace askap
 	    clipImage(psfArray);
 	    ASKAPLOG_INFO_STR(logger, "Peak data vector flux (derivative) after clipping "<<max(dirtyArray));
 
-	    // We need lattice equivalents. We can use ArrayLattice which involves
-	    // no copying
-	    casacore::ArrayLattice<float> dirty(dirtyArray);
-	    casacore::ArrayLattice<float> psf(psfArray);
-	    casacore::ArrayLattice<float> clean(cleanArray);
-	    casacore::ArrayLattice<float> mask(maskArray);
-
 	    // uncomment the code below to save the residual image
 	    // This takes up some memory and we have to ship the residual image out inside
 	    // the parameter class. Therefore, we may not need this functionality in the
@@ -202,7 +196,25 @@ namespace askap
 	    saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
 				   planeIter.position());
             */
+  
+	    // We need lattice equivalents. We can use ArrayLattice which involves
+	    // no copying
 
+        // sinc interpolate via Fourier padding if cleaning requires higher resolution
+        const float osfactor = 2.0;
+        if (osfactor > 1.0) {
+            oversample(dirtyArray,osfactor);
+            oversample(psfArray,osfactor);
+            oversample(maskArray,osfactor);
+            oversample(cleanArray,osfactor);
+        }
+
+	    // We need lattice equivalents. We can use ArrayLattice which involves
+	    // no copying
+	    casacore::ArrayLattice<float> dirty(dirtyArray);
+	    casacore::ArrayLattice<float> psf(psfArray);
+	    casacore::ArrayLattice<float> clean(cleanArray);
+	    casacore::ArrayLattice<float> mask(maskArray);
 
 	    // Create a lattice cleaner to do the dirty work :)
 	    /// @todo More checks on reuse of LatticeCleaner
@@ -247,6 +259,11 @@ namespace askap
 	      ip.add(peakResParam, lc->strengthOptimum());
 	    }
 	    ip.fix(peakResParam);
+        // remove Fourier padding if higher resolution was added for cleaning
+        if (osfactor > 1.0) {
+            // could just return the array like unpadImage, but keep it like the oversample function
+            downsample(cleanArray,osfactor);
+        }
 	    planeIter.getPlane(ip.valueT(indit->first)) = unpadImage(cleanArray);
 	  } // loop over all planes of the image cube
 	} // loop over map of indices

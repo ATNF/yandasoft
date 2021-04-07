@@ -40,6 +40,8 @@ ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
 
 
 namespace askap {
@@ -172,6 +174,92 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
   #endif
   return result;
 }
+
+
+/// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+/// @param[in] osfactor extra oversampling factor
+/// @param[in] image input image to be oversampled
+/// @return oversampled image
+/// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+/// @todo is this a duplication of, or can this use, scimath::PaddingUtils::fftPad?
+void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor) const
+{
+
+    ASKAPCHECK(osfactor >= 1.0,
+        "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+    if (osfactor == 1.) return;
+
+    casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
+    casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+
+    // destroy Agrid before resizing image. Small memory saving.
+    {
+        // Set up scratch arrays and lattices for changing resolution
+        casacore::Array<casacore::Complex> Agrid(image.shape());
+        casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+ 
+        // copy image into a complex scratch space
+        casacore::convertArray<casacore::Complex,float>(Agrid, image);
+ 
+        // renormalise based on the imminent padding
+        Agrid *= static_cast<float>(osfactor*osfactor);
+ 
+        // fft to uv
+        casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
+ 
+        // "extract" original Fourier grid into the central portion of the new Fourier grid
+        casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+        subGrid = Agrid;
+
+        // ifft back to image and return the real part
+        casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
+    }
+
+    image.resize(AgridOS.shape());
+    image = real(AgridOS);
+
+}
+
+/// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+/// @param[in] osfactor extra oversampling factor
+/// @param[in] image input oversampled image
+/// @return downsampled image
+/// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+/// @todo is this a duplication of, or can this use, scimath::PaddingUtils::fftPad?
+void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float osfactor) const
+{
+
+    ASKAPCHECK(osfactor >= 1.0,
+        "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+    if (osfactor == 1.) return;
+
+    casacore::Array<casacore::Complex> Agrid;
+
+    // destroy AgridOS before resizing image. Small memory saving.
+    {
+        // Set up scratch arrays and lattices for changing resolution
+        casacore::Array<casacore::Complex> AgridOS(image.shape());
+        casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+ 
+        // copy image into a complex scratch space
+        casacore::convertArray<casacore::Complex,float>(AgridOS, image);
+ 
+        // fft to uv. This is what we need to degrid from, so no need to renormalise
+        casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
+ 
+        // extract the central portion of the Fourier grid
+        Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+ 
+        // ifft back to image and return the real part
+        casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+        casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
+    }
+
+    image.resize(Agrid.shape());
+    image = real(Agrid);
+
+}
+
 
 /// @brief configure basic parameters of the solver
 /// @details This method encapsulates extraction of basic solver parameters from the parset.
