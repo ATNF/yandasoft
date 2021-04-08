@@ -633,107 +633,57 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-						const string& imagename)
-    {
-      ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
-      const casacore::Array<float> imagePixels(ip.valueF(name));
-      ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
-      const casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
-
-      ASKAPLOG_DEBUG_STR(logger, "Data of "<<name<<" parameter peak at "<<casacore::max(imagePixels));
-
-      imageHandler().create(imagename, imagePixels.shape(), imageCoords);
-      imageHandler().write(imagename, imagePixels);
-
-      const Axes &axes = ip.axes(name);
-      if (axes.has("MAJMIN")) {
-          // this is a restored image with beam parameters set
-          ASKAPCHECK(axes.has("PA"),"PA axis should always accompany MAJMIN");
-          imageHandler().setUnits(imagename, "Jy/beam");
-          imageHandler().setBeamInfo(imagename, axes.start("MAJMIN"), axes.end("MAJMIN"),
-                                     axes.start("PA"));
-      } else {
-          if (imagename.find("sensitivity") == 0) {
-               // sensitivity image is a special case, it has units of Jy/beam, but no beam info
-              imageHandler().setUnits(imagename, "Jy/beam");
-          }
-          else if (imagename.find("residual") == 0) {
-              // residual image is also a special case - perhaps the beam info should be from the fitted
-              // psf
-              imageHandler().setUnits(imagename, "Jy/beam");
-          }
-          else {
-             imageHandler().setUnits(imagename, "Jy/pixel");
-          }
-      }
-    }
-
-    void SynthesisParamsHelper::saveImageParameterDoubleRes(const askap::scimath::Params& ip,
-					 const string& name, const string& imagename)
+					 const string& imagename)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameterDoubleRes");
 
-      // based on padding in ImageSolver.
-      // Use of ArrayLattice involves no copying
-      //  - copy image into a complex scratch space
-
-/*
-      casacore::Array<casacore::Complex> inputPixels(ip.shape(name));
-      ASKAPDEBUGASSERT(inputPixels.ndim()!=0);
-      casacore::convertArray<casacore::Complex,float>(inputPixels, ip.valueF(name));
-      //  - renormalise based on the imminent zero padding
-      inputPixels *= static_cast<float>(4.);
-      casacore::ArrayLattice<casacore::Complex> scratch(inputPixels);
-      //  - fft to uv
-      casacore::LatticeFFT::cfft2d(scratch, casacore::True);
-      //  - add to a Fourier buffer that is 2x2 times as big
-      casacore::IPosition paddedShape = scratch.shape();
-      ASKAPDEBUGASSERT(paddedShape.nonDegenerate().nelements() >= 2);
-      paddedShape(0) *= 2;
-      paddedShape(1) *= 2;
-      casacore::ArrayLattice<casacore::Complex> scratchDouble(paddedShape);
-      scimath::PaddingUtils::inject(scratchDouble, scratch);
-      //  - ifft back to image and get the real part
-      casacore::LatticeFFT::cfft2d(scratchDouble, casacore::False);
-      casacore::Array<float> imagePixels(real(scratchDouble.asArray()));
-*/
-
       const float osfactor = 1.0;
-      casacore::Array<casacore::Complex> Agrid(ip.shape(name));
-      casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-      casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor),0.);
-      casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
-      // copy image into a complex scratch space
-      casacore::convertArray<casacore::Complex,float>(Agrid, ip.valueF(name));
-      // renormalise based on the imminent padding
-      Agrid *= static_cast<float>(osfactor*osfactor);
-      // fft to uv
-      casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
-      // "extract" original Fourier grid into the central portion of the new Fourier grid
-      casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
-      subGrid = Agrid;
-      casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
-      casacore::Array<float> imagePixels = real(AgridOS);
+      ASKAPCHECK(osfactor >= 1., "Oversampling factor shoujld be greater than or equal to 1, you have "<<osfactor);
 
+      casacore::Array<float> imagePixels;
       casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
 
-      // update the coordinate system for the new resolution
-      const int whichDir = imageCoords.findCoordinate(Coordinate::DIRECTION);
-      ASKAPCHECK(whichDir>-1, "No direction coordinate present in the image "<<name);
-      casacore::DirectionCoordinate radec(imageCoords.directionCoordinate(whichDir));
-/* keep these checks?
-      casacore::Vector<casacore::Int> axesDir = imageCoords.pixelAxes(whichDir);
-      ASKAPCHECK(axesDir.nelements() == 2, "Direction axis "<<whichDir<<
-                 " is expected to correspond to just two pixel axes, you have "<<axesDir);
-      ASKAPCHECK((axesDir[0] == 0) && (axesDir[1] == 1),
-               "At present we support only images with first axes being the direction pixel axes, image "<<name<<
-               " has "<< axesDir);
-*/
-ASKAPLOG_INFO_STR(logger, "DAM referencePixel = " << radec.referencePixel() << " increment = " << radec.increment() );
-      radec.setReferencePixel(radec.referencePixel()*2.);
-      radec.setIncrement(radec.increment()/2.);
-      imageCoords.replaceCoordinate(radec, whichDir);
+      if (osfactor == 1.) {
+          imagePixels.reference(ip.valueF(name));
+      }
+      else {
+          casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor),0.);
 
+          // destroy Agrid before initialising imagePixels. Small memory saving?
+          {
+              casacore::Array<casacore::Complex> Agrid(ip.shape(name));
+              casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+
+              // copy image into a complex scratch space
+              casacore::convertArray<casacore::Complex,float>(Agrid, ip.valueF(name));
+              // renormalise based on the imminent padding
+              Agrid *= static_cast<float>(osfactor*osfactor);
+              // fft to uv
+              casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
+              // "extract" original Fourier grid into the central portion of the new Fourier grid
+              casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+              subGrid = Agrid;
+              casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+              casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
+          }
+          imagePixels = real(AgridOS);
+
+          // update the coordinate system for the new resolution
+          const int whichDir = imageCoords.findCoordinate(Coordinate::DIRECTION);
+          ASKAPCHECK(whichDir>-1, "No direction coordinate present in the image "<<name);
+          casacore::DirectionCoordinate radec(imageCoords.directionCoordinate(whichDir));
+          casacore::Vector<casacore::Int> axesDir = imageCoords.pixelAxes(whichDir);
+          ASKAPCHECK(axesDir.nelements() == 2, "Direction axis "<<whichDir<<
+                     " is expected to correspond to just two pixel axes, you have "<<axesDir);
+          ASKAPCHECK((axesDir[0] == 0) && (axesDir[1] == 1),
+                   "At present we support only images with first axes being the direction pixel axes, image "<<name<<
+                   " has "<< axesDir);
+          radec.setReferencePixel(radec.referencePixel()*2.);
+          radec.setIncrement(radec.increment()/2.);
+          imageCoords.replaceCoordinate(radec, whichDir);
+      }
+
+      ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
       ASKAPLOG_DEBUG_STR(logger, "Data of "<<name<<" parameter peak at "<<casacore::max(imagePixels));
 
       imageHandler().create(imagename, imagePixels.shape(), imageCoords);
@@ -810,6 +760,7 @@ ASKAPLOG_INFO_STR(logger, "DAM referencePixel = " << radec.referencePixel() << "
     }
 
 
+// DAM also need to update loadImageParameter for osfactor? Or should saved images be stored at Nyquist?
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
 						 const string& imagename)
     {

@@ -190,7 +190,6 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
     if (osfactor == 1.) return;
 
     casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
-    casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
 
     // destroy Agrid before resizing image. Small memory saving.
     {
@@ -212,6 +211,7 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
         subGrid = Agrid;
 
         // ifft back to image and return the real part
+        casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
         casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
     }
 
