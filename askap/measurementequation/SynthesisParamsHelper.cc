@@ -698,7 +698,7 @@ namespace askap
       casacore::Array<float> imagePixels(real(scratchDouble.asArray()));
 */
 
-      const float osfactor = 2.0;
+      const float osfactor = 1.0;
       casacore::Array<casacore::Complex> Agrid(ip.shape(name));
       casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
       casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor),0.);

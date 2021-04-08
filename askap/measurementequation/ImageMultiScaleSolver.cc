@@ -201,7 +201,7 @@ namespace askap
 	    // no copying
 
         // sinc interpolate via Fourier padding if cleaning requires higher resolution
-        const float osfactor = 2.0;
+        const float osfactor = 1.0;
         if (osfactor > 1.0) {
             oversample(dirtyArray,osfactor);
             oversample(psfArray,osfactor);

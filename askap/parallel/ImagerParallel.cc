@@ -770,10 +770,10 @@ namespace askap
                 if (!iph.isFacet()) {
                     if (!itsRestore && itsResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+postfix );
+//ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
-ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+".pad" );
-                        SynthesisParamsHelper::saveImageParameterDoubleRes(*itsModel, *it, *it+".pad");
+//ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+".pad" );
+//                        SynthesisParamsHelper::saveImageParameterDoubleRes(*itsModel, *it, *it+".pad");
                     }
                 }
                 else {
@@ -786,11 +786,11 @@ ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+".pad" );
             }
             if (it->find("psf") == 0) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+postfix );
+//ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                 if (it->find("psf.image") == 0) {
-ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+".pad" );
-                    SynthesisParamsHelper::saveImageParameterDoubleRes(*itsModel, *it, *it+".pad");
+//ASKAPLOG_INFO_STR(logger, "DAM Saving " << *it << " with name " << *it+".pad" );
+//                    SynthesisParamsHelper::saveImageParameterDoubleRes(*itsModel, *it, *it+".pad");
     }
             }
         }
