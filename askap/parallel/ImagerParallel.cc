@@ -723,7 +723,7 @@ namespace askap
            }
       }
 
-      const float extraOS = parset().getFloat("solver.Clean.extraOversampling",1.0);
+      const float extraOS = parset().getFloat("solver.Clean.extraoversampling",1.0);
       tempPar.add(outParName,sensitivityArr,axes);
       ASKAPLOG_INFO_STR(logger, "Saving " << outParName);
       SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName, extraOS);
@@ -756,7 +756,7 @@ namespace askap
             resultimages=itsModel->names();
         }
 
-        const float extraOS = parset().getFloat("solver.Clean.extraOversampling",1.0);
+        const float extraOS = parset().getFloat("solver.Clean.extraoversampling",1.0);
 
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
