@@ -131,7 +131,7 @@ protected:
    /// @param[in] osfactor extra oversampling factor
    /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
    /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
-   void oversample(casacore::Array<float> &pixelArray, const float osfactor=1.) const;
+   void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true) const;
 
    /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
    /// @param[in] osfactor extra oversampling factor

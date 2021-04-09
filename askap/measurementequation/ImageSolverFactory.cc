@@ -294,6 +294,17 @@ namespace askap
 	    mfmss->setSpeedUp(factor);
 	  }
 	}
+
+	if (parset.isDefined("solver.Clean.extraOversampling")) {
+	  boost::shared_ptr<ImageMultiScaleSolver> mss = boost::dynamic_pointer_cast<ImageMultiScaleSolver>(solver);
+	  ASKAPCHECK(mss, "extra oversampling currently only supported with Hogbom solver");
+	  const float factor = parset.getFloat("solver.Clean.extraOversampling");
+	  ASKAPLOG_INFO_STR(logger,"Using an extra oversampling factor of "<<factor<<" in lattice clean");
+	  if (mss) {
+	    mss->setExtraOversampling(factor);
+	  }
+	}
+
       } else if(parset.getString("solver")=="Fista") {
 	ASKAPLOG_INFO_STR(logger, "Constructing FISTA solver" );
 	solver.reset(new ImageFistaSolver());

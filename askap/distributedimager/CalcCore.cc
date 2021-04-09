@@ -355,6 +355,8 @@ void CalcCore::solveNE()
 }
 void CalcCore::writeLocalModel(const std::string &postfix) {
 
+// DAM add getFloat("solver.Clean.extraOversampling",1.0) to saveImageParameter below? See ImagerParallel::writeModel
+
     ASKAPLOG_DEBUG_STR(logger, "Writing out results as images");
     ASKAPDEBUGASSERT(itsModel);
     std::vector<std::string> resultimages=itsModel->names();

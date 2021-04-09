@@ -633,40 +633,23 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-					 const string& imagename)
+					 const string& imagename, const float extraOversampleFactor)
     {
-      ASKAPTRACE("SynthesisParamsHelper::saveImageParameterDoubleRes");
+      ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
 
-      const float osfactor = 1.0;
-      ASKAPCHECK(osfactor >= 1., "Oversampling factor shoujld be greater than or equal to 1, you have "<<osfactor);
+      ASKAPCHECK(extraOversampleFactor >= 1.,
+                 "Oversampling factor should be greater than or equal to 1, you have "<<extraOversampleFactor);
 
       casacore::Array<float> imagePixels;
       casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
 
-      if (osfactor == 1.) {
+      if (extraOversampleFactor == 1.) {
           imagePixels.reference(ip.valueF(name));
       }
       else {
-          casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor),0.);
-
-          // destroy Agrid before initialising imagePixels. Small memory saving?
-          {
-              casacore::Array<casacore::Complex> Agrid(ip.shape(name));
-              casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-
-              // copy image into a complex scratch space
-              casacore::convertArray<casacore::Complex,float>(Agrid, ip.valueF(name));
-              // renormalise based on the imminent padding
-              Agrid *= static_cast<float>(osfactor*osfactor);
-              // fft to uv
-              casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
-              // "extract" original Fourier grid into the central portion of the new Fourier grid
-              casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
-              subGrid = Agrid;
-              casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
-              casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
-          }
-          imagePixels = real(AgridOS);
+          imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),extraOversampleFactor));
+          scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
+// DAM may need to use ip.valueT(name), because fftPad works with imtype rather than float
 
           // update the coordinate system for the new resolution
           const int whichDir = imageCoords.findCoordinate(Coordinate::DIRECTION);
@@ -760,7 +743,7 @@ namespace askap
     }
 
 
-// DAM also need to update loadImageParameter for osfactor? Or should saved images be stored at Nyquist?
+// DAM also need to update loadImageParameter for extraOversampleFactor? Or should saved images be stored at Nyquist?
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
 						 const string& imagename)
     {

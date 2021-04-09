@@ -299,7 +299,7 @@ namespace askap
         /// @param name Name of parameter
         /// @param imagename Name of image file
         static void saveImageParameter(const askap::scimath::Params& ip, const string& name,
-          const string& imagename);
+          const string& imagename, const float extraOversampleFactor=1.);
 
         /// @brief Copy a parameter to a CASA TempImage
         /// Note that this will be a reference if possible

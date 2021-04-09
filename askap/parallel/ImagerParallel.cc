@@ -723,9 +723,10 @@ namespace askap
            }
       }
 
+      const float extraOS = parset().getFloat("solver.Clean.extraOversampling",1.0);
       tempPar.add(outParName,sensitivityArr,axes);
       ASKAPLOG_INFO_STR(logger, "Saving " << outParName);
-      SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName);
+      SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName, extraOS);
     }
 
 
@@ -755,13 +756,15 @@ namespace askap
             resultimages=itsModel->names();
         }
 
+        const float extraOS = parset().getFloat("solver.Clean.extraOversampling",1.0);
+
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
             if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                 if (itsExportSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
@@ -770,20 +773,20 @@ namespace askap
                 if (!iph.isFacet()) {
                     if (!itsRestore && itsResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                     }
                 }
                 else {
                     if (itsResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                     }
                 }
 
             }
             if (it->find("psf") == 0) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
             }
         }
 
@@ -870,18 +873,18 @@ namespace askap
                     if (!iph.isFacet() && ((ci->find("image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
                                 << *ci+restore_suffix+".restored" );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored", extraOS);
                     }
                     if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
                                 << *ci+restore_suffix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
                     }
                     if (!iph.isFacet() && ((ci->find("residual") == 0)))  {
                         if (itsResidual) {
                             ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
                                     << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
                         }
                     }
                 }
@@ -907,7 +910,7 @@ namespace askap
                     if (std::find(resultimages.begin(),resultimages.end(),*it) == resultimages.end()) {
 
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                     }
                     else {
                         ASKAPLOG_INFO_STR(logger, "Not Saving as " << *it << " is in the original params list");

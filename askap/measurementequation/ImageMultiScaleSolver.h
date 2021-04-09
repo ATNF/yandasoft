@@ -78,6 +78,10 @@ namespace askap {
                 /// @param[in] factor speed up factor
                 void setSpeedUp(float factor);
 
+                /// @brief set extra oversampling during cleaning and image output if needed
+                /// @param[in] factor extra oversampling factor
+                void setExtraOversampling(float factor);
+
             protected:
                 /// @brief Precondition the PSF and the dirty image
                 /// @param[in] psf point spread function to precondition (in/out)
@@ -97,6 +101,10 @@ namespace askap {
                 /// @brief speed up factor
                 /// @details This value is used only if itsDoSpeedUp is true
                 float itsSpeedUpFactor;
+
+                /// @brief extra oversampling factor to use during clean
+                float itsExtraOversamplingFactor;
+
         };
 
     }

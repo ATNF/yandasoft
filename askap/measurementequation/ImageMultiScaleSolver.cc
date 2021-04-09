@@ -74,7 +74,7 @@ namespace askap
     // processed by every thread.
 
     ImageMultiScaleSolver::ImageMultiScaleSolver() :
-      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.)
+      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsExtraOversamplingFactor(1.)
     {
       itsScales.resize(3);
       itsScales(0)=0;
@@ -83,7 +83,7 @@ namespace askap
     }
 
     ImageMultiScaleSolver::ImageMultiScaleSolver(const casacore::Vector<float>& scales) :
-      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.)
+      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsExtraOversamplingFactor(1.)
     {
       itsScales.resize(scales.size());
       itsScales=scales;
@@ -100,6 +100,13 @@ namespace askap
     {
       itsDoSpeedUp = true;
       itsSpeedUpFactor = factor;
+    }
+
+    /// @brief set extra oversampling during cleaning and image output if needed
+    /// @param[in] factor extra oversampling factor
+    void ImageMultiScaleSolver::setExtraOversampling(float factor)
+    {
+      itsExtraOversamplingFactor = factor;
     }
 
 
@@ -201,20 +208,22 @@ namespace askap
 	    // no copying
 
         // sinc interpolate via Fourier padding if cleaning requires higher resolution
-        const float osfactor = 1.0;
-        if (osfactor > 1.0) {
-            oversample(dirtyArray,osfactor);
-            oversample(psfArray,osfactor);
-            oversample(maskArray,osfactor);
-            oversample(cleanArray,osfactor);
+        if (itsExtraOversamplingFactor > 1.0) {
+            ASKAPLOG_INFO_STR(logger,
+                "Oversampling by an extra factor of "<<itsExtraOversamplingFactor<<" before cleaning");
+            oversample(dirtyArray,itsExtraOversamplingFactor);
+            oversample(psfArray,itsExtraOversamplingFactor);
+            oversample(maskArray,itsExtraOversamplingFactor);
+            // if cleanArray was returned in a previous cycle, it won't have been scaled during downsampling
+            oversample(cleanArray,itsExtraOversamplingFactor,false);
         }
 
 	    // We need lattice equivalents. We can use ArrayLattice which involves
 	    // no copying
 	    casacore::ArrayLattice<float> dirty(dirtyArray);
 	    casacore::ArrayLattice<float> psf(psfArray);
-	    casacore::ArrayLattice<float> clean(cleanArray);
 	    casacore::ArrayLattice<float> mask(maskArray);
+	    casacore::ArrayLattice<float> clean(cleanArray);
 
 	    // Create a lattice cleaner to do the dirty work :)
 	    /// @todo More checks on reuse of LatticeCleaner
@@ -260,9 +269,9 @@ namespace askap
 	    }
 	    ip.fix(peakResParam);
         // remove Fourier padding if higher resolution was added for cleaning
-        if (osfactor > 1.0) {
+        if (itsExtraOversamplingFactor > 1.0) {
             // could just return the array like unpadImage, but keep it like the oversample function
-            downsample(cleanArray,osfactor);
+            downsample(cleanArray,itsExtraOversamplingFactor);
         }
 	    planeIter.getPlane(ip.valueT(indit->first)) = unpadImage(cleanArray);
 	  } // loop over all planes of the image cube

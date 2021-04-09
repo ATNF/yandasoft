@@ -181,8 +181,8 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
 /// @param[in] image input image to be oversampled
 /// @return oversampled image
 /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
-/// @todo is this a duplication of, or can this use, scimath::PaddingUtils::fftPad?
-void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor) const
+/// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
+void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor, const bool norm) const
 {
 
     ASKAPCHECK(osfactor >= 1.0,
@@ -190,6 +190,10 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
     if (osfactor == 1.) return;
 
     casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
+
+    // this is how it's done in SynthesisParamsHelper::saveImageParameter():
+    //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
+    //scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
 
     // destroy Agrid before resizing image. Small memory saving.
     {
@@ -201,8 +205,10 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
         casacore::convertArray<casacore::Complex,float>(Agrid, image);
  
         // renormalise based on the imminent padding
-        Agrid *= static_cast<float>(osfactor*osfactor);
- 
+        if (norm) {
+            Agrid *= static_cast<float>(osfactor*osfactor);
+        } 
+
         // fft to uv
         casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
  
@@ -225,7 +231,7 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
 /// @param[in] image input oversampled image
 /// @return downsampled image
 /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
-/// @todo is this a duplication of, or can this use, scimath::PaddingUtils::fftPad?
+/// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
 void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float osfactor) const
 {
 
@@ -249,6 +255,9 @@ void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float 
  
         // extract the central portion of the Fourier grid
         Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+ 
+        // renormalise based on the imminent padding
+        //Agrid /= static_cast<float>(osfactor*osfactor);
  
         // ifft back to image and return the real part
         casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
