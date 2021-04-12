@@ -1050,18 +1050,13 @@ namespace askap {
 
                                 maxPos(0) = 0; maxPos(1) = 0;
                                 maxVal = 0.0;
+                                #pragma omp single
+                                res.reference(this->itsResidualBasis(base)(term));
 
                                 if (isWeighted) {
-                                    #pragma omp sections
-                                    {
-                                        // replace with reference?
-                                        #pragma omp section
-                                        res = this->itsResidualBasis(base)(term);
-
-                                        #pragma omp section
-                                        wt = this->itsWeight(0).nonDegenerate();
-                                    }
-
+                                    #pragma omp single
+                                    wt.reference(this->itsWeight(0).nonDegenerate());
+                                    
                                     absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
                                 } else {
 
