@@ -299,6 +299,7 @@ namespace askap
 	  boost::shared_ptr<ImageMultiScaleSolver> mss = boost::dynamic_pointer_cast<ImageMultiScaleSolver>(solver);
 	  ASKAPCHECK(mss, "extra oversampling currently only supported with Hogbom solver");
 	  const float factor = parset.getFloat("solver.Clean.extraoversampling");
+	  ASKAPCHECK(factor>=1., "extra oversampling factors less than 1 are not supported");
 	  ASKAPLOG_INFO_STR(logger,"Using an extra oversampling factor of "<<factor<<" in lattice clean");
 	  if (mss) {
 	    mss->setExtraOversampling(factor);

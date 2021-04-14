@@ -761,7 +761,20 @@ namespace askap
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
-            if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
+            // if extraOS>1, "image.*" is retained for degridding but "fullres.*" is used for cleaning and restoring
+            if ((extraOS == 1.) && (it->find("image") == 0))
+            {
+                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+            }
+            if ((extraOS > 1.) && (it->find("fullres") == 0))
+            {
+                string tmpname = *it;
+                tmpname.replace(0,7,"image");
+                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << tmpname+postfix );
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, tmpname+postfix);
+            }
+            if ((it->find("weights") == 0) || (it->find("mask") == 0) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
@@ -858,6 +871,12 @@ namespace askap
                 ASKAPDEBUGASSERT(ir);
                 ASKAPDEBUGASSERT(itsSolver);
                     // configure restore solver
+                if (tmpset.isDefined("solver.Clean.extraoversampling")) {
+                    const float factor = tmpset.getFloat("solver.Clean.extraoversampling");
+                    ASKAPLOG_INFO_STR(logger,"Configuring restore solver with an extra oversampling factor of "<<
+                                      factor);
+                    ir->setExtraOversampling(factor);
+                }
                 boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
                 ASKAPDEBUGASSERT(template_solver);
                 ImageSolverFactory::configurePreconditioners(tmpset,ir);
@@ -870,10 +889,18 @@ namespace askap
                 std::vector<std::string> resultimages2=itsModel->names();
                 for (std::vector<std::string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
                     const ImageParamsHelper iph(*ci);
-                    if (!iph.isFacet() && ((ci->find("image") == 0)))  {
+                    // if extraOS>1, "image.*" is retained for degridding but "fullres.*" is used for restoring
+                    if (!iph.isFacet() && (extraOS == 1.) && ((ci->find("image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
                                 << *ci+restore_suffix+".restored" );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored", extraOS);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
+                    }
+                    if (!iph.isFacet() && (extraOS > 1.) && ((ci->find("fullres") == 0)))  {
+                        string tmpname = *ci;
+                        tmpname.replace(0,7,"image");
+                        ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                << tmpname+restore_suffix+".restored" );
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+restore_suffix+".restored");
                     }
                     if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
                         ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "

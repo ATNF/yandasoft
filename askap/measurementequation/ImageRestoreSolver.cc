@@ -70,7 +70,8 @@ namespace askap
   namespace synthesis
   {
     ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
-	    itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true), itsResidualNeedsUpdating(true)
+	    itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true),
+        itsResidualNeedsUpdating(true), itsExtraOversamplingFactor(1.)
     {
         setIsRestoreSolver();
     }
@@ -78,6 +79,13 @@ namespace askap
     void ImageRestoreSolver::init()
     {
 	    resetNormalEquations();
+    }
+
+    /// @brief set extra oversampling during cleaning and image output if needed
+    /// @param[in] factor extra oversampling factor
+    void ImageRestoreSolver::setExtraOversampling(float factor)
+    {
+      itsExtraOversamplingFactor = factor;
     }
 
     /// @brief Solve for parameters, updating the values kept internally
@@ -109,10 +117,10 @@ namespace askap
 	if (psfName == "") {
 	    // it doesn't matter that we don't have access to preconditioned PSF at this stage - only zero model will be
 	    // convolved with this PSF
-            ASKAPLOG_INFO_STR(logger, "ImageRestoreSolver::solveNormalEquations: Extracting PSF from normal equations");
-            savePSF(ip);
-            psfName = SynthesisParamsHelper::findPSF(ip);
-            ASKAPCHECK(psfName != "", "Failed to find a PSF parameter");
+        ASKAPLOG_INFO_STR(logger, "ImageRestoreSolver::solveNormalEquations: Extracting PSF from normal equations");
+        savePSF(ip);
+        psfName = SynthesisParamsHelper::findPSF(ip);
+        ASKAPCHECK(psfName != "", "Failed to find a PSF parameter");
     }
 
 	// determine which images are faceted and, if need be, setup parameters
@@ -452,7 +460,7 @@ namespace askap
                 casa::Array<float> psfArray(psfVector(order));
 
 			    if(nOrders>1) {
-			      iph.makeTaylorTerm(order);
+			        iph.makeTaylorTerm(order);
 			    }
 	            std::string imagename = iph.taylorName();
 	            ASKAPLOG_INFO_STR(logger, "Restoring "<<imagename);
@@ -462,11 +470,21 @@ namespace askap
                 std::string name;
                 casa::Array<imtype> out;
                 if (facetname == "") {
-                  name = imagename;
-                  out.reference(ip.valueT(name));
+                    name = imagename;
+                    // Check if a separate full-resolution clean model has been saved
+                    // It will be in a param with the starting "image" swapped to "fullres"):
+                    if ( itsExtraOversamplingFactor > 1. ) {
+                        size_t index = imagename.find("image", index);
+                        ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+                        imagename.replace(index,5,"fullres");
+                        ASKAPASSERT(ip.has(imagename));
+                        out.reference(ip.valueT(imagename));
+                    } else {
+                        out.reference(ip.valueT(name));
+                    }
                 } else {
-                  name = facetname;
-                  out.reference(SynthesisParamsHelper::getFacet(ip,name));
+                    name = facetname;
+                    out.reference(SynthesisParamsHelper::getFacet(ip,name));
                 }
 
                 if (itsResidualNeedsUpdating) {
@@ -481,12 +499,20 @@ namespace askap
                     // Store the new PSF in parameter class to be saved to disk later
                     ASKAPLOG_INFO_STR(logger, "Saving new PSF parameter as model NEW parameter -- needs full shape");
                     saveArrayIntoParameter(ip, name, shape, "psf.image", psfArray,
-       	 				     planeIter.position());
+       	 			    planeIter.position());
                 } else {
                     ASKAPLOG_INFO_STR(logger,
                         "Saving new PSF parameter as model EXISTING parameter -- using plane shape");
   	                saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
-  	 	   		           planeIter.position());
+  	 	   		        planeIter.position());
+                }
+
+                // sinc interpolate via Fourier padding if restoring requires higher resolution
+                if ( itsExtraOversamplingFactor > 1. ) {
+                    ASKAPLOG_INFO_STR(logger,
+                        "Oversampling dirty image and PSF by an extra factor of "<<itsExtraOversamplingFactor);
+                    oversample(dirtyArray,itsExtraOversamplingFactor);
+                    oversample(psfArray,itsExtraOversamplingFactor);
                 }
 
 	            // Add the residual image
@@ -516,6 +542,7 @@ namespace askap
 	                // Create a temporary image
                     boost::shared_ptr<casa::TempImage<float> >
                         image(SynthesisParamsHelper::tempImage(ip, imagename));
+
                     askap::synthesis::Image2DConvolver<float> convolver;
                     const casa::IPosition pixelAxes(2, 0, 1);
                     convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,

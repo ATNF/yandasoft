@@ -80,7 +80,7 @@ namespace askap {
 
                 /// @brief set extra oversampling during cleaning and image output if needed
                 /// @param[in] factor extra oversampling factor
-                void setExtraOversampling(float factor);
+                inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
 
             protected:
                 /// @brief Precondition the PSF and the dirty image
@@ -104,6 +104,9 @@ namespace askap {
 
                 /// @brief extra oversampling factor to use during clean
                 float itsExtraOversamplingFactor;
+
+                /// @brief flag to enable or disable a high-resolution cache for the clean model
+                bool itsUseCleanModelCache;
 
         };
 

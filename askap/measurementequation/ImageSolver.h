@@ -259,6 +259,17 @@ namespace synthesis
             const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr,
             const casacore::IPosition &pos);
 
+   /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+   /// @param[in] osfactor extra oversampling factor
+   /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
+   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+   void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true) const;
+
+   /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+   /// @param[in] osfactor extra oversampling factor
+   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+   void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.) const;
+
     private:
         /// Instance of a preconditioner
         // IImagePreconditioner::ShPtr itsPreconditioner;
@@ -287,6 +298,8 @@ namespace synthesis
         /// @brief Store the MFS inverse coupling matrix
         /// @details needed by the restore solver, but it doesn't have all 2N-1 PSFs needed for generation. So store.
         static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
+
+        static casa::Array<float> itsCleanModelCache;
 
     };
 

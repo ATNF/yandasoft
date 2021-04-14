@@ -91,6 +91,9 @@ namespace askap
         /// @param[in] ts template solver (to take parameters from)
         void configureSolver(const ImageSolver &ts);
 
+        /// @brief set extra oversampling during cleaning and image output if needed
+        /// @param[in] factor extra oversampling factor
+        void setExtraOversampling(float factor);
 
 
       protected:
@@ -138,6 +141,9 @@ namespace askap
         /// recovered in the model, this weighting scheme potentially introduces some
         /// direction-dependent flux error (but gives flat noise).
         bool itsEqualiseNoise;
+
+        /// @brief extra oversampling factor to use during clean
+        float itsExtraOversamplingFactor;
 
         //mutable bool itsModelNeedsConvolving;
         bool itsModelNeedsConvolving;

@@ -184,46 +184,7 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
 /// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
 void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor, const bool norm) const
 {
-
-    ASKAPCHECK(osfactor >= 1.0,
-        "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
-    if (osfactor == 1.) return;
-
-    casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
-
-    // this is how it's done in SynthesisParamsHelper::saveImageParameter():
-    //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
-    //scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
-
-    // destroy Agrid before resizing image. Small memory saving.
-    {
-        // Set up scratch arrays and lattices for changing resolution
-        casacore::Array<casacore::Complex> Agrid(image.shape());
-        casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
- 
-        // copy image into a complex scratch space
-        casacore::convertArray<casacore::Complex,float>(Agrid, image);
- 
-        // renormalise based on the imminent padding
-        if (norm) {
-            Agrid *= static_cast<float>(osfactor*osfactor);
-        } 
-
-        // fft to uv
-        casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
- 
-        // "extract" original Fourier grid into the central portion of the new Fourier grid
-        casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
-        subGrid = Agrid;
-
-        // ifft back to image and return the real part
-        casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
-        casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
-    }
-
-    image.resize(AgridOS.shape());
-    image = real(AgridOS);
-
+  ImageSolver::oversample(image, osfactor, norm);
 }
 
 /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
@@ -234,39 +195,7 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
 /// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
 void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float osfactor) const
 {
-
-    ASKAPCHECK(osfactor >= 1.0,
-        "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
-    if (osfactor == 1.) return;
-
-    casacore::Array<casacore::Complex> Agrid;
-
-    // destroy AgridOS before resizing image. Small memory saving.
-    {
-        // Set up scratch arrays and lattices for changing resolution
-        casacore::Array<casacore::Complex> AgridOS(image.shape());
-        casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
- 
-        // copy image into a complex scratch space
-        casacore::convertArray<casacore::Complex,float>(AgridOS, image);
- 
-        // fft to uv. This is what we need to degrid from, so no need to renormalise
-        casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
- 
-        // extract the central portion of the Fourier grid
-        Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
- 
-        // renormalise based on the imminent padding
-        //Agrid /= static_cast<float>(osfactor*osfactor);
- 
-        // ifft back to image and return the real part
-        casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-        casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
-    }
-
-    image.resize(Agrid.shape());
-    image = real(Agrid);
-
+  ImageSolver::downsample(image, osfactor);
 }
 
 
