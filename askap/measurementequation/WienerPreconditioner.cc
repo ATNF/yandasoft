@@ -465,8 +465,15 @@ namespace askap
     {
 
       float xfrMax = max(abs(real(pcf)));
+
       // The default threshold. Will be overwritten if useAutoThreshold==true.
-      float scratchThreshold = 1e-5 * xfrMax;
+      float scratchThreshold = 1e-6 * xfrMax;
+
+      // Auto thresholding in this way will not work with Nyquist gridding.
+      // Upcoming changes to the PCF should remove the necessity of the PCF.
+      ASKAPLOG_INFO_STR(logger, "Bypassing statistical thresholding of the uv sampling function and instead using " <<
+                        scratchThreshold << " (" << 100.0*scratchThreshold/xfrMax << "% of max) instead");
+      return scratchThreshold;
 
       // set a test value that we expect the noise to be below
       float thresholdTestVal = 1e-2 * xfrMax;
