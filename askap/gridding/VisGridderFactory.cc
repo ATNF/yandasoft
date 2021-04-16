@@ -43,6 +43,7 @@ ASKAP_LOGGER(logger, ".gridding.visgridderfactory");
 #include <askap/gridding/WStackVisGridder.h>
 #include <askap/gridding/AProjectWStackVisGridder.h>
 #include <askap/gridding/SnapShotImagingGridderAdapter.h>
+#include <askap/gridding/StackingGridderAdapter.h>
 #include <askap/gridding/SmearingGridderAdapter.h>
 #include <askap/gridding/VisWeightsMultiFrequency.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
@@ -276,7 +277,12 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         ASKAPDEBUGASSERT(adapter);
         gridder = adapter;
     }
-
+    if (parset.getBool("gridder.stacking",false)) {
+      ASKAPLOG_INFO_STR(logger, "A gridder adapter will be set up to use an stack of input data buffers");
+      boost::shared_ptr<StackingGridderAdapter> adapter(new StackingGridderAdapter(gridder));
+      ASKAPDEBUGASSERT(adapter);
+      gridder = adapter;
+  }
     return gridder;
 }
 
