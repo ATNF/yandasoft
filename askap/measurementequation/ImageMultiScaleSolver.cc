@@ -137,17 +137,33 @@ namespace askap
         // It will be in a param with the starting "image" swapped to "fullres"):
         string fullResName = indit->first;
         fullResName.replace(0,5,"fullres");
-        bool importCleanArray = true;
-        if ((itsExtraOversamplingFactor > 1.0) && ip.has(fullResName)) {
-            importCleanArray = false;
+        bool importModelFromNE = true;
+        if (itsExtraOversamplingFactor > 1.0) {
+            if (ip.has(fullResName)) {
+                // an existing model has already be saved into a param. Use that.
+                importModelFromNE = false;
+            }
+            else {
+                // use the NE model. But first, set up a new param for storing the results
+                // set the shape of a full-resolution model and also an iterator.
+                casacore::IPosition fullResPlaneShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),
+                                                                                         itsExtraOversamplingFactor));
+                casacore::IPosition fullResIterShape(ip.shape(indit->first));
+                fullResIterShape(0) = fullResPlaneShape(0);
+                fullResIterShape(1) = fullResPlaneShape(1);
+                ASKAPLOG_INFO_STR(logger, "Create empty parameter "<<fullResName<<" with shape " << fullResIterShape);
+                // copy the low-resolution axes
+                scimath::Axes axes(ip.axes(indit->first));
+                // update for the new resolution
+                casacore::DirectionCoordinate radec = axes.directionAxis();
+                /// @todo double check that the rounding is correctfor the ref pixel
+                radec.setReferencePixel(radec.referencePixel()*double(itsExtraOversamplingFactor));
+                radec.setIncrement(radec.increment()/double(itsExtraOversamplingFactor));
+                axes.addDirectionAxis(radec);
+                // add the new param
+                ip.add(fullResName, fullResIterShape, axes);
+            }
         }
-        // set the shape of a full-resolution model and also an iterator. Could just do it in-place later if needed
-        casacore::IPosition
-            fullResPlaneShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),itsExtraOversamplingFactor));
-        casacore::IPosition fullResIterShape(ip.shape(indit->first));
-        fullResIterShape(0) = fullResPlaneShape(0);
-        fullResIterShape(1) = fullResPlaneShape(1);
-          scimath::MultiDimArrayPlaneIter fullResPlaneIter(fullResIterShape);
         /// @todo load non-zero starting models (e.g. Cimager.Images.reuse) into fullResName params
         /// @todo will need to account for the other dims of planeIter here...
         /// @todo  - test multi-polarisation cleaning
@@ -185,7 +201,7 @@ namespace askap
           casacore::Array<float> maskArray(dirtyArray.shape());
           // don't copy into cleanArray if instead referencing an existing cache
           casacore::Array<float> cleanArray;
-          if (importCleanArray) {
+          if (importModelFromNE) {
               cleanArray = padImage(planeIter.getPlane(ip.valueT(indit->first)));
           }
           ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
@@ -237,9 +253,10 @@ namespace askap
             oversample(dirtyArray,itsExtraOversamplingFactor);
             oversample(psfArray,itsExtraOversamplingFactor);
             oversample(maskArray,itsExtraOversamplingFactor);
-            if (importCleanArray) {
+            if (importModelFromNE) {
                 oversample(cleanArray,itsExtraOversamplingFactor,false);
             } else {
+                scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                 cleanArray.reference( fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
             }
           }
@@ -298,7 +315,7 @@ namespace askap
             // store full-res model in a slice of the new fullres parameter
             ASKAPCHECK(planeIter.position()(0)==0 && planeIter.position()(1)==0,
                 "Image offsets not supported with variable image resolution");
-            saveArrayIntoParameter(ip, indit->first, fullResIterShape, "fullres", cleanArray, planeIter.position());
+            saveArrayIntoParameter(ip, indit->first, ip.shape(fullResName), "fullres", cleanArray, planeIter.position());
             // remove Fourier padding before returning to degridders
             downsample(cleanArray,itsExtraOversamplingFactor);
           }

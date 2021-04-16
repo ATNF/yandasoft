@@ -661,8 +661,9 @@ namespace askap
           ASKAPCHECK((axesDir[0] == 0) && (axesDir[1] == 1),
                    "At present we support only images with first axes being the direction pixel axes, image "<<name<<
                    " has "<< axesDir);
-          radec.setReferencePixel(radec.referencePixel()*2.);
-          radec.setIncrement(radec.increment()/2.);
+          /// @todo double check that the rounding is correctfor the ref pixel
+          radec.setReferencePixel(radec.referencePixel()*double(extraOversampleFactor));
+          radec.setIncrement(radec.increment()/double(extraOversampleFactor));
           imageCoords.replaceCoordinate(radec, whichDir);
       }
 

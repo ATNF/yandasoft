@@ -295,12 +295,11 @@ namespace askap
 	    std::string imagename = iph.taylorName();
         std::string name;
         if (facetname == "") {
-          name = imagename;
+            name = imagename;
         } else {
-          name = facetname;
+            name = facetname;
         }
         const casa::IPosition shape = ip.shape(name);
-        const scimath::Axes axes = ip.axes(name);
 
 	    // The following need to be done once and only once for each order (i.e. once for all planeIter)
         // So set to true here then to false at the end of the first planeIter loop.
@@ -529,6 +528,8 @@ namespace askap
                         casa::convertArray<double, float>(psfDArray, psfArray);
                         #endif
                         ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
+                        // this was set by "name" for facets, but surely it should be equal for all facets
+                        const scimath::Axes axes = ip.axes(imagename);
                         restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes, itsBeamHelper.cutoff());
                         ASKAPDEBUGASSERT(restoringBeam.size() == 3);
                         ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " <<
