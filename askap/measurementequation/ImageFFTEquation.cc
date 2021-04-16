@@ -30,12 +30,14 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefftequation");
 
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/dataaccess/MemBufferDataAccessor.h>
+#include <askap/dataaccess/MemBufferDataAccessorStack.h>
 #include <askap/dataaccess/DDCalBufferDataAccessor.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/gridding/BoxVisGridder.h>
 #include <askap/gridding/SphFuncVisGridder.h>
+#include <askap/gridding/StackingGridderAdapter.h>
 #include <askap/scimath/fitting/ImagingNormalEquations.h>
 #include <askap/scimath/fitting/DesignMatrix.h>
 #include <askap/scimath/fitting/Axes.h>
@@ -397,6 +399,8 @@ namespace askap
               "Found no free image parameters, this rank will not contribute usefully to normal equations");
       }
       bool somethingHasToBeDegridded = false;
+      
+      
       for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();it++)
       {
         string imageName("image"+(*it));
@@ -415,9 +419,11 @@ namespace askap
         if (!itsModelGridders[imageName]->isModelEmpty()) {
             somethingHasToBeDegridded = true;
         }
+        
         /// Now the residual images, dopsf=false, dopcf=false
         itsResidualGridders[imageName]->customiseForContext(*it);
         itsResidualGridders[imageName]->initialiseGrid(axes, imageShape, false);
+       
         // and PSF gridders, dopsf=true, dopcf=false
         itsPSFGridders[imageName]->customiseForContext(*it);
         itsPSFGridders[imageName]->initialiseGrid(axes, imageShape, true);
@@ -434,24 +440,66 @@ namespace askap
       // Now we loop through all the data
       ASKAPLOG_DEBUG_STR(logger, "Starting degridding model and gridding residuals" );
       size_t counterGrid = 0, counterDegrid = 0;
-      std::vector<accessors::MemBufferDataAccessor> accs;
-      std::vector<accessors::MemBufferDataAccessor>::iterator newIt;
-      for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
-      {
-        // buffer-accessor, used as a replacement for proper buffers held in the subtable
-        // effectively, an array with the same shape as the visibility cube is held by this class
+
+      // @note Test for stacking gridder
+      // I need to test here as I need to know whether or not to accumulate buffers in the stack
+      // I could have changed the interface to this method - but that seems to much effort to just determine
+      // whether or not to stack.
+      // @note also if I am stacking for one gridder I am probably stacking for all. But I should be able to structure this
+      // so the stacking can either be switched on or off in the adapter or here.
+      // Need to make sure of that
       
-        MemBufferDataAccessor accBuffer(*itsIdi);
-        // buffer all the input allocation
-        accs.push_back(accBuffer);
+      bool usingStackingAdapter = false;
+      accessors::MemBufferDataAccessorStack *bufferStackable = nullptr;
+      
+      for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it) {
+        const std::string imageName("image"+(*it));
+        const std::map<std::string, IVisGridder::ShPtr>::iterator grdIt = itsResidualGridders.find(imageName);
+        ASKAPDEBUGASSERT(grdIt != itsResidualGridders.end());
+        const IVisGridder::ShPtr gridder = grdIt->second;
+        if (dynamic_cast<StackingGridderAdapter*>(gridder.get()))
+        {
+          usingStackingAdapter = true;
+          bufferStackable = new accessors::MemBufferDataAccessorStack(*itsIdi.init());
+          ASKAPLOG_DEBUG_STR(logger, "Using a stacking adapter we therefore need to tell it to stack" );
+          break;
+        }
+            
       }
       
-      // iterate through the buffer
-      // FIXME: I have to cleanly deal with this - I could move the buffering to inside the gridder
-      // 
-      for (newIt=accs.begin(); newIt != accs.end(); newIt++) {
-        MemBufferDataAccessor accBuffer = *newIt;
+      
+      for (itsIdi.init();itsIdi.hasMore();itsIdi.next())
+      {
+        // iterating over each time step
+        // buffer-accessor, used as a replacement for proper buffers held in the subtable
+        // effectively, an array with the same shape as the visibility cube is held by this class
+        accessors::MemBufferDataAccessorStack accBuffer(*itsIdi);
+        // Although this is stackable it is not stacked unless a stacking adapter is being used
+        
+        if (usingStackingAdapter) {
+          
+          // FIXME: the + operator is an append
+          // FIXME: the base class is assuming a single time step ... which has repurcussions ....
+          bufferStackable->append(accBuffer);
+                    
+          if (itsIdi.hasMore())
+          {
+            // keep stacking
+            continue;
+          }
+          else
+          {
+            // stack is full - we can start the (de)gridding operations
+            // FIXME: the assignment operator is overridden
+            // FIXME: Or is it easier to swap a reference to avoid the copy?
+            accBuffer = *bufferStackable;
+          }
+        
+        }
+
+        
         // Accumulate model visibility for all models
+        // FIXME: stackable buffer has the same interface to the buffer so don't worry about this ...
         accBuffer.rwVisibility().set(0.0);
         if (somethingHasToBeDegridded) {
             for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it) {
@@ -461,8 +509,19 @@ namespace askap
                  const IVisGridder::ShPtr degridder = grdIt->second;
                  ASKAPDEBUGASSERT(degridder);
                  if (!degridder->isModelEmpty()) {
+                   if (usingStackingAdapter) //
+                   {
+                     // should only be entered if stacking adapter && the stack is full
+                     // this should be ensured by the earlier conditional ... but just incase.
+                     if (!itsIdi.hasMore()) {
+                       degridder->degrid(accBuffer);
+                     }
+                   }
+                   else
+                   { // if non-stackable adapter
                      degridder->degrid(accBuffer);
                      counterDegrid+=accBuffer.nRow();
+                   }
                  }
             }
             // optional aggregation of visibilities in the case of distributed model
@@ -472,8 +531,16 @@ namespace askap
             }
             //
         }
-        accBuffer.rwVisibility() -= itsIdi->visibility();
-        accBuffer.rwVisibility() *= float(-1.);
+        //
+        //   FIXME: In the stacking case this substraction is not possible.
+        //   FIXME: Perhaps we need to perform this as part of degrid
+        //
+        if (!usingStackingAdapter)
+        {
+          accBuffer.rwVisibility() -= itsIdi->visibility();
+          accBuffer.rwVisibility() *= float(-1.);
+        }
+        
         /// Now we can calculate the residual visibility and image
         size_t tempCounter = 0;
         for (size_t i = 0; i<completions.size(); ++i) {
@@ -488,6 +555,7 @@ namespace askap
             }
         }
         counterGrid += tempCounter;
+        
       }
       ASKAPLOG_DEBUG_STR(logger, "Finished degridding model and gridding residuals" );
       ASKAPLOG_DEBUG_STR(logger, "Number of accessor rows iterated through is "<<counterGrid<<" (gridding) and "<<

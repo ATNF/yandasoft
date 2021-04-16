@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
 {
     ImagerApp app;
     app.addParameter("profile", "p", "Write profiling output files", false);
+    app.addParameter("inputvis", "i", "Input measurement set");
     return app.main(argc, argv);
 
 }

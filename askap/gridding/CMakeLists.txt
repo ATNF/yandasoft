@@ -16,6 +16,7 @@ IVisWeights.cc
 PowerWSampling.cc
 SKA_LOWIllumination.cc
 SmearingGridderAdapter.cc
+StackingGridderAdapter.cc
 SnapShotImagingGridderAdapter.cc
 SphFuncVisGridder.cc
 SupportSearcher.cc
@@ -48,6 +49,7 @@ IWSampling.h
 PowerWSampling.h
 SKA_LOWIllumination.h
 SmearingGridderAdapter.h
+StackingGridderAdapter.h
 SnapShotImagingGridderAdapter.h
 SphFuncVisGridder.h
 SphFuncVisGridder.tcc
