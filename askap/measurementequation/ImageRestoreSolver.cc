@@ -184,6 +184,15 @@ namespace askap
 			      iph.makeTaylorTerm(order);
 			    }
 	            SynthesisParamsHelper::setBeam(ip, iph.paramName(), itsBeamHelper.value());
+                if ( itsExtraOversamplingFactor > 1. ) {
+                    // also setBeam for the fullres param
+                    std::string fullresname = iph.paramName();
+                    size_t index = fullresname.find("image", index);
+                    ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+                    fullresname.replace(index,5,"fullres");
+                    ASKAPASSERT(ip.has(fullresname));
+                    SynthesisParamsHelper::setBeam(ip, fullresname, itsBeamHelper.value());
+                }
 	        }
 
         } else {

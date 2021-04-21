@@ -744,7 +744,7 @@ namespace askap
     }
 
 
-// DAM also need to update loadImageParameter for extraOversampleFactor? Or should saved images be stored at Nyquist?
+// DAM also need to update loadImageParameter for extraOversampleFactor? Load full-res images into fullres params?
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
 						 const string& imagename)
     {
@@ -1445,7 +1445,13 @@ namespace askap
          // Find all the free parameters beginning with image
          vector<string> names(params->completions("image"));
          for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
-              const std::string name="image"+*it;
+// DAM adding support for fullres image parameters
+              //const std::string name="image"+*it;
+              std::string name="image"+*it;
+              if (params->isFree(name)) {
+                  params->valueT(name).set(0.);
+              }
+              name="fullres"+*it;
               if (params->isFree(name)) {
                   params->valueT(name).set(0.);
               }
