@@ -39,6 +39,15 @@ MSMFS with channels gridded together
     [Tags]          combinedchannels    newimager
     [Template]      Run PythonTest ${thetest}
     testcombined
+SPECTRALLINE with new imager
+    [Tags]          spectralline    newimager
+    [Template]      Run PythonTest ${thetest}
+    testspectral
+REVERSED 
+    [Tags]          spectralline    newimager
+    [Template]      Run PythonTest ${thetest}
+    test-reversed-freq
+
 *** Keywords ***
 Run PythonTest ${thetest}
     Log            ${thetest}
