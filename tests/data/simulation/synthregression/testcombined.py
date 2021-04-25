@@ -42,7 +42,7 @@ spr2.addToParset("Cimager.combinechannels = true")
 
 
 import os
-os.system("rm image.*")
+os.system("rm -rf image.*")
 
 if "CI" in os.environ:
     spr2.runNewImagerParallel(4)
