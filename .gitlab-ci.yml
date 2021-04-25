@@ -1,6 +1,6 @@
 # GitLab CI script for yandasoft
 
-image: registry.gitlab.com/askapsdp/all_yandasoft:latest
+image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 .common: {tags: [askapsdp]}
