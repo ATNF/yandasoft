@@ -921,7 +921,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                parset.add("wpercentile.advised", wpercentile);
            }
        }
-
+        
        estimate(parset);
        const VisMetaDataStats &advice = estimator();
 
