@@ -70,7 +70,7 @@ robottests:
     - mv *.stderr.txt ${CI_PROJECT_DIR}/public/robot/
   artifacts:
     paths:
-      - public/robot    
+      - ${CI_PROJECT_DIR}/public/robot    
     when: always
 
 pages:
