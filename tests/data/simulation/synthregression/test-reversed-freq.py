@@ -43,7 +43,7 @@ spr2 = SynthesisProgramRunner(template_parset = 'testspectral.in')
 import os
 os.system("rm -rf image.*")
 if "CI" in os.environ:
-    spr2.runNewImagerParallel(5)
+    spr2.runNewImagerParallel(5,'--allow-run-as-root')
 else:
     spr2.runNewImagerParallel(5)
 
