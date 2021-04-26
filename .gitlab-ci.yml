@@ -78,6 +78,8 @@ pages:
   stage: pages
   dependencies:
     - test
+    - ${CI_PROJECT_DIR}/public/robot
+    - ${CI_PROJECT_DIR}/public
   before_script:
     - apt update && apt install -y gcovr curl doxygen graphviz
   script:
@@ -91,7 +93,7 @@ pages:
     - curl -s https://gitlab.com/ska-telescope/ci-metrics-utilities/raw/master/scripts/ci-badges-func.sh | sh
   artifacts:
     paths:
-      - public
+      - ${CI_PROJECT_DIR}/public
 
 success:
   stage: ci_status
