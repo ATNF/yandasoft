@@ -58,19 +58,20 @@ robottests:
   before_script:
      - pip install robotframework
   script:
+    - export CDIR=${PWD}
     - mkdir -p public/robot
     - chmod go+rw public
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
     - robot --loglevel DEBUG --noncritical non-critical .
-    - mv output.xml ${CI_PROJECT_DIR}/public/robot/output.xml
-    - mv log.html ${CI_PROJECT_DIR}/public/robot/log.html
-    - mv report.html ${CI_PROJECT_DIR}/public/robot/report.html
-    - mv *.stdout.txt ${CI_PROJECT_DIR}/public/robot/
-    - mv *.stderr.txt ${CI_PROJECT_DIR}/public/robot/
+    - mv output.xml ${CDIR}/public/robot/output.xml
+    - mv log.html ${CDIR}/public/robot/log.html
+    - mv report.html ${CDIR}/public/robot/report.html
+    - mv *.stdout.txt ${CDIR}/public/robot/
+    - mv *.stderr.txt ${CDIR}/public/robot/
   artifacts:
     paths:
-      - ${CI_PROJECT_DIR}/public/robot    
+      - public/robot    
     when: always
 
 pages:
@@ -78,8 +79,6 @@ pages:
   stage: pages
   dependencies:
     - test
-    - ${CI_PROJECT_DIR}/public/robot
-    - ${CI_PROJECT_DIR}/public
   before_script:
     - apt update && apt install -y gcovr curl doxygen graphviz
   script:
