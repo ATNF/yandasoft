@@ -67,7 +67,7 @@ robottests:
     - chmod go+rw public
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
-    - robot --loglevel DEBUG --noncritical non-critical .
+    - python -m robot synthregression.robot
     - cat *.stdout.txt
     - cat *.stderr.txt
     - mv output.xml ${CDIR}/public/robot/output.xml
