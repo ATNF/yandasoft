@@ -67,7 +67,12 @@ robottests:
     - chmod go+rw public
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
-    - python testspectral.py
+    - robot --loglevel DEBUG --noncritical non-critical .
+    - mv output.xml ${CDIR}/public/robot/output.xml
+    - mv log.html ${CDIR}/public/robot/log.html
+    - mv report.html ${CDIR}/public/robot/report.html
+    - mv *.stdout.txt ${CDIR}/public/robot/
+    - mv *.stderr.txt ${CDIR}/public/robot/
   artifacts:
     paths:
       - ${CDIR}/public/robot    
