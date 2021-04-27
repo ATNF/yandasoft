@@ -20,12 +20,11 @@ build:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
     - mkdir build
     - cd build
-    - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -DCMAKE_INSTALL_PREFIX=./install
+    - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"
     - cmake --build . -j $n_cpus
     - cmake --install .
   artifacts:
     paths:
-      - install
       - build
       - askap-cmake
 
@@ -61,7 +60,9 @@ robottests:
      - pip install robotframework
   script:
     - export CDIR=${PWD}
-    - export PATH=${PWD}/install/bin:${PATH}
+    - cd build
+    - cmake --install . 
+    - cd ${CDIR}
     - mkdir -p public/robot
     - chmod go+rw public
     - chmod go+rw public/robot
