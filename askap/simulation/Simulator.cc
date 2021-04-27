@@ -211,6 +211,13 @@ Simulator::Simulator(const casacore::String& MSName, int bucketSize,
             info.readmeAddLine("This is a MeasurementSet Table holding simulated astronomical observations");
         }
 
+        // set reference frame for UVW and epoch columns
+        {
+            MSColumns msc(*itsMS);
+            msc.setUVWRef(casacore::Muvw::J2000);
+            msc.setEpochRef(casacore::MEpoch::UTC);
+        }
+
         // We're done - wasn't that easy?
 
     } catch (std::exception& x) {
