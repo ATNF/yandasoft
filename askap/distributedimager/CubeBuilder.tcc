@@ -44,6 +44,7 @@
 #include <askap/imageaccess/CasaImageAccess.h>
 #include <Common/ParameterSet.h>
 #include <askap/scimath/utils/PolConverter.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
@@ -392,10 +393,13 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     itsStokes = scimath::PolConverter::fromString(stokesStr);
     const casacore::uInt npol=itsStokes.size();
 
+    // Check whether image param is stored at a lower resolution
+    itsExtraOversamplingFactor = parset.getFloat("solver.Clean.extraoversampling", 1.);
+
     // Get the image shape
     const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
-    const casacore::uInt nx = imageShapeVector[0];
-    const casacore::uInt ny = imageShapeVector[1];
+    const casacore::uInt nx = imageShapeVector[0] * itsExtraOversamplingFactor;
+    const casacore::uInt ny = imageShapeVector[1] * itsExtraOversamplingFactor;
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
     // Use a tile shape appropriate for plane-by-plane access
@@ -423,11 +427,29 @@ template < class T >
 CubeBuilder<T>::~CubeBuilder()
 {
 }
+
+template < class T >
+void CubeBuilder<T>::writeSliceBaseRes(const casacore::Array<T>& arr, const casacore::uInt chan)
+{
+    casacore::IPosition where(4, 0, 0, 0, chan);
+    itsCube->write(itsFilename, arr, where);
+}
+
 template < class T >
 void CubeBuilder<T>::writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
 {
     casacore::IPosition where(4, 0, 0, 0, chan);
-    itsCube->write(itsFilename,arr, where);
+
+    if (itsExtraOversamplingFactor == 1.) {
+        itsCube->write(itsFilename, arr, where);
+    }
+    else {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),itsExtraOversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        itsCube->write(itsFilename, fullresarr, where);
+    }
+
 }
 
 template < class T >
@@ -453,8 +475,8 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Direction: " << ra.getValue() << " degrees, "
                            << dec.getValue() << " degrees");
 
-        const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec") * -1.0;
-        const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
+        const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec")/itsExtraOversamplingFactor * -1.;
+        const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec")/itsExtraOversamplingFactor;
         ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Cellsize: " << xcellsize.getValue()
                            << " arcsec, " << ycellsize.getValue() << " arcsec");
 

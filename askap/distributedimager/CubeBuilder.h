@@ -62,6 +62,7 @@ class CubeBuilder {
         /// Destructor
         ~CubeBuilder();
 
+        void writeSliceBaseRes(const casacore::Array<T>& arr, const casacore::uInt chan);
         void writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan);
 
         casacore::CoordinateSystem
@@ -91,6 +92,9 @@ class CubeBuilder {
 
     /// Description of the polarisation properties of the output cubes
         casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
+
+    /// @brief extra oversampling factor to use when building cubes
+        float itsExtraOversamplingFactor;
 };
 
 }

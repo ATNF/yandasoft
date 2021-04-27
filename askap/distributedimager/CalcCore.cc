@@ -382,6 +382,12 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ASKAPDEBUGASSERT(ir);
         ASKAPDEBUGASSERT(itsSolver);
         // configure restore solver the same way as normal imaging solver
+        if (parset().isDefined("solver.Clean.extraoversampling")) {
+            const float factor = parset().getFloat("solver.Clean.extraoversampling");
+            ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
+                              factor);
+            ir->setExtraOversampling(factor);
+        }
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
         ImageSolverFactory::configurePreconditioners(itsParset,ir);
@@ -420,6 +426,12 @@ void CalcCore::restoreImage()
     ir = ImageRestoreSolver::createSolver(itsParset.makeSubset("restore."));
     ASKAPDEBUGASSERT(ir);
     ASKAPDEBUGASSERT(itsSolver);
+    if (itsParset.isDefined("solver.Clean.extraoversampling")) {
+        const float factor = itsParset.getFloat("solver.Clean.extraoversampling");
+        ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
+                          factor);
+        ir->setExtraOversampling(factor);
+    }
     // configure restore solver the same way as normal imaging solver
     boost::shared_ptr<ImageSolver>
     template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
