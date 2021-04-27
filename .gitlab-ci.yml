@@ -68,8 +68,6 @@ robottests:
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
     - python -m robot synthregression.robot
-    - cat *.stdout.txt
-    - cat *.stderr.txt
     - mv output.xml ${CDIR}/public/robot/output.xml
     - mv log.html ${CDIR}/public/robot/log.html
     - mv report.html ${CDIR}/public/robot/report.html
