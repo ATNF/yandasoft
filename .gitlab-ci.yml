@@ -68,6 +68,8 @@ robottests:
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
     - robot --loglevel DEBUG --noncritical non-critical .
+    - cat *.stdout.txt
+    - cat *.stderr.txt
     - mv output.xml ${CDIR}/public/robot/output.xml
     - mv log.html ${CDIR}/public/robot/log.html
     - mv report.html ${CDIR}/public/robot/report.html
@@ -75,7 +77,7 @@ robottests:
     - mv *.stderr.txt ${CDIR}/public/robot/
   artifacts:
     paths:
-      - ${CDIR}/public/robot    
+      - public/robot    
     when: always
 
 pages:
