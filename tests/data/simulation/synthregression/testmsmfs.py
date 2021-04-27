@@ -44,7 +44,7 @@ import os
 os.system("rm -rf image.*")
 
 if "CI" in os.environ:
-    spr2.runNewImagerParallel(4,'--allow-run-as-root')
+    spr2.runNewImagerParallel(4)
 else:
     spr2.runNewImagerParallel(4)
 
