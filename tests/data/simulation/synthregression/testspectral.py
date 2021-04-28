@@ -34,11 +34,13 @@ def analyseResult(spr, checkWeights=True):
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
 
-spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
+spr = SynthesisProgramRunner(template_parset = 'simulator.in')
+spr.addToParset("Csimulator.dataset = spectral.ms")
+
 spr.runSimulator()
 
 spr2 = SynthesisProgramRunner(template_parset = 'testspectral.in')
-
+spr2.addToParset("Cimager.dataset = spectral.ms")
 
 import os
 os.system("rm -rf image.*");

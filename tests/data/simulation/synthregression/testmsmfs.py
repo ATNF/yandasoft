@@ -34,10 +34,12 @@ def analyseResult(spr, checkWeights=True):
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
 
-spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
-spr.runSimulator()
+spr = SynthesisProgramRunner(template_parset = 'simulator.in')
+spr.addToParset("Csimulator.dataset = testmsmfs.ms")
 
-spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
+spr.runSimulator()
+spr2 = SynthesisProgramRunner(template_parset = 'imager.in')
+spr.addToParset("Cimager.dataset = testmsmfs.ms")
 print("INFO About to Run new Imager")
 
 import os
