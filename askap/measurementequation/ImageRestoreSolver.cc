@@ -81,13 +81,6 @@ namespace askap
 	    resetNormalEquations();
     }
 
-    /// @brief set extra oversampling during cleaning and image output if needed
-    /// @param[in] factor extra oversampling factor
-    void ImageRestoreSolver::setExtraOversampling(float factor)
-    {
-      itsExtraOversamplingFactor = factor;
-    }
-
     /// @brief Solve for parameters, updating the values kept internally
     /// The solution is constructed from the normal equations. The parameters named
     /// image* are interpreted as images and solved for.

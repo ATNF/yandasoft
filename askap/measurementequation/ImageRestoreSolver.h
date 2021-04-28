@@ -93,8 +93,7 @@ namespace askap
 
         /// @brief set extra oversampling during cleaning and image output if needed
         /// @param[in] factor extra oversampling factor
-        void setExtraOversampling(float factor);
-
+        inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
 
       protected:
         /// @brief set noise equalisation flag
