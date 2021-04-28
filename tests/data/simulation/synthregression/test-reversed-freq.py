@@ -33,6 +33,9 @@ def analyseResult(spr, checkWeights=True):
    if stats['rms']>0.015 or abs(stats['median'])>0.001:
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
+import os
+os.system("rm -rf image.*")
+os.system("rm -rf reversed.ms")
 
 spr = SynthesisProgramRunner(template_parset = 'simulator-reversed.in')
 spr.addToParset("Csimulator.dataset = reversed.ms")
@@ -42,8 +45,6 @@ spr2 = SynthesisProgramRunner(template_parset = 'testspectral.in')
 
 spr.addToParset("Cimager.dataset = reversed.ms")
 
-import os
-os.system("rm -rf image.*")
 if "CI" in os.environ:
     spr2.runNewImagerParallel(5)
 else:
