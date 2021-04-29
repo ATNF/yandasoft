@@ -84,7 +84,12 @@ class ImagerApp : public askap::Application
                     }
                     profiler.reset(new askap::ProfileSingleton::Initialiser(profileFileName));
                 }
-
+                if (parameterExists("inputvis")) {
+                    const std::string param ="dataset";
+                    const std::string pstr = parameter("inputvis");
+                    ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
+                    subset.replace(param, pstr);            
+                }
 
                 ASKAPCHECK(comms_p.isParallel(), "This imager can only be run as a parallel MPI job");
                 // imager-specific configuration of the master/worker to allow groups of workers
@@ -133,6 +138,7 @@ int main(int argc, char *argv[])
 {
     ImagerApp app;
     app.addParameter("profile", "p", "Write profiling output files", false);
+    app.addParameter("inputvis","i", "input measurement set");
     return app.main(argc, argv);
 
 }

@@ -1,6 +1,6 @@
 # GitLab CI script for yandasoft
 
-image: registry.gitlab.com/askapsdp/all_yandasoft:latest
+image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 .common: {tags: [askapsdp]}
@@ -22,6 +22,7 @@ build:
     - cd build
     - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"
     - cmake --build . -j $n_cpus
+    - cmake --install .
   artifacts:
     paths:
       - build
@@ -58,16 +59,20 @@ robottests:
   before_script:
      - pip install robotframework
   script:
+    - export CDIR=${PWD}
+    - cd build
+    - cmake --install . 
+    - cd ${CDIR}
     - mkdir -p public/robot
     - chmod go+rw public
     - chmod go+rw public/robot
     - cd tests/data/simulation/synthregression
-    - robot --loglevel DEBUG --noncritical non-critical .
-    - mv output.xml ${CI_PROJECT_DIR}/public/robot/output.xml
-    - mv log.html ${CI_PROJECT_DIR}/public/robot/log.html
-    - mv report.html ${CI_PROJECT_DIR}/public/robot/report.html
-    - mv *.stdout.txt ${CI_PROJECT_DIR}/public/robot/
-    - mv *.stderr.txt ${CI_PROJECT_DIR}/public/robot/
+    - python -m robot synthregression.robot
+    - mv output.xml ${CDIR}/public/robot/output.xml
+    - mv log.html ${CDIR}/public/robot/log.html
+    - mv report.html ${CDIR}/public/robot/report.html
+    - mv *.stdout.txt ${CDIR}/public/robot/
+    - mv *.stderr.txt ${CDIR}/public/robot/
   artifacts:
     paths:
       - public/robot    
@@ -91,7 +96,7 @@ pages:
     - curl -s https://gitlab.com/ska-telescope/ci-metrics-utilities/raw/master/scripts/ci-badges-func.sh | sh
   artifacts:
     paths:
-      - public
+      - ${CI_PROJECT_DIR}/public
 
 success:
   stage: ci_status
