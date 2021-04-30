@@ -121,6 +121,7 @@ void ContinuumMaster::run(void)
     try {
 
         diadvise.prepare();
+ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 1");
         diadvise.addMissingParameters(unitParset,false);
 
         ASKAPLOG_DEBUG_STR(logger,"*****");
@@ -167,6 +168,7 @@ void ContinuumMaster::run(void)
     }
     // all the work units allocated - lets send the DONEs
     // now finish the advice for remaining parameters
+ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 2");
     diadvise.addMissingParameters();
 
 

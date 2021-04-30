@@ -380,8 +380,8 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ASKAPDEBUGASSERT(ir);
         ASKAPDEBUGASSERT(itsSolver);
         // configure restore solver the same way as normal imaging solver
-        if (parset().isDefined("solver.Clean.extraoversampling")) {
-            const float factor = parset().getFloat("solver.Clean.extraoversampling");
+        if (parset().isDefined("Images.extraoversampling")) {
+            const float factor = parset().getFloat("Images.extraoversampling");
             ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
                               factor);
             ir->setExtraOversampling(factor);
@@ -424,8 +424,8 @@ void CalcCore::restoreImage()
     ir = ImageRestoreSolver::createSolver(itsParset.makeSubset("restore."));
     ASKAPDEBUGASSERT(ir);
     ASKAPDEBUGASSERT(itsSolver);
-    if (itsParset.isDefined("solver.Clean.extraoversampling")) {
-        const float factor = itsParset.getFloat("solver.Clean.extraoversampling");
+    if (itsParset.isDefined("Images.extraoversampling")) {
+        const float factor = itsParset.getFloat("Images.extraoversampling");
         ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
                           factor);
         ir->setExtraOversampling(factor);

@@ -729,6 +729,7 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
 void AdviseDI::addMissingParameters() {
     this->addMissingParameters(this->itsParset,True);
 }
+
 void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::cp::ContinuumWorkUnit& wu) {
 
   string wu_dataset = wu.get_dataset();
@@ -755,7 +756,6 @@ void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::c
     }
   }
 }
-
 
 void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 {
@@ -951,6 +951,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
            parset.add(param, pstr);
        }
+
        const string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
        if (gridder!="") {
            param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
@@ -976,6 +977,43 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                }
            }
        }
+
+       ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
+       if (parset.isDefined("Images.griddingcellsize")) {
+
+           const std::vector<double> gCellSize =
+               SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.griddingcellsize"),"arcsec");
+           ASKAPCHECK((gCellSize[0]>=cellSize[0]) &&(gCellSize[1]>=cellSize[1]),
+               "griddingcellsize must not be less than cellsize");
+           const double extraOsFactor = gCellSize[0]/cellSize[0];
+           ASKAPCHECK(extraOsFactor == gCellSize[1]/cellSize[1],
+               "griddingcellsize must have the same aspect ratio as cellsize");
+
+           const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
+           ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
+           ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<" to "<<
+                                     "["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]");
+           ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<" to "<<
+                                     "["<<imSize[0]/extraOsFactor<<","<<imSize[1]/extraOsFactor<<"]");
+
+           {
+               std::ostringstream pstr;
+               pstr<<extraOsFactor;
+               parset.add("Images.extraoversampling", pstr.str().c_str());
+           }
+           {
+               std::ostringstream pstr;
+               pstr<<"["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]";
+               parset.replace("Images.cellsize", pstr.str().c_str());
+           }
+           {
+               // DAM use PaddingUtils::paddedShape()?
+               std::ostringstream pstr;
+               pstr<<"["<<long(imSize[0]/extraOsFactor)<<","<<long(imSize[1]/extraOsFactor)<<"]";
+               parset.replace("Images.shape", pstr.str().c_str());
+           }
+       }
+
    }
    ASKAPLOG_DEBUG_STR(logger,"Done adding missing params ");
 

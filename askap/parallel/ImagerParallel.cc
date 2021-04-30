@@ -181,7 +181,6 @@ namespace askap
           addMissingParameters(advice, fullset); /// add missing parameters based on advice from AdviseParallel.
 
           cleanUpAdviseParameters(fullset); // remove any added AdviseParallel parameters.
-
       }
 
       return fullset;
@@ -465,6 +464,42 @@ namespace askap
           }
       }
 
+      ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
+      if (parset.isDefined("Images.griddingcellsize")) {
+
+          const std::vector<double> gCellSize =
+              SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.griddingcellsize"),"arcsec");
+          ASKAPCHECK((gCellSize[0]>=cellSize[0]) &&(gCellSize[1]>=cellSize[1]),
+              "griddingcellsize must not be less than cellsize");
+          const double extraOsFactor = gCellSize[0]/cellSize[0];
+          ASKAPCHECK(extraOsFactor == gCellSize[1]/cellSize[1],
+              "griddingcellsize must have the same aspect ratio as cellsize");
+
+          const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
+          ASKAPLOG_INFO_STR(logger, "  Adding parameter extraoversampling = "<<extraOsFactor);
+          ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<" to "<<
+                                    "["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]");
+          ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<" to "<<
+                                    "["<<imSize[0]/extraOsFactor<<","<<imSize[1]/extraOsFactor<<"]");
+
+          {
+              std::ostringstream pstr;
+              pstr<<extraOsFactor;
+              parset.add("Images.extraoversampling", pstr.str().c_str());
+          }
+          {
+              std::ostringstream pstr;
+              pstr<<"["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]";
+              parset.replace("Images.cellsize", pstr.str().c_str());
+          }
+          {
+              // DAM use PaddingUtils::paddedShape()?
+              std::ostringstream pstr;
+              pstr<<"["<<long(imSize[0]/extraOsFactor)<<","<<long(imSize[1]/extraOsFactor)<<"]";
+              parset.replace("Images.shape", pstr.str().c_str());
+          }
+      }
+
     }
 
     void ImagerParallel::calcOne(const string& ms, bool discard)
@@ -723,7 +758,7 @@ namespace askap
            }
       }
 
-      const float extraOS = parset().getFloat("solver.Clean.extraoversampling",1.0);
+      const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
       tempPar.add(outParName,sensitivityArr,axes);
       ASKAPLOG_INFO_STR(logger, "Saving " << outParName);
       SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName, extraOS);
@@ -756,7 +791,7 @@ namespace askap
             resultimages=itsModel->names();
         }
 
-        const float extraOS = parset().getFloat("solver.Clean.extraoversampling",1.0);
+        const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
 
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
@@ -871,8 +906,8 @@ namespace askap
                 ASKAPDEBUGASSERT(ir);
                 ASKAPDEBUGASSERT(itsSolver);
                     // configure restore solver
-                if (tmpset.isDefined("solver.Clean.extraoversampling")) {
-                    const float factor = tmpset.getFloat("solver.Clean.extraoversampling");
+                if (tmpset.isDefined("Images.extraoversampling")) {
+                    const float factor = tmpset.getFloat("Images.extraoversampling");
                     ASKAPLOG_INFO_STR(logger,"Configuring restore solver with an extra oversampling factor of "<<
                                       factor);
                     ir->setExtraOversampling(factor);

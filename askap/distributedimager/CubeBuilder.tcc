@@ -394,7 +394,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     const casacore::uInt npol=itsStokes.size();
 
     // Check whether image param is stored at a lower resolution
-    itsExtraOversamplingFactor = parset.getFloat("solver.Clean.extraoversampling", 1.);
+    itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling", 1.);
 
     // Get the image shape
     const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");

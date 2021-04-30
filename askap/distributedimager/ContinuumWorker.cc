@@ -273,6 +273,7 @@ void ContinuumWorker::run(void)
   }
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
+ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumWorker::run");
   itsAdvisor->addMissingParameters();
 
 
@@ -506,6 +507,7 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
 
+ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumWorker::preProcessWorkUnit");
   itsAdvisor->addMissingParameters(unitParset);
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
