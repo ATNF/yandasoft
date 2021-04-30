@@ -38,7 +38,6 @@
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapUtil.h>
 
-
 ASKAP_LOGGER(logger, ".adviseDI");
 
 #include <askap/profile/AskapProfiler.h>
@@ -68,6 +67,7 @@ ASKAP_LOGGER(logger, ".adviseDI");
 #include <vector>
 #include <string>
 #include <float.h>
+#include <math.h>
 #include <boost/shared_ptr.hpp>
 
 
@@ -921,7 +921,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                parset.add("wpercentile.advised", wpercentile);
            }
        }
-        
+
        estimate(parset);
        const VisMetaDataStats &advice = estimator();
 
@@ -979,22 +979,44 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        }
 
        ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
-       if (parset.isDefined("Images.griddingcellsize")) {
+       if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
 
-           const std::vector<double> gCellSize =
-               SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.griddingcellsize"),"arcsec");
-           ASKAPCHECK((gCellSize[0]>=cellSize[0]) &&(gCellSize[1]>=cellSize[1]),
-               "griddingcellsize must not be less than cellsize");
-           const double extraOsFactor = gCellSize[0]/cellSize[0];
-           ASKAPCHECK(extraOsFactor == gCellSize[1]/cellSize[1],
-               "griddingcellsize must have the same aspect ratio as cellsize");
+           // need to make sure that extraOsFactor results in an integer number of pixels,
+           // which could get complicated for rectangular grids and pixels.
+           ASKAPCHECK(cellSize[0]==cellSize[1], "nyquistgridding only set up for square pixels");
 
            const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
+           std::vector<double> gCellSize(2);
+           if (parset.isDefined("Images.griddingcellsize")) {
+               gCellSize =
+                   SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.griddingcellsize"),"arcsec");
+               ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
+               ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
+           }
+           else {
+               const double uv_max = max(advice.maxU(), advice.maxV());
+               const double fov = cellSize[0] * imSize[0] / 3600. * M_PI / 180.0;
+               const double wk_max = 6/fov + advice.maxW()*fov;
+               ASKAPASSERT(uv_max > 0);
+               // calculate the resolution in arcsec corresponding to the smallest grid that will fit all of the data
+               // the reciprical of twice the longest baseline plus the largest w support
+               gCellSize[0] = 0.5 / (uv_max + wk_max) * 3600.0 * 180.0 / M_PI;
+               gCellSize[1] = gCellSize[0];
+           }
+
+           // nominal ratio between gridding resolution and cleaning resolution
+           double extraOsFactor = gCellSize[0]/cellSize[0];
+           // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
+           const double nPix = ceil(double(imSize[0])/extraOsFactor);
+           extraOsFactor = double(imSize[0]) / nPix;
+           gCellSize[0] = cellSize[0] * extraOsFactor;
+           gCellSize[1] = gCellSize[0];
+
            ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
-           ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<" to "<<
-                                     "["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]");
-           ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<" to "<<
-                                     "["<<imSize[0]/extraOsFactor<<","<<imSize[1]/extraOsFactor<<"]");
+           ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
+                                     " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
+           ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
+                                     " to "<<"["<<long(nPix)<<","<<long(nPix)<<"]");
 
            {
                std::ostringstream pstr;
@@ -1007,9 +1029,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                parset.replace("Images.cellsize", pstr.str().c_str());
            }
            {
-               // DAM use PaddingUtils::paddedShape()?
                std::ostringstream pstr;
-               pstr<<"["<<long(imSize[0]/extraOsFactor)<<","<<long(imSize[1]/extraOsFactor)<<"]";
+               pstr<<"["<<long(nPix)<<","<<long(nPix)<<"]";
                parset.replace("Images.shape", pstr.str().c_str());
            }
        }
