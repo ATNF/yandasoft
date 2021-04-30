@@ -33,17 +33,22 @@ def analyseResult(spr, checkWeights=True):
    if stats['rms']>0.01 or abs(stats['median'])>0.0001:
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
+import os
+os.system("rm -rf image.*")
+os.system("rm -rf combined.ms")
 
-spr = SynthesisProgramRunner(template_parset = 'askapsdp-sim-3504.in')
+
+
+spr = SynthesisProgramRunner(template_parset = 'simulator.in')
+spr.addToParset("Csimulator.dataset = combined.ms")
+
 spr.runSimulator()
 
-spr2 = SynthesisProgramRunner(template_parset = 'msmfs-3504.in')
+spr2 = SynthesisProgramRunner(template_parset = 'imager.in')
 spr2.addToParset("Cimager.combinechannels = true")
-
-
-import os
+spr2.addToParset("Cimager.dataset = combined.ms")
 if "CI" in os.environ:
-    spr2.runNewImagerParallel(4,'--allow-run-as-root')
+    spr2.runNewImagerParallel(4)
 else:
     spr2.runNewImagerParallel(4)
 

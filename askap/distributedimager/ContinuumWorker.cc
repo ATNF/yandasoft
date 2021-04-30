@@ -463,6 +463,7 @@ void ContinuumWorker::compressWorkUnits() {
     else {
         ASKAPLOG_WARN_STR(logger,"No compression performed");
     }
+    ASKAPCHECK(compressedList.size() < 2, "The number of assumed unique parsets is greater than one. Due to a pass by reference these parsets will not be unique - see AXA-1004 and associated technical debt tickets");
 }
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
@@ -478,11 +479,19 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // Channel numbers are zero based
   const int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
   string ChannelPar = "["+toString(n)+","+toString(wu.get_localChannel())+"]";
-
+  int last_beam = -1;
+  
+  // AXA-1004 this will not be unique as the parsets are passed by reference
+  // if we are expecting multiple beams in the work units then these will be clobbered
+  // unless the accessor gets the beam information some other way
+  
   const bool perbeam = unitParset.getBool("perbeam", true);
   if (!perbeam) {
     string param = "beams";
     string bstr = "[" + toString(wu.get_beam()) + "]";
+    if (last_beam != -1) {
+      ASKAPCHECK(last_beam == wu.get_beam(), "beam index changed in perbeam processing parset - clearly in the expectation that this will do something but the parset is stored by reference AXA-1004");
+    }
     unitParset.replace(param, bstr);
   }
 
@@ -498,12 +507,14 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // only add channel selection for valid workunits and topo frame
   // other frames have shifted channel allocations which can't be handled this way
   // if combinechannels==false the Channel parameter is only used for advise
-  ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
-  unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
-  unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
-  if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
-      unitParset.replace("Channels", ChannelPar);
-  }
+  // Ord AXA-1004 removing this as it is not used by subsequent code and can break advise
+  // in some corner cases.
+  // ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
+  // unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
+  // unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
+  // if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
+  //     unitParset.replace("Channels", ChannelPar);
+  //}
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
 
