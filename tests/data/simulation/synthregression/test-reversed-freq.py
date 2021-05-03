@@ -14,42 +14,41 @@ def analyseResult(spr, checkWeights=True):
 #   src_offset = 0.000
    psf_peak=[294.854166667,-63.7125]
    true_peak=sinProjection(psf_peak,src_offset,0)
-   stats = spr.imageStats('image.cont.taylor.0.restored')
+   stats = spr.imageStats('image.restored.wr.1.cont')
    print("Statistics for taylor-0 restored image: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
-   if disterr > 8:
-      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
+   if disterr > 5:
+      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (5 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
    if abs(stats['peak']-1.)>0.1:
       raise RuntimeError("Peak flux in the image is notably different from 1 Jy, F=%f" % stats['peak'])
    
-   stats = spr.imageStats('image.cont.taylor.0')
+   stats = spr.imageStats('image.wr.1.cont')
    print("Statistics for modelimage: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
-   if disterr > 8:
-      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
+   if disterr > 5:
+      raise RuntimeError("Offset between true and expected position exceeds 1 cell size (5 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
 
-   stats = spr.imageStats('residual.cont.taylor.0')
+   stats = spr.imageStats('residual.wr.1.cont')
    print("Statistics for residual image: ",stats)
-   if stats['rms']>0.01 or abs(stats['median'])>0.0001:
+   if stats['rms']>0.015 or abs(stats['median'])>0.001:
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
 import os
 os.system("rm -rf image.*")
-os.system("rm -rf testmsmfs.ms")
+os.system("rm -rf reversed.ms")
 
-
-spr = SynthesisProgramRunner(template_parset = 'simulator.in')
-spr.addToParset("Csimulator.dataset = testmsmfs.ms")
-
+spr = SynthesisProgramRunner(template_parset = 'simulator-reversed.in')
+spr.addToParset("Csimulator.dataset = reversed.ms")
 spr.runSimulator()
-spr2 = SynthesisProgramRunner(template_parset = 'imager.in')
-spr.addToParset("Cimager.dataset = testmsmfs.ms")
-print("INFO About to Run new Imager")
+
+spr2 = SynthesisProgramRunner(template_parset = 'testspectral.in')
+
+spr.addToParset("Cimager.dataset = reversed.ms")
 
 if "CI" in os.environ:
-    spr2.runNewImagerParallel(4)
+    spr2.runNewImagerParallel(5)
 else:
-    spr2.runNewImagerParallel(4)
+    spr2.runNewImagerParallel(5)
 
 analyseResult(spr2)
 
