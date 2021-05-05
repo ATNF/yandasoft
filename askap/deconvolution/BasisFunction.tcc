@@ -47,15 +47,16 @@ namespace askap {
         };
 
         template<class T>
-        BasisFunction<T>::BasisFunction(const IPosition shape) : itsNumberBases(1), itsOrthogonal(false)
+        BasisFunction<T>::BasisFunction(const IPosition& shape) : itsNumberBases(1), itsOrthogonal(false)
         {
             initialise(shape);
         };
 
         template<class T>
-        void BasisFunction<T>::initialise(const IPosition shape)
+        void BasisFunction<T>::initialise(const IPosition& shape)
         {
             ASKAPASSERT(itsNumberBases);
+            ASKAPASSERT(shape.nelements() >= 2);
             const IPosition bfShape(3, shape(0), shape(1), itsNumberBases);
             itsBasisFunction.resize(bfShape);
             itsBasisFunction.set(T(0.0));

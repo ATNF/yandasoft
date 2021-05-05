@@ -36,6 +36,8 @@
 #include <string>
 
 #include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
+
 #include <Common/ParameterSet.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -58,7 +60,7 @@ namespace askap {
         /// Usually the arrays are 2-D. However, in the case of e.g. MSMFS the
         /// third axis will be the taylor terms.
         /// @ingroup Deconvolver
-        template<class T, class FT> class DeconvolverBase {
+        template<class T, class FT> class DeconvolverBase : public boost::noncopyable {
 
             public:
                 typedef boost::shared_ptr<DeconvolverBase<T, FT> > ShPtr;
@@ -98,7 +100,14 @@ namespace askap {
 
                 /// @brief Get the current model
                 /// @detail Get the current model
-                /// @param[out] model Model image (array)
+                /// @param[in] term term of interest (i.e. element of the vector)
+                /// @return const reference to the array with the model
+                const casacore::Array<T>& model(const casacore::uInt term = 0) const;
+
+                /// @brief Non-const version to obtain reference to the current model
+                /// @detail Get the current model (for potential update)
+                /// @param[in] term term of interest (i.e. element of the vector)
+                /// @return reference to the array with the model
                 casacore::Array<T>& model(const casacore::uInt term = 0);
 
                 /// @brief Update only the dirty image
@@ -212,9 +221,10 @@ namespace askap {
                 /// The control used for the deconvolver
                 boost::shared_ptr<DeconvolverControl<T> > itsDC;
 
-                // Find the shape of the PSF to be used, this includes
-                // the effects of psfwidth
-                IPosition findSubPsfShape();
+                /// @details Find the shape of the PSF to be used, this includes
+                /// the effects of psfwidth
+                /// @param[in] term term of interest (i.e. element of the vector)
+                IPosition findSubPsfShape(const casacore::uInt term = 0) const;
 
                 /// The monitor used for the deconvolver
                 boost::shared_ptr<DeconvolverMonitor<T> > itsDM;
@@ -230,8 +240,14 @@ namespace askap {
 
                 // Audit the memory in use right now
                 void auditAllMemory();
-                casacore::uInt auditMemory(casacore::Vector<casacore::Array<T> >& vecArray);
-                casacore::uInt auditMemory(casacore::Vector<casacore::Array<FT> >& vecArray);
+
+                /// @brief memory occupied by the array set
+                /// @details This method iterates over the supplied array set and computes the
+                /// total amount of memory used up.
+                /// @param[in] vecArray arrays to work with (packed into a casa Vector)
+                /// @return amount of memory in bytes
+                template<typename Y>
+                casacore::uInt auditMemory(casacore::Vector<casacore::Array<Y> >& vecArray);
         };
 
     } // namespace synthesis

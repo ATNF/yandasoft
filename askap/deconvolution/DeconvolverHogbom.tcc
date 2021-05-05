@@ -147,7 +147,7 @@ namespace askap {
             const uInt nx(this->psf(0).shape()(0));
             const uInt ny(this->psf(0).shape()(1));
 
-            IPosition subPsfShape(this->findSubPsfShape());
+            const IPosition subPsfShape = this->findSubPsfShape();
 
             // Now we adjust model and residual for this component
             const casacore::IPosition residualShape(this->dirty(0).shape().nonDegenerate());

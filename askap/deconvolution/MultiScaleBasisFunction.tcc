@@ -60,7 +60,7 @@ namespace askap {
         }
 
         template<class T>
-        MultiScaleBasisFunction<T>::MultiScaleBasisFunction(const IPosition shape,
+        MultiScaleBasisFunction<T>::MultiScaleBasisFunction(const IPosition& shape,
                 const Vector<Float>& scales,
                 const Bool orthogonal) :
                 BasisFunction<T>::BasisFunction(), itsScales(scales)
@@ -71,7 +71,7 @@ namespace askap {
         }
 
         template<class T>
-        void MultiScaleBasisFunction<T>::initialise(const IPosition shape)
+        void MultiScaleBasisFunction<T>::initialise(const IPosition& shape)
         {
             BasisFunction<T>::initialise(shape);
 
@@ -84,7 +84,7 @@ namespace askap {
                 ASKAPCHECK(scaleSize >= 0.0, "Scale size " << scale << " is not positive " << scaleSize);
 
                 if (scaleSize < 1e-6) {
-                    scaleCube(shape[0] / 2, shape[1] / 2, 0) = T(1.0);
+                    scaleCube(shape[0] / 2, shape[1] / 2, scale) = T(1.0);
                 } else {
                     const Int nx = shape[0];
                     const Int ny = shape[1];
