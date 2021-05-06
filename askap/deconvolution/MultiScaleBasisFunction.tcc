@@ -32,6 +32,7 @@
 #include <askap/askap_synthesis.h>
 
 #include <askap/askap/AskapLogging.h>
+#include <askap/profile/AskapProfiler.h>
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Matrix.h>
 #include <casacore/casa/Arrays/Cube.h>
@@ -73,6 +74,7 @@ namespace askap {
         template<class T>
         void MultiScaleBasisFunction<T>::initialise(const IPosition& shape)
         {
+            ASKAPTRACE("MultiScaleBasisFunction<T>::initialise");
             BasisFunction<T>::initialise(shape);
 
             ASKAPLOG_INFO_STR(decmsbaselogger, "Calculating multiscale basis functions");

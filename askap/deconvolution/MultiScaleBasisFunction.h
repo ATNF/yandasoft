@@ -81,12 +81,12 @@ namespace askap {
                 /// @param[in] shape Shape of first two axes
                 virtual void initialise(const casacore::IPosition& shape);
 
+            protected:
+                /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
+                static T spheroidal(T nu);
             private:
                 /// Vector of scales (in pixels)
                 casacore::Vector<casacore::Float> itsScales;
-
-                /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
-                T spheroidal(T nu);
         };
 
     } // namespace synthesis
