@@ -2,6 +2,7 @@
 # some fixed parameters are given in calibratortest_template.in
 
 import argparse
+import cmath
 
 from synthprogrunner import *
 
@@ -409,12 +410,16 @@ def runTestsSmoothnessConstraintsGradientCost():
     result_smooth = "result_smooth.dat"
     result_smooth2 = "result_smooth2.dat"
     result_smooth4 = "result_smooth4.dat"
+    result_smooth2_acc4 = "result_smooth2_acc4.dat"
+    result_smooth4_acc4 = "result_smooth4_acc4.dat"
 
     # Remove old results (if any).
     os.system("rm %s" % result_nonsmooth)
     os.system("rm %s" % result_smooth)
     os.system("rm %s" % result_smooth2)
     os.system("rm %s" % result_smooth4)
+    os.system("rm %s" % result_smooth2_acc4)
+    os.system("rm %s" % result_smooth4_acc4)
 
     #------------------------------------------------------------------------------
     print("Bandpass test: without smoothing constraints.")
@@ -438,6 +443,7 @@ def runTestsSmoothnessConstraintsGradientCost():
     #------------------------------------------------------------------------------
     # Switch on the smoothing constraints (with Laplacian smoother).
     spr.addToParset("Ccalibrator.solver.LSQR.smoothing.type       = 2")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.accuracy   = 2")
 
     print("Bandpass test: with smoothing constraints (type = 2).")
     spr.runCalibratorParallel(nprocs)
@@ -445,15 +451,36 @@ def runTestsSmoothnessConstraintsGradientCost():
     # Store the results.
     os.system("mv result.dat %s" % result_smooth2)
 
+    #-------------------------------
+    # Use the 4th order of accuracy.
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.accuracy    = 4")
+
+    print("Bandpass test: with smoothing constraints (type = 2), accuracy 4.")
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_smooth2_acc4)
+
     #------------------------------------------------------------------------------
     # Switch on the smoothing constraints (with 4th order smoother).
     spr.addToParset("Ccalibrator.solver.LSQR.smoothing.type       = 4")
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.accuracy   = 2")
 
     print("Bandpass test: with smoothing constraints (type = 4).")
     spr.runCalibratorParallel(nprocs)
 
     # Store the results.
     os.system("mv result.dat %s" % result_smooth4)
+
+    #-------------------------------
+    # Use the 4th order of accuracy.
+    spr.addToParset("Ccalibrator.solver.LSQR.smoothing.accuracy    = 4")
+
+    print("Bandpass test: with smoothing constraints (type = 4), accuracy 4.")
+    spr.runCalibratorParallel(nprocs)
+
+    # Store the results.
+    os.system("mv result.dat %s" % result_smooth4_acc4)
 
     #------------------------------------------------------------------------------
     # Calcualte the gradient cost.
@@ -466,11 +493,15 @@ def runTestsSmoothnessConstraintsGradientCost():
     # just to compare results using a single number, so that the test fails if we break the code.
     cost_smooth2 = calculateGradientCost(result_smooth2, nchan, nant, True)
     cost_smooth4 = calculateGradientCost(result_smooth4, nchan, nant, True)
+    cost_smooth2_acc4 = calculateGradientCost(result_smooth2_acc4, nchan, nant, True)
+    cost_smooth4_acc4 = calculateGradientCost(result_smooth4_acc4, nchan, nant, True)
 
     print('cost nonsmooth =', cost_nonsmooth)
     print('cost smooth =', cost_smooth)
     print('cost smooth2 =', cost_smooth2)
     print('cost smooth4 =', cost_smooth4)
+    print('cost smooth2 acc4 =', cost_smooth2_acc4)
+    print('cost smooth4 acc4 =', cost_smooth4_acc4)
 
     #------------------------------------------------------------------------------
     # Verify the gradient cost.
@@ -481,6 +512,8 @@ def runTestsSmoothnessConstraintsGradientCost():
     expected_cost_smooth = 0.078488
     expected_cost_smooth2 = 0.188401
     expected_cost_smooth4 = 0.666211
+    expected_cost_smooth2_acc4 = 0.833353
+    expected_cost_smooth4_acc4 = 1.393525
 
     tol = 1.e-3
     if abs(cost_nonsmooth - expected_cost_nonsmooth) > tol:
@@ -497,6 +530,14 @@ def runTestsSmoothnessConstraintsGradientCost():
     tol = 1.e-5
     if abs(cost_smooth4 - expected_cost_smooth4) > tol:
         raise RuntimeError("Smooth gradient4 cost is wrong! cost = %s" % cost_smooth4)
+
+    tol = 1.e-5
+    if abs(cost_smooth2_acc4 - expected_cost_smooth2_acc4) > tol:
+        raise RuntimeError("Smooth gradient2 acc4 cost is wrong! cost = %s" % cost_smooth2_acc4)
+
+    tol = 1.e-5
+    if abs(cost_smooth4_acc4 - expected_cost_smooth4_acc4) > tol:
+        raise RuntimeError("Smooth gradient4 acc4 cost is wrong! cost = %s" % cost_smooth4_acc4)
 
 def compareGains(file1, file2, tol):
     gains1 = loadParset(file1)
