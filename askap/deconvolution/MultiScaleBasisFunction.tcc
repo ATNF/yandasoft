@@ -52,7 +52,7 @@ namespace askap {
         template<class T>
         MultiScaleBasisFunction<T>::MultiScaleBasisFunction(const Vector<Float>& scales,
                 const Bool orthogonal) :
-                BasisFunction<T>::BasisFunction(), itsScales(scales)
+                BasisFunction<T>::BasisFunction(), itsScales(scales), itsSphFunc(casacore::C::pi*3., 1)
         {
             this->itsOrthogonal = orthogonal;
             this->itsNumberBases = scales.nelements();
@@ -64,7 +64,7 @@ namespace askap {
         MultiScaleBasisFunction<T>::MultiScaleBasisFunction(const IPosition& shape,
                 const Vector<Float>& scales,
                 const Bool orthogonal) :
-                BasisFunction<T>::BasisFunction(), itsScales(scales)
+                BasisFunction<T>::BasisFunction(), itsScales(scales), itsSphFunc(casacore::C::pi*3., 1)
         {
             this->itsOrthogonal = orthogonal;
             this->itsNumberBases = scales.nelements();
@@ -126,9 +126,19 @@ namespace askap {
             }
         }
 
-        // Calculate the spheroidal function
+        /// @brief convenience method for spheroidal function calculator
         template<class T>
-        T MultiScaleBasisFunction<T>::spheroidal(T nu)
+        T MultiScaleBasisFunction<T>::spheroidal(T nu) const 
+        {
+           return static_cast<T>(itsSphFunc(static_cast<double>(nu)));
+        }
+
+        /// @brief Calculate the spheroidal function
+        /// @note (MV) this is an old routine which Tim borrowed from somewhere, it is preserved here just in case (not used any more,
+        /// except in tMultiScaleBasisFunction where it is compared against the generic routine. I did check that it matches 
+        /// the spheroidal function with alpha=1 and bandwidth of 3pi from our generic library
+        template<class T>
+        T MultiScaleBasisFunction<T>::spheroidalOld(T nu)
         {
 
             if (nu <= 0) {

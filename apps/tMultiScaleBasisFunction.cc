@@ -44,6 +44,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/askap/AskapUtil.h>
 #include <askap/profile/AskapProfiler.h>
+#include <askap/scimath/utils/SpheroidalFunction.h>
 
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
@@ -53,6 +54,8 @@ ASKAP_LOGGER(logger, ".tMultiScaleBasisFunction");
 // this should be after logging
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
 
+#include <fstream>
+
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -61,6 +64,9 @@ class MultiScaleBasisFunctionTestApp : public askap::Application {
 public:
    /// @brief do the actual test
    void doTest();
+
+   /// @brief test spheroidal function calculator
+   void doSphFuncTest();
    
    /// @brief run application
    /// @param[in] argc number of parameters
@@ -68,7 +74,28 @@ public:
    /// @return exit code
    virtual int run(int argc, char *argv[]);
 
+protected:
+   // test class to access protected method without making the whole app class a friend
+   class SphFuncTestClass : public MultiScaleBasisFunction<float> {
+   public:
+       SphFuncTestClass() : MultiScaleBasisFunction<float>(casacore::Vector<float>()) {}; 
+
+       using MultiScaleBasisFunction<float>::spheroidal;
+       using MultiScaleBasisFunction<float>::spheroidalOld;
+   };
+
 };
+
+void MultiScaleBasisFunctionTestApp::doSphFuncTest() {
+   scimath::SpheroidalFunction sphFunc(casacore::C::pi*3.,1);
+   SphFuncTestClass tc;
+   std::ofstream os("out.dat");
+   const size_t nPoints = 100;
+   for (size_t i = 0; i<nPoints; ++i) {
+        const float nu = 1./nPoints * i;
+        os<<i<<" "<<nu<<" "<<SphFuncTestClass::spheroidalOld(nu)<<" "<<sphFunc(nu)<<" "<<tc.spheroidal(nu)<<std::endl;
+   }
+}
 
 void MultiScaleBasisFunctionTestApp::doTest() {
   const casa::uInt size = config().getUint32("size");
@@ -94,6 +121,7 @@ int MultiScaleBasisFunctionTestApp::run(int argc, char **argv) {
         // before the final message
         {
            doTest();
+           doSphFuncTest();
         }
         std::cerr<<"Job: "<<timer.real()<<std::endl;
         stats.logSummary();

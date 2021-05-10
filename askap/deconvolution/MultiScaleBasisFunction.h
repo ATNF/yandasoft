@@ -38,6 +38,7 @@
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>
 
+#include <askap/scimath/utils/SpheroidalFunction.h>
 #include <askap/deconvolution/BasisFunction.h>
 
 namespace askap {
@@ -83,10 +84,16 @@ namespace askap {
 
             protected:
                 /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
-                static T spheroidal(T nu);
+                static T spheroidalOld(T nu);
+
+                /// @brief convenience method for spheroidal function calculator
+                T spheroidal(T nu) const;
             private:
                 /// Vector of scales (in pixels)
                 casacore::Vector<casacore::Float> itsScales;
+
+                /// @brief spheroidal function calculator
+                scimath::SpheroidalFunction itsSphFunc;
         };
 
     } // namespace synthesis
