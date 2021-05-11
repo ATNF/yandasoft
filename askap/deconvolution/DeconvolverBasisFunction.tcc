@@ -82,13 +82,13 @@ namespace askap {
         };
 
         template<class T, class FT>
-        void DeconvolverBasisFunction<T, FT>::setBasisFunction(boost::shared_ptr<BasisFunction<T> > bf)
+        void DeconvolverBasisFunction<T, FT>::setBasisFunction(const boost::shared_ptr<BasisFunction<T> >& bf)
         {
             itsBasisFunction = bf;
         };
 
         template<class T, class FT>
-        boost::shared_ptr<BasisFunction<T> > DeconvolverBasisFunction<T, FT>::basisFunction()
+        const boost::shared_ptr<BasisFunction<T> >& DeconvolverBasisFunction<T, FT>::basisFunction() const
         {
             return itsBasisFunction;
         };
@@ -407,10 +407,26 @@ namespace askap {
             invertSymPosDef(this->itsInverseCouplingMatrix, this->itsDetCouplingMatrix, this->itsCouplingMatrix);
             ASKAPLOG_DEBUG_STR(decbflogger, "Coupling matrix determinant " << this->itsDetCouplingMatrix);
             ASKAPLOG_DEBUG_STR(decbflogger, "Inverse coupling matrix " << this->itsInverseCouplingMatrix);
-            // Checked that the inverse really is an inverse.
+
+            // the following two methods are only reporting to the log with DEBUG severity,
+            // there is no point doing this additional math in the production mode
+            #ifdef ASKAP_DEBUG
+
+            // double-check that the inverse really is an inverse (but only by writing the product to the log
+            this->reportOnCouplingMatrix();
+
+            // Now look at coupling between adjacent scales: this works well if the
+            // scales are ordered.
+            this->reportOnAdjacentScaleCoupling();
+            #endif
+        }
+
+        template<typename T, typename FT>
+        void DeconvolverBasisFunction<T, FT>::reportOnCouplingMatrix() const {
             Matrix<T> identity(this->itsCouplingMatrix.shape(), 0.0);
             const uInt nRows(this->itsCouplingMatrix.nrow());
             const uInt nCols(this->itsCouplingMatrix.ncolumn());
+            ASKAPDEBUGASSERT(this->itsCouplingMatrix.shape() == this->itsInverseCouplingMatrix.shape());
 
             for (uInt row = 0; row < nRows; row++) {
                 for (uInt col = 0; col < nCols; col++) {
@@ -419,13 +435,16 @@ namespace askap {
             }
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Coupling matrix * inverse " << identity);
+        }
 
-
-            // Now look at coupling between adjacent scales: this works well if the
-            // scales are ordered.
+        template<typename T, typename FT>
+        void DeconvolverBasisFunction<T, FT>::reportOnAdjacentScaleCoupling() const {
+            ASKAPDEBUGASSERT(this->itsBasisFunction);
+            // Look at coupling between adjacent scales: this works well if the scales are ordered.
+            const casacore::Matrix<casacore::Double>& cm = this->itsCouplingMatrix;
             for (uInt term = 0; term < this->itsBasisFunction->numberBases() - 1; term++) {
-                double det = this->itsCouplingMatrix(term, term) * this->itsCouplingMatrix(term + 1, term + 1) -
-                             this->itsCouplingMatrix(term, term + 1) * this->itsCouplingMatrix(term + 1, term);
+                ASKAPDEBUGASSERT(term < cm.nrow() && term < cm.ncolumn());
+                const double det = cm(term, term) * cm(term + 1, term + 1) - cm(term, term + 1) * cm(term + 1, term);
                 ASKAPLOG_DEBUG_STR(decbflogger, "Independence between scales " << term << " and "
                                        << term + 1 << " = " << det);
             }

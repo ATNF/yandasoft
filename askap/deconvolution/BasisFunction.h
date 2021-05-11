@@ -81,10 +81,11 @@ namespace askap {
                 /// @brief Multiply by a matrix on the third dimension
                 virtual void multiplyArray(const casacore::Matrix<casacore::Double>& arr);
 
-                /// @brief Orthogonalise using Gram Schmidt algorithm
-                void gramSchmidt(casacore::Array<T>& bf);
-
             protected:
+                /// @brief Orthogonalise using Gram Schmidt algorithm
+                /// @param[in] bf cube to work with, 3rd dimension is the basis function index
+                static void gramSchmidt(casacore::Array<T>& bf);
+
                 casacore::IPosition itsShape;
                 casacore::Array<T> itsBasisFunction;
                 casacore::uInt itsNumberBases;
