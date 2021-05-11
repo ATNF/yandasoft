@@ -161,11 +161,19 @@ namespace askap {
         }
 
         template<class T, class FT>
+        const Array<T> & DeconvolverBase<T, FT>::model(const uInt term) const
+        {
+            ASKAPCHECK(term < itsNumberTerms, "Term " << term << " greater than allowed " << itsNumberTerms);
+            return itsModel(term);
+        }
+
+        template<class T, class FT>
         Array<T> & DeconvolverBase<T, FT>::model(const uInt term)
         {
             ASKAPCHECK(term < itsNumberTerms, "Term " << term << " greater than allowed " << itsNumberTerms);
             return itsModel(term);
         }
+
 
         template<class T, class FT>
         void DeconvolverBase<T, FT>::updateDirty(Array<T>& dirty, const uInt term)
@@ -423,22 +431,18 @@ namespace askap {
             updateResiduals(modelVec);
         }
 
+        /// @brief memory occupied by the array set
+        /// @details This method iterates over the supplied array set and computes the
+        /// total amount of memory used up.
+        /// @param[in] vecArray arrays to work with (packed into a casa Vector)
+        /// @return amount of memory in bytes
         template<class T, class FT>
-        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casacore::Array<T> >& vecArray)
+        template<typename Y>
+        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casacore::Array<Y> >& vecArray)
         {
             uInt memory = 0;
             for (uInt term = 0; term < vecArray.nelements(); term++) {
-                memory += sizeof(T) * vecArray(term).nelements();
-            }
-            return memory;
-        }
-
-        template<class T, class FT>
-        uInt DeconvolverBase<T, FT>::auditMemory(Vector<casacore::Array<FT> >& vecArray)
-        {
-            uInt memory = 0;
-            for (uInt term = 0; term < vecArray.nelements(); term++) {
-                memory += sizeof(FT) * vecArray(term).nelements();
+                memory += sizeof(Y) * vecArray(term).nelements();
             }
             return memory;
         }
@@ -453,14 +457,17 @@ namespace askap {
         }
 
         template<class T, class FT>
-        IPosition DeconvolverBase<T, FT>::findSubPsfShape()
+        IPosition DeconvolverBase<T, FT>::findSubPsfShape(const casacore::uInt term) const
         {
-            IPosition subPsfShape(2, this->model().shape()(0), this->model().shape()(1));
+            const casacore::IPosition modelShape = model(term).shape();
+            ASKAPDEBUGASSERT(modelShape.nelements() >= 2);
+            IPosition subPsfShape(2, modelShape(0), modelShape(1));
             // Only use the specified psfWidth if it makes sense
             // Also make sure it is even, otherwise the fft of the PSF is incorrect and the clean diverges
-            if (this->control()->psfWidth() > 1) {
-                uInt psfWidth = (this->control()->psfWidth()/2)*2;
-                if ((psfWidth < uInt(this->model().shape()(0))) && (psfWidth < uInt(this->model().shape()(1)))) {
+
+            if (control()->psfWidth() > 1) {
+                const uInt psfWidth = static_cast<casacore::uInt>(control()->psfWidth()/2)*2;
+                if ((psfWidth < static_cast<casacore::uInt>(modelShape(0))) && (psfWidth < static_cast<casacore::uInt>(modelShape(1)))) {
                     subPsfShape(0) = psfWidth;
                     subPsfShape(1) = psfWidth;
                 }

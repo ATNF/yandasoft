@@ -47,6 +47,7 @@ tParallelIterator
 tPreconditioning
 tSaxpy
 tWienerdbg
+tMultiScaleBasisFunction
 tcmult
 testlinmos
 tmerge
