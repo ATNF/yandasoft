@@ -211,6 +211,19 @@ namespace askap {
                     return itsFractionalThreshold;
                 }
 
+                /// @brief Set the desired absolute threshold
+                /// @detail If the absolute threshold is set then
+                /// the algorithm will stop when the maximum absolute residual
+                /// is less than this number.
+                /// @param[in] absoluteThreshold Absolute threshold (0.1 is 0.1Jy).
+                void setAbsoluteThreshold(casacore::Float absoluteThreshold) {
+                    itsAbsoluteThreshold = absoluteThreshold;
+                }
+
+                casacore::Float absoluteThreshold() {
+                    return itsAbsoluteThreshold;
+                }
+
                 /// @brief Set the desired PSF width in pixels
                 /// @detail Some algorithms can work with a fractional of the
                 /// full PSF. This allows specification of the support. Note that
@@ -249,6 +262,7 @@ namespace askap {
                 T itsTargetObjectiveFunction2;
                 T itsTargetFlux;
                 casa::Float itsFractionalThreshold;
+                casa::Float itsAbsoluteThreshold;
                 casa::Float itsGain;
                 casa::Float itsTolerance;
                 casa::Int itsPSFWidth;

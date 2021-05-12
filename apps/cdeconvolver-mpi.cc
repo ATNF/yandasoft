@@ -537,9 +537,51 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     } else {
         ASKAPTHROW(AskapError, "Unknown Clean algorithm " << algorithm);
     }
-    
-    deconvolver->configure(subset.makeSubset("solver.Clean."));
-    
+       
+    // copy cleaning parameters and add any extra stopping criteria
+    LOFAR::ParameterSet cleanset = subset.makeSubset("solver.Clean.");
+
+    // could make the following a function that returns the update parset and add to configure line
+    const std::string parName = "threshold.minorcycle";
+    if (subset.isDefined(parName)) {
+        const std::vector<std::string> thresholds = subset.getStringVector(parName);
+        ASKAPCHECK(thresholds.size() && (thresholds.size()<3), "Parameter "<<parName<<
+                   " must contain either 1 element or a vector of 2 elements, you have "<< thresholds.size());
+        bool absoluteThresholdDefined = false;
+        bool relativeThresholdDefined = false;
+        for (std::vector<std::string>::const_iterator ci = thresholds.begin();
+             ci != thresholds.end(); ++ci) {
+
+            casacore::Quantity cThreshold;
+            casacore::Quantity::read(cThreshold, *ci);
+            cThreshold.convert();
+            if (cThreshold.isConform("Jy")) {
+                ASKAPCHECK(!absoluteThresholdDefined, "Parameter "<<parName<<
+                           " defines absolute threshold twice ("<<*ci<<"). Deep cleaning not supported.");
+                absoluteThresholdDefined = true;
+                std::ostringstream pstr;
+                pstr<<cThreshold.getValue("Jy");
+                cleanset.add("absolutethreshold", pstr.str().c_str());
+                ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
+                                  pstr.str().c_str()<<" Jy");
+            } else if (cThreshold.isConform("")) {
+                ASKAPCHECK(!relativeThresholdDefined, "Parameter "<<parName<<
+                           " defines relative threshold twice ("<<*ci<<")");
+                relativeThresholdDefined = true;
+                std::ostringstream pstr;
+                pstr<<cThreshold.getValue();
+                cleanset.add("fractionalthreshold", pstr.str().c_str());
+                ASKAPLOG_INFO_STR(logger, "Will stop minor cycle at the relative threshold of "<<
+                                  cThreshold.getValue()*100.<<"\%");
+            } else {
+                ASKAPTHROW(AskapError, "Unable to convert units in the quantity "<<
+                           cThreshold<<" to either Jy or a dimensionless quantity");
+            }
+        }
+    }
+
+    deconvolver->configure(cleanset);
+
     deconvolver->deconvolve();
     
     dirty = deconvolver->dirty().copy();
