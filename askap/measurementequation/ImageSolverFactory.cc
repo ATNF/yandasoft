@@ -105,10 +105,10 @@ namespace askap
                                   "a deep threshold, ignoring "<<*ci<<" in "<<parName);
               }
             } else {
-               absoluteThresholdDefined = true;
-                solver->setThreshold(cThreshold);
-                ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
-                               cThreshold.getValue("mJy")<<" mJy");
+              absoluteThresholdDefined = true;
+              solver->setThreshold(cThreshold);
+              ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
+                                cThreshold.getValue("mJy")<<" mJy");
             }
           } else if (cThreshold.isConform("")) {
             ASKAPCHECK(!relativeThresholdDefined, "Parameter "<<parName<<
