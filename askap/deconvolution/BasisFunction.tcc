@@ -65,7 +65,7 @@ namespace askap {
         template<class T>
         void BasisFunction<T>::multiplyArray(const Matrix<Double>& A)
         {
-            Array<T> mDataArray(this->itsBasisFunction.shape());
+            Array<T> mDataArray(this->shape());
             mDataArray.set(T(0.0));
 
             const uInt nRows(A.nrow());
@@ -96,6 +96,19 @@ namespace askap {
                     BF.xyPlane(i) = BF.xyPlane(i) / sumBF;
                 }
             }
+        }
+
+        /// @brief return requested basis function
+        /// @details index index of the basis function to return [0..numberBases()-1]
+        /// @return basis function of interest
+        /// @note due to reference semantics of casa arrays it is possible to change the 
+        /// basis function despite the fact that this method is const.
+        template<typename T>
+        casacore::Matrix<T> BasisFunction<T>::basisFunction(casacore::uInt index) const
+        {
+           ASKAPASSERT(index < itsNumberBases);
+           casacore::Cube<T> tmpCube(itsBasisFunction);
+           return tmpCube.xyPlane(index);
         }
 
         template<class T>

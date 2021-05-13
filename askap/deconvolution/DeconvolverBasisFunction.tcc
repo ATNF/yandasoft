@@ -185,8 +185,8 @@ namespace askap {
             } else if (this->itsDecouplingAlgorithm == "residuals") {
                 // Decoupling using inverse coupling matrix applied to basis and residuals
                 ASKAPLOG_INFO_STR(decbflogger, "Decoupling using inverse coupling matrix applied to basis and residuals");
-                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->basisFunction()));
-                this->itsBasisFunction->basisFunction() = invBF.copy();
+                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->allBasisFunctions()));
+                this->itsBasisFunction->allBasisFunctions() = invBF.copy();
 
                 const Array<T> invRes(applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction));
                 this->itsResidualBasisFunction = invRes.copy();
@@ -239,14 +239,14 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating cache of images");
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->allBasisFunctions().shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
+            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
             Array<FT> residualFFT(this->dirty().shape().nonDegenerate());
@@ -293,13 +293,13 @@ namespace askap {
             Array<FT> work(subPsfShape);
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->allBasisFunctions().shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
+            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
             this->itsPSFBasisFunction.resize(stackShape);
@@ -623,7 +623,7 @@ namespace askap {
                     casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
                     typename casacore::Array<T> modelSlice = this->model()(modelSlicer).nonDegenerate();
                     modelSlice += this->control()->gain() * peakValues(term) *
-                                  this->itsBasisFunction->basisFunction()(psfSlicer).nonDegenerate();
+                                  this->itsBasisFunction->allBasisFunctions()(psfSlicer).nonDegenerate();
                 }
             }
 

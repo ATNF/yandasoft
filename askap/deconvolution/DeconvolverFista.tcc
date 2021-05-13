@@ -108,8 +108,8 @@ namespace askap {
 
             if (itsBasisFunction) {
                 this->itsBasisFunction->initialise(this->model().shape());
-                itsBasisFunctionTransform.resize(itsBasisFunction->basisFunction().shape());
-                casacore::setReal(itsBasisFunctionTransform, itsBasisFunction->basisFunction().nonDegenerate());
+                itsBasisFunctionTransform.resize(itsBasisFunction->allBasisFunctions().shape());
+                casacore::setReal(itsBasisFunctionTransform, itsBasisFunction->allBasisFunctions().nonDegenerate());
                 scimath::fft2d(itsBasisFunctionTransform, true);
             }
 
@@ -258,11 +258,11 @@ namespace askap {
             if (itsBasisFunction) {
                 casacore::Array<FT> inTransform(in.nonDegenerate().shape());
                 casacore::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
-                out.resize(itsBasisFunction->basisFunction().shape());
+                out.resize(itsBasisFunction->allBasisFunctions().shape());
                 casacore::Cube<T> outCube(out);
                 casacore::setReal(inTransform, in.nonDegenerate());
                 scimath::fft2d(inTransform, true);
-                const uInt nPlanes(itsBasisFunction->basisFunction().shape()(2));
+                const uInt nPlanes(itsBasisFunction->allBasisFunctions().shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
                     outPlaneTransform = inTransform.nonDegenerate() * Cube<FT>(itsBasisFunctionTransform).xyPlane(plane);
                     scimath::fft2d(outPlaneTransform, false);
@@ -286,7 +286,7 @@ namespace askap {
 
                 // To reconstruct, we filter out each basis from the cumulative sum
                 // and then add the corresponding term from the in array.
-                const uInt nPlanes(itsBasisFunction->basisFunction().shape()(2));
+                const uInt nPlanes(itsBasisFunction->allBasisFunctions().shape()(2));
 
                 casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
                 scimath::fft2d(inPlaneTransform, true);

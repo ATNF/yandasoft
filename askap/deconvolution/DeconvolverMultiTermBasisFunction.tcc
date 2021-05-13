@@ -343,7 +343,9 @@ namespace askap {
         void DeconvolverMultiTermBasisFunction<T, FT>::initialiseForBasisFunction(bool force)
         {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::initialiseForBasisFunction");
-            if (!force && !this->itsBasisFunctionChanged) return;
+            if (!force && !this->itsBasisFunctionChanged) {
+                return;
+            }
 
             ASKAPLOG_DEBUG_STR(decmtbflogger,
                                "Updating Multi-Term Basis Function deconvolver for change in basis function");
@@ -385,17 +387,17 @@ namespace askap {
         {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::initialiseResidual");
 
-            if (!this->itsDirtyChanged) return;
+            if (!this->itsDirtyChanged) {
+                return;
+            }
 
             // Initialise the basis function for residual calculations.
+            ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
             this->itsBasisFunction->initialise(this->dirty(0).shape());
 
-            ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
-
+            const uInt nBases(this->itsBasisFunction->numberBases());
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
-
-            uInt nBases(this->itsBasisFunction->numberBases());
+                                   << this->itsBasisFunction->shape()<<" number of bases "<<nBases);
 
             itsResidualBasis.resize(nBases);
             for (uInt base = 0; base < nBases; base++) {
@@ -414,18 +416,18 @@ namespace askap {
 
                     // Calculate transform of residual image
                     Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate());
-                    residualFFT.set(FT(0.0));
+                    //residualFFT.set(FT(0.0));
                     casacore::setReal(residualFFT, this->dirty(term).nonDegenerate());
                     scimath::fft2d(residualFFT, true);
 
                     // Calculate transform of basis function [nx,ny,nbases]
                     Matrix<FT> basisFunctionFFT(this->dirty(term).shape().nonDegenerate());
-                    basisFunctionFFT.set(FT(0.0));
-                    casacore::setReal(basisFunctionFFT, Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(base));
+                    //basisFunctionFFT.set(FT(0.0));
+                    casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction(base));
                     scimath::fft2d(basisFunctionFFT, true);
 
                     // Calculate product and transform back
-                    Matrix<FT> work(this->dirty(term).shape().nonDegenerate());
+                    Matrix<FT> work(basisFunctionFFT.shape());
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
                     // Removing the extra convolution with PSF0. Leave text here temporarily.
                     //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
@@ -473,9 +475,13 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "initialiseMask called");
 
             // check if we need the masks
-            if (this->control()->targetObjectiveFunction2()==0) return;
+            if (this->control()->targetObjectiveFunction2()==0) {
+                return;
+            }
             // check if we've already done this
-            if (this->itsMask.nelements()>0) return;
+            if (this->itsMask.nelements()>0) {
+                return;
+            }
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Initialising deep clean masks");
 
             ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
@@ -515,28 +521,29 @@ namespace askap {
         {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::initialisePSF");
 
-            if (!this->itsBasisFunctionChanged) return;
+            if (!this->itsBasisFunctionChanged) {
+                return;
+            }
 
             ASKAPCHECK(this->itsBasisFunction, "Basis function not initialised");
 
             ASKAPLOG_DEBUG_STR(decmtbflogger,
                                "Updating Multi-Term Basis Function deconvolver for change in basis function");
-            IPosition subPsfShape(this->findSubPsfShape());
+            const IPosition subPsfShape(this->findSubPsfShape());
 
             Array<FT> work(subPsfShape);
 
+            const uInt nBases(this->itsBasisFunction->numberBases());
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->shape()<< " number of bases "<<nBases);
 
-            IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
-
-            uInt nBases(this->itsBasisFunction->numberBases());
+            IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
             basisFunctionFFT.set(FT(0.0));
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
+            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
             itsTermBaseFlux.resize(nBases);
@@ -579,9 +586,10 @@ namespace askap {
 
             // Calculate all the transfer functions
             Vector<Array<FT> > subXFRVec(2*this->itsNumberTerms - 1);
-            for (uInt term1 = 0; term1 < (2*this->itsNumberTerms - 1); term1++) {
+            for (uInt term1 = 0; term1 < subXFRVec.nelements(); ++term1) {
                 subXFRVec(term1).resize(subPsfShape);
-                subXFRVec(term1).set(0.0);
+                // MV: technically, we don't need to set the values to zero, setReal would overwrite them
+                //subXFRVec(term1).set(0.0);
                 casacore::setReal(subXFRVec(term1), this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
                 scimath::fft2d(subXFRVec(term1), true);
             }
@@ -597,12 +605,6 @@ namespace askap {
             for (uInt base = 0; base < nBases; base++) {
                 for (uInt base1 = 0; base1 < nBases; base1++) {
                     itsPSFCrossTerms(base, base1).resize(this->itsNumberTerms, this->itsNumberTerms);
-                    for (uInt term1 = 0; term1 < this->itsNumberTerms; term1++) {
-                        for (uInt term2 = 0; term2 < this->itsNumberTerms; term2++) {
-                            // should not have to do this, since assigment happens below
-                            //itsPSFCrossTerms(base, base1)(term1, term2).resize(subPsfShape);
-                        }
-                    }
                 }
             }
 
@@ -1152,8 +1154,8 @@ namespace askap {
 
                         #pragma omp section
                         {
-                            psfShape(0) = this->itsBasisFunction->basisFunction().shape()(0),
-                            psfShape(1) = this->itsBasisFunction->basisFunction().shape()(1);
+                            psfShape(0) = this->itsBasisFunction->allBasisFunctions().shape()(0),
+                            psfShape(1) = this->itsBasisFunction->allBasisFunctions().shape()(1);
                         }
                     }
 
@@ -1195,7 +1197,7 @@ namespace askap {
                             if (abs(peakValues(term)) > 0.0) {
                                 casa::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                                 slice += this->control()->gain() * peakValues(term) *
-                                        Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                                        Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
                                 this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                             }
                         }
@@ -1750,8 +1752,8 @@ namespace askap {
             //IPosition subPsfStride(2, 1, 1);
 
             //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            const casacore::IPosition psfShape(2, this->itsBasisFunction->basisFunction().shape()(0),
-                                           this->itsBasisFunction->basisFunction().shape()(1));
+            const casacore::IPosition psfShape(2, this->itsBasisFunction->allBasisFunctions().shape()(0),
+                                           this->itsBasisFunction->allBasisFunctions().shape()(1));
 
             casacore::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
             casacore::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
@@ -1785,7 +1787,7 @@ namespace askap {
                 if (abs(peakValues(term)) > 0.0) {
                     casacore::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                     slice += this->control()->gain() * peakValues(term) *
-                             Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                             Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
                     this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                 }
             }
