@@ -307,7 +307,7 @@ namespace askap {
                                orthogonal));
 
             String solutionType = parset.getString("solutiontype", "MAXCHISQ");
-            Bool  itsDecoupled = parset.getBool("decoupled", false);
+            itsDecoupled = parset.getBool("decoupled", false);
             if (itsDecoupled) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Using decoupled residuals");
             }
