@@ -51,6 +51,7 @@ namespace askap {
                 itsAlgorithm(""), itsTerminationCause(NOTTERMINATED), itsTargetIter(1),
                 itsTargetObjectiveFunction(T(0)),itsTargetObjectiveFunction2(T(0)),
                 itsTargetFlux(T(0.0)),itsGain(1.0), itsTolerance(1e-4),
+                itsFractionalThreshold(T(0.0)),itsAbsoluteThreshold(0.0),
                 itsPSFWidth(0), itsDetectDivergence(False), itsDeepCleanMode(False), itsLambda(T(100.0))
         {
             // Install a signal handler to count signals so receipt of a signal
@@ -97,6 +98,12 @@ namespace askap {
                 ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
                                       << " less than fractional threshold " << itsFractionalThreshold
                                       << " * initialObjectiveFunction : " << state.initialObjectiveFunction());
+                itsTerminationCause = CONVERGED;
+                return True;
+            }
+            if (abs(state.objectiveFunction()) < itsAbsoluteThreshold) {
+                ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
+                                      << " less than absolute threshold " << itsAbsoluteThreshold);
                 itsTerminationCause = CONVERGED;
                 return True;
             }
@@ -167,6 +174,7 @@ namespace askap {
             this->setTargetFlux(parset.getFloat("targetflux", 0));
             this->setTargetObjectiveFunction(parset.getFloat("targetobjective", 0.0));
             this->setFractionalThreshold(parset.getFloat("fractionalthreshold", 0.0));
+            this->setAbsoluteThreshold(parset.getFloat("absolutethreshold", 0.0));
             this->setLambda(parset.getFloat("lambda", 0.0001));
             this->setPSFWidth(parset.getInt32("psfwidth", 0));
             this->setDetectDivergence(parset.getBool("detectdivergence",false));
