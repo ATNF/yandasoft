@@ -411,23 +411,23 @@ namespace askap {
             //const double start_time = MPI_Wtime();
             const time_t start_time = time(0);
             for (uInt base = 0; base < nBases; base++) {
-                // Calculate transform of residual images [nx,ny,nterms]
-                for (uInt term = 0; term < this->itsNumberTerms; term++) {
+                 // Calculate transform of basis function [nx,ny,nbases]
+                 const Matrix<T> bfRef(this->itsBasisFunction->basisFunction(base));
+                 Matrix<FT> basisFunctionFFT(bfRef.shape().nonDegenerate(2));
+                 casacore::setReal(basisFunctionFFT, bfRef);
+                 scimath::fft2d(basisFunctionFFT, true);
+
+                 // buffer for products
+                 Matrix<FT> work(basisFunctionFFT.shape());
+
+                 for (uInt term = 0; term < this->itsNumberTerms; term++) {
 
                     // Calculate transform of residual image
                     Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate());
-                    //residualFFT.set(FT(0.0));
                     casacore::setReal(residualFFT, this->dirty(term).nonDegenerate());
                     scimath::fft2d(residualFFT, true);
 
-                    // Calculate transform of basis function [nx,ny,nbases]
-                    Matrix<FT> basisFunctionFFT(this->dirty(term).shape().nonDegenerate());
-                    //basisFunctionFFT.set(FT(0.0));
-                    casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction(base));
-                    scimath::fft2d(basisFunctionFFT, true);
-
                     // Calculate product and transform back
-                    Matrix<FT> work(basisFunctionFFT.shape());
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
                     // Removing the extra convolution with PSF0. Leave text here temporarily.
                     //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);

@@ -57,9 +57,11 @@ namespace askap {
         {
             ASKAPASSERT(itsNumberBases);
             ASKAPASSERT(shape.nelements() >= 2);
-            const IPosition bfShape(3, shape(0), shape(1), itsNumberBases);
+            const IPosition bfShape = shape.concatenate(IPosition(1, itsNumberBases));
             itsBasisFunction.resize(bfShape);
             itsBasisFunction.set(T(0.0));
+            // we probably need to patch the code to remove expectations of the 3rd dimension to be passed here
+            itsShape = bfShape;
         };
 
         template<class T>
@@ -70,19 +72,16 @@ namespace askap {
 
             const uInt nRows(A.nrow());
             const uInt nCols(A.ncolumn());
+            ASKAPDEBUGASSERT(thos->itsBasisFunction.shape() >= 2);
             const uInt nx = this->itsBasisFunction.shape()(0);
             const uInt ny = this->itsBasisFunction.shape()(1);
 
             for (uInt j = 0; j < ny; j++) {
                 for (uInt i = 0; i < nx; i++) {
-
-                    IPosition currentPosCol(3, i, j, 0);
-                    IPosition currentPosRow(3, i, j, 0);
-
                     for (uInt row = 0; row < nRows; row++) {
-                        currentPosRow(2) = row;
+                        const IPosition currentPosRow(3, i, j, row);
                         for (uInt col = 0; col < nCols; col++) {
-                            currentPosCol(2) = col;
+                            const IPosition currentPosCol(3, i, j, col);
                             mDataArray(currentPosRow) += T(A(row, col)) * this->itsBasisFunction(currentPosCol);
                         }
                     }
