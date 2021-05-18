@@ -57,7 +57,7 @@ namespace askap {
         {
             ASKAPASSERT(itsNumberBases);
             ASKAPASSERT(shape.nelements() >= 2);
-            const IPosition bfShape = shape.concatenate(IPosition(1, itsNumberBases));
+            const IPosition bfShape = shape.getFirst(2).concatenate(IPosition(1, itsNumberBases));
             itsBasisFunction.resize(bfShape);
             itsBasisFunction.set(T(0.0));
             // we probably need to patch the code to remove expectations of the 3rd dimension to be passed here
