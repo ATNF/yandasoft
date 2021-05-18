@@ -37,7 +37,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/Params.h>
-
+#include <askap/askap/StatReporter.h>
 
 // Local includes
 
@@ -52,7 +52,7 @@ namespace cp {
 class ContinuumMaster {
     public:
         ContinuumMaster(LOFAR::ParameterSet& parset,
-                           CubeComms& comms);
+                           CubeComms& comms, StatReporter& stats);
         ~ContinuumMaster();
 
         void run(void);
@@ -94,6 +94,9 @@ class ContinuumMaster {
         /// Communications class
         CubeComms& itsComms;
 
+        /// statistics
+        StatReporter& itsStats;
+
         MSGroupInfo isMSGroupInfo;
 
         boost::scoped_ptr<CubeBuilder<casacore::Float> > itsImageCube;
@@ -107,7 +110,7 @@ class ContinuumMaster {
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
 
-      
+
 
 };
 

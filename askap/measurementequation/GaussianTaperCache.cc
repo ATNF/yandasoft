@@ -184,7 +184,7 @@ bool GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleran
 /// The output is guaranteed to have the requested shape.
 /// @param[in] shape required shape
 /// @return array with the taper (casa arrays use reference semantics)
-casacore::Array<casacore::Complex> GaussianTaperCache::taper(const casacore::IPosition &shape) const
+casacore::Array<float> GaussianTaperCache::taper(const casacore::IPosition &shape) const
 {
   if (!shape.isEqual(itsTaperCache.shape())) {
       initTaperCache(shape);

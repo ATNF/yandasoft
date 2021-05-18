@@ -38,6 +38,7 @@
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/gridding/IVisGridder.h>
+#include <askap/askap/StatReporter.h>
 
 // Local includes
 #include "askap/distributedimager/AdviseDI.h"
@@ -54,7 +55,7 @@ class ContinuumWorker
     {
     public:
         ContinuumWorker(LOFAR::ParameterSet& parset,
-                           CubeComms& comms);
+                           CubeComms& comms, StatReporter& stats);
         ~ContinuumWorker();
 
         void run(void);
@@ -83,7 +84,7 @@ class ContinuumWorker
         void preProcessWorkUnit(ContinuumWorkUnit& wu);
         // Compress all continuous channel allocations into individual workunits
         void compressWorkUnits();
-        
+
         // Delete a workunit from the cache
         void deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
         // clear the current cached files
@@ -113,6 +114,9 @@ class ContinuumWorker
 
         // Communications class
         CubeComms& itsComms;
+
+        // statistics
+        StatReporter& itsStats;
 
         // No support for assignment
         ContinuumWorker& operator=(const ContinuumWorker& rhs);

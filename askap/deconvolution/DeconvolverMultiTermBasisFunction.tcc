@@ -214,7 +214,7 @@ namespace askap {
 
             for (uInt term = 0; term < (2*this->nTerms() - 1); ++term) {
                 ASKAPCHECK(psfLong(term).nonDegenerate().shape().nelements() == 2, "PSF(" << term << ") has too many dimensions " << psfLong(term).shape());
-                this->itsPsfLongVec(term) = psfLong(term).nonDegenerate();
+                this->itsPsfLongVec(term).reference(psfLong(term).nonDegenerate());
             }
 
         };
@@ -431,14 +431,15 @@ namespace askap {
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
                     // Removing the extra convolution with PSF0. Leave text here temporarily.
                     //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
-                    work = conj(basisFunctionFFT) * residualFFT;
-                    scimath::fft2d(work, false);
+                    residualFFT *= conj(basisFunctionFFT);
+                    scimath::fft2d(residualFFT, false);
+                    Matrix<T> work(real(residualFFT));
 
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
-                                           << ")*Residual(" << term << "): max = " << max(real(work))
-                                           << " min = " << min(real(work)));
+                                           << ")*Residual(" << term << "): max = " << max(work)
+                                           << " min = " << min(work));
 
-                    this->itsResidualBasis(base)(term) = real(work);
+                    this->itsResidualBasis(base)(term) = work;
                 }
             }
             //const double end_time = MPI_Wtime();
@@ -1054,7 +1055,7 @@ namespace askap {
                                 if (isWeighted) {
                                     #pragma omp single
                                     wt.reference(this->itsWeight(0).nonDegenerate());
-                                    
+
                                     absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
                                 } else {
 

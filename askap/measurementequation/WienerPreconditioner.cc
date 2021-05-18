@@ -366,7 +366,7 @@ namespace askap
           }
           ASKAPLOG_INFO_STR(logger, "Applying Gaussian taper to the preconditioner function in the image domain");
           scimath::fft2d(scratch, False);
-          casacore::Matrix<casacore::Complex> taperArray(itsTaperCache->taper(shape));
+          casacore::Matrix<float> taperArray(itsTaperCache->taper(shape));
           scratch *= taperArray;
           scimath::fft2d(scratch, True);
           // Redo thresholding

@@ -259,6 +259,15 @@ namespace synthesis
             const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr,
             const casacore::IPosition &pos);
 
+        /// @brief copy the map of preconditioners from another ImageSolver
+        /// @details The map is copied by reference to avoid copying large caches,
+        /// so ideally original solver should not be modified after this
+        /// @param[in] is ImageSolver
+        void setPreconditioners(const ImageSolver& is)
+        {
+            itsPreconditioners = is.itsPreconditioners;
+        }
+
     private:
         /// Instance of a preconditioner
         // IImagePreconditioner::ShPtr itsPreconditioner;

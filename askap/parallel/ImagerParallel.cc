@@ -857,8 +857,9 @@ namespace askap
                     // configure restore solver
                 boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
                 ASKAPDEBUGASSERT(template_solver);
-                ImageSolverFactory::configurePreconditioners(tmpset,ir);
-                ir->configureSolver(*template_solver);
+                // use existing preconditioners for pass 0, special restore ones for pass 1
+                if (pass>0) ImageSolverFactory::configurePreconditioners(tmpset,ir);
+                ir->configureSolver(*template_solver,pass==0);
                 ir->copyNormalEquations(*template_solver);
                 Quality q;
 
