@@ -27,6 +27,7 @@ VisWeightsMultiFrequency.cc
 WDependentGridderBase.cc
 WProjectVisGridder.cc
 WStackVisGridder.cc
+StackingGridderAdapter.cc
 )
 
 install (FILES
