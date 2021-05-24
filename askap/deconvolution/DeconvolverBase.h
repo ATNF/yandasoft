@@ -96,7 +96,7 @@ namespace askap {
 
                 /// @brief Set the initial model
                 /// @detail Set the model from which iteration will start
-                void setModel(const casacore::Array<T> model, const casacore::uInt term = 0);
+                void setModel(const casacore::Array<T>& model, const casacore::uInt term = 0);
 
                 /// @brief Get the current model
                 /// @detail Get the current model
@@ -198,7 +198,7 @@ namespace askap {
 
                 /// @brief obtain the number of terms
                 /// @return the number of terms to solve for
-                casacore::uInt nTerms() const { return itsNumberTerms;}
+                inline casacore::uInt nTerms() const { return itsNumberTerms;}
 
             private:
 
@@ -206,12 +206,22 @@ namespace askap {
                 casacore::uInt itsNumberTerms;
 
             protected:
+                /// @brief obtain peak psf position (for the 0th term if there are many)
+                /// @return peak position
+                inline casacore::IPosition getPeakPSFPosition() const {return itsPeakPSFPos;}
 
                 // Initialise for both constructors
                 void init(casacore::Vector<casacore::Array<T> >& dirty, casacore::Vector<casacore::Array<T> >& psf);
 
                 // Validate the various shapes to ensure consistency
                 void validateShapes();
+
+                /// @brief validate PSF, find peak value and position
+                /// @details It works with the zero-th term, if there are many
+                /// @param[in] slicer optional slicer if only a fraction of the PSF needs to be considered
+                /// the default constructed instance of a slicer results in the whole PSF being used.
+                /// @note this method updates itsPeakPSFPos and itsPeakPSFVal, this is why it's non-const
+                void validatePSF(const casacore::Slicer &slicer = casacore::Slicer());
 
                 casacore::Vector<casacore::Array<T> > itsDirty;
 
@@ -235,6 +245,7 @@ namespace askap {
                 /// The monitor used for the deconvolver
                 boost::shared_ptr<DeconvolverMonitor<T> > itsDM;
 
+            private:
                 // Peak and location of peak of PSF(0)
                 casacore::IPosition itsPeakPSFPos;
                 T itsPeakPSFVal;

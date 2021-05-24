@@ -318,17 +318,9 @@ namespace askap {
             const IPosition subPsfStride(2, 1, 1);
 
             Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            casacore::IPosition minPos;
-            casacore::IPosition maxPos;
-            T minVal, maxVal;
-            casacore::minMax(minVal, maxVal, minPos, maxPos, this->psf(0).nonDegenerate()(subPsfSlicer));
-            ASKAPLOG_DEBUG_STR(decbflogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
-            ASKAPLOG_DEBUG_STR(decbflogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
-            this->itsPeakPSFVal = maxVal;
-            this->itsPeakPSFPos(0) = maxPos(0);
-            this->itsPeakPSFPos(1) = maxPos(1);
+            this->validatePSF(subPsfSlicer);
 
-            const IPosition subPsfPeak(2, this->itsPeakPSFPos(0), this->itsPeakPSFPos(1));
+            const casacore::IPosition subPsfPeak = this->getPeakPSFPosition().getFirst(2);
             ASKAPLOG_DEBUG_STR(decbflogger, "Peak of PSF subsection at  " << subPsfPeak);
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of PSF subsection is " << subPsfShape);
 
@@ -593,13 +585,16 @@ namespace askap {
             // quite a while to figure this out (slow brain day) so it may be
             // that there are some edge cases for which it fails.
 
+            const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
+            ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
+
             for (uInt dim = 0; dim < 2; dim++) {
                 residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                 residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
                 // Now we have to deal with the PSF. Here we want to use enough of the
                 // PSF to clean the residual image.
-                psfStart(dim) = max(0, Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
-                psfEnd(dim) = min(Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
+                psfStart(dim) = max(0, Int(peakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
+                psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                   Int(psfShape(dim) - 1));
 
                 psfCrossTermsStart(dim) = psfStart(dim);

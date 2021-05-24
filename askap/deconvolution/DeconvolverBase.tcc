@@ -55,20 +55,52 @@ namespace askap {
 
         template<class T, class FT>
         DeconvolverBase<T, FT>::DeconvolverBase(Vector<Array<T> >& dirty, Vector<Array<T> >& psf) :
-                itsBMaj(0.0), itsBMin(0.0), itsBPa(0.0)
+                itsPeakPSFVal(0.), itsBMaj(0.0), itsBMin(0.0), itsBPa(0.0)
         {
             init(dirty, psf);
         }
 
         template<class T, class FT>
         DeconvolverBase<T, FT>::DeconvolverBase(Array<T>& dirty, Array<T>& psf) :
-                itsBMaj(0.0), itsBMin(0.0), itsBPa(0.0)
+                itsPeakPSFVal(0.), itsBMaj(0.0), itsBMin(0.0), itsBPa(0.0)
         {
             Vector<Array<T> > dirtyVec(1);
             dirtyVec(0) = dirty.nonDegenerate();
             Vector<Array<T> > psfVec(1);
             psfVec(0) = psf.nonDegenerate();
             init(dirtyVec, psfVec);
+        }
+        
+        /// @brief validate PSF, find peak value and position
+        /// @details It works with the zero-th term, if there are many
+        /// @param[in] slicer optional slicer if only a fraction of the PSF needs to be considered
+        /// the default constructed instance of a slicer results in the whole PSF being used.
+        /// @note this method updates itsPeakPSFPos and itsPeakPSFVal, this is why it's non-const
+        template<typename T, typename FT>
+        void DeconvolverBase<T, FT>::validatePSF(const casacore::Slicer &slicer) 
+        {
+            ASKAPLOG_INFO_STR(decbaselogger, "Validating PSF");
+            casacore::Array<T> psfArr = slicer == casacore::Slicer() ? psf(0) : psf(0).nonDegenerate()(slicer);
+
+            casacore::IPosition minPos;
+            casacore::IPosition maxPos;
+            T minVal, maxVal;
+            casacore::minMax(minVal, maxVal, minPos, maxPos, psfArr);
+
+            ASKAPASSERT(psfArr.shape().nelements() >= 2);
+            const Int nx(psfArr.shape()(0));
+            const Int ny(psfArr.shape()(1));
+
+            ASKAPLOG_INFO_STR(decbaselogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
+            ASKAPLOG_INFO_STR(decbaselogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
+
+            ASKAPDEBUGASSERT(maxPos.shape().nelements() >= 2);
+            if ((maxPos(0) != nx / 2) || (maxPos(1) != ny / 2)) {
+                ASKAPTHROW(AskapError, "Peak of PSF(0) is at " << maxPos << ": not at centre pixel: [" << nx / 2 << "," << ny / 2 << "]");
+            }
+
+            itsPeakPSFVal = maxVal;
+            itsPeakPSFPos = maxPos;
         }
 
         template<class T, class FT>
@@ -104,24 +136,7 @@ namespace askap {
                 model(term).set(T(0.0));
             }
 
-            casacore::IPosition minPos;
-            casacore::IPosition maxPos;
-            T minVal, maxVal;
-            ASKAPLOG_INFO_STR(decbaselogger, "Validating PSF");
-            casacore::minMax(minVal, maxVal, minPos, maxPos, psf(0));
-
-            const Int nx(psf(0).shape()(0));
-            const Int ny(psf(0).shape()(1));
-
-            ASKAPLOG_INFO_STR(decbaselogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
-            ASKAPLOG_INFO_STR(decbaselogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
-
-            if ((maxPos(0) != nx / 2) || (maxPos(1) != ny / 2)) {
-                ASKAPTHROW(AskapError, "Peak of PSF(0) is at " << maxPos << ": not at centre pixel: [" << nx / 2 << "," << ny / 2 << "]");
-            }
-
-            itsPeakPSFVal = maxVal;
-            itsPeakPSFPos = maxPos;
+            validatePSF();
 
             itsDS = boost::shared_ptr<DeconvolverState<T> >(new DeconvolverState<T>());
             ASKAPASSERT(itsDS);
@@ -153,7 +168,7 @@ namespace askap {
         }
 
         template<class T, class FT>
-        void DeconvolverBase<T, FT>::setModel(const Array<T> model, const uInt term)
+        void DeconvolverBase<T, FT>::setModel(const Array<T>& model, const uInt term)
         {
             ASKAPCHECK(term < nTerms(), "Term " << term << " greater than allowed " << nTerms());
             itsModel(term) = model.nonDegenerate().copy();
@@ -284,42 +299,17 @@ namespace askap {
         template<class T, class FT>
         void DeconvolverBase<T, FT>::validateShapes()
         {
-            casacore::IPosition minPos;
-            casacore::IPosition maxPos;
-            T minVal, maxVal;
-            casacore::minMax(minVal, maxVal, minPos, maxPos, psf(0));
-            const Int nx(psf(0).shape()(0));
-            const Int ny(psf(0).shape()(1));
-            if ((maxPos(0) != nx / 2) || (maxPos(1) != ny / 2)) {
-                ASKAPTHROW(AskapError, "Peak of PSF(0) is at " << maxPos << ": not at centre pixel: [" << nx / 2 << "," << ny / 2 << "]");
-            }
-
             for (uInt term = 0; term < nTerms(); ++term) {
-                if (!(dirty(term).shape().size())) {
-                    ASKAPTHROW(AskapError, "Dirty image has zero size");
-                }
-                if (!(psf(term).shape().size())) {
-                    ASKAPTHROW(AskapError, "PSF image has zero size");
-                }
-                if (!(psf(term).shape()[0] == dirty().shape()[0]) || !(psf(term).shape()[1] == dirty().shape()[1])) {
-                    ASKAPTHROW(AskapError, "PSF has different shape from dirty image");
-                }
+                 ASKAPCHECK(dirty(term).shape().size() > 0, "Dirty image has zero size for term="<<term);
+                 ASKAPCHECK(psf(term).shape().size() > 0, "PSF image has zero size for term="<<term);
+                 ASKAPCHECK(psf(term).shape() == dirty().shape(), "PSF has different shape from dirty image for term="<<term);
 
-                // The model and dirty image shapes only need to agree on the
-                // first two axes
-                if (!(model(term).shape().size())) {
-                    ASKAPTHROW(AskapError, "Model has zero size");
-                }
-                if (!(model(term).shape()[0] == dirty().shape()[0]) || !(model(term).shape()[1] == dirty().shape()[1])) {
-                    ASKAPTHROW(AskapError, "Model has different shape from dirty image");
-                }
+                 // The model and dirty image shapes only need to agree on the first two axes
+                 ASKAPCHECK(model(term).shape().size() > 0, "Model has zero size for term="<<term);
+                 ASKAPCHECK(model(term).shape().getFirst(2) == dirty().shape().getFirst(2), "Model has different shape from dirty image for term="<<term);
             }
-            if (!itsPeakPSFPos.size()) {
-                ASKAPTHROW(AskapError, "Position of PSF peak not defined " << itsPeakPSFPos);
-            }
-            if (itsPeakPSFVal == 0.0) {
-                ASKAPTHROW(AskapError, "PSF peak is zero");
-            }
+            ASKAPCHECK(itsPeakPSFPos.size() > 0, "Position of PSF peak not defined " << itsPeakPSFPos);
+            ASKAPCHECK(itsPeakPSFVal > 0., "PSF peak is supposed to be positive");
         }
 
         template<class T, class FT>
@@ -329,7 +319,11 @@ namespace askap {
 
             // Always check shapes on initialise
             validateShapes();
-
+            // MV: after I removed another psf peak search from validateShapes some unit tests started to fail
+            // because an exception is thrown. It looks like this method can be another entry point (for no good reason),
+            // running psf validation here explicitly. There is some technical debt here, perhaps more thoughts are needed on
+            // how to design interfaces of these classes
+            validatePSF();
         }
 
         template<class T, class FT>
