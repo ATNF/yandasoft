@@ -223,7 +223,7 @@ namespace askap {
             const uInt nScales(this->itsBasisFunction->numberBases());
             const IPosition l1Shape(3, this->model().shape()(0), this->model().shape()(1), nScales);
 
-            this->itsL1image.resize(this->itsNumberTerms);
+            this->itsL1image.resize(this->nTerms());
             this->itsL1image(0).resize(l1Shape);
             this->itsL1image(0).set(0.0);
         }

@@ -112,14 +112,14 @@ namespace askap {
 
                 /// @brief Update only the dirty image
                 /// @detail Update an existing deconvolver for a changed dirty image
-                /// @param[in] dirty Dirty image (array)
+                /// @param[in] newDirty Dirty image (array)
                 /// @param[in] term term to update
-                virtual void updateDirty(casacore::Array<T>& dirty, const casacore::uInt term = 0);
+                virtual void updateDirty(const casacore::Array<T>& newDirty, const casacore::uInt term = 0);
 
                 /// @brief Update only the dirty images
                 /// @detail Update an existing deconvolver for a changed dirty images.
-                /// @param[in] dirty Dirty image (vector of arrays)
-                virtual void updateDirty(casacore::Vector<casacore::Array<T> >& dirty);
+                /// @param[in] newDirty Dirty image (vector of arrays)
+                virtual void updateDirty(const casacore::Vector<casacore::Array<T> >& newDirty);
 
                 /// @brief Set the weight image
                 /// @detail The weights image (actually the sqrt) is used to
@@ -196,10 +196,16 @@ namespace askap {
                 /// @param[in] parset parset
                 virtual void configure(const LOFAR::ParameterSet &parset);
 
-            protected:
+                /// @brief obtain the number of terms
+                /// @return the number of terms to solve for
+                casacore::uInt nTerms() const { return itsNumberTerms;}
+
+            private:
 
                 // Number of terms in the expansion > 0
                 casacore::uInt itsNumberTerms;
+
+            protected:
 
                 // Initialise for both constructors
                 void init(casacore::Vector<casacore::Array<T> >& dirty, casacore::Vector<casacore::Array<T> >& psf);
