@@ -43,6 +43,7 @@ namespace synthesis {
 class DeconvolverBaseTest : public CppUnit::TestFixture
 {
   CPPUNIT_TEST_SUITE(DeconvolverBaseTest);
+  CPPUNIT_TEST(testCasacoreAssumptions);
   CPPUNIT_TEST(testCreate);
   CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
   CPPUNIT_TEST_SUITE_END();
@@ -71,6 +72,58 @@ public:
       itsWeight.reset();
       itsPsf.reset();
       itsDirty.reset();
+  }
+  
+  void testCasacoreAssumptions() {
+     // MV: this test is not about DeconvolverBase, but rather about assumptions
+     // about casacore methods used throughout the deconvolve package which were not documented well
+     IPosition shape(2,2,3);
+     Array<Float> realArr(shape, 1.);
+     Array<Complex> complexArr(shape, Complex(2.,3.));
+     CPPUNIT_ASSERT(realArr.contiguousStorage());
+     CPPUNIT_ASSERT(complexArr.contiguousStorage());
+     for (Array<Float>::const_iterator ci = realArr.begin(); ci != realArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(1., *ci, 1e-10);
+     }
+     for (Array<Complex>::const_iterator ci = complexArr.begin(); ci != complexArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(2., real(*ci), 1e-10);
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(3., imag(*ci), 1e-10);
+     }
+     // this method overwrites just real part leaving imaginary part intact
+     setReal(complexArr, realArr);
+     for (Array<Complex>::const_iterator ci = complexArr.begin(); ci != complexArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(1., real(*ci), 1e-10);
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(3., imag(*ci), 1e-10);
+     }
+     // this method just sets all values to the constant 
+     realArr.set(5.);
+     for (Array<Float>::const_iterator ci = realArr.begin(); ci != realArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(5., *ci, 1e-10);
+     }
+     // and it shouldn't propagate to the complex array (i.e. no reference semantics here)
+     for (Array<Complex>::const_iterator ci = complexArr.begin(); ci != complexArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(1., real(*ci), 1e-10);
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(3., imag(*ci), 1e-10);
+     }
+
+     // special array with twice as many elements on the first axis
+     Array<Float> realArr2(IPosition(2,shape(0)*2, shape(1)), 5.);
+     int index = 0;
+     for (Array<Float>::iterator it = realArr2.begin(); it != realArr2.end(); ++it, ++index) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(5., *it, 1e-10);
+          if (index % 2 == 0) {
+              *it = 10.;
+          }
+     }
+
+     // this method packs real array of double length into a complex array
+     // we also effectively test that 
+     RealToComplex(complexArr, realArr2);
+     for (Array<Complex>::const_iterator ci = complexArr.begin(); ci != complexArr.end(); ++ci) {
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(10., real(*ci), 1e-10);
+          CPPUNIT_ASSERT_DOUBLES_EQUAL(5., imag(*ci), 1e-10);
+     }
+     
   }
 
   void testCreate() {

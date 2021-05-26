@@ -245,16 +245,15 @@ namespace askap {
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
-            Array<FT> residualFFT(this->dirty().shape().nonDegenerate());
-            residualFFT.set(FT(0.0));
+            Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), 0.);
             casacore::setReal(residualFFT, this->dirty().nonDegenerate());
             scimath::fft2d(residualFFT, true);
 
-            Array<FT> work(this->model().nonDegenerate().shape());
+            Array<FT> work(this->model().nonDegenerate().shape(), ArrayInitPolicies::NO_INIT);
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
@@ -298,7 +297,7 @@ namespace askap {
             const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
@@ -308,7 +307,7 @@ namespace askap {
             this->itsScaleFlux.set(T(0));
 
             // Calculate XFR for the subsection only
-            Array<FT> subXFR(subPsfShape);
+            Array<FT> subXFR(subPsfShape, 0.);
 
             const uInt nx(this->psf().shape()(0));
             const uInt ny(this->psf().shape()(1));

@@ -413,7 +413,7 @@ namespace askap {
             for (uInt base = 0; base < nBases; base++) {
                  // Calculate transform of basis function [nx,ny,nbases]
                  const Matrix<T> bfRef(this->itsBasisFunction->basisFunction(base));
-                 Matrix<FT> basisFunctionFFT(bfRef.shape().nonDegenerate(2));
+                 Matrix<FT> basisFunctionFFT(bfRef.shape().nonDegenerate(2), 0.);
                  casacore::setReal(basisFunctionFFT, bfRef);
                  scimath::fft2d(basisFunctionFFT, true);
 
@@ -423,7 +423,7 @@ namespace askap {
                  for (uInt term = 0; term < this->nTerms(); term++) {
 
                     // Calculate transform of residual image
-                    Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate());
+                    Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate(), 0.);
                     casacore::setReal(residualFFT, this->dirty(term).nonDegenerate());
                     scimath::fft2d(residualFFT, true);
 
@@ -580,8 +580,7 @@ namespace askap {
             Vector<Array<FT> > subXFRVec(2*this->nTerms() - 1);
             for (uInt term1 = 0; term1 < subXFRVec.nelements(); ++term1) {
                 subXFRVec(term1).resize(subPsfShape);
-                // MV: technically, we don't need to set the values to zero, setReal would overwrite them
-                //subXFRVec(term1).set(0.0);
+                subXFRVec(term1).set(0.0);
                 casacore::setReal(subXFRVec(term1), this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
                 scimath::fft2d(subXFRVec(term1), true);
             }

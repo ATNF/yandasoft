@@ -320,7 +320,7 @@ namespace askap {
             // Always check shapes on initialise
             validateShapes();
             // MV: after I removed another psf peak search from validateShapes some unit tests started to fail
-            // because an exception is thrown. It looks like this method can be another entry point (for no good reason),
+            // because an exception is not thrown. It looks like this method can be another entry point (for no good reason),
             // running psf validation here explicitly. There is some technical debt here, perhaps more thoughts are needed on
             // how to design interfaces of these classes
             validatePSF();
@@ -337,21 +337,29 @@ namespace askap {
             ASKAPCHECK(model.nelements() == nTerms(), "Number of terms in model " << model.nelements()
                            << " not same as number of terms specified "
                            << nTerms());
+            ASKAPASSERT(nTerms() > 0);
+            Array<FT> xfr(psf(0).shape(), ArrayInitPolicies::NO_INIT);
+            Array<FT> work(model(0).shape(), ArrayInitPolicies::NO_INIT);
 
             for (uInt term = 0; term < nTerms(); ++term) {
-                Array<FT> xfr;
-                xfr.resize(psf(term).shape());
-                casacore::setReal(xfr, psf(term));
-                scimath::fft2d(xfr, true);
-                Array<FT> work;
-                // Find residuals for current model model
-                work.resize(model(term).shape());
-                work.set(FT(0.0));
-                casacore::setReal(work, model(term));
-                scimath::fft2d(work, true);
-                work = xfr * work;
-                scimath::fft2d(work, false);
-                dirty(term) = dirty(term) - real(work);
+                 const Array<T>& thisTermPSF = psf(term);
+                 if (thisTermPSF.shape() != xfr.shape()) {
+                     xfr.resize(thisTermPSF.shape());
+                 }
+                 xfr.set(0.);
+                 casacore::setReal(xfr, thisTermPSF);
+                 scimath::fft2d(xfr, true);
+                 // Find residuals for current model model
+                 const Array<T>& thisTermModel = model(term);
+                 if (thisTermModel.shape() != work.shape()) {
+                     work.resize(thisTermModel.shape());
+                 }
+                 work.set(0.);
+                 casacore::setReal(work, thisTermModel);
+                 scimath::fft2d(work, true);
+                 work *= xfr;
+                 scimath::fft2d(work, false);
+                 dirty(term) -= real(work);
             }
         }
 
