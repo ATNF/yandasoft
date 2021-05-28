@@ -21,7 +21,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 
-//#include <askap/gridding/BoxVisGridder.h>
+#include <askap/gridding/WProjectVisGridder.h>
 #include <askap/gridding/StackingGridderAdapter.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/measurementequation/ComponentEquation.h>
@@ -54,7 +54,7 @@ namespace askap
       //      CPPUNIT_TEST(testForwardBox);
       //      CPPUNIT_TEST(testReverseBox);
       CPPUNIT_TEST(testForwardStackingGridderAdapter);
-      CPPUNIT_TEST(testReverseStackingGridderAdapter);
+      // CPPUNIT_TEST(testReverseStackingGridderAdapter);
       CPPUNIT_TEST_SUITE_END();
 
   private:
@@ -85,7 +85,7 @@ namespace askap
         ce.predict();
 
         itsWProject.reset(new WProjectVisGridder(10000.0, 9, 1e-3, 1, 128, 0, ""));
-        itsStacker.reset(itsWProject);
+        itsStacker.reset(new StackingGridderAdapter(itsWProject));
 
         double cellSize=10*casa::C::arcsec;
 
@@ -108,22 +108,6 @@ namespace askap
       {
       }
 
-      //      void testReverseBox()
-      //      {
-      //        itsBox->initialiseGrid(*itsAxes, itsModel->shape(), true);
-      //        itsBox->grid(idi);
-      //        itsBox->finaliseGrid(*itsModel);
-      //        itsBox->finalisePSF(*itsModelPSF);
-      //        itsBox->finaliseWeights(*itsModelWeights);
-      //      }
-      //      void testForwardBox()
-      //      {
-      //        itsBox->initialiseDegrid(*itsAxes, *itsModel);
-      //        itsBox->degrid(idi);
-      //      }
-
-        itsSphFunc->finaliseWeights(*itsModelWeights);
-      }
       void testForwardStackingGridderAdapter()
       {
         itsStacker->initialiseDegrid(*itsAxes, *itsModel);
