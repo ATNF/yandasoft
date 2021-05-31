@@ -88,7 +88,6 @@ class CdeconvolverApp : public askap::Application
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsModelCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
     
-    
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
 
         const bool itsInterp = true;
@@ -96,7 +95,14 @@ class CdeconvolverApp : public askap::Application
     
         void getPSF(casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &buffer );
     
-        void doTheWork(const LOFAR::ParameterSet, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &outpsf, casacore::Array<casacore::Float> &dirty, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &restored);
+        void doTheWork(const LOFAR::ParameterSet,
+                       casacore::Array<casacore::Complex> &buffer,
+                       casacore::Array<casacore::Float> &psfArray,
+                       casacore::Array<casacore::Complex> &pcfArray,
+                       casacore::Array<casacore::Float> &outpsf,
+                       casacore::Array<casacore::Float> &dirty,
+                       casacore::Array<casacore::Float> &model,
+                       casacore::Array<casacore::Float> &restored);
 
         std::pair<int, int> get_channel_allocation(askap::askapparallel::AskapParallel &comms, int nchannels)
         {
@@ -106,7 +112,8 @@ class CdeconvolverApp : public askap::Application
             auto rem = nchannels % nranks;
 
             if (rem > 0) {
-                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << nranks << " not a factor of number of channels: "<< nchannels);
+                ASKAPLOG_WARN_STR(logger,"Unbalanced allocation: num of ranks:" << nranks <<
+                                         " not a factor of number of channels: "<< nchannels);
             }
             // Simple round-robin: the first `rem` ranks receive an extra item
             // when rem > 0. That means that:
@@ -135,14 +142,12 @@ class CdeconvolverApp : public askap::Application
         int _run(int argc, char *argv[], askap::askapparallel::AskapParallel &comms)
         {
             StatReporter stats;
-           
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
            
             ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
             
             // ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
-                
             
             // Need some metadata for the output cube constructions
             
@@ -158,16 +163,11 @@ class CdeconvolverApp : public askap::Application
             const std::string outModelCubeName = subset.getString("model","model");
             const std::string outRestoredCubeName = subset.getString("restored","restored");
             
-            
-           
-            
             // WorkArrays
             casacore::Array<casacore::Float> psfArray;
             casacore::Array<casacore::Complex> pcfArray;
             casacore::Array<casacore::Complex> psfGridBuffer;
             casacore::Array<casacore::Complex> buffer;
-            
-            
             
             // Lets load in a cube
             casacore::PagedImage<casacore::Complex> grid(gridCubeName);
@@ -180,8 +180,6 @@ class CdeconvolverApp : public askap::Application
             int nchanCube = trc[3];
             
             if (comms.isMaster()) { // only the master makes the output
-            
-                
                 Int pixelAxis,worldAxis,coordinate;
                 CoordinateUtil::findSpectralAxis(pixelAxis,worldAxis,coordinate,grid.coordinates());
                 const SpectralCoordinate &sc = grid.coordinates().spectralCoordinate(coordinate);
@@ -200,10 +198,14 @@ class CdeconvolverApp : public askap::Application
                 ASKAPLOG_INFO_STR(logger,"Freq inc (CDELT) " << cdelt);
                 
                 // create the output cubes
-                itsPsfCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outPsfCubeName));
-                itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outResidCubeName));
-                itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outModelCubeName));
-                itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, nchanCube, f0, cdelt,outRestoredCubeName));
+                itsPsfCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,
+                    nchanCube, f0, cdelt, outPsfCubeName));
+                itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                    nchanCube, f0, cdelt, outResidCubeName));
+                itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                    nchanCube, f0, cdelt, outModelCubeName));
+                itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                    nchanCube, f0, cdelt, outRestoredCubeName));
             }
             else {
                 // this should work fine as the cubes will exist by the time
@@ -217,7 +219,8 @@ class CdeconvolverApp : public askap::Application
             // What fraction of the full problem does a rank have
             int firstChannel, numChannelsLocal;
             std::tie(firstChannel, numChannelsLocal) = get_channel_allocation(comms, nchanCube);
-            ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " << firstChannel << " and is " << numChannelsLocal << " in size");
+            ASKAPLOG_INFO_STR(logger,"Rank " << comms.rank() << " - RankAllocation starts at " <<  firstChannel <<
+                                     " and is " << numChannelsLocal << " in size");
             bool firstPassForMaster = true;
 
             for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
@@ -239,8 +242,6 @@ class CdeconvolverApp : public askap::Application
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
                 
-                
-                
                 psfgrid.getSlice(psfGridBuffer,slicer);
                 pcf.getSlice(pcfArray,slicer);
                 grid.doGetSlice(buffer, slicer);
@@ -251,7 +252,6 @@ class CdeconvolverApp : public askap::Application
                 for ( ; planeIter.hasMore(); planeIter.next()) {
                     /// FIXME: this is supposed to loop over the polarisations as well as channels
                     /// FIXME: but i have not sorted out the output indexes for this to work
-                    
                     
                     casacore::IPosition curpos = planeIter.position();
                     ASKAPLOG_INFO_STR(logger, "Processing from position: " << curpos);
@@ -290,9 +290,6 @@ class CdeconvolverApp : public askap::Application
                     // write out the slice
                     // FIXME: THis is the issue with npol I need to use some position
                     
-                    
-                    
-                    
                     itsPsfCube->writeSlice(psfout, channel);
                     itsResidualCube->writeSlice(dirty, channel);
                     itsModelCube->writeSlice(model, channel);
@@ -320,7 +317,8 @@ class CdeconvolverApp : public askap::Application
         }
 };
             
-void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &buffer ) {
+void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,
+                             casacore::Array<casacore::Complex> &buffer ) {
    
     casacore::Array<double> dBuffer(buffer.shape());
 
@@ -337,7 +335,14 @@ void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,casacore
     
 }
 
-void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Array<casacore::Complex> &buffer, casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &pcfArray, casacore::Array<casacore::Float> &outpsf, casacore::Array<casacore::Float> &dirty, casacore::Array<casacore::Float> &model, casacore::Array<casacore::Float> &restored) {
+void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
+                                casacore::Array<casacore::Complex> &buffer,
+                                casacore::Array<casacore::Float> &psfArray,
+                                casacore::Array<casacore::Complex> &pcfArray,
+                                casacore::Array<casacore::Float> &outpsf,
+                                casacore::Array<casacore::Float> &dirty,
+                                casacore::Array<casacore::Float> &model,
+                                casacore::Array<casacore::Float> &restored) {
     
     ASKAPLOG_INFO_STR(logger,"Array Shape: " << buffer.shape());
     //double norm = buffer.nelements()/max(psfArray);
@@ -482,7 +487,8 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Arra
                     // the image is rectangular. Although the gaussian taper is symmetric in
                     // angular coordinates, it will be elongated along the vertical axis in
                     // the uv-coordinates.
-                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol));
+                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0], yFactor/taper[0],
+                                                             0., isPsfSize, cutoff, tol));
                     //solver->addPreconditioner(IImagePreconditioner::ShPtr(
                     //    new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol)));
                   } // xFactor!=yFactor
@@ -531,9 +537,51 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Arra
     } else {
         ASKAPTHROW(AskapError, "Unknown Clean algorithm " << algorithm);
     }
-    
-    deconvolver->configure(subset.makeSubset("solver.Clean."));
-    
+       
+    // copy cleaning parameters and add any extra stopping criteria
+    LOFAR::ParameterSet cleanset = subset.makeSubset("solver.Clean.");
+
+    // could make the following a function that returns the update parset and add to configure line
+    const std::string parName = "threshold.minorcycle";
+    if (subset.isDefined(parName)) {
+        const std::vector<std::string> thresholds = subset.getStringVector(parName);
+        ASKAPCHECK(thresholds.size() && (thresholds.size()<3), "Parameter "<<parName<<
+                   " must contain either 1 element or a vector of 2 elements, you have "<< thresholds.size());
+        bool absoluteThresholdDefined = false;
+        bool relativeThresholdDefined = false;
+        for (std::vector<std::string>::const_iterator ci = thresholds.begin();
+             ci != thresholds.end(); ++ci) {
+
+            casacore::Quantity cThreshold;
+            casacore::Quantity::read(cThreshold, *ci);
+            cThreshold.convert();
+            if (cThreshold.isConform("Jy")) {
+                ASKAPCHECK(!absoluteThresholdDefined, "Parameter "<<parName<<
+                           " defines absolute threshold twice ("<<*ci<<"). Deep cleaning not supported.");
+                absoluteThresholdDefined = true;
+                std::ostringstream pstr;
+                pstr<<cThreshold.getValue("Jy");
+                cleanset.add("absolutethreshold", pstr.str().c_str());
+                ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
+                                  pstr.str().c_str()<<" Jy");
+            } else if (cThreshold.isConform("")) {
+                ASKAPCHECK(!relativeThresholdDefined, "Parameter "<<parName<<
+                           " defines relative threshold twice ("<<*ci<<")");
+                relativeThresholdDefined = true;
+                std::ostringstream pstr;
+                pstr<<cThreshold.getValue();
+                cleanset.add("fractionalthreshold", pstr.str().c_str());
+                ASKAPLOG_INFO_STR(logger, "Will stop minor cycle at the relative threshold of "<<
+                                  cThreshold.getValue()*100.<<"\%");
+            } else {
+                ASKAPTHROW(AskapError, "Unable to convert units in the quantity "<<
+                           cThreshold<<" to either Jy or a dimensionless quantity");
+            }
+        }
+    }
+
+    deconvolver->configure(cleanset);
+
     deconvolver->deconvolve();
     
     dirty = deconvolver->dirty().copy();
@@ -547,7 +595,8 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset, casacore::Arra
     
 }
 
-void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int support=3, int alpha = 1, bool itsInterp = true)
+void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int support=3, int alpha = 1,
+                                         bool itsInterp = true)
 {
     casacore::IPosition itsShape = grid.shape();
     ASKAPDEBUGASSERT(itsShape.nelements()>=2);
