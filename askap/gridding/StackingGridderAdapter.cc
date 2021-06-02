@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
-
+#include <askap/profile/AskapProfiler.h>
 
 #include "StackingGridderAdapter.h"
 
@@ -24,7 +24,10 @@ using namespace askap::accessors;
 /// @param[in] gridder a shared pointer to the gridder to be wrapped by this adapter
 /// @param[in] nsteps how many time-steps to buffer
 StackingGridderAdapter::StackingGridderAdapter(const boost::shared_ptr<IVisGridder> &gridder) {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  
+  ASKAPCHECK(gridder, "SnapShotImagingGridderAdapter should only be initialised with a valid gridder");
+  itsGridder = gridder->clone();
+  
 }
 
 /// @brief copy constructor
@@ -32,13 +35,16 @@ StackingGridderAdapter::StackingGridderAdapter(const boost::shared_ptr<IVisGridd
 /// which is a non-trivial type
 /// @param[in] other an object to copy from
 StackingGridderAdapter::StackingGridderAdapter(const StackingGridderAdapter &other) {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  this->itsGridder = other.itsGridder->clone();
 }
 
 /// @brief clone a copy of this gridder
 /// @return shared pointer to the clone
 boost::shared_ptr<IVisGridder> StackingGridderAdapter::clone() {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  
+  boost::shared_ptr<StackingGridderAdapter> newOne(new StackingGridderAdapter(*this));
+  return newOne;
+  
 }
 
 /// @brief initialise the gridding
@@ -49,23 +55,23 @@ boost::shared_ptr<IVisGridder> StackingGridderAdapter::clone() {
 
 void StackingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
              const casacore::IPosition& shape, const bool dopsf,
-                            const bool)
+                            const bool dopcf)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->initialiseGrid(axes,shape,dopsf,dopcf);
 }
 
 /// @brief grid the visibility data.
 /// @param[in] acc const data accessor to work with
 void StackingGridderAdapter::grid(accessors::IConstDataAccessor& acc)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->grid(acc);
 }
 
 /// @brief form the final output image
 /// @param[in] out output double precision image or PSF
 void StackingGridderAdapter::finaliseGrid(casacore::Array<imtype>& out)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->finaliseGrid(out);
 }
 
 /// @brief finalise weights
@@ -74,7 +80,7 @@ void StackingGridderAdapter::finaliseGrid(casacore::Array<imtype>& out)
 /// @param[in] out output double precision sum of weights images
 void StackingGridderAdapter::finaliseWeights(casacore::Array<imtype>& out)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->finaliseWeights(out);
 }
 
 /// @brief initialise the degridding
@@ -83,34 +89,36 @@ void StackingGridderAdapter::finaliseWeights(casacore::Array<imtype>& out)
 void StackingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
        const casacore::Array<imtype>& image)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  
+  itsGridder->initialiseDegrid(axes, image);
+ 
 }
 
 /// @brief make context-dependant changes to the gridder behaviour
 /// @param[in] context context description
 void StackingGridderAdapter::customiseForContext(const std::string &context)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->customiseForContext(context);
 }
 
 /// @brief set visibility weights
 /// @param[in] viswt shared pointer to visibility weights
 void StackingGridderAdapter::initVisWeights(const IVisWeights::ShPtr &viswt)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->initVisWeights( viswt);
 }
 
 /// @brief degrid the visibility data.
 /// @param[in] acc non-const data accessor to work with
 void StackingGridderAdapter::degrid(accessors::IDataAccessor& acc)
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->degrid(acc);
 }
 
 /// @brief finalise degridding
 void StackingGridderAdapter::finaliseDegrid()
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->finaliseDegrid();
 }
 
 /// @brief check whether the model is empty
@@ -119,13 +127,13 @@ void StackingGridderAdapter::finaliseDegrid()
 /// @brief true, if the model is empty
 bool StackingGridderAdapter::isModelEmpty() const
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  itsGridder->isModelEmpty();
 }
 
 /// @ brief check whether the adapter can stack
 bool StackingGridderAdapter::isStackingGridder() const
 {
-  ASKAPTHROW(AskapError, "This StackingGridderAdapter method is not yet implemented");
+  return true;
 }
 
 
