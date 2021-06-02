@@ -54,7 +54,7 @@ namespace askap
       //      CPPUNIT_TEST(testForwardBox);
       //      CPPUNIT_TEST(testReverseBox);
       CPPUNIT_TEST(testForwardStackingGridderAdapter);
-      // CPPUNIT_TEST(testReverseStackingGridderAdapter);
+      CPPUNIT_TEST(testReverseStackingGridderAdapter);
       CPPUNIT_TEST_SUITE_END();
 
   private:
@@ -108,6 +108,22 @@ namespace askap
       {
       }
 
+      //      void testReverseBox()
+      //      {
+      //        itsBox->initialiseGrid(*itsAxes, itsModel->shape(), true);
+      //        itsBox->grid(idi);
+      //        itsBox->finaliseGrid(*itsModel);
+      //        itsBox->finalisePSF(*itsModelPSF);
+      //        itsBox->finaliseWeights(*itsModelWeights);
+      //      }
+      //      void testForwardBox()
+      //      {
+      //        itsBox->initialiseDegrid(*itsAxes, *itsModel);
+      //        itsBox->degrid(idi);
+      //      }
+
+        itsSphFunc->finaliseWeights(*itsModelWeights);
+      }
       void testForwardStackingGridderAdapter()
       {
         itsStacker->initialiseDegrid(*itsAxes, *itsModel);
