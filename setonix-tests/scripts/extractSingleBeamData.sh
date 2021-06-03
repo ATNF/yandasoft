@@ -9,7 +9,7 @@
 
 usage()
 {
-    echo "usage: sh $0 [[[-p path] [-b beam] [-w workDir] [-d dryRun]] | [-h]]"
+    echo "usage: sh $0 [[[-p path] [-b beam] [-w workDir] [-d dryRun] [-t tapeDir] [-o outDirName]]| [-h]]"
 }
 
 # Main script begins here: 
@@ -18,6 +18,9 @@ path=""
 beamID=""
 workDir="$(dirname $(pwd))/$(basename $(pwd))"
 dryRun=1
+
+tapeDir=""
+outDirName="msdata"
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -29,6 +32,12 @@ while [ "$1" != "" ]; do
                                 ;;
         -w | --workDir )        shift 
 		                workDir="$1"
+                                ;;
+        -t | --tapeDir )        shift 
+		                tapeDir="$1"
+                                ;;
+        -o | --outDirName )     shift 
+		                outDirName="$1"
                                 ;;
         -d | --dryRun )         shift 
 		                DRY_RUN="$1"
@@ -43,7 +52,8 @@ while [ "$1" != "" ]; do
 done
 
 workDir="$(dirname $workDir)/$(basename $workDir)"
-
+path="$(dirname $path)/$(basename $path)"
+outDirName="$(basename $outDirName)"
 # Sanity checks: 
 #================================================================
 if [ ! -e "${workDir}" ];
@@ -60,6 +70,7 @@ fi
 if [ "${path}" == "" ] || [ ! -e "${path}" ];
 then
     echo "ERROR - Invalid path to raw ms data: $path"
+    echo "pwd: $(pwd)"
     usage
     exit 1
 fi
@@ -97,16 +108,37 @@ copyScript="${scriptDir}/${copyScript}"
 sedstr="s/\.sh/_copyLog_${dateStr}\.log/g"
 copyLog="$(echo $0 |sed -e ${sedstr})"
 copyLog="${logDir}/${copyLog}"
-echo ${copyScript}
-echo ${copyLog}
+echo "Copy script: ${copyScript}"
+echo "    logfile: ${copyLog}"
 
-# Define destination directory (relative to workDir):
-destDir="${workDir}/msdata"
-mkdir -p "${destDir}"
+# Define destination directory (relative to workDir OR specify a tapeDir):
+if [ "${tapeDir}" == "" ];
+then
+    copyCommand="module load askaputils
+"
+    copyMethod="mcp.sh"
+    copyCommand="${copyCommand}
+
+cd ${workDir}
+# Create outDirName and change dir to outDirName
+mkdir -p ${outDirName}
+cd ${outDirName}
+"
+else
+    backup_mode="tape"
+    copyMethod="put"
+    copyCommand="cd ${tapeDir}
+mkdir ${outDirName}
+cd ${outDirName}
+"
+fi
+
+
 echo "  workDir: ${workDir}"
-echo "  destDir: ${destDir}"
+echo "  destDir: ${outDirName}"
 echo "      log: ${copyLog}"
 echo "   script: ${copyScript}"
+
 #================================================================
 
 # For each ms, find out the matching beamID that user specified: 
@@ -117,7 +149,6 @@ msOutList=""
 touch "${copyScript}"
 touch "${copyLog}"
 
-copyCommand="module load askaputils"
 for (( iMS=0; iMS<$nMS; iMS++ ))
 do
     beamNow=$(msInfo.py -m "${path}/${msList[$iMS]}" -q beam)
@@ -127,10 +158,15 @@ do
     then
         msOutList="${msOutList} 
 ${path}/${msNow}"
-        if [ "${destDir}" != "" ] && [ -e "${destDir}" ];
-	then
+        if [ "${backup_mode}" != "tape" ];then 
+	    if [ "${outDirName}" != "" ];
+	    then
+                copyCommand="${copyCommand}
+${copyMethod} ${path}/${msNow} ."
+            fi
+	else 
             copyCommand="${copyCommand}
-mcp.sh ${path}/${msNow} ${destDir}/."
+${copyMethod} ${path}/${msNow}"
         fi
     fi
 done
@@ -144,7 +180,15 @@ EOFCOPY
 if [ "${DRY_RUN}" == "0" ];
 then
     echo "Copying data using script: ${copyScript}"
-    #source ${copyScript}
+    if [ "${backup_mode}" == "tape" ];
+    then
+	    echo "Will archive data to tape using pshell..."
+            module load askaputils 
+	    pshell -i ${copyScript}
+    else
+	    echo "Will copy data to local disk using mcp.sh..."
+	    sh ${copyScript}
+    fi
 else
     echo "This was a dry run. To copy, set dry run option to false. "
 fi
