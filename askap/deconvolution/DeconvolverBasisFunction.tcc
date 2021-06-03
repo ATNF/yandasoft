@@ -185,8 +185,8 @@ namespace askap {
             } else if (this->itsDecouplingAlgorithm == "residuals") {
                 // Decoupling using inverse coupling matrix applied to basis and residuals
                 ASKAPLOG_INFO_STR(decbflogger, "Decoupling using inverse coupling matrix applied to basis and residuals");
-                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->basisFunction()));
-                this->itsBasisFunction->basisFunction() = invBF.copy();
+                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->allBasisFunctions()));
+                this->itsBasisFunction->allBasisFunctions() = invBF.copy();
 
                 const Array<T> invRes(applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction));
                 this->itsResidualBasisFunction = invRes.copy();
@@ -223,7 +223,7 @@ namespace askap {
             const uInt nScales(this->itsBasisFunction->numberBases());
             const IPosition l1Shape(3, this->model().shape()(0), this->model().shape()(1), nScales);
 
-            this->itsL1image.resize(this->itsNumberTerms);
+            this->itsL1image.resize(this->nTerms());
             this->itsL1image(0).resize(l1Shape);
             this->itsL1image(0).set(0.0);
         }
@@ -239,22 +239,21 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating cache of images");
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->allBasisFunctions().shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
+            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
-            Array<FT> residualFFT(this->dirty().shape().nonDegenerate());
-            residualFFT.set(FT(0.0));
+            Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), 0.);
             casacore::setReal(residualFFT, this->dirty().nonDegenerate());
             scimath::fft2d(residualFFT, true);
 
-            Array<FT> work(this->model().nonDegenerate().shape());
+            Array<FT> work(this->model().nonDegenerate().shape(), ArrayInitPolicies::NO_INIT);
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
@@ -293,13 +292,13 @@ namespace askap {
             Array<FT> work(subPsfShape);
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->allBasisFunctions().shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
+            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
             this->itsPSFBasisFunction.resize(stackShape);
@@ -308,7 +307,7 @@ namespace askap {
             this->itsScaleFlux.set(T(0));
 
             // Calculate XFR for the subsection only
-            Array<FT> subXFR(subPsfShape);
+            Array<FT> subXFR(subPsfShape, 0.);
 
             const uInt nx(this->psf().shape()(0));
             const uInt ny(this->psf().shape()(1));
@@ -318,17 +317,9 @@ namespace askap {
             const IPosition subPsfStride(2, 1, 1);
 
             Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            casacore::IPosition minPos;
-            casacore::IPosition maxPos;
-            T minVal, maxVal;
-            casacore::minMax(minVal, maxVal, minPos, maxPos, this->psf(0).nonDegenerate()(subPsfSlicer));
-            ASKAPLOG_DEBUG_STR(decbflogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
-            ASKAPLOG_DEBUG_STR(decbflogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
-            this->itsPeakPSFVal = maxVal;
-            this->itsPeakPSFPos(0) = maxPos(0);
-            this->itsPeakPSFPos(1) = maxPos(1);
+            this->validatePSF(subPsfSlicer);
 
-            const IPosition subPsfPeak(2, this->itsPeakPSFPos(0), this->itsPeakPSFPos(1));
+            const casacore::IPosition subPsfPeak = this->getPeakPSFPosition().getFirst(2);
             ASKAPLOG_DEBUG_STR(decbflogger, "Peak of PSF subsection at  " << subPsfPeak);
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of PSF subsection is " << subPsfShape);
 
@@ -593,13 +584,16 @@ namespace askap {
             // quite a while to figure this out (slow brain day) so it may be
             // that there are some edge cases for which it fails.
 
+            const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
+            ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
+
             for (uInt dim = 0; dim < 2; dim++) {
                 residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                 residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
                 // Now we have to deal with the PSF. Here we want to use enough of the
                 // PSF to clean the residual image.
-                psfStart(dim) = max(0, Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
-                psfEnd(dim) = min(Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
+                psfStart(dim) = max(0, Int(peakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
+                psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                   Int(psfShape(dim) - 1));
 
                 psfCrossTermsStart(dim) = psfStart(dim);
@@ -623,7 +617,7 @@ namespace askap {
                     casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
                     typename casacore::Array<T> modelSlice = this->model()(modelSlicer).nonDegenerate();
                     modelSlice += this->control()->gain() * peakValues(term) *
-                                  this->itsBasisFunction->basisFunction()(psfSlicer).nonDegenerate();
+                                  this->itsBasisFunction->allBasisFunctions()(psfSlicer).nonDegenerate();
                 }
             }
 

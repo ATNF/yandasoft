@@ -63,7 +63,7 @@ namespace askap {
       }
       void testSetup() {
         {
-          CPPUNIT_ASSERT(itsBasisFunction->basisFunction().shape()==IPosition(3,50,50,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,3));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
         }
       }
@@ -72,10 +72,10 @@ namespace askap {
           itsBasisFunction.reset();
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new PointBasisFunction<Float>());
 	  itsBasisFunction->initialise(itsBasisFunctionShape);
-          CPPUNIT_ASSERT(itsBasisFunction->basisFunction().shape()==IPosition(3,50,50,1));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,1));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==1);
           IPosition centre(3,25,25,0);
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-1.0)<1e-6);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-6);
         }
       }
       void testMultiScale() {
@@ -87,15 +87,15 @@ namespace askap {
           scales[2]=6.0;
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new MultiScaleBasisFunction<Float>(scales));
 	  itsBasisFunction->initialise(itsBasisFunctionShape);
-          CPPUNIT_ASSERT(itsBasisFunction->basisFunction().shape()==IPosition(3,50,50,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,3));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
           IPosition centre(3,25,25,0);
           centre(2)=0;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-1.0)<1e-5);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-5);
           centre(2)=1;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-0.192449)<1e-05);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.192449)<1e-05);
           centre(2)=2;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-0.048122)<1e-5);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.048122)<1e-5);
         }
       }
       void testMultiScaleSetShape() {
@@ -107,15 +107,15 @@ namespace askap {
           scales[2]=6.0;
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new MultiScaleBasisFunction<Float>(scales));
 	  itsBasisFunction->initialise(IPosition(2,20,20));
-          CPPUNIT_ASSERT(itsBasisFunction->basisFunction().shape()==IPosition(3,20,20,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,20,20,3));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
           IPosition centre(3,10,10,0);
           centre(2)=0;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-1.0)<1e-5);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-5);
           centre(2)=1;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-0.192449)<1e-05);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.192449)<1e-05);
           centre(2)=2;
-          CPPUNIT_ASSERT(abs(itsBasisFunction->basisFunction()(centre)-0.048122)<1e-5);
+          CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.048122)<1e-5);
         }
       }
       void tearDown() {
