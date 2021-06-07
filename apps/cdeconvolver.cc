@@ -46,24 +46,11 @@ ASKAP_LOGGER(logger, ".cdeconvolver");
 #include <askap/deconvolution/DeconvolverFactory.h>
 #include <askap/deconvolution/DeconvolverHelpers.h>
 
+#include <askap/parallel/AdviseParallel.h>
+
+
 using namespace askap;
 using namespace askap::synthesis;
-
-static std::string getNodeName(void)
-{
-    const int HOST_NAME_MAXLEN = 256;
-    char name[HOST_NAME_MAXLEN];
-    gethostname(name, HOST_NAME_MAXLEN);
-    std::string nodename(name);
-
-    std::string::size_type idx = nodename.find_first_of('.');
-    if (idx != std::string::npos) {
-        // Extract just the hostname part
-        nodename = nodename.substr(0, idx);
-    }
-
-    return nodename;
-}
 
 class CdeconvolverApp : public askap::Application
 {
@@ -72,28 +59,36 @@ class CdeconvolverApp : public askap::Application
         {
             StatReporter stats;
 
-            const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
+            // This class must have scope outside the main try/catch block
+            askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
 
-            const std::string hostname = getNodeName();
-            ASKAPLOG_REMOVECONTEXT("hostname");
-            ASKAPLOG_PUTCONTEXT("hostname", hostname.c_str());
+            try {
+                const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
 
-            ASKAPLOG_INFO_STR(logger, "ASKAP image deconvolver " << ASKAP_PACKAGE_VERSION);
+                ASKAPLOG_INFO_STR(logger, "ASKAP image deconvolver " << ASKAP_PACKAGE_VERSION);
 
-            boost::shared_ptr<DeconvolverBase<Float, Complex> > deconvolver(DeconvolverFactory::make(subset));
-            deconvolver->deconvolve();
+                boost::shared_ptr<DeconvolverBase<Float, Complex> > deconvolver(DeconvolverFactory::make(subset));
+                deconvolver->deconvolve();
 
-            // Now write the model and residual to disk using the names specified in the 
-            // parset. We simply copy the dirty image and then write the array into 
-            // the resulting image. 
-            DeconvolverHelpers::putArrayToImage(deconvolver->model(), "model", "dirty", subset);
-            DeconvolverHelpers::putArrayToImage(deconvolver->dirty(), "residual", "dirty", subset);
+                // Now write the model and residual to disk using the names specified in the 
+                // parset. We simply copy the dirty image and then write the array into 
+                // the resulting image. 
+                DeconvolverHelpers::putArrayToImage(deconvolver->model(), "model", "dirty", subset);
+                DeconvolverHelpers::putArrayToImage(deconvolver->dirty(), "residual", "dirty", subset);
 
-            Vector<Array<float> > restored(1);
-            if(deconvolver->restore(restored)) {
-                DeconvolverHelpers::putArrayToImage(restored(0), "restored", "dirty", subset);
+                Vector<Array<float> > restored(1);
+                if(deconvolver->restore(restored)) {
+                    DeconvolverHelpers::putArrayToImage(restored(0), "restored", "dirty", subset);
+                }
+            } catch (const askap::AskapError& e) {
+                ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << e.what());
+                std::cerr << "Askap error in " << argv[0] << ": " << e.what() << std::endl;
+                exit(1);
+            } catch (const std::exception& e) {
+                ASKAPLOG_FATAL_STR(logger, "Unexpected exception in " << argv[0] << ": " << e.what());
+                std::cerr << "Unexpected exception in " << argv[0] << ": " << e.what() << std::endl;
+                exit(1);
             }
-
             stats.logSummary();
             return 0;
         }
