@@ -541,8 +541,7 @@ namespace askap {
 
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
-            basisFunctionFFT.set(FT(0.0));
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(),FT(0.));
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
@@ -625,8 +624,9 @@ namespace askap {
                             itsPSFCrossTerms(base1, base2)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
                             itsPSFCrossTerms(base2, base1)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
                             if (base1 == base2) {
-                                itsCouplingMatrix(base1)(term1, term2) = real(work(subPsfPeak));
-                                itsCouplingMatrix(base1)(term2, term1) = real(work(subPsfPeak));
+                                const T subPsfPeakValue =  real(work(subPsfPeak));
+                                itsCouplingMatrix(base1)(term1, term2) = subPsfPeakValue;
+                                itsCouplingMatrix(base1)(term2, term1) = subPsfPeakValue;
                             }
                         }
                     }
@@ -1189,7 +1189,7 @@ namespace askap {
                             if (abs(peakValues(term)) > 0.0) {
                                 casa::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                                 slice += this->control()->gain() * peakValues(term) *
-                                        Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                                        this->itsBasisFunction->basisFunction(optimumBase).nonDegenerate()(psfSlicer);
                                 this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                             }
                         }
@@ -1781,7 +1781,7 @@ namespace askap {
                 if (abs(peakValues(term)) > 0.0) {
                     casacore::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                     slice += this->control()->gain() * peakValues(term) *
-                             Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                             this->itsBasisFunction->basisFunction(optimumBase).nonDegenerate()(psfSlicer);
                     this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                 }
             }
