@@ -108,7 +108,7 @@ namespace askap {
 
             if (itsBasisFunction) {
                 this->itsBasisFunction->initialise(this->model().shape());
-                itsBasisFunctionTransform.resize(itsBasisFunction->allBasisFunctions().shape());
+                itsBasisFunctionTransform.resize(itsBasisFunction->shape());
                 itsBasisFunctionTransform.set(0.);
                 casacore::setReal(itsBasisFunctionTransform, itsBasisFunction->allBasisFunctions().nonDegenerate());
                 scimath::fft2d(itsBasisFunctionTransform, true);
@@ -259,11 +259,11 @@ namespace askap {
             if (itsBasisFunction) {
                 casacore::Array<FT> inTransform(in.nonDegenerate().shape(), 0.);
                 casacore::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
-                out.resize(itsBasisFunction->allBasisFunctions().shape());
+                out.resize(itsBasisFunction->shape());
                 casacore::Cube<T> outCube(out);
                 casacore::setReal(inTransform, in.nonDegenerate());
                 scimath::fft2d(inTransform, true);
-                const uInt nPlanes(itsBasisFunction->allBasisFunctions().shape()(2));
+                const uInt nPlanes(itsBasisFunction->shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
                     outPlaneTransform = inTransform.nonDegenerate() * Cube<FT>(itsBasisFunctionTransform).xyPlane(plane);
                     scimath::fft2d(outPlaneTransform, false);
@@ -287,7 +287,7 @@ namespace askap {
 
                 // To reconstruct, we filter out each basis from the cumulative sum
                 // and then add the corresponding term from the in array.
-                const uInt nPlanes(itsBasisFunction->allBasisFunctions().shape()(2));
+                const uInt nPlanes(itsBasisFunction->shape()(2));
 
                 casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
                 scimath::fft2d(inPlaneTransform, true);

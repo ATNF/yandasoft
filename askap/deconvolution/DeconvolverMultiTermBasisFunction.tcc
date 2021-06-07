@@ -537,11 +537,11 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of basis functions "
                                    << this->itsBasisFunction->shape()<< " number of bases "<<nBases);
 
-            IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(),FT(0.));
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(),FT(0.));
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
@@ -1144,8 +1144,8 @@ namespace askap {
 
                         #pragma omp section
                         {
-                            psfShape(0) = this->itsBasisFunction->allBasisFunctions().shape()(0),
-                            psfShape(1) = this->itsBasisFunction->allBasisFunctions().shape()(1);
+                            psfShape(0) = this->itsBasisFunction->shape()(0),
+                            psfShape(1) = this->itsBasisFunction->shape()(1);
                         }
                     }
 
@@ -1743,8 +1743,7 @@ namespace askap {
             //IPosition subPsfStride(2, 1, 1);
 
             //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            const casacore::IPosition psfShape(2, this->itsBasisFunction->allBasisFunctions().shape()(0),
-                                           this->itsBasisFunction->allBasisFunctions().shape()(1));
+            const casacore::IPosition psfShape = this->itsBasisFunction->shape().getFirst(2);
 
             casacore::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
             casacore::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);

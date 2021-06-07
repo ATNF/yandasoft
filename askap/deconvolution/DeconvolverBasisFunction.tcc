@@ -239,13 +239,13 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating cache of images");
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->allBasisFunctions().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
@@ -292,12 +292,12 @@ namespace askap {
             Array<FT> work(subPsfShape);
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->allBasisFunctions().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
             casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
             scimath::fft2d(basisFunctionFFT, true);
 
