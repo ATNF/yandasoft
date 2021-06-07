@@ -998,8 +998,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                const double fov = cellSize[0] * imSize[0] / 3600. * M_PI / 180.0;
                const double wk_max = 6/fov + advice.maxW()*fov;
                ASKAPASSERT(uv_max > 0);
-               // calculate the resolution in arcsec corresponding to the smallest grid that will fit all of the data
-               // the reciprical of twice the longest baseline plus the largest w support
+               // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
+               //  - the reciprical of twice the longest baseline plus the largest w support
                gCellSize[0] = 0.5 / (uv_max + wk_max) * 3600.0 * 180.0 / M_PI;
                gCellSize[1] = gCellSize[0];
            }
@@ -1007,8 +1007,12 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
            // nominal ratio between gridding resolution and cleaning resolution
            double extraOsFactor = gCellSize[0]/cellSize[0];
            // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
-           const double nPix = ceil(double(imSize[0])/extraOsFactor);
+           double nPix = ceil(double(imSize[0])/extraOsFactor);
+           // also ensure that it is even
+           nPix += int(nPix) % 2;
+           // reset the extra multiplicative factor
            extraOsFactor = double(imSize[0]) / nPix;
+
            gCellSize[0] = cellSize[0] * extraOsFactor;
            gCellSize[1] = gCellSize[0];
 
@@ -1025,7 +1029,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
            }
            {
                std::ostringstream pstr;
-               pstr<<"["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]";
+               pstr<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]";
                parset.replace("Images.cellsize", pstr.str().c_str());
            }
            {

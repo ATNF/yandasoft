@@ -180,8 +180,6 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
 /// @param[in] osfactor extra oversampling factor
 /// @param[in] image input image to be oversampled
 /// @return oversampled image
-/// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
-/// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
 void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor, const bool norm) const
 {
   ImageSolver::oversample(image, osfactor, norm);
@@ -191,8 +189,6 @@ void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float 
 /// @param[in] osfactor extra oversampling factor
 /// @param[in] image input oversampled image
 /// @return downsampled image
-/// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
-/// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
 void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float osfactor) const
 {
   ImageSolver::downsample(image, osfactor);
