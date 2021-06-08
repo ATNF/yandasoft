@@ -537,14 +537,19 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of basis functions "
                                    << this->itsBasisFunction->shape()<< " number of bases "<<nBases);
 
-            IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape());
-            basisFunctionFFT.set(FT(0.0));
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(stackShape,FT(0.));
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
             itsTermBaseFlux.resize(nBases);
             for (uInt base = 0; base < nBases; base++) {
@@ -625,8 +630,9 @@ namespace askap {
                             itsPSFCrossTerms(base1, base2)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
                             itsPSFCrossTerms(base2, base1)(term2, term1).reference(itsPSFCrossTerms(base1, base2)(term1, term2));
                             if (base1 == base2) {
-                                itsCouplingMatrix(base1)(term1, term2) = real(work(subPsfPeak));
-                                itsCouplingMatrix(base1)(term2, term1) = real(work(subPsfPeak));
+                                const T subPsfPeakValue =  real(work(subPsfPeak));
+                                itsCouplingMatrix(base1)(term1, term2) = subPsfPeakValue;
+                                itsCouplingMatrix(base1)(term2, term1) = subPsfPeakValue;
                             }
                         }
                     }
@@ -1144,8 +1150,8 @@ namespace askap {
 
                         #pragma omp section
                         {
-                            psfShape(0) = this->itsBasisFunction->allBasisFunctions().shape()(0),
-                            psfShape(1) = this->itsBasisFunction->allBasisFunctions().shape()(1);
+                            psfShape(0) = this->itsBasisFunction->shape()(0),
+                            psfShape(1) = this->itsBasisFunction->shape()(1);
                         }
                     }
 
@@ -1189,7 +1195,7 @@ namespace askap {
                             if (abs(peakValues(term)) > 0.0) {
                                 casa::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                                 slice += this->control()->gain() * peakValues(term) *
-                                        Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                                        this->itsBasisFunction->basisFunction(optimumBase).nonDegenerate()(psfSlicer);
                                 this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                             }
                         }
@@ -1743,8 +1749,7 @@ namespace askap {
             //IPosition subPsfStride(2, 1, 1);
 
             //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            const casacore::IPosition psfShape(2, this->itsBasisFunction->allBasisFunctions().shape()(0),
-                                           this->itsBasisFunction->allBasisFunctions().shape()(1));
+            const casacore::IPosition psfShape = this->itsBasisFunction->shape().getFirst(2);
 
             casacore::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
             casacore::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
@@ -1781,7 +1786,7 @@ namespace askap {
                 if (abs(peakValues(term)) > 0.0) {
                     casacore::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
                     slice += this->control()->gain() * peakValues(term) *
-                             Cube<T>(this->itsBasisFunction->allBasisFunctions()).xyPlane(optimumBase).nonDegenerate()(psfSlicer);
+                             this->itsBasisFunction->basisFunction(optimumBase).nonDegenerate()(psfSlicer);
                     this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
                 }
             }

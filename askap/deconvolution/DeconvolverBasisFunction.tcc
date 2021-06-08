@@ -185,11 +185,9 @@ namespace askap {
             } else if (this->itsDecouplingAlgorithm == "residuals") {
                 // Decoupling using inverse coupling matrix applied to basis and residuals
                 ASKAPLOG_INFO_STR(decbflogger, "Decoupling using inverse coupling matrix applied to basis and residuals");
-                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->allBasisFunctions()));
-                this->itsBasisFunction->allBasisFunctions() = invBF.copy();
+                this->itsBasisFunction->allBasisFunctions() = applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->allBasisFunctions());
 
-                const Array<T> invRes(applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction));
-                this->itsResidualBasisFunction = invRes.copy();
+                this->itsResidualBasisFunction = applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction);
 
                 if (itsUseCrossTerms) {
                     ASKAPLOG_DEBUG_STR(decbflogger, "Overriding usecrossterms since it makes no sense in this case");
@@ -239,15 +237,22 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating cache of images");
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->allBasisFunctions().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            const casacore::uInt nBases = this->itsBasisFunction->numberBases();
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
             Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), 0.);
             casacore::setReal(residualFFT, this->dirty().nonDegenerate());
@@ -257,7 +262,7 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
-            for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
+            for (uInt term = 0; term < nBases; ++term) {
 
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(residualFFT.nonDegenerate().shape()));
                 work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * residualFFT.nonDegenerate();
@@ -292,14 +297,21 @@ namespace askap {
             Array<FT> work(subPsfShape);
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->allBasisFunctions().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->allBasisFunctions().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->allBasisFunctions().shape(), 0.);
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            const casacore::uInt nBases = this->itsBasisFunction->numberBases();
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
             this->itsPSFBasisFunction.resize(stackShape);
 
@@ -331,7 +343,7 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating convolutions of Psfs with basis functions");
             itsPSFScales.resize(this->itsBasisFunction->numberBases());
 
-            for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
+            for (uInt term = 0; term < nBases; ++term) {
                 // basis function * psf
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(subXFR.shape()));
                 work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * subXFR;
@@ -571,6 +583,7 @@ namespace askap {
             const casacore::IPosition psfShape(this->itsPSFBasisFunction.shape());
 
             const casacore::uInt ndim(this->itsResidualBasisFunction.shape().size());
+            ASKAPDEBUGASSERT(ndim > 2);
 
             casacore::IPosition residualStart(ndim, 0), residualEnd(ndim, 0), residualStride(ndim, 1);
             casacore::IPosition psfStart(ndim, 0), psfEnd(ndim, 0), psfStride(ndim, 1);
@@ -610,14 +623,16 @@ namespace askap {
             // and keep the model layers separate
             // We loop over all terms and ignore those with no flux
             const casacore::uInt nterms(this->itsResidualBasisFunction.shape()(2));
+            ASKAPDEBUGASSERT(nterms == this->itsBasisFunction->numberBases());
 
             for (uInt term = 0; term < nterms; term++) {
                 if (abs(peakValues(term)) > 0.0) {
-                    psfStart(2) = psfEnd(2) = term;
-                    casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
+                    //psfStart(2) = psfEnd(2) = term;
+                    // slicer operates on a 2D image
+                    casacore::Slicer psfSlicer(psfStart.getFirst(2), psfEnd.getFirst(2), psfStride.getFirst(2), Slicer::endIsLast);
                     typename casacore::Array<T> modelSlice = this->model()(modelSlicer).nonDegenerate();
                     modelSlice += this->control()->gain() * peakValues(term) *
-                                  this->itsBasisFunction->allBasisFunctions()(psfSlicer).nonDegenerate();
+                                  this->itsBasisFunction->basisFunction(term)(psfSlicer).nonDegenerate();
                 }
             }
 
@@ -738,9 +753,14 @@ namespace askap {
             return coefficients;
         }
 
+        /// @brief basically matrix multiplication across the basis function domain
+        /// @details This method applies inverse coupling matrix to every pixel of the data array
+        /// @param[in] invCoupling inverse coupling matrix (i.e. the matrix multiplied by the data array)
+        /// @param[in] dataArray data array (with basis function decomposition)
+        /// @return new data array after the inverse coupling matrix is applied
         template<class T, class FT>
         Array<T> DeconvolverBasisFunction<T, FT>::applyInverse(const Matrix<Double>& invCoupling,
-                const Array<T> dataArray)
+                const Array<T>& dataArray)
         {
             Array<T> invDataArray(dataArray.shape(), 0.0);
 

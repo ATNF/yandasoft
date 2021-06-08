@@ -94,7 +94,7 @@ namespace askap {
             ASKAPLOG_INFO_STR(decbaselogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
             ASKAPLOG_INFO_STR(decbaselogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
 
-            ASKAPDEBUGASSERT(maxPos.shape().nelements() >= 2);
+            ASKAPDEBUGASSERT(maxPos.nelements() >= 2);
             if ((maxPos(0) != nx / 2) || (maxPos(1) != ny / 2)) {
                 ASKAPTHROW(AskapError, "Peak of PSF(0) is at " << maxPos << ": not at centre pixel: [" << nx / 2 << "," << ny / 2 << "]");
             }

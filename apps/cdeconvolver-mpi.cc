@@ -696,7 +696,6 @@ void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int supp
 /// @param[in] func vector to be interpolated
 void CdeconvolverApp::interpolateEdgeValues(casacore::Vector<casacore::DComplex> &func)
 {
-  ASKAPDEBUGASSERT(itsInterp);
 
   int length = func.shape()[0];
   ASKAPASSERT(length>3);

@@ -113,7 +113,7 @@ namespace askap {
                 void W(casacore::Array<T>& out, const casacore::Array<T>& in);
                 void WT(casacore::Array<T>& out, const casacore::Array<T>& in);
 
-                casacore::Array<FT> itsBasisFunctionTransform;
+                casacore::Cube<FT> itsBasisFunctionTransform;
 
                 /// Basis function used in the deconvolution
                 boost::shared_ptr<BasisFunction<T> > itsBasisFunction;

@@ -310,8 +310,8 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     // We pad here to do sinc interpolation of the convolution
     // function in uv space
     casacore::Matrix<imtypeComplex> thisPlane(getCFBuffer());
-    ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx)||thisPlaneF.nrow() == casacore::uInt(nx));
-    ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny)||thisPlaneF.ncolumn() == casacore::uInt(ny));
+    ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx));
+    ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny));
 
     for (int iw = 0; iw < nWPlanes(); ++iw) {
         thisPlane.set(0.0);

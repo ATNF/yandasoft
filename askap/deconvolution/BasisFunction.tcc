@@ -72,7 +72,7 @@ namespace askap {
 
             const uInt nRows(A.nrow());
             const uInt nCols(A.ncolumn());
-            ASKAPDEBUGASSERT(thos->itsBasisFunction.shape() >= 2);
+            ASKAPDEBUGASSERT(this->itsBasisFunction.shape() >= 2);
             const uInt nx = this->itsBasisFunction.shape()(0);
             const uInt ny = this->itsBasisFunction.shape()(1);
 
