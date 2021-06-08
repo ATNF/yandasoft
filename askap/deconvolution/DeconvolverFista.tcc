@@ -110,8 +110,16 @@ namespace askap {
                 this->itsBasisFunction->initialise(this->model().shape());
                 itsBasisFunctionTransform.resize(itsBasisFunction->shape());
                 itsBasisFunctionTransform.set(0.);
-                casacore::setReal(itsBasisFunctionTransform, itsBasisFunction->allBasisFunctions().nonDegenerate());
-                scimath::fft2d(itsBasisFunctionTransform, true);
+
+                // do explicit loop over basis functions here (the original code relied on iterator in
+                // fft2d and, therefore, low level representation of the basis function stack). This way
+                // we have more control over the array structure and can transition to the more efficient order
+                const casacore::uInt nBases = itsBasisFunction->numberBases();
+                for (uInt base = 0; base < nBases; ++base) {
+                     casacore::Matrix<FT> fftBuffer = itsBasisFunctionTransform.xyPlane(base);
+                     casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                     scimath::fft2d(fftBuffer, true);
+                }
             }
 
             ASKAPLOG_INFO_STR(decfistalogger, "Initialised FISTA solver");
@@ -265,7 +273,7 @@ namespace askap {
                 scimath::fft2d(inTransform, true);
                 const uInt nPlanes(itsBasisFunction->shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
-                    outPlaneTransform = inTransform.nonDegenerate() * Cube<FT>(itsBasisFunctionTransform).xyPlane(plane);
+                    outPlaneTransform = inTransform.nonDegenerate() * itsBasisFunctionTransform.xyPlane(plane);
                     scimath::fft2d(outPlaneTransform, false);
                     outCube.xyPlane(plane) = real(outPlaneTransform);
                 }
@@ -291,14 +299,14 @@ namespace askap {
 
                 casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
                 scimath::fft2d(inPlaneTransform, true);
-                outTransform = Cube<FT>(itsBasisFunctionTransform).xyPlane(nPlanes - 1) * (inPlaneTransform);
+                outTransform = itsBasisFunctionTransform.xyPlane(nPlanes - 1) * (inPlaneTransform);
 
                 for (uInt plane = 1; plane < nPlanes; plane++) {
                     inPlaneTransform.set(0.);
                     casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
                     scimath::fft2d(inPlaneTransform, true);
                     outTransform = outTransform
-                                   + Cube<FT>(itsBasisFunctionTransform).xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
+                                   + itsBasisFunctionTransform.xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
                 }
                 scimath::fft2d(outTransform, false);
                 out.nonDegenerate() = real(outTransform);

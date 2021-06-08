@@ -537,13 +537,19 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of basis functions "
                                    << this->itsBasisFunction->shape()<< " number of bases "<<nBases);
 
-            IPosition stackShape(this->itsBasisFunction->shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(),FT(0.));
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->allBasisFunctions());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(stackShape,FT(0.));
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
             itsTermBaseFlux.resize(nBases);
             for (uInt base = 0; base < nBases; base++) {
