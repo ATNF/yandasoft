@@ -893,6 +893,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    missing |= (cellsizeNeeded && !parset.isDefined("Images.cellsize"));
    missing |= (shapeNeeded && !parset.isDefined("Images.shape"));
    missing |= (wMaxGridder!="");
+   // don't really need VisMetaDataStats if griddingcellsize is set, but keep it with nyquistgridding
+   missing |= (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize"));
 
    if (missing) {
        ASKAPLOG_INFO_STR(logger, "Remaining missing parameters require a pass through the data");
