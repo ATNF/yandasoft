@@ -417,9 +417,6 @@ namespace askap {
                  casacore::setReal(basisFunctionFFT, bfRef);
                  scimath::fft2d(basisFunctionFFT, true);
 
-                 // buffer for products
-                 Matrix<FT> work(basisFunctionFFT.shape());
-
                  for (uInt term = 0; term < this->nTerms(); term++) {
 
                     // Calculate transform of residual image
@@ -429,8 +426,6 @@ namespace askap {
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    // Removing the extra convolution with PSF0. Leave text here temporarily.
-                    //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
                     residualFFT *= conj(basisFunctionFFT);
                     scimath::fft2d(residualFFT, false);
                     Matrix<T> work(real(residualFFT));
