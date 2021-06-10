@@ -91,8 +91,8 @@ using utility::toString;
 ASKAP_LOGGER(logger, ".ContinuumWorker");
 
 ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
-  CubeComms& comms)
-  : itsParset(parset), itsComms(comms), itsBeamList()
+  CubeComms& comms, StatReporter& stats)
+  : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList()
 {
     itsAdvisor = boost::shared_ptr<synthesis::AdviseDI> (new synthesis::AdviseDI(itsComms, itsParset));
     itsAdvisor->prepare();
@@ -140,8 +140,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     else {
       ASKAPLOG_INFO_STR(logger,"Gridder <CANNOT> mosaick");
     }
-
-
 }
 
 ContinuumWorker::~ContinuumWorker()
@@ -274,8 +272,6 @@ void ContinuumWorker::run(void)
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
   itsAdvisor->addMissingParameters();
-
-
 
   try {
     processChannels();
@@ -479,11 +475,11 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   const int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
   string ChannelPar = "["+toString(n)+","+toString(wu.get_localChannel())+"]";
   int last_beam = -1;
-  
+
   // AXA-1004 this will not be unique as the parsets are passed by reference
   // if we are expecting multiple beams in the work units then these will be clobbered
   // unless the accessor gets the beam information some other way
-  
+
   const bool perbeam = unitParset.getBool("perbeam", true);
   if (!perbeam) {
     string param = "beams";
@@ -780,7 +776,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Out of work with workUnit " << workUnitCount);
         break;
       }
-
+      itsStats.logSummary();
       ASKAPLOG_INFO_STR(logger, "Starting to process workunit " << workUnitCount+1 << " of " << workUnits.size());
 
       int initialChannelWorkUnit = workUnitCount;
@@ -840,7 +836,7 @@ void ContinuumWorker::processChannels()
       /// set up the image for this channel
       /// this will actually build a full image for the first - it is not actually used tho.
       ///
-
+      ASKAPLOG_INFO_STR(logger, "Initialised imager & gridder");
 
       bool stopping = false;
 
@@ -1001,6 +997,7 @@ void ContinuumWorker::processChannels()
               // what to do here. Do we continue with the accumulation or just fail ...
               throw;
             }
+            itsStats.logSummary();
 
             // merge into root image if required.
             // this is required if there is more than one workunit per channel
@@ -1113,6 +1110,8 @@ void ContinuumWorker::processChannels()
         if (!stopping && localSolver) {
           try {
             rootImager.solveNE();
+            itsStats.logSummary();
+
           } catch (const askap::AskapError& e) {
             ASKAPLOG_WARN_STR(logger, "Askap error in solver:" << e.what());
 
@@ -1175,7 +1174,7 @@ void ContinuumWorker::processChannels()
           }
 
         }
-
+        itsStats.logSummary();
 
 
       }
@@ -1237,6 +1236,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "done clearing cache");
 
       }
+      itsStats.logSummary();
 
       ASKAPLOG_INFO_STR(logger, "writing channel into cube");
 

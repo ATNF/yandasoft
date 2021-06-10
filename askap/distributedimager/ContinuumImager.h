@@ -33,6 +33,7 @@
 
 // Local package includes
 #include <askap/distributedimager/CubeComms.h>
+#include <askap/askap/StatReporter.h>
 
 namespace askap {
 namespace cp {
@@ -49,7 +50,7 @@ class ContinuumImager
         ///                     the configuration.
         /// @param[in]  comms   an instance of IBasicComms.
         ContinuumImager(LOFAR::ParameterSet& parset,
-                           CubeComms& comms);
+                           CubeComms& comms, StatReporter& stats);
 
         /// @brief Destructor.
         ~ContinuumImager();
@@ -71,6 +72,9 @@ class ContinuumImager
 
         // Communications class
         CubeComms& itsComms;
+
+        // statistics
+        StatReporter & itsStats;
 }; // end class
 
 }; // end cp

@@ -354,7 +354,7 @@ namespace askap
 	            ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" is "<<casa::max(dv));
 
                 #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                casa::Array<float> dirtyArray(planeIter.getPlane(dv).copy());
+                casa::Array<float> dirtyArray(planeIter.getPlane(dv));
                 #else
                 casa::Array<float> dirtyArray(planeIter.planeShape());
 	            casa::convertArray<float, double>(dirtyArray,planeIter.getPlane(dv));
@@ -364,7 +364,7 @@ namespace askap
 	                     planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
 
                 #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                casa::Array<float> psfArray(planeIter.getPlane(slice).copy());
+                casa::Array<float> psfArray(planeIter.getPlane(slice));
                 #else
                 casa::Array<float> psfArray(planeIter.planeShape());
                 casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
@@ -373,11 +373,13 @@ namespace askap
 	            // send an anternative preconditioner function, if it isn't empty.
 	            // whether the psf or pcf is used, preconditioning needs to be the same for all Taylor terms
                 if (order == 0) {
-                    psfZeroArray = psfArray;
+                    if (nOrders > 0) {
+                        psfZeroArray = psfArray;
+                    }
                     if (pcf.shape() > 0) {
 	                    ASKAPDEBUGASSERT(pcf.shape() == slice.shape());
                         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                        pcfArray.assign(planeIter.getPlane(pcf));
+                        pcfArray.reference(planeIter.getPlane(pcf));
                         #else
                         pcfArray.resize(planeIter.planeShape());
 	                    casa::convertArray<float, double>(pcfArray, planeIter.getPlane(pcf));
@@ -396,15 +398,20 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger,
                         "Restored image will have primary beam corrected noise (no equalisation)");
                 }
-                // Save unnormalised PSF
-                saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
-                planeIter.position());
+                // Save unnormalised PSF - make this optional or just remove?
+                // saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
+                // planeIter.position());
 
                 // Do the preconditioning
-                psfWorkArray = psfZeroArray;
-                doPreconditioning(psfWorkArray,dirtyArray,pcfArray);
-                psfWorkArray = psfZeroArray;
-                doPreconditioning(psfWorkArray,psfArray,pcfArray);
+                if (nOrders == 1) {
+                    // avoid the extra work & memory if we only have 1 taylor term
+                    doPreconditioning(psfArray,dirtyArray,pcfArray);
+                } else {
+                    psfWorkArray = psfZeroArray;
+                    doPreconditioning(psfWorkArray,dirtyArray,pcfArray);
+                    psfWorkArray = psfZeroArray;
+                    doPreconditioning(psfWorkArray,psfArray,pcfArray);
+                }
 
                 // Normalize by the diagonal of Taylor term 0
                 if (order == 0) {
@@ -442,7 +449,7 @@ namespace askap
 
                 // don't decouple PSF images
                 // should change this to use reference semantics
-			    psfVector(order) = psfArray;
+			    psfVector(order).reference(psfArray);
 
             }
 
@@ -626,7 +633,8 @@ namespace askap
     /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
     /// does the job and encapsulates all related code.
     /// @param[in] ts template solver (to take parameters from)
-    void ImageRestoreSolver::configureSolver(const ImageSolver &ts)
+    /// @param[in] doPrecon, copy the PreConditioners from other solver
+    void ImageRestoreSolver::configureSolver(const ImageSolver &ts, bool doPrecon)
     {
       setThreshold(ts.threshold());
       setVerbose(ts.verbose());
@@ -635,6 +643,11 @@ namespace askap
       // behavior in the weight cutoff area
       zeroWeightCutoffMask(ts.zeroWeightCutoffMask());
       zeroWeightCutoffArea(ts.zeroWeightCutoffArea());
+
+      //preconditioners
+      if (doPrecon) {
+          setPreconditioners(ts);
+      }
     }
 
 

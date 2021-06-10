@@ -73,7 +73,7 @@ namespace askap
         void testGaussianTaperCache()
         {
           GaussianTaperCache gtc(25.,15.,-M_PI/18.);
-          casacore::Array<casacore::Complex> taper = gtc.taper(casacore::IPosition(4,128,128,1,1));
+          casacore::Array<float> taper = gtc.taper(casacore::IPosition(4,128,128,1,1));
 
           std::vector<std::string> direction(3);
           direction[0]="12h30m00.0";
@@ -89,10 +89,10 @@ namespace askap
                               1.4e9,1,stokes);
 
           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          params.update("psf.test",amplitude(taper));
+          params.update("psf.test",taper);
           #else
           casacore::Array<double> temp(taper.shape());
-          casacore::convertArray<double,float>(temp, amplitude(taper));
+          casacore::convertArray<double,float>(temp, taper);
           params.update("psf.test",temp);
           #endif
 

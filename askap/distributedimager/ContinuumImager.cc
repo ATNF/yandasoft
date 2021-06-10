@@ -49,8 +49,8 @@ using namespace askap::cp;
 using namespace askap;
 
 ContinuumImager::ContinuumImager(LOFAR::ParameterSet& parset,
-                                       CubeComms& comms) :
-    itsParset(parset), itsComms(comms)
+                                       CubeComms& comms, StatReporter& stats) :
+    itsParset(parset), itsComms(comms), itsStats(stats)
 {
     if (isMaster()) {
         ASKAPLOG_INFO_STR(logger,
@@ -66,10 +66,10 @@ ContinuumImager::~ContinuumImager()
 void ContinuumImager::run(void) {
 
     if (isMaster()) {
-        ContinuumMaster master(itsParset,itsComms);
+        ContinuumMaster master(itsParset,itsComms,itsStats);
         master.run();
     } else {
-        ContinuumWorker worker(itsParset,itsComms);
+        ContinuumWorker worker(itsParset,itsComms,itsStats);
         worker.run();
     }
     ASKAPLOG_INFO_STR(logger,"Reached world barrier");

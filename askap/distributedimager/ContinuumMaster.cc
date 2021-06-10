@@ -73,8 +73,8 @@ using namespace askap;
 ASKAP_LOGGER(logger, ".ContinuumMaster");
 
 ContinuumMaster::ContinuumMaster(LOFAR::ParameterSet& parset,
-                                       CubeComms& comms)
-    : itsParset(parset), itsComms(comms), itsBeamList()
+                                       CubeComms& comms, StatReporter& stats)
+    : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList()
 {
 }
 
@@ -169,6 +169,7 @@ void ContinuumMaster::run(void)
     // now finish the advice for remaining parameters
     diadvise.addMissingParameters();
 
+    itsStats.logSummary();
 
 
     if (localSolver) {
@@ -189,6 +190,7 @@ void ContinuumMaster::run(void)
         imager.calcNE(); // Needed here because it resets the itsNE
         imager.receiveNE();
         imager.writeModel();
+        itsStats.logSummary();
 
     }
     else {
@@ -244,6 +246,7 @@ void ContinuumMaster::run(void)
             else {
                 ASKAPLOG_DEBUG_STR(logger, "Not writing out model");
             }
+            itsStats.logSummary();
 
         }
         ASKAPLOG_INFO_STR(logger, "Cycles complete - Receiving residuals for latest model");
@@ -252,6 +255,7 @@ void ContinuumMaster::run(void)
         imager.receiveNE(); // updates the residuals from workers
         ASKAPLOG_INFO_STR(logger, "Writing out model");
         imager.writeModel();
+        itsStats.logSummary();
 
     }
 

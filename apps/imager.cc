@@ -63,7 +63,7 @@ class ImagerApp : public askap::Application
             // Instantiate the comms class
 
             askap::cp::CubeComms comms_p(argc, const_cast<const char **>(argv));
-            
+
 
             try {
 
@@ -88,7 +88,7 @@ class ImagerApp : public askap::Application
                     const std::string param ="dataset";
                     const std::string pstr = parameter("inputvis");
                     ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-                    subset.replace(param, pstr);            
+                    subset.replace(param, pstr);
                 }
 
                 ASKAPCHECK(comms_p.isParallel(), "This imager can only be run as a parallel MPI job");
@@ -108,7 +108,7 @@ class ImagerApp : public askap::Application
                 // ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
                 // sleep(20);
                 // end sleep
-                ContinuumImager imager(subset, comms_p);
+                ContinuumImager imager(subset, comms_p, stats);
 
                 // runit
                 imager.run();

@@ -89,7 +89,8 @@ namespace askap
         /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
         /// does the job and encapsulates all related code.
         /// @param[in] ts template solver (to take parameters from)
-        void configureSolver(const ImageSolver &ts);
+        /// @param[in] doPrecon, copy the PreConditioners from other solver
+        void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
 
 
