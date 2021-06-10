@@ -1115,8 +1115,12 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
 
     /// Loop over all grids Fourier transforming and accumulating
     for (unsigned int i=0; i<itsGrid.size(); i++) {
+        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+        casacore::Array<imtypeComplex> scratch(itsGrid[i]);
+        #else
         casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
         casacore::convertArray<imtypeComplex,casacore::Complex>(scratch, itsGrid[i]);
+        #endif
 
         /*
         // for debugging
@@ -1177,6 +1181,11 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     correctConvolution(dBuffer);
     dBuffer*=imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
+
+    // Free up the grid memory
+    itsGrid.resize(0);
+    its2dGrid.resize(0,0);
+    itsGridIndex=-1;
 }
 
 /// @brief store given grid
@@ -1307,6 +1316,10 @@ void TableVisGridder::logUnusedSpectralPlanes() const
 /// This is the default implementation
 void TableVisGridder::finaliseDegrid() {
     /// Nothing to do
+    // Free up the grid memory
+    itsGrid.resize(0);
+    its2dGrid.resize(0,0);
+    itsGridIndex=-1;
 }
 
 // This ShPtr should get deep-copied during cloning.

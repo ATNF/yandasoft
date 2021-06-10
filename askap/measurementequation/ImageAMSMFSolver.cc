@@ -241,7 +241,7 @@ namespace askap
 	  const std::string zeroOrderParam = iph.paramName();
 
 	  // Setup the normalization vector
-	  ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
+      ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
 	  ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0,
          "Diagonal not present " << zeroOrderParam);
 	  casacore::Vector<imtype> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
@@ -278,7 +278,7 @@ namespace askap
 	  Array<float> pcfZeroArray;
       if (pcf.shape() > 0) {
         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-        pcfZeroArray = planeIter.getPlane(pcf);
+        pcfZeroArray.reference(planeIter.getPlane(pcf));
         #else
         pcfZeroArray.resize(planeIter.planeShape());
 	    casacore::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
@@ -307,7 +307,8 @@ namespace askap
 			 "PSF Slice for plane="<< plane<<" and order="<<order<<" is not present");
 	      casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-          psfLongVec(order).assign(planeIter.getPlane(slice));
+          // use a reference
+          psfLongVec(order).reference(planeIter.getPlane(slice));
           #else
 	      psfLongVec(order).resize(planeIter.planeShape());
 	      casacore::convertArray<float, double>(psfLongVec(order), planeIter.getPlane(slice));
@@ -320,14 +321,17 @@ namespace askap
 	    dirtyLongVec(order).resize(planeIter.planeShape());
         casacore::Vector<imtype> dv = normalEquations().dataVectorT(thisOrderParam);
 	    #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-        dirtyLongVec(order) = planeIter.getPlane(dv);
+        // use a reference
+        dirtyLongVec(order).reference(planeIter.getPlane(dv));
         #else
         casacore::convertArray<float, double>(dirtyLongVec(order), planeIter.getPlane(dv));
         #endif
 
 	    // For the clean images, we need only the first nTaylor
 	    if(order < this->itsNumberTaylor) {
-            cleanVec(order).assign(planeIter.getPlane(ip.valueF(thisOrderParam)));
+            // use a reference
+            //cleanVec(order).assign(planeIter.getPlane(ip.valueF(thisOrderParam)));
+            cleanVec(order).reference(planeIter.getPlane(ip.valueF(thisOrderParam)));
 	    }
 	  } // Loop over order
 
@@ -346,21 +350,28 @@ namespace askap
 	    // For the first cycle we need to precondition and normalise all PSFs and all dirty images
 	    itsPSFZeroCentre=-1;
 	    for(uInt order=0; order < 2 * itsNumberTaylor - 1; ++order) {
-	      // We need to work with the original PSF since it gets overridden
-	      psfWorkArray = itsPSFZeroArray;
-	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order <<
-              ") centre value " << psfLongVec(order).nonDegenerate()(centre));
-              // Precondition this order PSF using PSF(0)
+          if (itsNumberTaylor == 1) {
+              // shortcut for the case with no Taylor terms
+              ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<<
+                                 " ("<<tagLogString<< ")");
+              doPreconditioning(psfLongVec(0), dirtyLongVec(0), pcfZeroArray);
+          } else {
+    	      // We need to work with the original PSF since it gets overridden
+    	      psfWorkArray = itsPSFZeroArray;
+    	      ASKAPLOG_DEBUG_STR(logger, "Initial PSF(" << order <<
+                  ") centre value " << psfLongVec(order).nonDegenerate()(centre));
+                  // Precondition this order PSF using PSF(0)
 
-	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfZeroArray)) {
-             ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order <<
-                 ") centre value " << psfLongVec(order).nonDegenerate()(centre));
-             // Now we can precondition the dirty (residual) array using PSF(0)
-             psfWorkArray = itsPSFZeroArray;
-             ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<<
-                                " ("<<tagLogString<< ") and order=" << order);
-             doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfZeroArray);
-	      }
+    	      if(doPreconditioning(psfWorkArray, psfLongVec(order), pcfZeroArray)) {
+                 ASKAPLOG_DEBUG_STR(logger, "After preconditioning PSF(" << order <<
+                     ") centre value " << psfLongVec(order).nonDegenerate()(centre));
+                 // Now we can precondition the dirty (residual) array using PSF(0)
+                 psfWorkArray = itsPSFZeroArray;
+                 ASKAPLOG_INFO_STR(logger, "Preconditioning dirty image for plane=" << plane<<
+                                    " ("<<tagLogString<< ") and order=" << order);
+                 doPreconditioning(psfWorkArray,dirtyLongVec(order),pcfZeroArray);
+    	      }
+          }
 	      // Normalise.
 	      ASKAPLOG_DEBUG_STR(logger, "Normalising PSF and Dirty image for order " << order);
 	      ASKAPLOG_DEBUG_STR(logger, "Before normalisation PSF(" << order <<
@@ -370,7 +381,7 @@ namespace askap
 	      // Thus for MFS, the first PSF should have centre value 1.0 and the others lower values
 	      if(order==0) {
              itsPSFZeroCentre = doNormalization(planeIter.getPlaneVector(normdiag), tol(),
-                 psfLongVec(order), dirtyLongVec(order),
+                 psfLongVec(0), dirtyLongVec(0),
                  boost::shared_ptr<casacore::Array<float> >(&maskArray, utility::NullDeleter()));
 	      }  else {
              doNormalization(planeIter.getPlaneVector(normdiag), tol(),
@@ -388,8 +399,8 @@ namespace askap
 	      ASKAPLOG_DEBUG_STR(logger, "After  normalisation PSF(" << order <<
               ") centre value " << psfLongVec(order).nonDegenerate()(centre));
 	      if (order<itsNumberTaylor) {
-              psfVec(order)=psfLongVec(order);
-              dirtyVec(order)=dirtyLongVec(order);
+              psfVec(order).reference(psfLongVec(order));
+              dirtyVec(order).reference(dirtyLongVec(order));
 	      }
 	    }// Loop over order
 	  }
@@ -558,6 +569,13 @@ namespace askap
       /// Save PSFs and Weights into parameter class (to be exported later)
       saveWeights(ip);
       savePSF(ip);
+
+      // if not using taylor terms we can save memory by throwing away the cleaners here
+      // the extra work of recreating them is minimal in that case
+      if (itsNumberTaylor==1) {
+          ASKAPLOG_INFO_STR(logger,"Clearing out the cleaners");
+          itsCleaners.clear();
+      }
 
       return true;
     };

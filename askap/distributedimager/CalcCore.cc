@@ -178,7 +178,9 @@ void CalcCore::doCalc()
     }
     else {
         ASKAPLOG_INFO_STR(logger, "Reusing measurement equation and updating with latest model images" );
-        itsEquation->setParameters(*itsModel);
+        // Try changing this to reference instead of copy - passes tests
+        //itsEquation->setParameters(*itsModel);
+        itsEquation->reference(itsModel);
     }
     ASKAPCHECK(itsEquation, "Equation not defined");
     ASKAPCHECK(itsNe, "NormalEquations not defined");
@@ -187,7 +189,8 @@ void CalcCore::doCalc()
     ASKAPLOG_INFO_STR(logger,"Calculated normal equations in "<< timer.real()
                       << " seconds ");
 
-    }
+}
+
 casacore::Array<casacore::Complex> CalcCore::getGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
@@ -351,8 +354,9 @@ void CalcCore::solveNE()
     }
     itsModel->fix("peak_residual");
 
-
 }
+
+// This code is not called from anywhere at present
 void CalcCore::writeLocalModel(const std::string &postfix) {
 
     ASKAPLOG_DEBUG_STR(logger, "Writing out results as images");
@@ -382,7 +386,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         // configure restore solver the same way as normal imaging solver
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
-        ImageSolverFactory::configurePreconditioners(itsParset,ir);
+        //ImageSolverFactory::configurePreconditioners(itsParset,ir);
         ir->configureSolver(*template_solver);
         ir->copyNormalEquations(*template_solver);
         Quality q;
@@ -422,13 +426,18 @@ void CalcCore::restoreImage()
     boost::shared_ptr<ImageSolver>
     template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
     ASKAPDEBUGASSERT(template_solver);
-    ImageSolverFactory::configurePreconditioners(itsParset, ir);
+
+    // Can we copy the preconditioners from itsSolver to avoid some work & memory?
+    // Both Wiener and Gaussian keep a cache we should try to reuse
+    // added code to configureSolver to do this.
+    // ImageSolverFactory::configurePreconditioners(itsParset, ir);
     ir->configureSolver(*template_solver);
 
     try {
       ir->copyNormalEquations(*template_solver);
     }
     catch (...) {
+      ASKAPLOG_WARN_STR(logger, "Adding missing normal equations for restore");
       template_solver->addNormalEquations(*itsNe);
       try {
           ir->copyNormalEquations(*template_solver);
@@ -440,11 +449,11 @@ void CalcCore::restoreImage()
 
     Quality q;
     ir->solveNormalEquations(*itsModel, q);
-    std::vector<std::string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->completions("image",true);
 
     for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
 
-        ASKAPLOG_INFO_STR(logger, "Restored image " << *ci);
+        ASKAPLOG_INFO_STR(logger, "Restored image " << "image"+*ci);
 
     }
     ASKAPDEBUGASSERT(itsModel);
