@@ -323,7 +323,8 @@ namespace askap {
             // because an exception is not thrown. It looks like this method can be another entry point (for no good reason),
             // running psf validation here explicitly. There is some technical debt here, perhaps more thoughts are needed on
             // how to design interfaces of these classes
-            validatePSF();
+            // MHW: following validatePSF sets the shape to the full size instead of the subpsfsize we need - removed
+            //validatePSF();
         }
 
         template<class T, class FT>
