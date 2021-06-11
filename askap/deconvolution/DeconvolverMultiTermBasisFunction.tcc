@@ -670,7 +670,15 @@ namespace askap {
         {
 
             // Shared constants used by all threads during cleaning process
-            IPosition subPsfShape(this->findSubPsfShape());
+
+            // Need to (re)set the subPsfShape and call validatePSF to get correct psf peak pixels as it gets unset by DeconvolverBase::initialise
+            const IPosition subPsfShape(this->findSubPsfShape());
+            const uInt nx(this->psf(0).shape()(0));
+            const uInt ny(this->psf(0).shape()(1));
+            const IPosition subPsfStart(2, (nx - subPsfShape(0)) / 2, (ny - subPsfShape(1)) / 2);
+            const Slicer subPsfSlicer(subPsfStart, subPsfShape);
+            this->validatePSF(subPsfSlicer);
+
             const uInt nBases(this->itsResidualBasis.nelements());
             IPosition absPeakPos(2, 0);
             T absPeakVal(0.0);
