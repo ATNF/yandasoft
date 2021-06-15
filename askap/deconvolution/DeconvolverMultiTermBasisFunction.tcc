@@ -668,9 +668,6 @@ namespace askap {
         template<class T, class FT>
         void DeconvolverMultiTermBasisFunction<T, FT>::ManyIterations()
         {
-
-            // Shared constants used by all threads during cleaning process
-
             // Need to (re)set the subPsfShape and call validatePSF to get correct psf peak pixels as it gets unset by DeconvolverBase::initialise
             const IPosition subPsfShape(this->findSubPsfShape());
             const uInt nx(this->psf(0).shape()(0));
