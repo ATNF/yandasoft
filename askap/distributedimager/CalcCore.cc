@@ -85,10 +85,17 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     const std::string solver_par = parset.getString("solver");
     const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
     // tell gridder it can throw the grids away if we don't need to write them out
-    bool dumpgrids = parset.getBool("dumpgrids",false);
-    parset.replace(LOFAR::KVpair("gridder.cleargrids",!dumpgrids));
+    bool writeGrids = parset.getBool("dumpgrids",false);
+    writeGrids = parset.getBool("write.grids",writeGrids); // new name
+    parset.replace(LOFAR::KVpair("gridder.cleargrids",!writeGrids));
     // tell restore solver to save the raw (unnormalised, unpreconditioned) psf
-    parset.replace(LOFAR::KVpair("restore.saverawpsf",dumpgrids));
+    parset.replace(LOFAR::KVpair("restore.saverawpsf",writeGrids));
+    // only switch on updateResiduals if we want the residuals written out
+    bool writeResiduals = parset.getBool("write.residualimage",false);
+    parset.replace(LOFAR::KVpair("restore.updateresiduals",writeResiduals));
+    // only switch on savepsfimage if we want the preconditioned psf written out
+    bool writePsfImage = parset.getBool("write.psfimage",false);
+    parset.replace(LOFAR::KVpair("restore.savepsfimage",writePsfImage));
     itsSolver = ImageSolverFactory::make(parset);
     itsGridder_p = VisGridderFactory::make(parset); // this is private to an inherited class so have to make a new one
     itsRestore = itsParset.getBool("restore", false);
@@ -199,7 +206,7 @@ void CalcCore::doCalc()
 casacore::Array<casacore::Complex> CalcCore::getGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping vis grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
 
     // We will need to loop over all completions i.e. all sources
@@ -213,7 +220,7 @@ casacore::Array<casacore::Complex> CalcCore::getGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping pcf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
@@ -228,7 +235,7 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping psf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));

@@ -112,6 +112,10 @@ Cimager.ncycles                                 = 5
 Cimager.restore                                 = True
 Cimager.restore.beam                            = fit
 
+Cimager.write.modelimage                        = true
+Cimager.write.psfrawimage                       = true
+Cimager.write.weightsimage                      = true
+Cimager.write.residualimage                     = true
 # parameters for calibrator
 Ccalibrator.dataset                              = field1.ms
 Ccalibrator.nAnt                                 = 36

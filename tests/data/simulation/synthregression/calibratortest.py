@@ -60,7 +60,7 @@ def analyseResult(spr):
 def loadParset(fname,rotate=True):
     """
        Helper method to read parset file with gains into a python dictionary. Most likely we wouldn't need this method
-       if importing of py-parset was a bit more straightforward. 
+       if importing of py-parset was a bit more straightforward.
 
        fname - file name of the parset file to read
        rotate - if True, phases of all gains will be rotated, so the first antenna will get 0 phase on both polarisations
@@ -112,36 +112,36 @@ def runTests(solverType):
     spr = SynthesisProgramRunner(template_parset = 'calibratortest_template.in')
     spr.addToParset("Csimulator.corrupt = false")
     spr.runSimulator()
-    
+
     spr.initParset()
     spr.runImager()
     analyseResult(spr)
-    
+
     print("First run of ccalibrator, should get gains close to (1.,0.)")
-    
+
     spr.addToParset("Ccalibrator.calibaccess = parset")
     spr.addToParset("Ccalibrator.solver = " + solverType)
     spr.runCalibrator()
     # here result.dat should be close to (1.,0) within 0.03 or so
-    
+
     res_gains = loadParset("result.dat")
     for k,v in list(res_gains.items()):
        if abs(v-1)>0.03:
           raise RuntimeError("Gain parameter %s has a value of %s which is notably different from (1,0)" % (k,v))
-    
+
     # now repeat the simulation, but with corruption of visibilities
     spr.initParset()
     spr.addToParset("Csimulator.corrupt = true")
     spr.runSimulator()
-    
+
     print("Second run of ccalibrator, gains should be close to rndgains.in")
     # calibrate again
     spr.addToParset("Ccalibrator.calibaccess = parset")
     spr.addToParset("Ccalibrator.solver = " + solverType)
     spr.runCalibrator()
-    
+
     # gains should now be close to rndgains.in
-    
+
     res_gains = loadParset("result.dat")
     orig_gains = loadParset("rndgains.in")
     for k,v in list(res_gains.items()):
@@ -150,7 +150,7 @@ def runTests(solverType):
        orig_val = orig_gains[k]
        if abs(v-orig_val)>0.03:
           raise RuntimeError("Gain parameter %s has a value of %s which is notably different from model value %s" % (k,v,orig_val))
-    
+
     # now try to obtain time-dependent solution (note, a proper analysis of the result is not done)
     print("Third run of ccalibrator. Time-dependent solution for antennagains")
     spr.initParset()
@@ -160,7 +160,7 @@ def runTests(solverType):
     spr.addToParset("Ccalibrator.solver = " + solverType)
     os.system("rm -rf caldata.tab")
     spr.runCalibrator()
-    
+
     print("Testing calibration application.")
     # run cimager applying time-dependent calibration
     spr.addToParset("Cimager.calibrate = true")
@@ -278,7 +278,7 @@ def runTestsSmoothnessConstraintsParallel():
     spr.addToParset("Ccalibrator.nAnt                         = 12")
     spr.addToParset("Ccalibrator.nBeam                        = 1")
     spr.addToParset("Ccalibrator.nChan                        = 40")
-    
+
     spr.addToParset("Ccalibrator.refantenna                   = 1")
 
     spr.addToParset("Ccalibrator.calibaccess                  = parset")
@@ -377,7 +377,7 @@ def runTestsSmoothnessConstraintsGradientCost():
     spr.addToParset("Ccalibrator.nAnt                         = 12")
     spr.addToParset("Ccalibrator.nBeam                        = 1")
     spr.addToParset("Ccalibrator.nChan                        = 40")
-    
+
     spr.addToParset("Ccalibrator.refantenna                   = 1")
 
     spr.addToParset("Ccalibrator.calibaccess                  = parset")
@@ -601,3 +601,7 @@ if __name__ == '__main__':
         runTestsParallel(5)
         runTestsSmoothnessConstraintsParallel()
         runTestsSmoothnessConstraintsGradientCost()
+
+    #clean up
+    import os
+    os.system("rm -rf *field1* temp_parset.in caldata.tab result.dat")

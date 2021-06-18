@@ -106,3 +106,5 @@ Cimager.ncycles                                 = 1
 Cimager.restore                                 = True
 Cimager.restore.beam                            = [20arcsec, 20arcsec, 0deg]
 
+Cimager.write.sensitivityimage                  = true
+Cimager.write.residualimage                     = true

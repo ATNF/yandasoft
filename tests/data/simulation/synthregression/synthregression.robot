@@ -23,6 +23,10 @@ wtermtest: WProject and WStack gridders
     [Tags]          wtermtest
     [Template]      Run PythonTest ${thetest}
     wtermtest
+imageroutputtest: test selection of imager outputs
+    [Tags]          testimageroutputs
+    [Template]      Run PythonTest ${thetest}
+    testimageroutputs
 pbcorrtest: single field with mosaicing gridders (primary beam correction)
     [Tags]          pbcorrtest
     [Template]      Run PythonTest ${thetest}

@@ -177,7 +177,6 @@ namespace askap
       /// @param[in] flag new value of the flag
       void inline doClearGrid(const bool flag) { itsClearGrid = flag;}
 
-
       /// @brief set the largest angular separation between the pointing centre and the image centre
       /// @details If the threshold is positive, it is interpreted as the largest allowed angular
       /// separation between the beam (feed in the accessor terminology) pointing centre and the
