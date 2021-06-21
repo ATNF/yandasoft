@@ -53,7 +53,7 @@ namespace askap {
     public:
       
       void setUp() {
-        itsBasisFunctionShape=IPosition(3,50,50,1);
+        itsBasisFunctionShape=IPosition(2,50,50);
 	Vector<Float> scales(3);
 	scales[0]=0.0;
 	scales[1]=3.0;
@@ -63,7 +63,7 @@ namespace askap {
       }
       void testSetup() {
         {
-          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,3,50,50));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
         }
       }
@@ -72,9 +72,9 @@ namespace askap {
           itsBasisFunction.reset();
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new PointBasisFunction<Float>());
 	  itsBasisFunction->initialise(itsBasisFunctionShape);
-          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,1));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,1,50,50));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==1);
-          IPosition centre(3,25,25,0);
+          IPosition centre(3,0,25,25);
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-6);
         }
       }
@@ -87,14 +87,14 @@ namespace askap {
           scales[2]=6.0;
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new MultiScaleBasisFunction<Float>(scales));
 	  itsBasisFunction->initialise(itsBasisFunctionShape);
-          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,50,50,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,3,50,50));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
-          IPosition centre(3,25,25,0);
-          centre(2)=0;
+          IPosition centre(3,0,25,25);
+          centre(0)=0;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-5);
-          centre(2)=1;
+          centre(0)=1;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.192449)<1e-05);
-          centre(2)=2;
+          centre(0)=2;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.048122)<1e-5);
         }
       }
@@ -107,14 +107,14 @@ namespace askap {
           scales[2]=6.0;
           itsBasisFunction=boost::shared_ptr<BasisFunction<Float> >(new MultiScaleBasisFunction<Float>(scales));
 	  itsBasisFunction->initialise(IPosition(2,20,20));
-          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,20,20,3));
+          CPPUNIT_ASSERT(itsBasisFunction->allBasisFunctions().shape()==IPosition(3,3,20,20));
           CPPUNIT_ASSERT(itsBasisFunction->numberBases()==3);
-          IPosition centre(3,10,10,0);
-          centre(2)=0;
+          IPosition centre(3,0,10,10);
+          centre(0)=0;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-1.0)<1e-5);
-          centre(2)=1;
+          centre(0)=1;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.192449)<1e-05);
-          centre(2)=2;
+          centre(0)=2;
           CPPUNIT_ASSERT(abs(itsBasisFunction->allBasisFunctions()(centre)-0.048122)<1e-5);
         }
       }

@@ -57,7 +57,8 @@ namespace askap {
         {
             ASKAPASSERT(itsNumberBases);
             ASKAPASSERT(shape.nelements() >= 2);
-            const IPosition bfShape = shape.getFirst(2).concatenate(IPosition(1, itsNumberBases));
+            //const IPosition bfShape = shape.getFirst(2).concatenate(IPosition(1, itsNumberBases));
+            const IPosition bfShape = IPosition(1, itsNumberBases).concatenate(shape.getFirst(2));
             itsBasisFunction.resize(bfShape);
             itsBasisFunction.set(T(0.0));
             // we probably need to patch the code to remove expectations of the 3rd dimension to be passed here
@@ -72,16 +73,16 @@ namespace askap {
 
             const uInt nRows(A.nrow());
             const uInt nCols(A.ncolumn());
-            ASKAPDEBUGASSERT(this->itsBasisFunction.shape() >= 2);
-            const uInt nx = this->itsBasisFunction.shape()(0);
-            const uInt ny = this->itsBasisFunction.shape()(1);
+            ASKAPDEBUGASSERT(this->itsBasisFunction.shape() >= 3);
+            const uInt nx = this->itsBasisFunction.shape()(1);
+            const uInt ny = this->itsBasisFunction.shape()(2);
 
             for (uInt j = 0; j < ny; j++) {
                 for (uInt i = 0; i < nx; i++) {
                     for (uInt row = 0; row < nRows; row++) {
-                        const IPosition currentPosRow(3, i, j, row);
+                        const IPosition currentPosRow(3, row, i, j);
                         for (uInt col = 0; col < nCols; col++) {
-                            const IPosition currentPosCol(3, i, j, col);
+                            const IPosition currentPosCol(3, col, i, j);
                             mDataArray(currentPosRow) += T(A(row, col)) * this->itsBasisFunction(currentPosCol);
                         }
                     }
@@ -90,9 +91,9 @@ namespace askap {
             this->itsBasisFunction = mDataArray.copy();
             Cube<T> BF(this->itsBasisFunction);
             for (uInt i = 0; i < this->itsNumberBases; i++) {
-                T sumBF(sum(BF.xyPlane(i)));
+                const T sumBF(sum(BF.yzPlane(i)));
                 if (abs(sumBF) > 0.0) {
-                    BF.xyPlane(i) = BF.xyPlane(i) / sumBF;
+                    BF.yzPlane(i) = BF.yzPlane(i) / sumBF;
                 }
             }
         }
@@ -107,31 +108,31 @@ namespace askap {
         {
            ASKAPASSERT(index < itsNumberBases);
            casacore::Cube<T> tmpCube(itsBasisFunction);
-           return tmpCube.xyPlane(index);
+           return tmpCube.yzPlane(index);
         }
 
         template<class T>
         void BasisFunction<T>::gramSchmidt(Array<T>& bf)
         {
             // Use reference semantics of Casa Arrays.
-            Cube<T> v(bf.nonDegenerate());
+            Cube<T> v(bf.nonDegenerate(3));
 
-            const uInt nScales = bf.shape()(2);
+            const uInt nScales = bf.shape()(0);
 
             for (uInt j = 0; j < nScales; j++) {
                 for (uInt i = 0; i < j; i++) {
                     // remove component in direction vi
-                    const T proj(sum(v.xyPlane(j)*v.xyPlane(i)) / sum(v.xyPlane(i)*v.xyPlane(i)));
-                    v.xyPlane(j) = v.xyPlane(j) - proj * v.xyPlane(i);
+                    const T proj(sum(v.yzPlane(j)*v.yzPlane(i)) / sum(v.yzPlane(i)*v.yzPlane(i)));
+                    v.yzPlane(j) = v.yzPlane(j) - proj * v.yzPlane(i);
                 }
                 // Normalise to rms==1.0
-                v.xyPlane(j) = v.xyPlane(j) / sum(v.xyPlane(j) * v.xyPlane(j));
+                v.yzPlane(j) = v.yzPlane(j) / sum(v.yzPlane(j) * v.yzPlane(j));
             }
             // Now normalise each plane to unit sum. The basis functions will remain
             // orthogonal but not orthonormal
             for (uInt j = 0; j < nScales; j++) {
-                const T rNorm(T(1.0) / sum(v.xyPlane(j)));
-                v.xyPlane(j) = v.xyPlane(j) * rNorm;
+                const T rNorm(T(1.0) / sum(v.yzPlane(j)));
+                v.yzPlane(j) = v.yzPlane(j) * rNorm;
             }
         }
 

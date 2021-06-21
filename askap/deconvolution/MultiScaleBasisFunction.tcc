@@ -78,6 +78,7 @@ namespace askap {
             BasisFunction<T>::initialise(shape);
 
             ASKAPLOG_INFO_STR(decmsbaselogger, "Calculating multiscale basis functions");
+            // MV: technical debt - broken encapsulation/protected data member
             // Make a cube and use referencing in Array
             casacore::Cube<T> scaleCube(this->itsBasisFunction);
 
@@ -86,7 +87,7 @@ namespace askap {
                 ASKAPCHECK(scaleSize >= 0.0, "Scale size " << scale << " is not positive " << scaleSize);
 
                 if (scaleSize < 1e-6) {
-                    scaleCube(shape[0] / 2, shape[1] / 2, scale) = T(1.0);
+                    scaleCube(scale,shape[0] / 2, shape[1] / 2) = T(1.0);
                 } else {
                     const Int nx = shape[0];
                     const Int ny = shape[1];
@@ -112,12 +113,12 @@ namespace askap {
                                 }
                                 T value;
                                 value = (1.0 - rad2) * spheroidal(rad);
-                                scaleCube(i, j, scale) = value;
+                                scaleCube(scale, i, j) = value;
                                 volume += value;
                             }
                         }
                     }
-                    scaleCube.xyPlane(scale) = scaleCube.xyPlane(scale) / volume;
+                    scaleCube.yzPlane(scale) = scaleCube.yzPlane(scale) / static_cast<T>(volume);
                 }
             }
             if (this->itsOrthogonal) {
