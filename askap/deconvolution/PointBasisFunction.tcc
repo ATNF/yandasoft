@@ -60,8 +60,8 @@ namespace askap {
         void PointBasisFunction<T>::initialise(const IPosition& shape)
         {
             ASKAPASSERT(shape.nelements() >= 2);
-            const IPosition centre(3, 0, shape[0] / 2, shape[1] / 2);
-            BasisFunction<T>::itsBasisFunction.resize(IPosition(3, 1, shape[0], shape[1]));
+            const IPosition centre(3, shape[0] / 2, shape[1] / 2, 0);
+            BasisFunction<T>::itsBasisFunction.resize(IPosition(3, shape[0], shape[1], 1));
             BasisFunction<T>::itsBasisFunction(centre) = T(1.0);
         };
 

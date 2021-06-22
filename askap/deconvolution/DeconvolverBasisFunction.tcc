@@ -219,7 +219,7 @@ namespace askap {
             }
 
             const uInt nScales(this->itsBasisFunction->numberBases());
-            const IPosition l1Shape(3, nScales, this->model().shape()(0), this->model().shape()(1));
+            const IPosition l1Shape(3, this->model().shape()(0), this->model().shape()(1), nScales);
 
             this->itsL1image.resize(this->nTerms());
             this->itsL1image(0).resize(l1Shape);
@@ -249,7 +249,7 @@ namespace askap {
             // we have more control over the array structure and can transition to the more efficient order
             const casacore::uInt nBases = this->itsBasisFunction->numberBases();
             for (uInt base = 0; base < nBases; ++base) {
-                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.yzPlane(base);
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
                  scimath::fft2d(fftBuffer, true);
             }
@@ -264,8 +264,8 @@ namespace askap {
 
             for (uInt term = 0; term < nBases; ++term) {
 
-                ASKAPASSERT(basisFunctionFFT.yzPlane(term).nonDegenerate().shape().conform(residualFFT.nonDegenerate().shape()));
-                work = conj(basisFunctionFFT.yzPlane(term).nonDegenerate()) * residualFFT.nonDegenerate();
+                ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(residualFFT.nonDegenerate().shape()));
+                work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * residualFFT.nonDegenerate();
                 scimath::fft2d(work, false);
 
                 // basis function * residual
@@ -273,7 +273,7 @@ namespace askap {
                                        << ") * Residual: max = " << max(real(work))
                                        << " min = " << min(real(work)));
 
-                Cube<T>(itsResidualBasisFunction).yzPlane(term) = real(work);
+                Cube<T>(itsResidualBasisFunction).xyPlane(term) = real(work);
 
             }
         }
@@ -308,7 +308,7 @@ namespace askap {
             // we have more control over the array structure and can transition to the more efficient order
             const casacore::uInt nBases = this->itsBasisFunction->numberBases();
             for (uInt base = 0; base < nBases; ++base) {
-                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.yzPlane(base);
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
                  scimath::fft2d(fftBuffer, true);
             }
@@ -345,10 +345,10 @@ namespace askap {
 
             for (uInt term = 0; term < nBases; ++term) {
                 // basis function * psf
-                ASKAPASSERT(basisFunctionFFT.yzPlane(term).nonDegenerate().shape().conform(subXFR.shape()));
-                work = conj(basisFunctionFFT.yzPlane(term).nonDegenerate()) * subXFR;
+                ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(subXFR.shape()));
+                work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * subXFR;
                 scimath::fft2d(work, false);
-                Cube<T>(this->itsPSFBasisFunction).yzPlane(term) = real(work);
+                Cube<T>(this->itsPSFBasisFunction).xyPlane(term) = real(work);
 
                 ASKAPLOG_DEBUG_STR(decbflogger, "Basis function(" << term << ") * PSF: max = " << max(real(work)) << " min = " << min(real(work)));
 
@@ -356,8 +356,9 @@ namespace askap {
             }
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating double convolutions of PSF with basis functions");
-            const IPosition crossTermsShape(4, this->itsBasisFunction->numberBases(),
-                                            this->itsBasisFunction->numberBases(), psfWidth, psfWidth);
+            const IPosition crossTermsShape(4, psfWidth, psfWidth,
+                                            this->itsBasisFunction->numberBases(),
+                                            this->itsBasisFunction->numberBases());
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of cross terms " << crossTermsShape);
             itsPSFCrossTerms.resize(crossTermsShape);
             IPosition crossTermsStart(4, 0);
@@ -368,36 +369,31 @@ namespace askap {
             crossTermsPSFFFT.set(T(0));
 
             for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
-                crossTermsStart(0) = term;
-                crossTermsEnd(0) = term;
+                crossTermsStart(2) = term;
+                crossTermsEnd(2) = term;
 
                 for (uInt term1 = 0; term1 < this->itsBasisFunction->numberBases(); term1++) {
-                    crossTermsStart(1) = term1;
-                    crossTermsEnd(1) = term1;
+                    crossTermsStart(3) = term1;
+                    crossTermsEnd(3) = term1;
                     casacore::Slicer crossTermsSlicer(crossTermsStart, crossTermsEnd, crossTermsStride, Slicer::endIsLast);
                     crossTermsPSFFFT(crossTermsSlicer).nonDegenerate() =
-                        basisFunctionFFT.yzPlane(term).nonDegenerate() *
-                        conj(basisFunctionFFT.yzPlane(term1)).nonDegenerate() * subXFR;
-                    // MV: it would be good to ensure proper constness of the interface to avoid the need of temporary object here
-                    // (although there is no extra copy)
-                    casacore::Array<FT> xtermSlice = crossTermsPSFFFT(crossTermsSlicer); 
-                    scimath::fft2d(xtermSlice, true);
+                        basisFunctionFFT.xyPlane(term).nonDegenerate() *
+                        conj(basisFunctionFFT.xyPlane(term1)).nonDegenerate() * subXFR;
                 }
 
             }
 
-            // normalise cross-terms
-            this->itsPSFCrossTerms = real(crossTermsPSFFFT) / T(crossTermsShape(2) * crossTermsShape(3));
-
             this->itsCouplingMatrix.resize(itsBasisFunction->numberBases(), itsBasisFunction->numberBases());
+            scimath::fft2d(crossTermsPSFFFT, true);
+            this->itsPSFCrossTerms = real(crossTermsPSFFFT) / T(crossTermsShape(0) * crossTermsShape(1));
 
             for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
-                crossTermsStart(0) = term;
-                crossTermsEnd(0) = term;
+                crossTermsStart(2) = term;
+                crossTermsEnd(2) = term;
 
                 for (uInt term1 = 0; term1 < this->itsBasisFunction->numberBases(); term1++) {
-                    crossTermsStart(1) = term1;
-                    crossTermsEnd(1) = term1;
+                    crossTermsStart(3) = term1;
+                    crossTermsEnd(3) = term1;
                     casacore::Slicer crossTermsSlicer(crossTermsStart, crossTermsEnd, crossTermsStride, Slicer::endIsLast);
                     casacore::IPosition minPos;
                     casacore::IPosition maxPos;
@@ -515,7 +511,7 @@ namespace askap {
             Vector<T> coupledPeakValues(nScales);
 
             for (uInt scale = 0; scale < nScales; scale++) {
-                peakPos(0) = scale;
+                peakPos(2) = scale;
                 coupledPeakValues(scale) = this->itsResidualBasisFunction(peakPos);
             }
 
@@ -526,25 +522,25 @@ namespace askap {
                 peakValues = apply(this->itsInverseCouplingMatrix, coupledPeakValues);
             } else if (itsDecouplingAlgorithm == "diagonal") {
                 for (uInt scale = 0; scale < nScales; scale++) {
-                    peakPos(0) = scale;
+                    peakPos(2) = scale;
                     peakValues(scale) = coupledPeakValues(scale)
                                         / (this->itsCouplingMatrix(scale, scale));
                 }
             } else if (itsDecouplingAlgorithm == "sqrtdiagonal") {
                 for (uInt scale = 0; scale < nScales; scale++) {
-                    peakPos(0) = scale;
+                    peakPos(2) = scale;
                     peakValues(scale) = coupledPeakValues(scale)
                                         / sqrt(this->itsCouplingMatrix(scale, scale));
                 }
             } else if (itsDecouplingAlgorithm == "psfscales") {
                 for (uInt scale = 0; scale < nScales; scale++) {
-                    peakPos(0) = scale;
+                    peakPos(2) = scale;
                     peakValues(scale) = coupledPeakValues(scale)
                                         / this->itsPSFScales(scale);
                 }
             } else if (itsDecouplingAlgorithm == "sqrtpsfscales") {
                 for (uInt scale = 0; scale < nScales; scale++) {
-                    peakPos(0) = scale;
+                    peakPos(2) = scale;
                     peakValues(scale) = coupledPeakValues(scale)
                                         / sqrt(this->itsPSFScales(scale));
                 }
@@ -602,9 +598,9 @@ namespace askap {
             // that there are some edge cases for which it fails.
 
             const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
-            ASKAPDEBUGASSERT(peakPSFPos.nelements() > 2);
+            ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
 
-            for (uInt dim = 1; dim < 3; dim++) {
+            for (uInt dim = 0; dim < 2; dim++) {
                 residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                 residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
                 // Now we have to deal with the PSF. Here we want to use enough of the
@@ -613,8 +609,8 @@ namespace askap {
                 psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                   Int(psfShape(dim) - 1));
 
-                psfCrossTermsStart(dim+1) = psfStart(dim);
-                psfCrossTermsEnd(dim+1) = psfEnd(dim);
+                psfCrossTermsStart(dim) = psfStart(dim);
+                psfCrossTermsEnd(dim) = psfEnd(dim);
 
                 modelStart(dim) = residualStart(dim);
                 modelEnd(dim) = residualEnd(dim);
@@ -626,14 +622,14 @@ namespace askap {
             // Note that the model is only two dimensional. We could make it three dimensional
             // and keep the model layers separate
             // We loop over all terms and ignore those with no flux
-            const casacore::uInt nterms(this->itsResidualBasisFunction.shape()(0));
+            const casacore::uInt nterms(this->itsResidualBasisFunction.shape()(2));
             ASKAPDEBUGASSERT(nterms == this->itsBasisFunction->numberBases());
 
             for (uInt term = 0; term < nterms; term++) {
                 if (abs(peakValues(term)) > 0.0) {
                     //psfStart(2) = psfEnd(2) = term;
                     // slicer operates on a 2D image
-                    casacore::Slicer psfSlicer(psfStart.getLast(2), psfEnd.getLast(2), psfStride.getLast(2), Slicer::endIsLast);
+                    casacore::Slicer psfSlicer(psfStart.getFirst(2), psfEnd.getFirst(2), psfStride.getFirst(2), Slicer::endIsLast);
                     typename casacore::Array<T> modelSlice = this->model()(modelSlicer).nonDegenerate();
                     modelSlice += this->control()->gain() * peakValues(term) *
                                   this->itsBasisFunction->basisFunction(term)(psfSlicer).nonDegenerate();
@@ -643,7 +639,7 @@ namespace askap {
             // Keep track of strengths and locations of components
             for (uInt term = 0; term < nterms; term++) {
                 if (abs(peakValues(term)) > 0.0) {
-                    IPosition l1PeakPos(3, term, absPeakPos(0), absPeakPos(1));
+                    IPosition l1PeakPos(3, absPeakPos(0), absPeakPos(1), term);
                     casacore::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
                     this->itsL1image(0)(l1PeakPos) += this->control()->gain() * abs(peakValues(term));
                     this->itsScaleFlux(term) += this->control()->gain() * peakValues(term);
@@ -653,9 +649,9 @@ namespace askap {
             // Subtract PSFs
             for (uInt term = 0; term < nterms; term++) {
                 if (abs(peakValues(term)) > 0.0) {
-                    psfStart(0) = psfEnd(0) = term;
+                    psfStart(2) = psfEnd(2) = term;
                     casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
-                    residualStart(0) = residualEnd(0) = term;
+                    residualStart(2) = residualEnd(2) = term;
                     casacore::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
                     typename casacore::Array<T> residualBFSlice = this->itsResidualBasisFunction(residualSlicer).nonDegenerate();
                     residualBFSlice -= this->control()->gain() * peakValues(term) * this->itsPSFBasisFunction(psfSlicer).nonDegenerate();
@@ -667,14 +663,14 @@ namespace askap {
                     if (abs(peakValues(term1)) > 0.0) {
                         for (uInt term = 0; term < nterms; term++) {
                             if (term != term1) {
-                                residualStart(0) = term;
-                                residualEnd(0) = term;
+                                residualStart(2) = term;
+                                residualEnd(2) = term;
                                 casacore::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
 
-                                psfCrossTermsStart(0) = term1;
-                                psfCrossTermsEnd(0) = term1;
-                                psfCrossTermsStart(1) = term;
-                                psfCrossTermsEnd(1) = term;
+                                psfCrossTermsStart(2) = term1;
+                                psfCrossTermsEnd(2) = term1;
+                                psfCrossTermsStart(3) = term;
+                                psfCrossTermsEnd(3) = term;
                                 casacore::Slicer psfCrossTermsSlicer(psfCrossTermsStart, psfCrossTermsEnd, psfCrossTermsStride, Slicer::endIsLast);
                                 typename casacore::Array<T> residualBFSlice = this->itsResidualBasisFunction(residualSlicer).nonDegenerate();
                                 residualBFSlice -= this->control()->gain() * peakValues(term1) *
@@ -695,9 +691,9 @@ namespace askap {
                 const Array<T>& weightArray)
         {
             const Cube<T> data(dataArray);
-            bool isWeighted(weightArray.shape().nonDegenerate().conform(data.yzPlane(0).shape()));
+            bool isWeighted(weightArray.shape().nonDegenerate().conform(data.xyPlane(0).shape()));
 
-            const uInt nScales = data.shape()(0);
+            const uInt nScales = data.shape()(2);
 
             Vector<T> sMaxVal(nScales);
             Vector<T> sMinVal(nScales);
@@ -707,41 +703,41 @@ namespace askap {
                 if (isWeighted) {
                     for (uInt scale = 0; scale < nScales; scale++) {
                         casacore::minMaxMasked(sMinVal(scale), sMaxVal(scale), sMinPos(scale), sMaxPos(scale),
-                                           Cube<T>(dataArray).yzPlane(scale), weightArray.nonDegenerate());
+                                           Cube<T>(dataArray).xyPlane(scale), weightArray.nonDegenerate());
                     }
                 } else {
                     for (uInt scale = 0; scale < nScales; scale++) {
                         casacore::minMax(sMinVal(scale), sMaxVal(scale), sMinPos(scale), sMaxPos(scale),
-                                     Cube<T>(dataArray).yzPlane(scale));
+                                     Cube<T>(dataArray).xyPlane(scale));
                     }
                 }
             }
-            minPos = IPosition(3, 0, sMinPos(0)(1), sMinPos(0)(2));
-            maxPos = IPosition(3, 0, sMaxPos(0)(1), sMaxPos(0)(2));
+            minPos = IPosition(3, sMinPos(0)(0), sMinPos(0)(1), 0);
+            maxPos = IPosition(3, sMaxPos(0)(0), sMaxPos(0)(1), 0);
             minVal = sMinVal(0);
             maxVal = sMaxVal(0);
 
             for (uInt scale = 1; scale < nScales; scale++) {
                 if (sMinVal(scale) <= minVal) {
                     minVal = sMinVal(scale);
-                    minPos = IPosition(3, scale, sMinPos(scale)(1), sMinPos(scale)(2));
+                    minPos = IPosition(3, sMinPos(scale)(0), sMinPos(scale)(1), scale);
                 }
 
                 if (sMaxVal(scale) >= maxVal) {
                     maxVal = sMaxVal(scale);
-                    maxPos = IPosition(3, scale, sMaxPos(scale)(1), sMaxPos(scale)(2));
+                    maxPos = IPosition(3, sMaxPos(scale)(0), sMaxPos(scale)(1), scale);
                 }
             }
 
             // If weighting (presumably with weights) was done we need to
             // look up the original values (without the weights).
             // MV: I don't understand the following - it seems like the dimensions mismatch - I'll replace it
-            //minVal = data.yzPlane(minPos(0))(minPos);
-            //maxVal = data.yzPlane(maxPos(0))(maxPos);
+            // (it probably worked fine because the last dimension goes beyond 3 dimensions of a cube and remains unchecked)
+            //minVal = data.xyPlane(minPos(2))(minPos);
+            //maxVal = data.xyPlane(maxPos(2))(maxPos);
             minVal = data(minPos);
             maxVal = data(maxPos);
         }
-
         template<class T, class FT>
         Vector<T> DeconvolverBasisFunction<T, FT>::findCoefficients(const Matrix<Double>& invCoupling,
                 const Vector<T>& peakValues)
@@ -774,20 +770,20 @@ namespace askap {
 
             const uInt nRows(invCoupling.nrow());
             const uInt nCols(invCoupling.ncolumn());
-            const uInt nx = dataArray.shape()(1);
-            const uInt ny = dataArray.shape()(2);
+            const uInt nx = dataArray.shape()(0);
+            const uInt ny = dataArray.shape()(1);
 
             for (uInt j = 0; j < ny; j++) {
                 for (uInt i = 0; i < nx; i++) {
 
-                    IPosition currentPosCol(3, 0, i, j);
-                    IPosition currentPosRow(3, 0, i, j);
+                    IPosition currentPosCol(3, i, j, 0);
+                    IPosition currentPosRow(3, i, j, 0);
 
                     for (uInt row = 0; row < nRows; row++) {
-                        currentPosRow(0) = row;
+                        currentPosRow(2) = row;
 
                         for (uInt col = 0; col < nCols; col++) {
-                            currentPosCol(0) = col;
+                            currentPosCol(2) = col;
                             invDataArray(currentPosRow) += T(invCoupling(row, col)) * dataArray(currentPosCol);
                         }
                     }

@@ -542,7 +542,7 @@ namespace askap {
             // fft2d and, therefore, low level representation of the basis function stack). This way
             // we have more control over the array structure and can transition to the more efficient order
             for (uInt base = 0; base < nBases; ++base) {
-                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.yzPlane(base);
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
                  scimath::fft2d(fftBuffer, true);
             }
@@ -568,7 +568,7 @@ namespace askap {
 
             this->validatePSF(subPsfSlicer);
 
-            const casacore::IPosition subPsfPeak=this->getPeakPSFPosition().getLast(2);
+            const casacore::IPosition subPsfPeak=this->getPeakPSFPosition().getFirst(2);
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Peak of PSF subsection at  " << subPsfPeak);
             ASKAPLOG_DEBUG_STR(decmtbflogger, "Shape of PSF subsection is " << subPsfShape);
 
@@ -587,6 +587,7 @@ namespace askap {
             }
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
             // Calculate transform of PSF(0)
+
             // Removing the extra convolution with PSF0. Leave text here temporarily.
             //const T normPSF = casacore::sum(casacore::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
             const T normPSF = casacore::sum(casacore::real(subXFRVec(0))) / subXFRVec(0).nelements();
@@ -606,9 +607,9 @@ namespace askap {
                     for (uInt term1 = 0; term1 < this->nTerms(); ++term1) {
                         for (uInt term2 = term1; term2 < this->nTerms(); ++term2) {
                             // Removing the extra convolution with PSF0. Leave text here temporarily.
-                            //work = conj(basisFunctionFFT.yzPlane(base1)) * basisFunctionFFT.yzPlane(base2) *
+                            //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
                             //       subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
-                            work = conj(basisFunctionFFT.yzPlane(base1)) * basisFunctionFFT.yzPlane(base2) *
+                            work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
                                    conj(subXFRVec(term1 + term2)) / normPSF;
                             scimath::fft2d(work, false);
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
@@ -1150,8 +1151,8 @@ namespace askap {
 
                         #pragma omp section
                         {
-                            psfShape(0) = this->itsBasisFunction->shape()(1),
-                            psfShape(1) = this->itsBasisFunction->shape()(2);
+                            psfShape(0) = this->itsBasisFunction->shape()(0),
+                            psfShape(1) = this->itsBasisFunction->shape()(1);
                         }
                     }
 
@@ -1216,7 +1217,7 @@ namespace askap {
                             const T amp = this->control()->gain() * peakValues(term);
                             casa::Matrix<T> mMdl, mBfn;
                             mMdl.reference(this->model(term).nonDegenerate()(modelSlicer));
-                            mBfn.reference(Cube<T>(this->itsBasisFunction->basisFunction()).yzPlane(optimumBase).nonDegenerate()(psfSlicer));
+                            mBfn.reference(Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer));
                             #pragma omp for schedule(static)
                             for (uInt j = 0; j < nj; j++ ) {
                                 Vector<T> mdlcol = mMdl.column(j);
@@ -1749,7 +1750,7 @@ namespace askap {
             //IPosition subPsfStride(2, 1, 1);
 
             //Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            const casacore::IPosition psfShape = this->itsBasisFunction->shape().getLast(2);
+            const casacore::IPosition psfShape = this->itsBasisFunction->shape().getFirst(2);
 
             casacore::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
             casacore::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);

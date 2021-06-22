@@ -116,7 +116,7 @@ namespace askap {
                 // we have more control over the array structure and can transition to the more efficient order
                 const casacore::uInt nBases = itsBasisFunction->numberBases();
                 for (uInt base = 0; base < nBases; ++base) {
-                     casacore::Matrix<FT> fftBuffer = itsBasisFunctionTransform.yzPlane(base);
+                     casacore::Matrix<FT> fftBuffer = itsBasisFunctionTransform.xyPlane(base);
                      casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
                      scimath::fft2d(fftBuffer, true);
                 }
@@ -271,11 +271,11 @@ namespace askap {
                 casacore::Cube<T> outCube(out);
                 casacore::setReal(inTransform, in.nonDegenerate());
                 scimath::fft2d(inTransform, true);
-                const uInt nPlanes(itsBasisFunction->shape()(0));
+                const uInt nPlanes(itsBasisFunction->shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
-                    outPlaneTransform = inTransform.nonDegenerate() * itsBasisFunctionTransform.yzPlane(plane);
+                    outPlaneTransform = inTransform.nonDegenerate() * itsBasisFunctionTransform.xyPlane(plane);
                     scimath::fft2d(outPlaneTransform, false);
-                    outCube.yzPlane(plane) = real(outPlaneTransform);
+                    outCube.xyPlane(plane) = real(outPlaneTransform);
                 }
             } else {
                 out = in.copy();
@@ -295,18 +295,18 @@ namespace askap {
 
                 // To reconstruct, we filter out each basis from the cumulative sum
                 // and then add the corresponding term from the in array.
-                const uInt nPlanes(itsBasisFunction->shape()(0));
+                const uInt nPlanes(itsBasisFunction->shape()(2));
 
-                casacore::setReal(inPlaneTransform, inCube.yzPlane(nPlanes - 1));
+                casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
                 scimath::fft2d(inPlaneTransform, true);
-                outTransform = itsBasisFunctionTransform.yzPlane(nPlanes - 1) * (inPlaneTransform);
+                outTransform = itsBasisFunctionTransform.xyPlane(nPlanes - 1) * (inPlaneTransform);
 
                 for (uInt plane = 1; plane < nPlanes; plane++) {
                     inPlaneTransform.set(0.);
-                    casacore::setReal(inPlaneTransform, inCube.yzPlane(nPlanes - 1 - plane));
+                    casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
                     scimath::fft2d(inPlaneTransform, true);
                     outTransform = outTransform
-                                   + itsBasisFunctionTransform.yzPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
+                                   + itsBasisFunctionTransform.xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
                 }
                 scimath::fft2d(outTransform, false);
                 out.nonDegenerate() = real(outTransform);
