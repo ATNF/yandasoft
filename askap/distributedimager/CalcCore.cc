@@ -84,6 +84,11 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     /// Not sure whether to use it directly or copy it.
     const std::string solver_par = parset.getString("solver");
     const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
+    // tell gridder it can throw the grids away if we don't need to write them out
+    bool dumpgrids = parset.getBool("dumpgrids",false);
+    parset.replace(LOFAR::KVpair("gridder.cleargrids",!dumpgrids));
+    // tell restore solver to save the raw (unnormalised, unpreconditioned) psf
+    parset.replace(LOFAR::KVpair("restore.saverawpsf",dumpgrids));
     itsSolver = ImageSolverFactory::make(parset);
     itsGridder_p = VisGridderFactory::make(parset); // this is private to an inherited class so have to make a new one
     itsRestore = itsParset.getBool("restore", false);
@@ -200,12 +205,6 @@ casacore::Array<casacore::Complex> CalcCore::getGrid() {
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
 
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
-
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
     boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(fftEquation->getResidualGridder(imageName));
@@ -218,12 +217,6 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -239,12 +232,6 @@ casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
