@@ -103,6 +103,10 @@ namespace askap
         /// @param[in] flag true, to switch updating on
         inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
 
+        /// @brief set flag to save the raw psf into a parameter
+        /// @param[in] flag true, to save the raw psf
+        inline void saveRawPsf(bool flag) { itsSaveRawPsf = flag;}
+
         /// @brief solves for and adds residuals
         /// @details Restore solver convolves the current model with the beam and adds the
         /// residual image. The latter has to be "solved for" with a proper preconditioning and
@@ -144,6 +148,8 @@ namespace askap
         bool itsModelNeedsConvolving;
 
         bool itsResidualNeedsUpdating;
+
+        bool itsSaveRawPsf;
 
     };
 

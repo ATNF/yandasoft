@@ -630,6 +630,7 @@ void ContinuumWorker::processChannels()
       weights_name = "weights";
       grid_name = "grid";
       pcf_name = "pcf";
+      psfgrid_name = "psfgrid";
     }
 
     ASKAPLOG_DEBUG_STR(logger, "Configuring Spectral Cube");

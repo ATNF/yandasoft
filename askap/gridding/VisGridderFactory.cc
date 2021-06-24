@@ -224,6 +224,10 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "Not swapping polarisations");
         }
+        const bool clearGrids = parset.getBool("gridder.cleargrids",false);
+        if (tvg && clearGrids) {
+          tvg->doClearGrid(clearGrids);
+        }
     }
 
     // Initialize the Visibility Weights
