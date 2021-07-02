@@ -398,10 +398,11 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger,
                         "Restored image will have primary beam corrected noise (no equalisation)");
                 }
-                // Save unnormalised PSF - make this optional or just remove?
-                // saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
-                // planeIter.position());
-
+                // Save unnormalised PSF
+                if (itsSaveRawPsf) {
+                  saveArrayIntoParameter(ip, name, shape, "psf.raw", psfArray,
+                  planeIter.position());
+                }
                 // Do the preconditioning
                 if (nOrders == 1) {
                     // avoid the extra work & memory if we only have 1 taylor term
@@ -621,6 +622,8 @@ namespace askap
        result->equaliseNoise(equalise);
        const bool update = parset.getBool("updateresiduals",true);
        result->updateResiduals(update);
+       const bool saverawpsf = parset.getBool("saverawpsf",false);
+       result->saveRawPsf(saverawpsf);
 
        return result;
     }

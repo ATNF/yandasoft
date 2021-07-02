@@ -97,7 +97,7 @@ TableVisGridder::TableVisGridder() : itsSumWeights(),
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
     itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
     its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
-    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0),itsClearGrid(false)
 {
 }
 
@@ -112,7 +112,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     itsMaxPointingSeparation(-1.), itsRowsRejectedDueToMaxPointingSeparation(0),
     itsTrackWeightPerOversamplePlane(false),itsPARotation(false),itsSwapPols(false),
     its2dGrid(),itsVisPols(),itsPolConv(),itsImagePolFrameVis(),itsImagePolFrameNoise(),
-    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
+    itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0),itsClearGrid(false)
 {
    ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
    ASKAPCHECK(support>=0, "Maximum support must be zero or greater");
@@ -155,7 +155,8 @@ TableVisGridder::TableVisGridder(const TableVisGridder &other) :
      its2dGrid(other.its2dGrid.copy()),itsVisPols(other.itsVisPols.copy()),
      itsPolConv(other.itsPolConv),itsImagePolFrameVis(other.itsImagePolFrameVis.copy()),
      itsImagePolFrameNoise(other.itsImagePolFrameNoise.copy()),itsPolVector(other.itsPolVector.copy()),
-     itsImageChan(other.itsImageChan),itsGridIndex(other.itsGridIndex),itsSourceIndex(other.itsSourceIndex)
+     itsImageChan(other.itsImageChan),itsGridIndex(other.itsGridIndex),itsSourceIndex(other.itsSourceIndex),
+     itsClearGrid(other.itsClearGrid)
 {
    deepCopyOfSTDVector(other.itsConvFunc,itsConvFunc);
    deepCopyOfSTDVector(other.itsGrid, itsGrid);
@@ -485,7 +486,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // inside the section protected by the lock and make a copy of the returned vector
    const casacore::Vector<casacore::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
 
-   #ifdef _OPENMP_WORKING_WORKING_WORKING
+   #ifdef _OPENMP_WORKING
    boost::unique_lock<boost::mutex> lock(itsMutex);
    const casa::Vector<double> delay = acc.uvwRotationDelay(tangentPoint, imageCentre).copy();
    lock.unlock();
@@ -511,8 +512,8 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // of the matrices for every accessor. More intelligent caching is possible with a bit
    // more effort (i.e. one has to detect whether polarisation frames change from the
    // previous call). Need to think about parallactic angle dependence.
-   // OPENMP_WORKING_WORKING_WORKING case needs work...
-   #ifdef _OPENMP_WORKING_WORKING_WORKING
+   // OPENMP case needs work...
+   #ifdef _OPENMP_WORKING
    itsPolConv = (forward ? : scimath::PolConverter(getStokes(),syncHelper.copy(acc.stokes()), false)
                              scimath::PolConverter(syncHelper.copy(acc.stokes()), getStokes()));
    //scimath::PolConverter degridPolConv(getStokes(),syncHelper.copy(acc.stokes()), false);
@@ -1182,10 +1183,12 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     dBuffer*=imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
 
-    // Free up the grid memory
-    itsGrid.resize(0);
-    its2dGrid.resize(0,0);
-    itsGridIndex=-1;
+    // Free up the grid memory?
+    if (itsClearGrid) {
+        itsGrid.resize(0);
+        its2dGrid.resize(0,0);
+        itsGridIndex=-1;
+    }
 }
 
 /// @brief store given grid
@@ -1316,10 +1319,12 @@ void TableVisGridder::logUnusedSpectralPlanes() const
 /// This is the default implementation
 void TableVisGridder::finaliseDegrid() {
     /// Nothing to do
-    // Free up the grid memory
-    itsGrid.resize(0);
-    its2dGrid.resize(0,0);
-    itsGridIndex=-1;
+    // Free up the grid memory?
+    if (itsClearGrid) {
+        itsGrid.resize(0);
+        its2dGrid.resize(0,0);
+        itsGridIndex=-1;
+    }
 }
 
 // This ShPtr should get deep-copied during cloning.
