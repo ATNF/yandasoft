@@ -3,6 +3,22 @@ Library             Process
 Documentation       Synthesis Regresssion Test Suite 
 Default Tags        synthesis  
 *** Test Cases ***
+MSMFS with new imager
+    [Tags]          testmsmfs      newimager
+    [Template]      Run PythonTest ${thetest}
+    testmsmfs  
+MSMFS with channels gridded together
+    [Tags]          combinedchannels    newimager
+    [Template]      Run PythonTest ${thetest}
+    testcombined
+SPECTRALLINE with new imager
+    [Tags]          spectralline    newimager
+    [Template]      Run PythonTest ${thetest}
+    testspectral
+REVERSED 
+    [Tags]          spectralline    newimager
+    [Template]      Run PythonTest ${thetest}
+    test-reversed-freq
 wtermtest: WProject and WStack gridders
     [Tags]          wtermtest
     [Template]      Run PythonTest ${thetest}
@@ -31,14 +47,7 @@ leakagecalibtest: test of polarisation leakage calibration
     [Tags]          test1934  
     [Template]      Run PythonTest ${thetest}
     test1934  
-MSMFS with new imager
-    [Tags]          testmsmfs      newimager
-    [Template]      Run PythonTest ${thetest}
-    testmsmfs  
-MSMFS with channels gridded together
-    [Tags]          combinedchannels    newimager
-    [Template]      Run PythonTest ${thetest}
-    testcombined
+
 *** Keywords ***
 Run PythonTest ${thetest}
     Log            ${thetest}

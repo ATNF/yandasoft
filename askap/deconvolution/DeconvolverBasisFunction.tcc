@@ -82,13 +82,13 @@ namespace askap {
         };
 
         template<class T, class FT>
-        void DeconvolverBasisFunction<T, FT>::setBasisFunction(boost::shared_ptr<BasisFunction<T> > bf)
+        void DeconvolverBasisFunction<T, FT>::setBasisFunction(const boost::shared_ptr<BasisFunction<T> >& bf)
         {
             itsBasisFunction = bf;
         };
 
         template<class T, class FT>
-        boost::shared_ptr<BasisFunction<T> > DeconvolverBasisFunction<T, FT>::basisFunction()
+        const boost::shared_ptr<BasisFunction<T> >& DeconvolverBasisFunction<T, FT>::basisFunction() const
         {
             return itsBasisFunction;
         };
@@ -185,11 +185,9 @@ namespace askap {
             } else if (this->itsDecouplingAlgorithm == "residuals") {
                 // Decoupling using inverse coupling matrix applied to basis and residuals
                 ASKAPLOG_INFO_STR(decbflogger, "Decoupling using inverse coupling matrix applied to basis and residuals");
-                const Array<T> invBF(applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->basisFunction()));
-                this->itsBasisFunction->basisFunction() = invBF.copy();
+                this->itsBasisFunction->allBasisFunctions() = applyInverse(this->itsInverseCouplingMatrix, this->itsBasisFunction->allBasisFunctions());
 
-                const Array<T> invRes(applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction));
-                this->itsResidualBasisFunction = invRes.copy();
+                this->itsResidualBasisFunction = applyInverse(this->itsInverseCouplingMatrix, this->itsResidualBasisFunction);
 
                 if (itsUseCrossTerms) {
                     ASKAPLOG_DEBUG_STR(decbflogger, "Overriding usecrossterms since it makes no sense in this case");
@@ -223,7 +221,7 @@ namespace askap {
             const uInt nScales(this->itsBasisFunction->numberBases());
             const IPosition l1Shape(3, this->model().shape()(0), this->model().shape()(1), nScales);
 
-            this->itsL1image.resize(this->itsNumberTerms);
+            this->itsL1image.resize(this->nTerms());
             this->itsL1image(0).resize(l1Shape);
             this->itsL1image(0).set(0.0);
         }
@@ -239,26 +237,32 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating cache of images");
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            const casacore::uInt nBases = this->itsBasisFunction->numberBases();
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
-            Array<FT> residualFFT(this->dirty().shape().nonDegenerate());
-            residualFFT.set(FT(0.0));
+            Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), 0.);
             casacore::setReal(residualFFT, this->dirty().nonDegenerate());
             scimath::fft2d(residualFFT, true);
 
-            Array<FT> work(this->model().nonDegenerate().shape());
+            Array<FT> work(this->model().nonDegenerate().shape(), ArrayInitPolicies::NO_INIT);
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
-            for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
+            for (uInt term = 0; term < nBases; ++term) {
 
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(residualFFT.nonDegenerate().shape()));
                 work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * residualFFT.nonDegenerate();
@@ -293,14 +297,21 @@ namespace askap {
             Array<FT> work(subPsfShape);
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of basis functions "
-                                   << this->itsBasisFunction->basisFunction().shape());
+                                   << this->itsBasisFunction->shape());
 
-            const IPosition stackShape(this->itsBasisFunction->basisFunction().shape());
+            const IPosition stackShape(this->itsBasisFunction->shape());
 
             // Now transform the basis functions
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->basisFunction().shape());
-            casacore::setReal(basisFunctionFFT, this->itsBasisFunction->basisFunction());
-            scimath::fft2d(basisFunctionFFT, true);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            // do explicit loop over basis functions here (the original code relied on iterator in
+            // fft2d and, therefore, low level representation of the basis function stack). This way
+            // we have more control over the array structure and can transition to the more efficient order
+            const casacore::uInt nBases = this->itsBasisFunction->numberBases();
+            for (uInt base = 0; base < nBases; ++base) {
+                 casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
+                 casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
+                 scimath::fft2d(fftBuffer, true);
+            }
 
             this->itsPSFBasisFunction.resize(stackShape);
 
@@ -308,7 +319,7 @@ namespace askap {
             this->itsScaleFlux.set(T(0));
 
             // Calculate XFR for the subsection only
-            Array<FT> subXFR(subPsfShape);
+            Array<FT> subXFR(subPsfShape, 0.);
 
             const uInt nx(this->psf().shape()(0));
             const uInt ny(this->psf().shape()(1));
@@ -318,17 +329,9 @@ namespace askap {
             const IPosition subPsfStride(2, 1, 1);
 
             Slicer subPsfSlicer(subPsfStart, subPsfEnd, subPsfStride, Slicer::endIsLast);
-            casacore::IPosition minPos;
-            casacore::IPosition maxPos;
-            T minVal, maxVal;
-            casacore::minMax(minVal, maxVal, minPos, maxPos, this->psf(0).nonDegenerate()(subPsfSlicer));
-            ASKAPLOG_DEBUG_STR(decbflogger, "Maximum of PSF(0) = " << maxVal << " at " << maxPos);
-            ASKAPLOG_DEBUG_STR(decbflogger, "Minimum of PSF(0) = " << minVal << " at " << minPos);
-            this->itsPeakPSFVal = maxVal;
-            this->itsPeakPSFPos(0) = maxPos(0);
-            this->itsPeakPSFPos(1) = maxPos(1);
+            this->validatePSF(subPsfSlicer);
 
-            const IPosition subPsfPeak(2, this->itsPeakPSFPos(0), this->itsPeakPSFPos(1));
+            const casacore::IPosition subPsfPeak = this->getPeakPSFPosition().getFirst(2);
             ASKAPLOG_DEBUG_STR(decbflogger, "Peak of PSF subsection at  " << subPsfPeak);
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of PSF subsection is " << subPsfShape);
 
@@ -340,7 +343,7 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Calculating convolutions of Psfs with basis functions");
             itsPSFScales.resize(this->itsBasisFunction->numberBases());
 
-            for (uInt term = 0; term < this->itsBasisFunction->numberBases(); term++) {
+            for (uInt term = 0; term < nBases; ++term) {
                 // basis function * psf
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(subXFR.shape()));
                 work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * subXFR;
@@ -407,10 +410,26 @@ namespace askap {
             invertSymPosDef(this->itsInverseCouplingMatrix, this->itsDetCouplingMatrix, this->itsCouplingMatrix);
             ASKAPLOG_DEBUG_STR(decbflogger, "Coupling matrix determinant " << this->itsDetCouplingMatrix);
             ASKAPLOG_DEBUG_STR(decbflogger, "Inverse coupling matrix " << this->itsInverseCouplingMatrix);
-            // Checked that the inverse really is an inverse.
+
+            // the following two methods are only reporting to the log with DEBUG severity,
+            // there is no point doing this additional math in the production mode
+            #ifdef ASKAP_DEBUG
+
+            // double-check that the inverse really is an inverse (but only by writing the product to the log
+            this->reportOnCouplingMatrix();
+
+            // Now look at coupling between adjacent scales: this works well if the
+            // scales are ordered.
+            this->reportOnAdjacentScaleCoupling();
+            #endif
+        }
+
+        template<typename T, typename FT>
+        void DeconvolverBasisFunction<T, FT>::reportOnCouplingMatrix() const {
             Matrix<T> identity(this->itsCouplingMatrix.shape(), 0.0);
             const uInt nRows(this->itsCouplingMatrix.nrow());
             const uInt nCols(this->itsCouplingMatrix.ncolumn());
+            ASKAPDEBUGASSERT(this->itsCouplingMatrix.shape() == this->itsInverseCouplingMatrix.shape());
 
             for (uInt row = 0; row < nRows; row++) {
                 for (uInt col = 0; col < nCols; col++) {
@@ -419,13 +438,16 @@ namespace askap {
             }
 
             ASKAPLOG_DEBUG_STR(decbflogger, "Coupling matrix * inverse " << identity);
+        }
 
-
-            // Now look at coupling between adjacent scales: this works well if the
-            // scales are ordered.
+        template<typename T, typename FT>
+        void DeconvolverBasisFunction<T, FT>::reportOnAdjacentScaleCoupling() const {
+            ASKAPDEBUGASSERT(this->itsBasisFunction);
+            // Look at coupling between adjacent scales: this works well if the scales are ordered.
+            const casacore::Matrix<casacore::Double>& cm = this->itsCouplingMatrix;
             for (uInt term = 0; term < this->itsBasisFunction->numberBases() - 1; term++) {
-                double det = this->itsCouplingMatrix(term, term) * this->itsCouplingMatrix(term + 1, term + 1) -
-                             this->itsCouplingMatrix(term, term + 1) * this->itsCouplingMatrix(term + 1, term);
+                ASKAPDEBUGASSERT(term < cm.nrow() && term < cm.ncolumn());
+                const double det = cm(term, term) * cm(term + 1, term + 1) - cm(term, term + 1) * cm(term + 1, term);
                 ASKAPLOG_DEBUG_STR(decbflogger, "Independence between scales " << term << " and "
                                        << term + 1 << " = " << det);
             }
@@ -561,6 +583,7 @@ namespace askap {
             const casacore::IPosition psfShape(this->itsPSFBasisFunction.shape());
 
             const casacore::uInt ndim(this->itsResidualBasisFunction.shape().size());
+            ASKAPDEBUGASSERT(ndim > 2);
 
             casacore::IPosition residualStart(ndim, 0), residualEnd(ndim, 0), residualStride(ndim, 1);
             casacore::IPosition psfStart(ndim, 0), psfEnd(ndim, 0), psfStride(ndim, 1);
@@ -574,13 +597,16 @@ namespace askap {
             // quite a while to figure this out (slow brain day) so it may be
             // that there are some edge cases for which it fails.
 
+            const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
+            ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
+
             for (uInt dim = 0; dim < 2; dim++) {
                 residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                 residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
                 // Now we have to deal with the PSF. Here we want to use enough of the
                 // PSF to clean the residual image.
-                psfStart(dim) = max(0, Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
-                psfEnd(dim) = min(Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
+                psfStart(dim) = max(0, Int(peakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
+                psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                   Int(psfShape(dim) - 1));
 
                 psfCrossTermsStart(dim) = psfStart(dim);
@@ -597,14 +623,16 @@ namespace askap {
             // and keep the model layers separate
             // We loop over all terms and ignore those with no flux
             const casacore::uInt nterms(this->itsResidualBasisFunction.shape()(2));
+            ASKAPDEBUGASSERT(nterms == this->itsBasisFunction->numberBases());
 
             for (uInt term = 0; term < nterms; term++) {
                 if (abs(peakValues(term)) > 0.0) {
-                    psfStart(2) = psfEnd(2) = term;
-                    casacore::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
+                    //psfStart(2) = psfEnd(2) = term;
+                    // slicer operates on a 2D image
+                    casacore::Slicer psfSlicer(psfStart.getFirst(2), psfEnd.getFirst(2), psfStride.getFirst(2), Slicer::endIsLast);
                     typename casacore::Array<T> modelSlice = this->model()(modelSlicer).nonDegenerate();
                     modelSlice += this->control()->gain() * peakValues(term) *
-                                  this->itsBasisFunction->basisFunction()(psfSlicer).nonDegenerate();
+                                  this->itsBasisFunction->basisFunction(term)(psfSlicer).nonDegenerate();
                 }
             }
 
@@ -725,9 +753,14 @@ namespace askap {
             return coefficients;
         }
 
+        /// @brief basically matrix multiplication across the basis function domain
+        /// @details This method applies inverse coupling matrix to every pixel of the data array
+        /// @param[in] invCoupling inverse coupling matrix (i.e. the matrix multiplied by the data array)
+        /// @param[in] dataArray data array (with basis function decomposition)
+        /// @return new data array after the inverse coupling matrix is applied
         template<class T, class FT>
         Array<T> DeconvolverBasisFunction<T, FT>::applyInverse(const Matrix<Double>& invCoupling,
-                const Array<T> dataArray)
+                const Array<T>& dataArray)
         {
             Array<T> invDataArray(dataArray.shape(), 0.0);
 

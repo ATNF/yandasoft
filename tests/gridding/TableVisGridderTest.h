@@ -60,8 +60,8 @@ namespace askap
       CPPUNIT_TEST_SUITE(TableVisGridderTest);
       //      CPPUNIT_TEST(testForwardBox);
       //      CPPUNIT_TEST(testReverseBox);
-      CPPUNIT_TEST(testCreateAbstract);      
-      CPPUNIT_TEST(testUnknownGridder);      
+      CPPUNIT_TEST(testCreateAbstract);
+      CPPUNIT_TEST(testUnknownGridder);
       CPPUNIT_TEST(testForwardSph);
       CPPUNIT_TEST(testReverseSph);
       CPPUNIT_TEST(testForwardAWProject);
@@ -88,9 +88,9 @@ namespace askap
 
       accessors::IDataSharedIter idi;
       boost::shared_ptr<Axes> itsAxes;
-      boost::shared_ptr<casa::Array<double> > itsModel;
-      boost::shared_ptr<casa::Array<double> > itsModelPSF;
-      boost::shared_ptr<casa::Array<double> > itsModelWeights;
+      boost::shared_ptr<casa::Array<imtype> > itsModel;
+      boost::shared_ptr<casa::Array<imtype> > itsModelPSF;
+      boost::shared_ptr<casa::Array<imtype> > itsModelWeights;
 
   public:
       void setUp()
@@ -122,16 +122,16 @@ namespace askap
 
         casa::Matrix<double> xform(2,2,0.);
         xform.diagonal().set(1.);
-               
+
         itsAxes.reset(new Axes());
-        itsAxes->addDirectionAxis(casa::DirectionCoordinate(casa::MDirection::J2000, 
+        itsAxes->addDirectionAxis(casa::DirectionCoordinate(casa::MDirection::J2000,
                      casa::Projection(casa::Projection::SIN), 0.,0.,cellSize,cellSize,xform,256.,256.));
-        
-        itsModel.reset(new casa::Array<double>(casa::IPosition(4,512,512,1,1)));
+
+        itsModel.reset(new casa::Array<imtype>(casa::IPosition(4,512,512,1,1)));
         itsModel->set(0.0);
-        itsModelPSF.reset(new casa::Array<double>(casa::IPosition(4,512,512,1,1)));
+        itsModelPSF.reset(new casa::Array<imtype>(casa::IPosition(4,512,512,1,1)));
         itsModelPSF->set(0.0);
-        itsModelWeights.reset(new casa::Array<double>(casa::IPosition(4,512,512,1,1)));
+        itsModelWeights.reset(new casa::Array<imtype>(casa::IPosition(4,512,512,1,1)));
         itsModelWeights->set(0.0);
       }
 
@@ -152,7 +152,7 @@ namespace askap
       //        itsBox->initialiseDegrid(*itsAxes, *itsModel);
       //        itsBox->degrid(idi);
       //      }
-      
+
       void testCreateAbstract()
       {
          // TableVisGridder is still an abstract class
@@ -161,17 +161,17 @@ namespace askap
          LOFAR::ParameterSet parset;
          CPPUNIT_ASSERT_THROW(TableVisGridder::createGridder(parset),AskapError);
       }
-      
+
       void testUnknownGridder()
       {
          // here we attempt to create a gridder, which is not recognized by a factory
          // The code should try to load a properly named dynamic library and because
-         // it is not there an exception will be thrown 
+         // it is not there an exception will be thrown
          LOFAR::ParameterSet parset;
          parset.add("gridder","AGridderWithSuchNameShouldDefinitelyBeUnknownToTheSystsem");
          CPPUNIT_ASSERT_THROW(VisGridderFactory::make(parset),AskapError);
       }
-      
+
       void testReverseSph()
       {
         itsSphFunc->initialiseGrid(*itsAxes, itsModel->shape(), true);

@@ -125,7 +125,7 @@ namespace askap
           std::vector<std::string> names(params1->freeNames());
           for (uint row=0;row<names.size();row++) {
             for (uint col=0;col<names.size();col++) {
-                if ((&ne.normalMatrix(names[row], names[col])) != &emptyMatrix) {
+                if (ne.normalMatrix(names[row], names[col]).nelements() != 0) {
                     const casacore::Matrix<double> nm = ne.normalMatrix(names[row], names[col]);
                     casacore::IPosition ip(nm.shape());
                     CPPUNIT_ASSERT(ip(0)==1);

@@ -90,12 +90,12 @@ namespace askap {
                 /// @details The algorithm can work with different basis functions
                 /// PointBasisFunction, MultiScaleBasisFunction.
                 /// @param[in] bf Shared pointer to basisfunction instance
-                void setBasisFunction(boost::shared_ptr<BasisFunction<T> > bf);
+                void setBasisFunction(const boost::shared_ptr<BasisFunction<T> >& bf);
 
                 /// @brief Return the basis function to be used
                 /// @details The algorithm can work with different basis functions
                 /// PointBasisFunction, MultiScaleBasisFunction
-                boost::shared_ptr<BasisFunction<T> > basisFunction();
+                const boost::shared_ptr<BasisFunction<T> >& basisFunction() const;
 
                 /// @brief Perform the deconvolution
                 /// @detail This is the main deconvolution method.
@@ -113,6 +113,13 @@ namespace askap {
                 /// @details This method encapsulates extraction of basic solver parameters from the parset.
                 /// @param[in] parset parset
                 virtual void configure(const LOFAR::ParameterSet &parset);
+            protected:
+
+                /// @brief report in the log on the product of coupling matrix and its inverse
+                void reportOnCouplingMatrix() const;
+
+                /// @brief report in the log on the level of coupling between adjacent scales
+                void reportOnAdjacentScaleCoupling() const;
 
             private:
 
@@ -134,13 +141,16 @@ namespace askap {
                 casacore::Vector<T> findCoefficients(const casacore::Matrix<casacore::Double>& invCoupling,
                                                  const casacore::Vector<T>& peakValues);
 
-                casacore::Array<T> applyInverse(const casacore::Matrix<casacore::Double>& invCoupling,
-                                            const casacore::Array<T> dataArray);
+                /// @brief basically matrix multiplication across the basis function domain
+                /// @details This method applies inverse coupling matrix to every pixel of the data array
+                /// @param[in] invCoupling inverse coupling matrix (i.e. the matrix multiplied by the data array)
+                /// @param[in] dataArray data array (with basis function decomposition)
+                /// @return new data array after the inverse coupling matrix is applied
+                static casacore::Array<T> applyInverse(const casacore::Matrix<casacore::Double>& invCoupling,
+                                            const casacore::Array<T>& dataArray);
 
-                casacore::Array<T> apply(const casacore::Matrix<casacore::Double>& invCoupling,
+                static casacore::Array<T> apply(const casacore::Matrix<casacore::Double>& invCoupling,
                                      const casacore::Vector<T> dataVector);
-
-                void gramSchmidt(casacore::Array<T>& bf);
 
                 /// Residual images convolved with basis functions
                 casacore::Array<T> itsResidualBasisFunction;

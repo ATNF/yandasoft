@@ -1,7 +1,7 @@
 /// @file
 ///
-/// @brief Gridder adapter to simulate smearing effects 
-/// @details When in the degridding mode, this adapter runs the wrapped 
+/// @brief Gridder adapter to simulate smearing effects
+/// @details When in the degridding mode, this adapter runs the wrapped
 /// gridder at finer time and frequency resolution and averages the result
 /// to simulate bandwidth at time-average smearing. This can be done for both
 /// simulation and the forward prediction step of the ordinary imaging.
@@ -41,20 +41,20 @@ namespace askap {
 
 namespace synthesis {
 
-/// @brief Gridder adapter to simulate smearing effects 
-/// @details When in the degridding mode, this adapter runs the wrapped 
+/// @brief Gridder adapter to simulate smearing effects
+/// @details When in the degridding mode, this adapter runs the wrapped
 /// gridder at finer time and frequency resolution and averages the result
 /// to simulate bandwidth at time-average smearing. This can be done for both
 /// simulation and the forward prediction step of the ordinary imaging.
 /// @ingroup gridding
-class SmearingGridderAdapter : virtual public IVisGridder 
+class SmearingGridderAdapter : virtual public IVisGridder
 {
 public:
    /// @brief initialise the adapter
    /// @details
    /// @param[in] gridder a shared pointer to the gridder to be wrapped by this adapter
    /// @param[in] bandwidth effective bandwidth of a single spectral channel (we don't have access to it and
-   /// in general it may be different from spectral resolution), same units as used in the other part of 
+   /// in general it may be different from spectral resolution), same units as used in the other part of
    /// the gridding package (Hz)
    /// @param[in] nFreqSteps number of frequency points in the simulation (default is 1, i.e. no simulation)
    /// @note time-average smearing is not yet implemented
@@ -68,7 +68,7 @@ public:
    /// which is a non-trivial type
    /// @param[in] other an object to copy from
    SmearingGridderAdapter(const SmearingGridderAdapter &other);
-   
+
    /// @brief clone a copy of this gridder
    /// @return shared pointer to the clone
    virtual boost::shared_ptr<IVisGridder> clone();
@@ -88,30 +88,30 @@ public:
 
    /// @brief form the final output image
    /// @param[in] out output double precision image or PSF
-   virtual void finaliseGrid(casacore::Array<double>& out);
+   virtual void finaliseGrid(casacore::Array<imtype>& out);
 
    /// @brief finalise weights
    /// @details Form the sum of the convolution function squared, multiplied by the weights for each
    /// different convolution function. This is used in the evaluation of the second derivative.
    /// @param[in] out output double precision sum of weights images
-   virtual void finaliseWeights(casacore::Array<double>& out);
+   virtual void finaliseWeights(casacore::Array<imtype>& out);
 
    /// @brief initialise the degridding
    /// @param[in] axes axes specifications
    /// @param[in] image input image cube: u,v,pol,chan
    virtual void initialiseDegrid(const scimath::Axes& axes,
-					const casacore::Array<double>& image);
+					const casacore::Array<imtype>& image);
 
    /// @brief make context-dependant changes to the gridder behaviour
    /// @param[in] context context description
    virtual void customiseForContext(const std::string &context);
-			
+
    /// @brief set visibility weights
    /// @param[in] viswt shared pointer to visibility weights
    virtual void initVisWeights(const IVisWeights::ShPtr &viswt);
 
    /// @brief degrid the visibility data.
-   /// @param[in] acc non-const data accessor to work with  
+   /// @param[in] acc non-const data accessor to work with
    virtual void degrid(accessors::IDataAccessor& acc);
 
    /// @brief finalise degridding
@@ -121,19 +121,19 @@ public:
    /// @details A simple check allows us to bypass heavy calculations if the input model
    /// is empty (all pixels are zero). This makes sense for degridding only.
    /// @brief true, if the model is empty
-   virtual bool isModelEmpty() const; 
-      
+   virtual bool isModelEmpty() const;
+
 private:
 
    /// @brief wrapped gridder doing actual job
    boost::shared_ptr<IVisGridder> itsGridder;
-   
+
    /// @brief bandwidth of a single channel (same units as everywhere else in gridding -> Hz)
    const double itsBandwidth;
-   
+
    /// @brief number of frequency steps to simulate (1 means a void operation, pass accessor as it is)
    const casacore::uInt itsNFreqSteps;
-                  
+
    /// @brief flag that the model is empty for degridding
    /// @details It allows to bypass expensive image regridding
    bool itsModelIsEmpty;
@@ -145,4 +145,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef SMEARING_GRIDDER_ADAPTER_H
-

@@ -150,7 +150,7 @@ namespace askap
 
     askap::scimath::Params ImageFFTEquation::defaultParameters()
     {
-      Params ip;
+      Params ip(true);
       ip.add("image");
       return ip;
     }
@@ -234,7 +234,7 @@ namespace askap
       if (itsNDir > 1) {
          DDCalBufferDataAccessor accBuffer(*itsIdi);
          ASKAPLOG_DEBUG_STR(logger, "calling accBuffer.setNDir("<<itsNDir<<")");
-         accBuffer.setNDir(itsNDir); 
+         accBuffer.setNDir(itsNDir);
       }
       int dirIndex = itsNDir > 1 ? -1 : 0;
 
@@ -252,7 +252,12 @@ namespace askap
         if (notYetDegridded(imageName)) {
             ASKAPLOG_DEBUG_STR(logger, "Degridding image "<<imageName);
             const Axes axes(parameters().axes(imageName));
-            casacore::Array<double> imagePixels(parameters().value(imageName).copy());
+            casacore::Array<imtype> imagePixels;
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                imagePixels = parameters().valueF(imageName);
+            #else
+                imagePixels = parameters().value(imageName);
+            #endif
             const casacore::IPosition imageShape(imagePixels.shape());
             itsModelGridders[imageName]->initialiseDegrid(axes, imagePixels);
         }
@@ -275,7 +280,7 @@ namespace askap
             ASKAPLOG_DEBUG_STR(logger, "degridding "<<imageName<<" into buffer "<<dirIndex);
             try {
                 // Only possible in DDCalBufferDataAccessor, so cast first
-                const boost::shared_ptr<TableVisGridder const> &tGridder = 
+                const boost::shared_ptr<TableVisGridder const> &tGridder =
                        boost::dynamic_pointer_cast<TableVisGridder const>(itsModelGridders[imageName]);
                 tGridder->setSourceIndex(dirIndex);
             }
@@ -339,7 +344,7 @@ namespace askap
     void ImageFFTEquation::calcImagingEquations(askap::scimath::ImagingNormalEquations& ne) const
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
-     
+
 
       // We will need to loop over all completions i.e. all sources
       const std::vector<std::string> completions(parameters().completions("image"));
@@ -397,7 +402,12 @@ namespace askap
         string imageName("image"+(*it));
         ASKAPLOG_DEBUG_STR(logger, "Initialising for " << imageName);
         const Axes axes(parameters().axes(imageName));
-        casacore::Array<double> imagePixels(parameters().value(imageName).copy());
+        casacore::Array<imtype> imagePixels;
+        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            imagePixels = parameters().valueF(imageName);
+        #else
+            imagePixels = parameters().valueT(imageName);
+        #endif
         const casacore::IPosition imageShape(imagePixels.shape());
         /// First the model
         itsModelGridders[imageName]->customiseForContext(*it);
@@ -485,9 +495,11 @@ namespace askap
       for (std::vector<std::string>::const_iterator it=completions.begin();it!=completions.end();++it)
       {
         const string imageName("image"+(*it));
-        const casacore::IPosition imageShape(parameters().value(imageName).shape());
+        const casacore::IPosition imageShape(parameters().shape(imageName));
         ASKAPLOG_INFO_STR(logger,"Name: " << imageName << " Shape: " << imageShape);
-        casacore::Array<double> imageDeriv(imageShape);
+        casacore::Array<imtype> imageDeriv(imageShape);
+        casacore::Array<imtype> imagePSF(imageShape);
+        casacore::Array<imtype> imageWeight(imageShape);
         itsResidualGridders[imageName]->finaliseGrid(imageDeriv);
 
         // for debugging/research, store grid prior to FFT
@@ -497,14 +509,11 @@ namespace askap
         //}
         // end debugging code
 
-        casacore::Array<double> imagePSF(imageShape);
         itsPSFGridders[imageName]->finaliseGrid(imagePSF);
-
-        casacore::Array<double> imageWeight(imageShape);
         itsResidualGridders[imageName]->finaliseWeights(imageWeight);
 
         /*{
-          casacore::Array<double> imagePSFWeight(imageShape);
+          casacore::Array<imtype> imagePSFWeight(imageShape);
           itsPSFGridders[imageName]->finaliseWeights(imagePSFWeight);
           const double maxPSFWeight = casacore::max(imagePSFWeight);
           if (maxPSFWeight > 0) {
@@ -524,23 +533,20 @@ namespace askap
 
         casacore::IPosition vecShape(1, imagePSF.nelements());
 
-        casacore::Vector<double> imagePreconVec;
+        casacore::Vector<imtype> imagePreconVec;
         if (itsUsePreconGridder && (itsPreconGridders.count(imageName)>0)) {
-          casacore::Array<double> imagePrecon(imageShape);
+          casacore::Array<imtype> imagePrecon(imageShape);
           itsPreconGridders[imageName]->finaliseGrid(imagePrecon);
           imagePreconVec.reference(imagePrecon.reform(vecShape));
         }
 
         {
           casacore::IPosition reference(4, imageShape(0)/2, imageShape(1)/2, 0, 0);
-          casacore::Vector<double> imagePSFVec(imagePSF.reform(vecShape));
-          casacore::Vector<double> imageWeightVec(imageWeight.reform(vecShape));
-          casacore::Vector<double> imageDerivVec(imageDeriv.reform(vecShape));
-
+          casacore::Vector<imtype> imagePSFVec(imagePSF.reform(vecShape));
+          casacore::Vector<imtype> imageWeightVec(imageWeight.reform(vecShape));
+          casacore::Vector<imtype> imageDerivVec(imageDeriv.reform(vecShape));
           ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
               imageDerivVec, imageShape, reference,itsCoordSystems[imageName]);
-          //ne.addSlice(imageName, imagePSFVec, imageWeightVec, imagePreconVec,
-          //    imageDerivVec, imageShape, reference);
         }
       }
     }

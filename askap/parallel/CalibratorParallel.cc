@@ -119,7 +119,7 @@ using namespace askap::askapparallel;
 /// @param[in] parset ParameterSet for inputs
 CalibratorParallel::CalibratorParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset),
+      MEParallelApp(comms,parset,false),
       itsPerfectModel(new scimath::Params()), itsSolveGains(false), itsSolveLeakage(false),
       itsSolveBandpass(false), itsSolveBandpassLeakage(false), itsChannelsPerWorker(0), itsStartChan(0),
       itsBeamIndependentGains(false), itsBeamIndependentLeakages(false), itsNormaliseGains(false), itsSolutionInterval(-1.),
@@ -425,11 +425,13 @@ void CalibratorParallel::init(const LOFAR::ParameterSet& parset)
 std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(const LOFAR::ParameterSet& parset) {
     std::map<std::string, std::string> params;
     if (parset.isDefined("solver.LSQR.alpha")) params["alpha"] = parset.getString("solver.LSQR.alpha");
+    if (parset.isDefined("solver.LSQR.alpha_leak")) params["alpha_leak"] = parset.getString("solver.LSQR.alpha_leak");
     if (parset.isDefined("solver.LSQR.norm"))  params["norm"] = parset.getString("solver.LSQR.norm");
     if (parset.isDefined("solver.LSQR.niter")) params["niter"] = parset.getString("solver.LSQR.niter");
     if (parset.isDefined("solver.LSQR.rmin"))  params["rmin"] = parset.getString("solver.LSQR.rmin");
     if (parset.isDefined("solver.LSQR.verbose")) params["verbose"] = parset.getString("solver.LSQR.verbose");
     if (parset.isDefined("solver.LSQR.parallelMatrix")) params["parallelMatrix"] = parset.getString("solver.LSQR.parallelMatrix");
+    if (parset.isDefined("solver.LSQR.normalizeColumns")) params["normalizeColumns"] = parset.getString("solver.LSQR.normalizeColumns");
 
     // Smoothing constraints parameters.
     if (parset.isDefined("solver.LSQR.smoothing")) params["smoothing"] = parset.getString("solver.LSQR.smoothing");
@@ -438,6 +440,8 @@ std::map<std::string, std::string> CalibratorParallel::getLSQRSolverParameters(c
     if (parset.isDefined("solver.LSQR.smoothing.nsteps")) params["smoothingNsteps"] = parset.getString("solver.LSQR.smoothing.nsteps");
     if (parset.isDefined("solver.LSQR.smoothing.level")) params["smoothingLevel"] = parset.getString("solver.LSQR.smoothing.level");
     if (parset.isDefined("solver.LSQR.smoothing.type")) params["smoothingType"] = parset.getString("solver.LSQR.smoothing.type");
+    if (parset.isDefined("solver.LSQR.smoothing.variableType")) params["smoothingVariableType"] = parset.getString("solver.LSQR.smoothing.variableType");
+    if (parset.isDefined("solver.LSQR.smoothing.accuracy")) params["smoothingAccuracy"] = parset.getString("solver.LSQR.smoothing.accuracy");
 
     if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont")) params["spectralDiscont"] = parset.getString("solver.LSQR.smoothing.spectralDiscont");
     if (parset.isDefined("solver.LSQR.smoothing.spectralDiscont.step")) params["spectralDiscontStep"] = parset.getString("solver.LSQR.smoothing.spectralDiscont.step");

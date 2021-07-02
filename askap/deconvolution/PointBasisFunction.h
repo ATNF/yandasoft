@@ -65,13 +65,13 @@ namespace askap {
                 /// @details Construct a point source basis function. This has only
                 /// one plane.
                 /// param[in] shape Shape of desired basis function on the first two axes.
-                PointBasisFunction(const casacore::IPosition shape);
+                explicit PointBasisFunction(const casacore::IPosition& shape);
 
                 /// @brief Construct from a specified shape
                 /// @details Construct a point source basis function. This has only
                 /// one plane.
                 /// param[in] shape Shape of desired basis function on the first two axes.
-                void initialise(const casacore::IPosition shape);
+                virtual void initialise(const casacore::IPosition& shape);
         };
 
     } // namespace synthesis

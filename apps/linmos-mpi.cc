@@ -1,4 +1,31 @@
-
+/// @file linmos-mpi.cc
+///
+/// @brief combine a number of images as a linear mosaic
+/// @details This is a utility to merge images into a mosaic. Images can be set
+/// explicitly or found automatically based on input tags.
+///
+/// @copyright (c) 2012,2014,2021 CSIRO
+/// Australia Telescope National Facility (ATNF)
+/// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+/// PO Box 76, Epping NSW 1710, Australia
+/// atnf-enquiries@csiro.au
+///
+/// This file is part of the ASKAP software distribution.
+///
+/// The ASKAP software distribution is free software: you can redistribute it
+/// and/or modify it under the terms of the GNU General Public License as
+/// published by the Free Software Foundation; either version 2 of the License,
+/// or (at your option) any later version.
+///
+/// This program is distributed in the hope that it will be useful,
+/// but WITHOUT ANY WARRANTY; without even the implied warranty of
+/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+/// GNU General Public License for more details.
+///
+/// You should have received a copy of the GNU General Public License
+/// along with this program; if not, write to the Free Software
+/// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+///
 /// local includes
 #include <askap/askap_synthesis.h>
 #include <askap/utils/LinmosUtils.h>
@@ -451,6 +478,45 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                   break;
               }
 
+          }
+
+          if (parset.getBool("removeleakage",false)) {
+              // only do this if we're processing a Q, U or V image
+              int pol = 0;
+              size_t pos = inImgName.find(".q.");
+              bool found = false;
+              if (pos != string::npos) {
+                  found = true;
+                  pol = 1;
+              }
+              if (!found) {
+                  pos = inImgName.find(".u.");
+                  if (pos != string::npos) {
+                      found = true;
+                      pol = 2;
+                  }
+              }
+              if (!found) {
+                  pos = inImgName.find(".v.");
+                  if (pos !=string::npos) {
+                      found = true;
+                      pol = 3;
+                  }
+              }
+              if (found) {
+                  // find corresponding Stokes I image
+                  string ImgName = inImgName;
+                  ImgName.replace(pos,3,".i.");
+                  Array<float> stokesI = iacc.read(ImgName,blc,trc);
+                  ASKAPCHECK(stokesI.shape()==inPix.shape(),"Stokes I and Pol image shapes don't match");
+                  // do leakage correction
+                  // TODO: what should thispos be? 0 or blc? It's used to get the frequency
+                  casa::IPosition thispos(blc); // thispos(inPix.ndim(),0);
+                  ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<ImgName<<" for channel " << thispos(3));
+                  accumulator.removeLeakage(inPix,stokesI,pol,thispos,iacc.coordSys(inImgName));
+              } else {
+                  ASKAPLOG_WARN_STR(logger,"Skipping removeLeakage - cannot determine polarisation of input");
+              }
           }
 
           Array<float> inWgtPix;

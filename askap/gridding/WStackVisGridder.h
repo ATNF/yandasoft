@@ -39,7 +39,7 @@ namespace askap
 		/// @brief Visibility gridder using W stacking
 		/// @details The visibilities are gridded using a convolution
 		/// function of compact support - actually a spheroidal function.
-		/// To correct for the w term in the full synthesis measurement equation 
+		/// To correct for the w term in the full synthesis measurement equation
 		/// the data are first partitioned in w and then gridded onto separate
 		/// planes. At the end, all planes are Fourier transformed and stacked
 		/// after multiplication by the w-dependent complex phasor image.
@@ -57,7 +57,7 @@ namespace askap
 				WStackVisGridder(const double wmax, const int nwplanes);
 
 				virtual ~WStackVisGridder();
-				
+
 				/// @brief copy constructor
 				/// @details It is required to decouple internal arrays between
 				/// input object and the copy
@@ -71,16 +71,16 @@ namespace askap
 				virtual void initialiseGrid(const scimath::Axes& axes,
 				    const casacore::IPosition& shape, const bool dopsf=true,
                     const bool dopcf=false);
-				
+
 				/// Form the final output image
 				/// @param out Output double precision image or PSF
-				virtual void finaliseGrid(casacore::Array<double>& out);
+				virtual void finaliseGrid(casacore::Array<imtype>& out);
 
 				/// @brief Initialise the degridding
 				/// @param axes axes specifications
 				/// @param image Input image: cube: u,v,pol,chan
 				virtual void initialiseDegrid(const scimath::Axes& axes,
-				    const casacore::Array<double>& image);
+				    const casacore::Array<imtype>& image);
 
 				/// Clone a copy of this Gridder
 				virtual IVisGridder::ShPtr clone();
@@ -94,11 +94,11 @@ namespace askap
                 /// @brief static method to create gridder
                 /// @details Each gridder should have a static factory method, which is
                 /// able to create a particular type of the gridder and initialise it with
-                /// the parameters taken form the given parset. It is assumed that the 
+                /// the parameters taken form the given parset. It is assumed that the
                 /// method receives a subset of parameters where the gridder name is already
-                /// taken out. 
+                /// taken out.
                 /// @param[in] parset input parset file
-                /// @return a shared pointer to the gridder instance					 
+                /// @return a shared pointer to the gridder instance
                 static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
 			protected:
@@ -115,8 +115,13 @@ namespace askap
 				/// Multiply by the phase screen
 				/// @param scratch To be multiplied
 				/// @param i Index
-				void multiply(casacore::Array<casacore::DComplex>& scratch, int i);
-				
+				void multiply(casacore::Array<imtypeComplex>& scratch, int i);
+
+				/// Increase PCF support accumulations
+				/// @param scratch To be updated
+				/// @param i Index
+				void updatew(casacore::Array<imtypeComplex>& scratch, int i);
+
 				/// Mapping from row, pol, and channel to planes of grid
 				casacore::Cube<int> itsGMap;
             private:
@@ -124,7 +129,7 @@ namespace askap
 				/// @details It is required as private to avoid being called
 				/// @param[in] other input object
 				/// @return reference to itself
-				WStackVisGridder& operator=(const WStackVisGridder &other);    
+				WStackVisGridder& operator=(const WStackVisGridder &other);
 		};
 	}
 }

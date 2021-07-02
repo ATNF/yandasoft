@@ -38,6 +38,7 @@
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>
 
+#include <askap/scimath/utils/SpheroidalFunction.h>
 #include <askap/deconvolution/BasisFunction.h>
 
 namespace askap {
@@ -63,7 +64,7 @@ namespace askap {
                 /// @details Set up internals - shape not set yet
                 /// @param[in] scales Scale (in pixels) of each blob
                 /// @param[in] orthogonal Orthogonalise using Gram-Schmidt
-                MultiScaleBasisFunction(const casacore::Vector<casacore::Float>& scales,
+                explicit MultiScaleBasisFunction(const casacore::Vector<casacore::Float>& scales,
                                         const casacore::Bool orthogonal = false);
 
                 /// @brief Construct with specified shape
@@ -71,7 +72,7 @@ namespace askap {
                 /// @param[in] shape Shape of first two axes
                 /// @param[in] scales Scale (in pixels) of each blob
                 /// @param[in] orthogonal Orthogonalise using Gram-Schmidt
-                MultiScaleBasisFunction(const casacore::IPosition shape,
+                MultiScaleBasisFunction(const casacore::IPosition& shape,
                                         const casacore::Vector<casacore::Float>& scales,
                                         const casacore::Bool orthogonal = false);
 
@@ -79,14 +80,20 @@ namespace askap {
                 /// @details The first two axes are set from shape, and the
                 /// array is then filled in with the calculated values.
                 /// @param[in] shape Shape of first two axes
-                virtual void initialise(const casacore::IPosition shape);
+                virtual void initialise(const casacore::IPosition& shape);
 
+            protected:
+                /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
+                static T spheroidalOld(T nu);
+
+                /// @brief convenience method for spheroidal function calculator
+                T spheroidal(T nu) const;
             private:
                 /// Vector of scales (in pixels)
                 casacore::Vector<casacore::Float> itsScales;
 
-                /// Ancient routine (originally from F. Schwab) to calculate the PSWF.
-                T spheroidal(T nu);
+                /// @brief spheroidal function calculator
+                scimath::SpheroidalFunction itsSphFunc;
         };
 
     } // namespace synthesis

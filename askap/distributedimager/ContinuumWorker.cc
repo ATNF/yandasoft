@@ -153,6 +153,7 @@ ContinuumWorker::~ContinuumWorker()
 
 void ContinuumWorker::run(void)
 {
+
   // Send the initial request for work
   ContinuumWorkRequest wrequest;
 
@@ -411,7 +412,9 @@ void ContinuumWorker::compressWorkUnits() {
     LOFAR::ParameterSet startParset = itsParsets[0];
 
     unsigned int contiguousCount = 1;
-
+    if (workUnits.size() == 1) {
+        ASKAPLOG_WARN_STR(logger,"Asked to compress channels but workunit count 1");
+    }
     for ( int count = 1; count < workUnits.size(); count++) {
 
         ContinuumWorkUnit nextUnit = workUnits[count];
@@ -450,14 +453,19 @@ void ContinuumWorker::compressWorkUnits() {
         }
 
     }
-    ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
-    ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
-    workUnits = compressedList;
-    itsParsets = compressedParsets;
+    if (compressedList.size() > 0) {
+        ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
+        ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
+        workUnits = compressedList;
+        itsParsets = compressedParsets;
+    }
+    else {
+        ASKAPLOG_WARN_STR(logger,"No compression performed");
+    }
+    ASKAPCHECK(compressedList.size() < 2, "The number of assumed unique parsets is greater than one. Due to a pass by reference these parsets will not be unique - see AXA-1004 and associated technical debt tickets");
 }
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
-
   // This also needs to set the frequencies and directions for all the images
   ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit");
   LOFAR::ParameterSet unitParset = itsParset;
@@ -470,17 +478,26 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // Channel numbers are zero based
   const int n = (localsolve ? itsParset.getInt("nchanpercore", 1) : 1);
   string ChannelPar = "["+toString(n)+","+toString(wu.get_localChannel())+"]";
-
+  int last_beam = -1;
+  
+  // AXA-1004 this will not be unique as the parsets are passed by reference
+  // if we are expecting multiple beams in the work units then these will be clobbered
+  // unless the accessor gets the beam information some other way
+  
   const bool perbeam = unitParset.getBool("perbeam", true);
   if (!perbeam) {
     string param = "beams";
     string bstr = "[" + toString(wu.get_beam()) + "]";
+    if (last_beam != -1) {
+      ASKAPCHECK(last_beam == wu.get_beam(), "beam index changed in perbeam processing parset - clearly in the expectation that this will do something but the parset is stored by reference AXA-1004");
+    }
     unitParset.replace(param, bstr);
   }
 
-
   const bool usetmpfs = unitParset.getBool("usetmpfs", false);
+
   if (usetmpfs && !localsolve) // only do this here if in continuum mode
+
   {
     cacheWorkUnit(wu, unitParset);
     ChannelPar="[1,0]";
@@ -489,14 +506,17 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // only add channel selection for valid workunits and topo frame
   // other frames have shifted channel allocations which can't be handled this way
   // if combinechannels==false the Channel parameter is only used for advise
-  ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
-  unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
-  unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
-  if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
-      unitParset.replace("Channels", ChannelPar);
-  }
+  // Ord AXA-1004 removing this as it is not used by subsequent code and can break advise
+  // in some corner cases.
+  // ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
+  // unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
+  // unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
+  // if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
+  //     unitParset.replace("Channels", ChannelPar);
+  //}
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
+
   itsAdvisor->addMissingParameters(unitParset);
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
@@ -1186,7 +1206,7 @@ void ContinuumWorker::processChannels()
 
       ASKAPLOG_INFO_STR(logger,"Adding model.slice");
       ASKAPCHECK(rootImager.params()->has("image.slice"), "Params are missing image.slice parameter");
-      rootImager.params()->add("model.slice", rootImager.params()->value("image.slice"));
+      rootImager.params()->add("model.slice", rootImager.params()->valueT("image.slice"));
       ASKAPCHECK(rootImager.params()->has("model.slice"), "Params are missing model.slice parameter");
 
       if (dumpgrids) {
@@ -1314,9 +1334,8 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
-
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
 
 
@@ -1353,7 +1372,7 @@ void ContinuumWorker::processChannels()
         ASKAPLOG_INFO_STR(logger, "Sending blankparams to writer " << workUnits[goodUnitCount].get_writer());
         askap::scimath::Params::ShPtr blankParams;
 
-        blankParams.reset(new Params);
+        blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
 
         setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
@@ -1424,10 +1443,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   } else // Write image
   {
     ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    const casacore::Array<double> imagePixels(params->value("model.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsImageCube->writeSlice(floatImagePixels, chan);
+    itsImageCube->writeSlice(params->valueF("model.slice"), chan);
   }
 
 
@@ -1438,11 +1454,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else {
     // Write PSF
       if (!itsParset.getBool("dumpgrids",false)) {
-          ASKAPLOG_INFO_STR(logger, "Writing PSF");
-          const casacore::Array<double> imagePixels(params->value("psf.slice"));
-          casacore::Array<float> floatImagePixels(imagePixels.shape());
-          casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-          itsPSFCube->writeSlice(floatImagePixels, chan);
+          itsPSFCube->writeSlice(params->valueF("psf.slice"), chan);
       }
   }
   if (!params->has("residual.slice")) {
@@ -1452,10 +1464,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   {
     // Write residual
     ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    const casacore::Array<double> imagePixels(params->value("residual.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsResidualCube->writeSlice(floatImagePixels, chan);
+    itsResidualCube->writeSlice(params->valueF("residual.slice"), chan);
   }
 
   if (!params->has("weights.slice")) {
@@ -1465,39 +1474,33 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   else
   {
     ASKAPLOG_INFO_STR(logger, "Writing Weights");
-    const casacore::Array<double> imagePixels(params->value("weights.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsWeightsCube->writeSlice(floatImagePixels, chan);
+    itsWeightsCube->writeSlice(params->valueF("weights.slice"), chan);
   }
   // Write the grids
 
   if (params->has("grid.slice")) {
     ASKAPLOG_INFO_STR(logger, "Writing Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
-    casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+    casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
     itsGriddedVis->writeSlice(grid,chan);
   }
   if (params->has("pcf.slice")) {
       ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
       const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
-      casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+      casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
       itsPCFCube->writeSlice(grid,chan);
   }
   if (params->has("psfgrid.slice")) {
         ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
         const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
-        casacore::Array<casacore::Complex> grid(gr.reform(params->value("psf.slice").shape()));
+        casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
         itsPSFGridCube->writeSlice(grid,chan);
   }
   if (params->has("psf.raw.slice"))
   {
       if (itsParset.getBool("dumpgrids", false)) {
         ASKAPLOG_INFO_STR(logger, "Writing un-normalised PSF");
-        const casacore::Array<double> imagePixels(params->value("psf.raw.slice"));
-        casacore::Array<float> floatImagePixels(imagePixels.shape());
-        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-        itsPSFCube->writeSlice(floatImagePixels, chan);
+        itsPSFCube->writeSlice(params->valueF("psf.raw.slice"), chan);
       }
   }
   if (itsParset.getBool("restore", false)) {
@@ -1519,21 +1522,14 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       // Write preconditioned PSF image
       {
         ASKAPLOG_INFO_STR(logger, "Writing preconditioned PSF");
-        const casacore::Array<double> imagePixels(params->value("psf.image.slice"));
-        casacore::Array<float> floatImagePixels(imagePixels.shape());
-        casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-        itsPSFimageCube->writeSlice(floatImagePixels, chan);
+        itsPSFimageCube->writeSlice(params->valueF("psf.image.slice"), chan);
       }
     }
 
     // Write Restored image
 
     ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
-    const casacore::Array<double> imagePixels(params->value("image.slice"));
-    casacore::Array<float> floatImagePixels(imagePixels.shape());
-    casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-    itsRestoredCube->writeSlice(floatImagePixels, chan);
-
+    itsRestoredCube->writeSlice(params->valueF("image.slice"), chan);
   }
 
 }

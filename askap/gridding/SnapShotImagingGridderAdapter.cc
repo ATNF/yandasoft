@@ -1,15 +1,15 @@
 /// @file
 ///
-/// @brief Gridder adapter to do snap-shot imaging 
-/// @details We can handle non-coplanarity via snap-shot imaging. For an approximately co-planar 
+/// @brief Gridder adapter to do snap-shot imaging
+/// @details We can handle non-coplanarity via snap-shot imaging. For an approximately co-planar
 ///     array the effect of w-term at a short time interval is equivalent to a shift. This gridder
 ///     uses an accessor adapter to monitor changes of the best-fit plane in the u,v,w-spce. If the
 ///     departure from the previously fitted plane exceeds the tolerance, the image is regridded to
 ///     a proper coordinate system (taken the shift out). This is an adapter, which can work with
-///     any ASKAPsoft gridder. The real gridder, passed as a parameter during construction, does all 
+///     any ASKAPsoft gridder. The real gridder, passed as a parameter during construction, does all
 ///     the gridding job, so the snap-shot imaging can be combined with w-projection or any other
 ///     algorithm. The main driver for snap-shot imaging is an attempt to decrease the support size
-///     of convolution functions (largely caused by w-projection).  
+///     of convolution functions (largely caused by w-projection).
 ///
 ///     See also Ord et al., 2011, PASA (in press); arXiv:1010.1733
 ///
@@ -97,18 +97,18 @@ SnapShotImagingGridderAdapter::SnapShotImagingGridderAdapter(const SnapShotImagi
     itsFirstAccessor(other.itsFirstAccessor), itsBuffersFinalised(other.itsBuffersFinalised),
     itsNumOfImageRegrids(other.itsNumOfImageRegrids), itsTimeImageRegrid(other.itsTimeImageRegrid),
     itsNumOfInitialisations(other.itsNumOfInitialisations), itsLastFitTimeStamp(other.itsLastFitTimeStamp),
-    itsShortestIntervalBetweenFits(other.itsShortestIntervalBetweenFits), 
-    itsLongestIntervalBetweenFits(other.itsLongestIntervalBetweenFits), 
+    itsShortestIntervalBetweenFits(other.itsShortestIntervalBetweenFits),
+    itsLongestIntervalBetweenFits(other.itsLongestIntervalBetweenFits),
     itsTempInImg(), itsTempOutImg(), itsModelIsEmpty(other.itsModelIsEmpty),
     itsClippingFactor(other.itsClippingFactor), itsWeightsClippingFactor(other.itsWeightsClippingFactor),
     itsNoPSFReprojection(other.itsNoPSFReprojection), itsDecimationFactor(other.itsDecimationFactor),
     itsInterpolationMethod(other.itsInterpolationMethod), itsPredictWPlane(other.itsPredictWPlane)
 {
-  ASKAPCHECK(other.itsGridder, 
+  ASKAPCHECK(other.itsGridder,
        "copy constructor of SnapShotImagingGridderAdapter got an object somehow set up with an empty gridder");
-  ASKAPCHECK(!other.itsAccessorAdapter.isAssociated(), 
+  ASKAPCHECK(!other.itsAccessorAdapter.isAssociated(),
      "An attempt to copy gridder adapter with the accessor adapter associated with some real data accessor. This shouldn't happen.");
-  itsGridder = other.itsGridder->clone();  
+  itsGridder = other.itsGridder->clone();
 
 }
 
@@ -119,28 +119,28 @@ SnapShotImagingGridderAdapter::~SnapShotImagingGridderAdapter()
       ASKAPLOG_INFO_STR(logger, "SnapShotImagingGridderAdapter usage statistics");
       const std::string msg = itsNoPSFReprojection ? "non-PSF " : "";
       ASKAPLOG_INFO_STR(logger, "   The adapter was initialised for "<<msg<<"gridding and degridding "<<
-                        itsNumOfInitialisations<<" times");     
+                        itsNumOfInitialisations<<" times");
       ASKAPLOG_INFO_STR(logger, "   Total time spent doing image plane regridding is "<<
                         itsTimeImageRegrid<<" (s)");
       ASKAPLOG_INFO_STR(logger, "   Number of regridding events is "<<itsNumOfImageRegrids);
       ASKAPLOG_INFO_STR(logger, "   or "<<double(itsNumOfImageRegrids)/double(itsNumOfInitialisations)<<
-                        " times per grid/degrid pass");      
+                        " times per grid/degrid pass");
       ASKAPLOG_INFO_STR(logger, "   Image clipping factor (clipping during regrids) is "<< itsClippingFactor);
       ASKAPLOG_INFO_STR(logger, "   Weights clipping factor (in addition to any image clipping) is "<<
                         itsWeightsClippingFactor);
       if (itsNumOfImageRegrids > 0) {
           ASKAPLOG_INFO_STR(logger, "   Average time spent per image plane regridding is "<<
                       itsTimeImageRegrid/double(itsNumOfImageRegrids)<<" (s)");
-      } 
-      reportAndInitIntervalStats();     
+      }
+      reportAndInitIntervalStats();
   }
 }
 
 /// @brief report current interval stats and initialise them
 /// @details We collect and report such statistics like shortest and longest
-/// intervals between changes to the best fit plane (and therefore between 
+/// intervals between changes to the best fit plane (and therefore between
 /// image regrids). As the adapter can be reused multiple times, these
-/// stats need to be reset every time a new initialisation is done. This 
+/// stats need to be reset every time a new initialisation is done. This
 /// method reports current stats to the log (if there is something to report; the
 /// initial values are such that they shouldn't occur in normal operations and can
 /// serve as flags) and initialises them for the next pass.
@@ -152,8 +152,8 @@ void SnapShotImagingGridderAdapter::reportAndInitIntervalStats() const
       ASKAPLOG_DEBUG_STR(logger, "Longest observing time interval between image plane regrids is "<<
                          itsLongestIntervalBetweenFits<<" (s)");
       ASKAPLOG_DEBUG_STR(logger, "Shortest observing time interval between image plane regrids is "<<
-                         itsShortestIntervalBetweenFits<<" (s)");                         
-  } 
+                         itsShortestIntervalBetweenFits<<" (s)");
+  }
   itsLongestIntervalBetweenFits = -1.;
   itsShortestIntervalBetweenFits = 3e7;
 }
@@ -209,11 +209,11 @@ void SnapShotImagingGridderAdapter::initialiseGrid(const scimath::Axes& axes,
       itsWeightsBuffer.resize(shape);
       itsImageBuffer.set(0.);
       itsWeightsBuffer.set(0.);
-      // the following flag means the gridding will be 
+      // the following flag means the gridding will be
       // initialised when the first accessor is encountered
-      itsFirstAccessor = true; 
+      itsFirstAccessor = true;
       // nothing gridded, zero buffers are the correct output
-      itsBuffersFinalised = true; 
+      itsBuffersFinalised = true;
   }
 }
 
@@ -224,24 +224,24 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
   ASKAPTRACE("SnapShotImagingGridderAdapter::grid");
 
   ASKAPDEBUGASSERT(itsGridder);
-  
+
   // Switches on the predict W plane mode in the Accessor
   if (itsPredictWPlane){
         itsAccessorAdapter.setPredictWPlaneMode();
   }
-    
+
   if ((isPSFGridder() || isPCFGridder()) && itsNoPSFReprojection) {
       itsAccessorAdapter.associate(acc);
       // for PSF gridder we don't do any image-plane regridding in this mode
       itsGridder->grid(itsAccessorAdapter);
       // we don't really need this line
-      itsAccessorAdapter.detach();      
+      itsAccessorAdapter.detach();
   } else {
       itsAccessorAdapter.associate(acc);
       const scimath::ChangeMonitor cm = itsAccessorAdapter.planeChangeMonitor();
       // the call to rotatedUVW method would assess whether the current plane is still
       // fine. The result is cached, so there is no performance penalty.
-      
+
       itsAccessorAdapter.rotatedUVW(getTangentPoint());
       if ((cm != itsAccessorAdapter.planeChangeMonitor()) || itsFirstAccessor) {
           if (!itsFirstAccessor) {
@@ -254,8 +254,8 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
           }
           // update plane parameters
           itsCoeffA = itsAccessorAdapter.coeffA();
-          itsCoeffB = itsAccessorAdapter.coeffB();          
-      } 
+          itsCoeffB = itsAccessorAdapter.coeffB();
+      }
       if (itsFirstAccessor) {
           scimath::Axes axes = itsAxes;
           // need to patch axes here before passing to initialise grid
@@ -273,7 +273,7 @@ void SnapShotImagingGridderAdapter::grid(IConstDataAccessor& acc)
 
 /// @brief form the final output image
 /// @param[in] out output double precision image or PSF
-void SnapShotImagingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
+void SnapShotImagingGridderAdapter::finaliseGrid(casacore::Array<imtype>& out)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseGrid");
 
@@ -284,7 +284,7 @@ void SnapShotImagingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
       if (!itsBuffersFinalised) {
           finaliseGriddingOfCurrentPlane();
       }
-      out.assign(itsImageBuffer);  
+      out.assign(itsImageBuffer);
   }
 }
 
@@ -292,7 +292,7 @@ void SnapShotImagingGridderAdapter::finaliseGrid(casacore::Array<double>& out)
 /// @details Form the sum of the convolution function squared, multiplied by the weights for each
 /// different convolution function. This is used in the evaluation of the second derivative.
 /// @param[in] out output double precision sum of weights images
-void SnapShotImagingGridderAdapter::finaliseWeights(casacore::Array<double>& out)
+void SnapShotImagingGridderAdapter::finaliseWeights(casacore::Array<imtype>& out)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::finaliseWeights");
 
@@ -303,15 +303,15 @@ void SnapShotImagingGridderAdapter::finaliseWeights(casacore::Array<double>& out
       if (!itsBuffersFinalised) {
           finaliseGriddingOfCurrentPlane();
       }
-      out.assign(itsWeightsBuffer);  
-  }      
+      out.assign(itsWeightsBuffer);
+  }
 }
 
 /// @brief initialise the degridding
 /// @param[in] axes axes specifications
 /// @param[in] image input image cube: u,v,pol,chan
 void SnapShotImagingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
-					const casacore::Array<double>& image)
+					const casacore::Array<imtype>& image)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::initialiseDegrid");
 
@@ -328,10 +328,10 @@ void SnapShotImagingGridderAdapter::initialiseDegrid(const scimath::Axes& axes,
   itsDoPCF = false;
   itsAxes = axes;
   itsImageBuffer.assign(image);
-  // the following flag means the gridding will be 
+  // the following flag means the gridding will be
   // initialised when the first accessor is encountered
-  itsFirstAccessor = true; 
-}					
+  itsFirstAccessor = true;
+}
 
 /// @brief make context-dependant changes to the gridder behaviour
 /// @param[in] context context description
@@ -340,7 +340,7 @@ void SnapShotImagingGridderAdapter::customiseForContext(const std::string &conte
   ASKAPDEBUGASSERT(itsGridder);
   itsGridder->customiseForContext(context);
 }
-			
+
 /// @brief set visibility weights
 /// @param[in] viswt shared pointer to visibility weights
 void SnapShotImagingGridderAdapter::initVisWeights(const IVisWeights::ShPtr &viswt)
@@ -350,7 +350,7 @@ void SnapShotImagingGridderAdapter::initVisWeights(const IVisWeights::ShPtr &vis
 }
 
 /// @brief degrid the visibility data.
-/// @param[in] acc non-const data accessor to work with  
+/// @param[in] acc non-const data accessor to work with
 void SnapShotImagingGridderAdapter::degrid(IDataAccessor& acc)
 {
   ASKAPTRACE("SnapShotImagingGridderAdapter::degrid");
@@ -378,21 +378,21 @@ void SnapShotImagingGridderAdapter::degrid(IDataAccessor& acc)
        }
        // update plane parameters
        itsCoeffA = itsAccessorAdapter.coeffA();
-       itsCoeffB = itsAccessorAdapter.coeffB();          
-  } 
+       itsCoeffB = itsAccessorAdapter.coeffB();
+  }
   if (itsFirstAccessor) {
       scimath::Axes axes = itsAxes;
       // need to patch axes here before passing to initialise degrid
       axes.addDirectionAxis(currentPlaneDirectionCoordinate());
       //
-      casacore::Array<double> scratch(itsImageBuffer.shape());
+      casacore::Array<imtype> scratch(itsImageBuffer.shape());
       imageRegrid(itsImageBuffer,scratch, false);
       itsGridder->initialiseDegrid(axes,scratch);
       itsFirstAccessor = false;
   }
   itsGridder->degrid(itsAccessorAdapter);
   // we don't really need this line
-  itsAccessorAdapter.detach();  
+  itsAccessorAdapter.detach();
 }
 
 /// @brief finalise degridding
@@ -404,7 +404,7 @@ void SnapShotImagingGridderAdapter::finaliseDegrid()
       return;
   }
   ASKAPDEBUGASSERT(itsGridder);
-  ASKAPCHECK(!itsFirstAccessor, 
+  ASKAPCHECK(!itsFirstAccessor,
        "finaliseDegrid is called while the itsFirstAccessor flag is true. This is not supposed to happen");
   itsGridder->finaliseDegrid();
 }
@@ -420,7 +420,7 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
 {
   ASKAPDEBUGTRACE("SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane");
   ASKAPDEBUGASSERT(itsGridder);
-  ASKAPCHECK(!itsFirstAccessor, 
+  ASKAPCHECK(!itsFirstAccessor,
        "finaliseGriddingOfCurrentPlane is called while itsFirstAccessor flag is true. This is not supposed to happen");
   if (isPSFGridder()) {
       ASKAPLOG_DEBUG_STR(logger, "Finalising current PSF");
@@ -429,7 +429,7 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   } else {
       ASKAPLOG_DEBUG_STR(logger, "Finalising current dirty image");
   }
-  casacore::Array<double> scratch(itsImageBuffer.shape());
+  casacore::Array<imtype> scratch(itsImageBuffer.shape());
   itsGridder->finaliseGrid(scratch);
   imageRegrid(scratch, itsImageBuffer, true);
 
@@ -437,14 +437,14 @@ void SnapShotImagingGridderAdapter::finaliseGriddingOfCurrentPlane()
   if (!isPCFGridder()) {
     ASKAPLOG_DEBUG_STR(logger, "Finalising current weights");
     itsGridder->finaliseWeights(scratch);
-    imageRegrid(scratch, itsWeightsBuffer, true, true);  
+    imageRegrid(scratch, itsWeightsBuffer, true, true);
   }
   itsBuffersFinalised = true;
 }
 
 /// @brief direction coordinate corresponding to the current fit plane
 /// @details This method forms a direction coordinate corresponding to the
-/// current best fit w=Au+Bv from the direction coordinate stored in 
+/// current best fit w=Au+Bv from the direction coordinate stored in
 /// itsAxes. This is used to setup image plane regridding and coordinate system
 /// of the wrapped gridder during grid/degrid initialisation.
 casacore::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirectionCoordinate() const
@@ -475,21 +475,21 @@ casacore::DirectionCoordinate SnapShotImagingGridderAdapter::currentPlaneDirecti
 /// over 2D planes of the input array, regrids them into the other frame
 /// and either adds the result to the appropriate plane of the output array,
 /// if the regridding is into the target frame or replaces the result if it is
-/// from the target frame. 
+/// from the target frame.
 /// @param[in] input input array to be regridded
 /// @param[out] output output array
-/// @param[in] toTarget true, if regridding is from the current frame into the 
-/// target frame (for gridding); false if regridding is from the target frame 
+/// @param[in] toTarget true, if regridding is from the current frame into the
+/// target frame (for gridding); false if regridding is from the target frame
 /// into the current frame (for degridding)
 /// @note The output and input arrays should have the same shape. The iteration
-/// over 2D planes is perfromed explicitly to avoid initialising large scratch 
-/// buffers. An exception is raised if input and output arrays have different 
+/// over 2D planes is perfromed explicitly to avoid initialising large scratch
+/// buffers. An exception is raised if input and output arrays have different
 /// shapes
-void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &input, 
-           casacore::Array<double> &output, bool toTarget, bool isWeights) const
+void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<imtype> &input,
+           casacore::Array<imtype> &output, bool toTarget, bool isWeights) const
 {
-   ASKAPTRACE("SnapShotImagingGridderAdapter::imageRegrid");    
- 
+   ASKAPTRACE("SnapShotImagingGridderAdapter::imageRegrid");
+
    // for stats
    casacore::Timer timer;
    timer.mark();
@@ -499,18 +499,18 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &i
        ASKAPLOG_DEBUG_STR(logger, "Regridding image from the frame corresponding to the fitted plane w = u * "<<
               coeffA()<<" + v * "<<coeffB()<<", into the target frame");
    } else {
-       ASKAPLOG_DEBUG_STR(logger, 
+       ASKAPLOG_DEBUG_STR(logger,
            "Regridding image from the input frame into a frame corresponding to the fitted plane w = u * "<<
-              coeffA()<<" + v * "<<coeffB());       
+              coeffA()<<" + v * "<<coeffB());
    }
-   ASKAPCHECK(input.shape() == output.shape(), 
+   ASKAPCHECK(input.shape() == output.shape(),
            "The shape of input and output arrays should be identical, input.shape()="<<
               input.shape()<<", output.shape()="<<output.shape());
    ASKAPDEBUGASSERT(input.shape().nelements() >= 2);
-   
+
    // constness is conceptual, we don't do any assignments to the input array
    // the following line doesn't copy the data (reference semantics)
-   casacore::Array<double> inRef(input);
+   casacore::Array<imtype> inRef(input);
    // form coordinate systems
    const casacore::DirectionCoordinate dcCurrent = currentPlaneDirectionCoordinate();
    const casacore::DirectionCoordinate& dcTarget = itsAxes.directionAxis();
@@ -523,32 +523,32 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &i
       csInput.addCoordinate(dcTarget);
       csOutput.addCoordinate(dcCurrent);
    }
-   
+
    // iterator over planes
    scimath::MultiDimArrayPlaneIter planeIter(input.shape());
-   
+
    // regridder
-   casacore::ImageRegrid<double> regridder;
+   casacore::ImageRegrid<imtype> regridder;
    // regridder works with images, so we have to setup temporary 2D images
    // the following may cause an unnecessary copy, there should be a better way
    // of constructing an image out of an array
    const casacore::IPosition tempShape = planeIter.planeShape().nonDegenerate();
    if (!itsTempInImg.shape().isEqual(tempShape)) {
-       /* 
+       /*
        // this resizing is temporary replaced with a more convoluted operation
        // as a workaround to avoid a possible casacore bug with TempImage
        itsTempInImg.resize(casacore::TiledShape(tempShape));
-       itsTempOutImg.resize(casacore::TiledShape(tempShape));       
+       itsTempOutImg.resize(casacore::TiledShape(tempShape));
        */
        // +100 forces to use the memory
        const double maxMemoryInMB = double(tempShape.product()*sizeof(double))/1024./1024.+100;
-       itsTempInImg = casacore::TempImage<double>(casacore::TiledShape(tempShape),csInput,maxMemoryInMB);
-       itsTempOutImg = casacore::TempImage<double>(casacore::TiledShape(tempShape),csOutput,maxMemoryInMB);       
+       itsTempInImg = casacore::TempImage<imtype>(casacore::TiledShape(tempShape),csInput,maxMemoryInMB);
+       itsTempOutImg = casacore::TempImage<imtype>(casacore::TiledShape(tempShape),csOutput,maxMemoryInMB);
    }
    ASKAPDEBUGASSERT(itsTempInImg.shape().isEqual(itsTempOutImg.shape()));
    const bool csSuccess = itsTempInImg.setCoordinateInfo(csInput) && itsTempOutImg.setCoordinateInfo(csOutput);
    ASKAPCHECK(csSuccess, "Error setting either input or output coordinate frame during image plane regridding");
-                  
+
    for (; planeIter.hasMore(); planeIter.next()) {
         itsTempInImg.put(planeIter.getPlane(inRef));
           if (!isPCFGridder()) {
@@ -558,9 +558,9 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &i
             pcfRegrid(regridder);
           }
         // the next line does not do any copying (reference semantics)
-        casacore::Array<double> outRef(planeIter.getPlane(output).nonDegenerate());
+        casacore::Array<imtype> outRef(planeIter.getPlane(output).nonDegenerate());
         // create a lattice to benefit from lattice math operators
-        casacore::ArrayLattice<double> tempOutputLattice(outRef, casacore::True);
+        casacore::ArrayLattice<imtype> tempOutputLattice(outRef, casacore::True);
         if (toTarget) {
             tempOutputLattice += itsTempOutImg;
         } else {
@@ -577,43 +577,43 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<double> &i
    itsTimeImageRegrid += timer.real();
 }
 
-void SnapShotImagingGridderAdapter::pcfRegrid(casacore::ImageRegrid<double>& regridder) const
+void SnapShotImagingGridderAdapter::pcfRegrid(casacore::ImageRegrid<imtype>& regridder) const
 {
    // Special regridder for the preconditioner function
 
    // The PCF uses the imaginary part of Fourier components to store estimates
    // of the gridding kernel size. It has nothing to do with phases. The real and
-   // imaginary images need to be split out, regridded separately, then recombined. 
+   // imaginary images need to be split out, regridded separately, then recombined.
    casacore::IPosition shape = itsTempInImg.shape();
-   casacore::Array<casacore::DComplex> scratch(shape);
-   casacore::Array<casacore::DComplex> scratchReal(shape);
-   casacore::Array<casacore::DComplex> scratchImag(shape);
+   casacore::Array<imtypeComplex> scratch(shape);
+   casacore::Array<imtypeComplex> scratchReal(shape);
+   casacore::Array<imtypeComplex> scratchImag(shape);
    // Copy to a complex array and transform to the uv plane
-   casacore::convertArray<casacore::DComplex,double>(scratch, itsTempInImg.get());
+   casacore::convertArray<imtypeComplex,imtype>(scratch, itsTempInImg.get());
    scimath::fft2d(scratch, true);
 
    // Regrid the real part
-   casacore::convertArray<casacore::DComplex,double>(scratchReal, real(scratch));
+   casacore::convertArray<imtypeComplex,imtype>(scratchReal, real(scratch));
    scimath::fft2d(scratchReal, false);
    itsTempInImg.put(real(scratchReal));
    regridder.regrid(itsTempOutImg, itsInterpolationMethod,
            casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
-   casacore::convertArray<casacore::DComplex,double>(scratchReal, itsTempOutImg.get());
+   casacore::convertArray<imtypeComplex,imtype>(scratchReal, itsTempOutImg.get());
    scimath::fft2d(scratchReal, true);
-   casacore::convertArray<casacore::DComplex,double>(scratchReal, real(scratchReal));
+   casacore::convertArray<imtypeComplex,imtype>(scratchReal, real(scratchReal));
 
    // Regrid the imaginary part
    // Even though these are non-negative numbers, they are stored with conjugate
    // symmetry to ensure that they form a real PCF image. However, we need to
    // regrid the non-negative numbers, so take the absolute values first.
-   casacore::convertArray<casacore::DComplex,double>(scratchImag, abs(imag(scratch)));
+   casacore::convertArray<imtypeComplex,imtype>(scratchImag, abs(imag(scratch)));
    scimath::fft2d(scratchImag, false);
    itsTempInImg.put(real(scratchImag));
    regridder.regrid(itsTempOutImg, itsInterpolationMethod,
            casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
-   casacore::convertArray<casacore::DComplex,double>(scratchImag, itsTempOutImg.get());
+   casacore::convertArray<imtypeComplex,imtype>(scratchImag, itsTempOutImg.get());
    scimath::fft2d(scratchImag, true);
-   casacore::convertArray<casacore::DComplex,double>(scratchImag, real(scratchImag));
+   casacore::convertArray<imtypeComplex,imtype>(scratchImag, real(scratchImag));
 
    // Recombine the real and imaginary uv grids. Need to add the imaginary parts
    // with conjugate symmetry or the real image storage will lose them.
@@ -627,18 +627,18 @@ void SnapShotImagingGridderAdapter::pcfRegrid(casacore::ImageRegrid<double>& reg
    end(0) = shape[0]/2-1;
    start(1) = 0;
    end(1) = shape[1]/2;
-   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,+1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + imtypeComplex(0,+1)*scratchImag(start,end);
    start(1) = shape[1]/2+1;
    end(1) = shape[1]-1;
-   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,-1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + imtypeComplex(0,-1)*scratchImag(start,end);
    start(0) = shape[0]/2;
    end(0) = shape[0]-1;
    start(1) = 0;
    end(1) = shape[1]/2-1;
-   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,+1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + imtypeComplex(0,+1)*scratchImag(start,end);
    start(1) = shape[1]/2;
    end(1) = shape[1]-1;
-   scratch(start,end) = scratchReal(start,end) + casacore::DComplex(0,-1)*scratchImag(start,end);
+   scratch(start,end) = scratchReal(start,end) + imtypeComplex(0,-1)*scratchImag(start,end);
 
    // Transform back to an image
    scimath::fft2d(scratch, false);
@@ -652,7 +652,7 @@ void SnapShotImagingGridderAdapter::pcfRegrid(casacore::ImageRegrid<double>& reg
 /// @return direction measure corresponding to the tangent point
 casacore::MVDirection SnapShotImagingGridderAdapter::getTangentPoint() const
 {
-   // at this stage, just a copy of the method from TableVisGridder. May need some refactoring 
+   // at this stage, just a copy of the method from TableVisGridder. May need some refactoring
    // in the future
    ASKAPCHECK(itsAxes.hasDirection(),"Direction axis is missing. axes="<<itsAxes);
    const casacore::Vector<casacore::Double> refVal(itsAxes.directionAxis().referenceValue());
@@ -664,34 +664,34 @@ casacore::MVDirection SnapShotImagingGridderAdapter::getTangentPoint() const
 }
 
 /// @brief set clipping factor
-/// @details The image could be optionally clipped during regridding (to avoid edge effects). 
+/// @details The image could be optionally clipped during regridding (to avoid edge effects).
 /// This parameter represents the fraction of the image size (on each directional axis) which is
 /// zeroed (equally from both sides). It should be a non-negative number less than 1. Set to zero to avoid
 /// any clipping (this is the default behavior)
 /// @param[in] factor clipping factor
-void SnapShotImagingGridderAdapter::setClippingFactor(const float factor) 
+void SnapShotImagingGridderAdapter::setClippingFactor(const float factor)
 {
   ASKAPCHECK((factor >= 0.) && (factor < 1), "Clipping factor should be a non-negative number less than 1, you have "<<factor);
   itsClippingFactor = factor;
 }
 
 /// @brief set clipping factor
-/// @details The image could be optionally clipped during regridding (to avoid edge effects). 
+/// @details The image could be optionally clipped during regridding (to avoid edge effects).
 /// This parameter represents the fraction of the image size (on each directional axis) which is
 /// zeroed (equally from both sides). It should be a non-negative number less than 1. Set to zero to avoid
 /// any clipping (this is the default behavior)
 /// @param[in] factor clipping factor
-void SnapShotImagingGridderAdapter::setWeightsClippingFactor(const float factor) 
+void SnapShotImagingGridderAdapter::setWeightsClippingFactor(const float factor)
 {
   ASKAPCHECK((factor >= 0.) && (factor < 1), "Clipping factor should be a non-negative number less than 1, you have "<<factor);
   itsWeightsClippingFactor = factor;
 }
 
-/// @brief clip image 
+/// @brief clip image
 /// @details This method clips the image by zeroing the edges according to the
 /// assigned clipping factor.
 /// @param[in] img array to modify
-void SnapShotImagingGridderAdapter::imageClip(casacore::Array<double> &img, const float factor) const
+void SnapShotImagingGridderAdapter::imageClip(casacore::Array<imtype> &img, const float factor) const
 {
   ASKAPDEBUGTRACE("SnapShotImagingGridderAdapter::imageClip");
 
@@ -713,9 +713,9 @@ void SnapShotImagingGridderAdapter::setPSFReprojection(const bool doIt)
 {
   itsNoPSFReprojection = !doIt;
   if (doIt) {
-        ASKAPLOG_INFO_STR(logger, "PSF image will be reprojected the same way as the residual image");      
+        ASKAPLOG_INFO_STR(logger, "PSF image will be reprojected the same way as the residual image");
   } else {
-        ASKAPLOG_INFO_STR(logger, "No PSF reprojection will be done");      
+        ASKAPLOG_INFO_STR(logger, "No PSF reprojection will be done");
   }
 }
 
@@ -723,9 +723,7 @@ void SnapShotImagingGridderAdapter::setPSFReprojection(const bool doIt)
 /// @details A simple check allows us to bypass heavy calculations if the input model
 /// is empty (all pixels are zero). This makes sense for degridding only.
 /// @brief true, if the model is empty
-bool SnapShotImagingGridderAdapter::isModelEmpty() const 
+bool SnapShotImagingGridderAdapter::isModelEmpty() const
 {
   return itsModelIsEmpty;
 }
-
-

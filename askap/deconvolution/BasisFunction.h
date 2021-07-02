@@ -36,6 +36,7 @@
 
 #include <casacore/casa/aips.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/noncopyable.hpp>
 #include <casacore/casa/Arrays/Array.h>
 
 namespace askap {
@@ -48,7 +49,7 @@ namespace askap {
         /// and MultiScale (for BasisFunctionClean).
         /// @ingroup Deconvolver
 
-        template<typename T> class BasisFunction {
+        template<typename T> class BasisFunction : public boost::noncopyable {
 
             public:
                 typedef boost::shared_ptr<BasisFunction<T> > ShPtr;
@@ -60,31 +61,45 @@ namespace askap {
 
                 /// @brief Construct from a specified shape
                 /// param[in] shape Shape of desired basis function
-                BasisFunction(const casacore::IPosition shape);
+                explicit BasisFunction(const casacore::IPosition& shape);
 
                 /// @brief Initialise from a specified shape (actually only first two axes)
                 /// @detail Set the shape of the basis function and fill in the actual
                 /// function.
                 /// param[in] shape Shape of desired basis function on the first two axes.
-                virtual void initialise(const casacore::IPosition shape);
+                virtual void initialise(const casacore::IPosition& shape);
 
                 /// @brief Return the number of bases in the basis function
                 casacore::uInt numberBases() const {return itsNumberBases;};
+
+                /// @brief shape of the basis
+                /// @return shape of the basis function itself
+                casacore::IPosition shape() const {return itsShape;}
 
                 /// @brief Return the basis function as an array
                 /// @details The basis function is returned as an array
                 /// of shape (nx, ny, nbases) where nx, ny are the
                 /// lengths of the first two axes.
-                virtual casacore::Array<T>& basisFunction() {return itsBasisFunction;};
+                casacore::Array<T>& allBasisFunctions() {return itsBasisFunction;};
+
+                /// @brief return requested basis function
+                /// @details index index of the basis function to return [0..numberBases()-1]
+                /// @return basis function of interest
+                /// @note due to reference semantics of casa arrays it is possible to change the 
+                /// basis function despite the fact that this method is const.
+                casacore::Matrix<T> basisFunction(casacore::uInt index) const;
 
                 /// @brief Multiply by a matrix on the third dimension
-                virtual void multiplyArray(const casacore::Matrix<casacore::Double>& arr);
-
-                /// @brief Orthogonalise using Gram Schmidt algorithm
-                void gramSchmidt(casacore::Array<T>& bf);
+                void multiplyArray(const casacore::Matrix<casacore::Double>& arr);
 
             protected:
+                /// @brief Orthogonalise using Gram Schmidt algorithm
+                /// @param[in] bf cube to work with, 3rd dimension is the basis function index
+                static void gramSchmidt(casacore::Array<T>& bf);
+
+            private:
                 casacore::IPosition itsShape;
+            protected:
                 casacore::Array<T> itsBasisFunction;
                 casacore::uInt itsNumberBases;
                 casacore::Bool itsOrthogonal;

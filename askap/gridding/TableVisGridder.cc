@@ -115,7 +115,7 @@ TableVisGridder::TableVisGridder(const int overSample, const int support,
     itsPolVector(),itsImageChan(-1),itsGridIndex(-1),itsSourceIndex(0)
 {
    ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
-   ASKAPCHECK(support>0, "Maximum support must be greater than 0");
+   ASKAPCHECK(support>=0, "Maximum support must be zero or greater");
    ASKAPCHECK(padding>0, "Padding factor must be greater than 0");
 }
 
@@ -322,8 +322,7 @@ void TableVisGridder::save(const std::string& name) {
         ASKAPLOG_DEBUG_STR(logger, "Saving " << itsConvFunc.size() << " entries in convolution function");
         for (unsigned int i=0; i<itsConvFunc.size(); i++) {
 
-            casacore::Array<double> realC(itsConvFunc[i].shape());
-            casacore::convertArray<double,float>(realC,real(itsConvFunc[i]));
+            casacore::Array<float> realC=real(itsConvFunc[i]);
             // ASKAPLOG_DEBUG_STR(logger, "Entry[" <<  i <<  "] has shape " <<  itsConvFunc[i].shape());
             std::ostringstream os;
             os<<"Real.Convolution";
@@ -499,7 +498,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    // Now time the gridding
    timer.mark();
 
-   ASKAPCHECK(itsSupport>0, "Support must be greater than 0");
+   ASKAPCHECK(itsSupport>=0, "Support must be zero or greater");
    ASKAPCHECK(itsUVCellSize.size()==2, "UV cell sizes not yet set");
 
    const uint nSamples = acc.nRow();
@@ -731,7 +730,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                    // we now use support size for this given plane in the CF cache; itsSupport is a maximum
                    // support across all CFs (this allows plane-dependent support size)
                    const int support = (int(convFunc.nrow()) - 1) / 2;
-                   ASKAPCHECK(support > 0, "Support must be greater than zero, CF["<<cInd<<"] has shape="<<
+                   ASKAPCHECK(support >= 0, "Support must be zero or greater, CF["<<cInd<<"] has shape="<<
                               convFunc.shape()<<" giving a support of "<<support);
 
                    // This seems to be the quickest way to get a reference to the matrix we want
@@ -953,14 +952,14 @@ casacore::MVDirection TableVisGridder::getTangentPoint() const
 /// @param[out] out complex output array
 /// @param[in] in double input array
 /// @param[in] padding padding factor
-void TableVisGridder::toComplex(casacore::Array<casacore::DComplex>& out,
-        const casacore::Array<double>& in, const float padding) {
-    ASKAPDEBUGTRACE("TableVisGridder::toComplex");
+void TableVisGridder::toComplex(casacore::Array<imtypeComplex>& out,
+        const casacore::Array<imtype>& in, const float padding) {
+    ASKAPDEBUGTRACE("TableVisGridder::toImtypeComplex");
 
     out.resize(scimath::PaddingUtils::paddedShape(in.shape(),padding));
     out.set(0.);
-    casacore::Array<casacore::DComplex> subImage = scimath::PaddingUtils::extract(out,padding);
-    casacore::convertArray<casacore::DComplex, double>(subImage, in);
+    casacore::Array<imtypeComplex> subImage = scimath::PaddingUtils::extract(out,padding);
+    casacore::convertArray<imtypeComplex, imtype>(subImage, in);
 }
 
 /// @brief Conversion helper function
@@ -969,11 +968,11 @@ void TableVisGridder::toComplex(casacore::Array<casacore::DComplex>& out,
 /// @param[out] out real output array
 /// @param[in] in complex input array
 /// @param[in] padding padding factor
-void TableVisGridder::toDouble(casacore::Array<double>& out,
-        const casacore::Array<casacore::DComplex>& in, const float padding) {
+void TableVisGridder::toDouble(casacore::Array<imtype>& out,
+        const casacore::Array<imtypeComplex>& in, const float padding) {
   ASKAPDEBUGTRACE("TableVisGridder::toDouble");
-  casacore::Array<casacore::DComplex> wrapper(in);
-  const casacore::Array<casacore::DComplex> subImage = scimath::PaddingUtils::extract(wrapper,padding);
+  casacore::Array<imtypeComplex> wrapper(in);
+  const casacore::Array<imtypeComplex> subImage = scimath::PaddingUtils::extract(wrapper,padding);
   out.resize(subImage.shape());
   out = real(subImage);
 }
@@ -1106,18 +1105,18 @@ void TableVisGridder::initRepresentativeFieldAndFeed()
 }
 
 /// This is the default implementation
-void TableVisGridder::finaliseGrid(casacore::Array<double>& out) {
+void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     ASKAPTRACE("TableVisGridder::finaliseGrid");
     ASKAPDEBUGASSERT(itsGrid.size() > 0);
     // buffer for result as doubles
-    casacore::Array<double> dBuffer(itsGrid[0].shape());
+    casacore::Array<imtype> dBuffer(itsGrid[0].shape());
     ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
 
     /// Loop over all grids Fourier transforming and accumulating
     for (unsigned int i=0; i<itsGrid.size(); i++) {
-        casacore::Array<casacore::DComplex> scratch(itsGrid[i].shape());
-        casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, itsGrid[i]);
+        casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
+        casacore::convertArray<imtypeComplex,casacore::Complex>(scratch, itsGrid[i]);
 
         /*
         // for debugging
@@ -1137,7 +1136,7 @@ void TableVisGridder::finaliseGrid(casacore::Array<double>& out) {
                  }
             }
             scimath::saveAsCasaImage("uvcoverage.sympart",buf);
-            casacore::Matrix<casacore::DComplex> scratchM(scratch.nonDegenerate());
+            casacore::Matrix<imtypeComplex> scratchM(scratch.nonDegenerate());
             for (int x=0; x<int(scratchM.nrow()); ++x) {
                  for (int y=0; y<int(scratchM.ncolumn()); ++y) {
                       scratchM(x,y) -= double(bufM(x,y));
@@ -1146,7 +1145,7 @@ void TableVisGridder::finaliseGrid(casacore::Array<double>& out) {
             // as we ignore imaginary part after FT, make scratch hermitian to be fair
             for (int x=0; x<int(scratchM.nrow()); ++x) {
                  for (int y=0; y<int(scratchM.ncolumn())/2; ++y) {
-                      const casacore::DComplex val = 0.5*(scratchM(x,y)+
+                      const imtypeComplex val = 0.5*(scratchM(x,y)+
                             conj(scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1)));
                       scratchM(x,y) = val;
                       scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1) = conj(val);
@@ -1169,14 +1168,14 @@ void TableVisGridder::finaliseGrid(casacore::Array<double>& out) {
         if (i==0) {
             toDouble(dBuffer, scratch);
         } else {
-            casacore::Array<double> work(dBuffer.shape());
+            casacore::Array<imtype> work(dBuffer.shape());
             toDouble(work, scratch);
             dBuffer+=work;
         }
     }
     // Now we can do the convolution correction
     correctConvolution(dBuffer);
-    dBuffer*=double(dBuffer.shape()(0))*double(dBuffer.shape()(1));
+    dBuffer*=imtype(double(dBuffer.shape()(0))*double(dBuffer.shape()(1)));
     out = scimath::PaddingUtils::extract(dBuffer,paddingFactor());
 }
 
@@ -1197,7 +1196,7 @@ void TableVisGridder::storeGrid(const std::string &name, casacore::uInt numGrid)
 
 
 /// This is the default implementation
-void TableVisGridder::finaliseWeights(casacore::Array<double>& out) {
+void TableVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
    ASKAPTRACE("TableVisGridder::finaliseWeights");
    ASKAPDEBUGASSERT(itsShape.nelements() >= 4);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
@@ -1229,7 +1228,7 @@ void TableVisGridder::finaliseWeights(casacore::Array<double>& out) {
 }
 
 void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casacore::Array<double>& in) {
+        const casacore::Array<imtype>& in) {
    ASKAPTRACE("TableVisGridder::initialiseDegrid");
     configureForPSF(false);
     configureForPCF(false);
@@ -1249,13 +1248,13 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
 
     if (casacore::max(casacore::abs(in))>0.0) {
         itsModelIsEmpty=false;
-        casacore::Array<double> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,0.);
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
-        casacore::Array<casacore::DComplex> scratch2(itsGrid[0].shape());
+        casacore::Array<imtypeComplex> scratch2(itsGrid[0].shape());
         toComplex(scratch2, scratch);
         fft2d(scratch2, true);
-        casacore::convertArray<casacore::Complex,casacore::DComplex>(itsGrid[0],scratch2);
+        casacore::convertArray<casacore::Complex,imtypeComplex>(itsGrid[0],scratch2);
     } else {
         ASKAPLOG_DEBUG_STR(logger, "No need to degrid: model is empty");
         itsModelIsEmpty=true;

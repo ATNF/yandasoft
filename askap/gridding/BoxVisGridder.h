@@ -49,23 +49,23 @@ namespace askap
 
 				/// Clone a copy of this Gridder
 				virtual IVisGridder::ShPtr clone();
-				
+
 				/// @brief static method to get the name of the gridder
 				/// @details We specify parameters per gridder type in the parset file.
 				/// This method returns the gridder name which should be used to extract
 				/// a subset of parameters for createGridder method.
 				static inline std::string gridderName() { return "Box";}
-				
+
 				/// @brief static method to create gridder
 			    /// @details Each gridder should have a static factory method, which is
 			    /// able to create a particular type of the gridder and initialise it with
-			    /// the parameters taken form the given parset. It is assumed that the 
+			    /// the parameters taken form the given parset. It is assumed that the
 		    	/// method receives a subset of parameters where the gridder name is already
-                /// taken out. 
+                /// taken out.
 			    /// @param[in] parset input parset file
-			    /// @return a shared pointer to the gridder instance					 
+			    /// @return a shared pointer to the gridder instance
 			    static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
-				
+
 
 				virtual ~BoxVisGridder();
 
@@ -75,8 +75,8 @@ namespace askap
 
 				/// @brief Correct for gridding convolution function
 				/// @param image image to be corrected
-				virtual void correctConvolution(casacore::Array<double>& image);
-				
+				virtual void correctConvolution(casacore::Array<imtype>& image);
+
 			protected:
 				/// Initialize convolution function
 				/// @param[in] acc const data accessor to work with

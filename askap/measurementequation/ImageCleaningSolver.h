@@ -104,14 +104,14 @@ protected:
    /// here.
    /// @param[in] image input image (to be padded, with double precision at the moment)
    /// @return padded image converted to floats
-   casacore::Array<float> padImage(const casacore::Array<double> &image) const;
+   casacore::Array<float> padImage(const casacore::Array<imtype> &image) const;
 
    /// @brief helper method to pad an image
    /// @details This method encapsulates all padding logic. In addition double to float conversion happens
    /// here.
    /// @param[in] image input padded image (with single precision at the moment)
    /// @return image of original (unpadded) shape converted to double precision
-   casacore::Array<double> unpadImage(const casacore::Array<float> &image) const;
+   casacore::Array<imtype> unpadImage(const casacore::Array<float> &image) const;
 
    /// @brief helper method to clip the edges of padded image
    /// @details This method fills the edges of a padded image with 0 (original subimage is left intact, so
@@ -125,7 +125,7 @@ protected:
    /// the output array is flattened into a 1D vector
    /// @param[in] diag diagonal array
    /// @return flattened padded vector
-   casacore::Vector<double> padDiagonal(const casacore::Array<double> &diag) const;
+   casacore::Vector<imtype> padDiagonal(const casacore::Array<imtype> &diag) const;
 
 
 

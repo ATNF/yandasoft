@@ -55,6 +55,7 @@ option (ENABLE_OPENMP "Build with OPENMP Support" NO)
 option (ENABLE_SHARED "Build shared libraries" YES)
 option (ENABLE_RPATH "Include rpath in executables and shared libraries" YES)
 option (ENABLE_GRID_WITH_POINTERS "Grid with pointers" YES)
+option (ENABLE_FLOAT_IMAGE_PARAMS "Use floats for image parameters" YES)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} $ENV{CPPFLAGS}")
 message(STATUS "CXXFLAGS are ${CMAKE_CXX_FLAGS}")
@@ -207,6 +208,11 @@ endif()
 if (ENABLE_GRID_WITH_POINTERS)
     target_compile_definitions(yandasoft PUBLIC
         ASKAP_GRID_WITH_POINTERS
+    )
+endif()
+if (ENABLE_FLOAT_IMAGE_PARAMS)
+    target_compile_definitions(yandasoft PUBLIC
+	    ASKAP_FLOAT_IMAGE_PARAMS
     )
 endif()
 

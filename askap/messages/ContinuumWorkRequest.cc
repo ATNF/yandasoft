@@ -108,7 +108,7 @@ void ContinuumWorkRequest::readFromBlob(LOFAR::BlobIStream& is)
     bool hasParams;
     is >> hasParams;
     if (hasParams) {
-        itsParams.reset(new askap::scimath::Params());
+        itsParams.reset(new askap::scimath::Params(true));
         is >> *itsParams;
     } else {
         itsParams.reset();

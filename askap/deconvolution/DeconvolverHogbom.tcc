@@ -147,7 +147,7 @@ namespace askap {
             const uInt nx(this->psf(0).shape()(0));
             const uInt ny(this->psf(0).shape()(1));
 
-            IPosition subPsfShape(this->findSubPsfShape());
+            const IPosition subPsfShape = this->findSubPsfShape();
 
             // Now we adjust model and residual for this component
             const casacore::IPosition residualShape(this->dirty(0).shape().nonDegenerate());
@@ -165,14 +165,16 @@ namespace askap {
             const casacore::IPosition modelShape(this->model(0).shape().nonDegenerate());
             casacore::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
 
+            const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
+            ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
             // Wrangle the start, end, and shape into consistent form.
             for (uInt dim = 0; dim < 2; dim++) {
                 residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                 residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
                 // Now we have to deal with the PSF. Here we want to use enough of the
                 // PSF to clean the residual image.
-                psfStart(dim) = max(0, Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
-                psfEnd(dim) = min(Int(this->itsPeakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
+                psfStart(dim) = max(0, Int(peakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
+                psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                   Int(psfShape(dim) - 1));
 
                 modelStart(dim) = residualStart(dim);
@@ -184,7 +186,7 @@ namespace askap {
             casacore::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
 
             if (!(residualSlicer.length() == psfSlicer.length()) || !(residualSlicer.stride() == psfSlicer.stride())) {
-                ASKAPLOG_INFO_STR(dechogbomlogger, "Peak of PSF  : " << this->itsPeakPSFPos);
+                ASKAPLOG_INFO_STR(dechogbomlogger, "Peak of PSF  : " << peakPSFPos);
                 ASKAPLOG_INFO_STR(dechogbomlogger, "Peak of residual: " << absPeakPos);
                 ASKAPLOG_INFO_STR(dechogbomlogger, "Residual start  : " << residualStart << " end: " << residualEnd);
                 ASKAPLOG_INFO_STR(dechogbomlogger, "PSF   start  : " << psfStart << " end: " << psfEnd);

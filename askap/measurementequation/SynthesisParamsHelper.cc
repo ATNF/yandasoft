@@ -303,7 +303,7 @@ namespace askap
       }
       axes.addStokesAxis(stokes);
 
-      casacore::Array<double> pixels(casacore::IPosition(4, nx, ny, stokes.nelements(), nchan));
+      casacore::Array<imtype> pixels(casacore::IPosition(4, nx, ny, stokes.nelements(), nchan));
       pixels.set(0.0);
       axes.add("FREQUENCY", freqmin, freqmax);
       ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<freqmin<<" Hz, endFreq="<<freqmax<<
@@ -351,7 +351,7 @@ namespace askap
 
       // zero-filled array is the same for all facets as it is copied inside Params
       // class
-      casacore::Array<double> pixels(casacore::IPosition(4, nx, ny, stokes.nelements(), nchan));
+      casacore::Array<imtype> pixels(casacore::IPosition(4, nx, ny, stokes.nelements(), nchan));
       pixels.set(0.0);
 
       // void linear transform used to set up coordinate system
@@ -420,7 +420,7 @@ namespace askap
        }
        const int facetStep = int(axes.start("FACETSTEP"));
        ASKAPDEBUGASSERT(facetStep>0);
-       casacore::Array<double> pixels = ip.value(name);
+       casacore::Array<imtype> pixels = ip.valueT(name);
        const casacore::IPosition shape = pixels.shape();
        ASKAPDEBUGASSERT(shape.nelements()>=2);
        casacore::IPosition end(shape);
@@ -512,7 +512,7 @@ namespace askap
        const askap::scimath::Axes axes(ip.axes(iph.paramName()));
        ASKAPDEBUGASSERT(axes.has("FACETSTEP") && axes.has("STOKES") && axes.has("FREQUENCY")
                         && axes.hasDirection());
-       const casacore::IPosition shape = ip.value(iph.paramName()).shape();
+       const casacore::IPosition shape = ip.shape(iph.paramName());
        ASKAPDEBUGASSERT(shape.nelements()>=2);
 
        const int facetStep = int(axes.start("FACETSTEP"));
@@ -531,7 +531,7 @@ namespace askap
        dc.setReferencePixel(refPix);
        newAxes.addDirectionAxis(dc);
 
-       casacore::Array<double> pixels(newShape);
+       casacore::Array<imtype> pixels(newShape);
        pixels.set(0.0);
        ip.add(iph.taylorName(), pixels, newAxes);
     }
@@ -547,7 +547,7 @@ namespace askap
     /// @param[in] ip parameters
     /// @param[in] name name of the facet parameter (with suffix like .facet.0.0)
     /// @return an array of doubles representing a subimage of the merged image
-    casacore::Array<double> SynthesisParamsHelper::getFacet(askap::scimath::Params &ip, const string &name)
+    casacore::Array<imtype> SynthesisParamsHelper::getFacet(askap::scimath::Params &ip, const string &name)
     {
       ASKAPDEBUGASSERT(ip.has(name));
       // parse the name
@@ -565,7 +565,7 @@ namespace askap
                  iph.name()<<" are notably different for ra and dec axes. Should be the same integer number");
       const int facetStep = int(axes.start("FACETSTEP")+0.5);
 
-      casacore::Array<double> mergedImage = ip.value(mergedName);
+      casacore::Array<imtype> mergedImage = ip.valueT(mergedName);
       casacore::IPosition blc(mergedImage.shape());
       casacore::IPosition trc(mergedImage.shape());
       ASKAPDEBUGASSERT(blc.nelements()>=2);
@@ -576,7 +576,7 @@ namespace askap
            trc[i] -= 1;
       }
 
-      casacore::IPosition patchShape = ip.value(name).shape();
+      casacore::IPosition patchShape = ip.shape(name);
       ASKAPDEBUGASSERT(patchShape.nelements()>=2);
       ASKAPDEBUGASSERT((facetStep<=patchShape[0]) && (facetStep<=patchShape[1]));
 
@@ -586,35 +586,6 @@ namespace askap
       blc[1] = iph.facetY()*facetStep;
       trc[1] = blc[1]+facetStep-1;
 
-      /*
-      const casacore::DirectionCoordinate csPatch = directionCoordinate(ip,name);
-      const casacore::DirectionCoordinate csFull = directionCoordinate(ip,iph.name());
-      casacore::Vector<double> world(2);
-      // first get blc
-      casacore::Vector<double> blcPixel(2);
-      blcPixel(0)=double((patchShape[0]-facetStep)/2);
-      blcPixel(1)=double((patchShape[1]-facetStep)/2);
-      std::cout<<blcPixel<<endl;
-      csPatch.toWorld(world,blcPixel);
-      csFull.toPixel(blcPixel,world);
-      std::cout<<blcPixel<<endl;
-
-      // now get trc
-      casacore::Vector<double> trcPixel(2);
-      trcPixel[0]=double((patchShape[0]+facetStep)/2-1);
-      trcPixel[1]=double((patchShape[1]+facetStep)/2-1);
-      ASKAPDEBUGASSERT((trcPixel[0]>0) && (trcPixel[1]>0));
-      std::cout<<trcPixel<<endl;
-      csPatch.toWorld(world,trcPixel);
-      csFull.toPixel(trcPixel,world);
-      std::cout<<trcPixel<<endl;
-      for (size_t dim=0;dim<2;++dim) {
-           const int pix1 = int(blcPixel[dim]);
-           const int pix2 = int(trcPixel[dim]);
-           blc[dim] = pix1>pix2 ? pix2 : pix1;
-           trc[dim] = pix1>pix2 ? pix1 : pix2;
-      }
-      */
       // ready to make a slice
       //std::cout<<blc<<" "<<trc<<" "<<facetStep<<" "<<mergedImage.shape()<<std::endl;
       ASKAPDEBUGASSERT((trc[0]-blc[0]+1 == facetStep) && (trc[1]-blc[1]+1 == facetStep));
@@ -663,16 +634,14 @@ namespace askap
 						const string& imagename)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
-      const casacore::Array<double> imagePixels(ip.value(name));
+      const casacore::Array<float> imagePixels(ip.valueF(name));
       ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
       const casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
 
-      casacore::Array<float> floatImagePixels(imagePixels.shape());
-      casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-      ASKAPLOG_DEBUG_STR(logger, "Data of "<<name<<" parameter peak at "<<casacore::max(floatImagePixels));
+      ASKAPLOG_DEBUG_STR(logger, "Data of "<<name<<" parameter peak at "<<casacore::max(imagePixels));
 
-      imageHandler().create(imagename, floatImagePixels.shape(), imageCoords);
-      imageHandler().write(imagename, floatImagePixels);
+      imageHandler().create(imagename, imagePixels.shape(), imageCoords);
+      imageHandler().write(imagename, imagePixels);
 
       const Axes &axes = ip.axes(name);
       if (axes.has("MAJMIN")) {
@@ -749,10 +718,7 @@ namespace askap
 						 const string& imagename)
     {
       ASKAPTRACE("SynthesisParamsHelper::loadImageParameter");
-      casacore::Array<float> pixels = imageHandler().read(imagename);
-      casacore::Array<double> imagePixels(pixels.shape());
-      casacore::convertArray<double, float>(imagePixels, pixels);
-
+      casacore::Array<float> imagePixels = imageHandler().read(imagename);
       casacore::CoordinateSystem imageCoords = imageHandler().coordSys(imagename);
 
       /// Fill in the axes information
@@ -863,19 +829,17 @@ namespace askap
     SynthesisParamsHelper::tempImage(const askap::scimath::Params& ip,
 				     const string& name)
     {
-      const casacore::Array<double> imagePixels(ip.value(name));
+      const casacore::Array<float> imagePixels(ip.valueF(name));
 
       casacore::CoordinateSystem imageCoords(coordinateSystem(ip, name));
 
       boost::shared_ptr<casacore::TempImage<float> >
-	im(new casacore::TempImage<float> (TiledShape(imagePixels.shape()),
+      im(new casacore::TempImage<float> (TiledShape(imagePixels.shape()),
 				       imageCoords));
 
       im->setUnits("Jy/pixel");
 
-      casacore::Array<float> floatImagePixels(imagePixels.shape());
-      casacore::convertArray<float, double>(floatImagePixels, imagePixels);
-      casacore::ArrayLattice<float> latImagePixels(floatImagePixels);
+      casacore::ArrayLattice<float> latImagePixels(imagePixels);
       im->copyData(latImagePixels);
       return im;
     }
@@ -892,7 +856,7 @@ namespace askap
       imageCoords.addCoordinate(radec);
 
 
-      const casacore::IPosition shape = ip.value(name).shape();
+      const casacore::IPosition shape = ip.shape(name);
       const int nchan = shape.nelements() >= 4 ? shape(3) : 1;
       const double restfreq = 0.0;
       const double crpix = double(nchan-1)/2.;
@@ -987,9 +951,7 @@ namespace askap
       casacore::ArrayLattice<float> latImagePixels(floatImagePixels);
       latImagePixels.copyData(im);
 
-      casacore::Array<double> imagePixels(im.shape());
-      casacore::convertArray<double, float>(imagePixels, floatImagePixels);
-      ip.update(name, imagePixels);
+      ip.update(name, floatImagePixels);
     }
 
     /// @brief check whether parameter list defines at least one component
@@ -1031,7 +993,7 @@ namespace askap
     {
        ASKAPDEBUGASSERT(ip.has(name));
        const casacore::DirectionCoordinate inDC = directionCoordinate(ip,name);
-       const casacore::IPosition inShape = ip.value(name).shape();
+       const casacore::IPosition inShape = ip.shape(name);
        ASKAPDEBUGASSERT(inShape.nelements() >= 2);
        casacore::IPosition blc(inShape.nelements(),0);
        casacore::IPosition trc(inShape);
@@ -1106,7 +1068,7 @@ namespace askap
                  }
             }
        }
-       casacore::IPosition newShape = ip.value(names[0]).shape();
+       casacore::IPosition newShape = ip.shape(names[0]);
        ASKAPDEBUGASSERT(newShape.nelements() >= 2);
        newShape(0) = tempTRC(0) - tempBLC(0) + 1;
        newShape(1) = tempTRC(1) - tempBLC(1) + 1;
@@ -1121,7 +1083,7 @@ namespace askap
        askap::scimath::Axes newAxes(ip.axes(names[0]));
        newAxes.addDirectionAxis(newDC);
 
-       casacore::Array<double> pixels(newShape);
+       casacore::Array<imtype> pixels(newShape);
        pixels.set(0.0);
        ip.add(mergedName, pixels, newAxes);
 
@@ -1303,14 +1265,13 @@ namespace askap
        ASKAPCHECK(psfName != "", "Unable to find psf paramter to fit, params="<<ip);
        ASKAPLOG_INFO_STR(logger, "Fitting 2D Gaussian into PSF parameter "<<psfName);
 
-       casacore::Array<double> psfArray = ip.value(psfName);
+       casacore::Array<imtype> psfArray = ip.valueT(psfName);
        return fitBeam(psfArray, ip.axes(psfName), cutoff);
 
     }
 
-    casacore::Vector<casacore::Quantum<double> > SynthesisParamsHelper::fitBeam(casacore::Array<double> &psfArray,
-                                                                        const scimath::Axes &axes,
-                                                                        const double cutoff) {
+    casacore::Vector<casacore::Quantum<double> > SynthesisParamsHelper::fitBeam(casacore::Array<imtype> &psfArray,
+       const scimath::Axes &axes, const double cutoff) {
 
        const casacore::IPosition shape = psfArray.shape();
        ASKAPCHECK(shape.nelements()>=2,"PSF image is supposed to be at least 2-dimensional, shape="<<psfArray.shape());
@@ -1319,9 +1280,9 @@ namespace askap
                              "), using the first 2D plane only to fit the beam");
        }
 
-       casacore::Array<double> psfSlice = MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
+       casacore::Array<imtype> psfSlice = MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
        ASKAPDEBUGASSERT(psfSlice.shape().nelements() == 2);
-       casacore::Matrix<double> psfSliceMatrix = psfSlice;
+       casacore::Matrix<imtype> psfSliceMatrix = psfSlice;
 
        // search for support to speed up beam fitting
        ASKAPLOG_INFO_STR(logger, "Searching for support with the relative cutoff of "<<cutoff<<" to speed fitting up");
@@ -1343,9 +1304,12 @@ namespace askap
                            psfSlice.shape());
            }
            //
+           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+           casa::Array<float> floatPSFSlice = scimath::PaddingUtils::centeredSubArray(psfSlice,newShape);
+           #else
            casa::Array<float> floatPSFSlice(newShape);
-           casa::convertArray<float, double>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
-
+           casa::convertArray<float, imtype>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
+           #endif
            // hack for debugging only
            //floatPSFSlice = imageHandler().read("tmp.img").nonDegenerate();
            //
@@ -1365,9 +1329,9 @@ namespace askap
            //  - use estimate to set the initial guess - this seems the best solution so far
            casa::LogIO os;
            casa::Fit2D fitter(os);
-	   // Using estimate to set the initial guess seems to make the fit more robust
+	       // Using estimate to set the initial guess seems to make the fit more robust
            casa::Vector<casa::Double> initialEstimate = fitter.estimate(casa::Fit2D::GAUSSIAN,floatPSFSlice);
-	   ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
+	       ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
            initialEstimate[0]=1.; // PSF peak is always 1
            initialEstimate[1]=newShape[0]/2; // centre
            initialEstimate[2]=newShape[1]/2; // centre
@@ -1452,7 +1416,7 @@ namespace askap
          for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
               const std::string name="image"+*it;
               if (params->isFree(name)) {
-                  params->value(name).set(0.);
+                  params->valueT(name).set(0.);
               }
          }
     }
@@ -1506,7 +1470,7 @@ namespace askap
            params->add("sourceID."+srcName, sourceList.size());
        }
 
-       // DDCALTAG COMPTAG -- link this component to its source ID 
+       // DDCALTAG COMPTAG -- link this component to its source ID
        //ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
        //    " to source "<<params->scalarValue("sourceID."+srcName));
        params->add("source."+compName, params->scalarValue("sourceID."+srcName));

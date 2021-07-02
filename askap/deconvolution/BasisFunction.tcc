@@ -47,41 +47,41 @@ namespace askap {
         };
 
         template<class T>
-        BasisFunction<T>::BasisFunction(const IPosition shape) : itsNumberBases(1), itsOrthogonal(false)
+        BasisFunction<T>::BasisFunction(const IPosition& shape) : itsNumberBases(1), itsOrthogonal(false)
         {
             initialise(shape);
         };
 
         template<class T>
-        void BasisFunction<T>::initialise(const IPosition shape)
+        void BasisFunction<T>::initialise(const IPosition& shape)
         {
             ASKAPASSERT(itsNumberBases);
-            const IPosition bfShape(3, shape(0), shape(1), itsNumberBases);
+            ASKAPASSERT(shape.nelements() >= 2);
+            const IPosition bfShape = shape.getFirst(2).concatenate(IPosition(1, itsNumberBases));
             itsBasisFunction.resize(bfShape);
             itsBasisFunction.set(T(0.0));
+            // we probably need to patch the code to remove expectations of the 3rd dimension to be passed here
+            itsShape = bfShape;
         };
 
         template<class T>
         void BasisFunction<T>::multiplyArray(const Matrix<Double>& A)
         {
-            Array<T> mDataArray(this->itsBasisFunction.shape());
+            Array<T> mDataArray(this->shape());
             mDataArray.set(T(0.0));
 
             const uInt nRows(A.nrow());
             const uInt nCols(A.ncolumn());
+            ASKAPDEBUGASSERT(this->itsBasisFunction.shape() >= 2);
             const uInt nx = this->itsBasisFunction.shape()(0);
             const uInt ny = this->itsBasisFunction.shape()(1);
 
             for (uInt j = 0; j < ny; j++) {
                 for (uInt i = 0; i < nx; i++) {
-
-                    IPosition currentPosCol(3, i, j, 0);
-                    IPosition currentPosRow(3, i, j, 0);
-
                     for (uInt row = 0; row < nRows; row++) {
-                        currentPosRow(2) = row;
+                        const IPosition currentPosRow(3, i, j, row);
                         for (uInt col = 0; col < nCols; col++) {
-                            currentPosCol(2) = col;
+                            const IPosition currentPosCol(3, i, j, col);
                             mDataArray(currentPosRow) += T(A(row, col)) * this->itsBasisFunction(currentPosCol);
                         }
                     }
@@ -95,6 +95,19 @@ namespace askap {
                     BF.xyPlane(i) = BF.xyPlane(i) / sumBF;
                 }
             }
+        }
+
+        /// @brief return requested basis function
+        /// @details index index of the basis function to return [0..numberBases()-1]
+        /// @return basis function of interest
+        /// @note due to reference semantics of casa arrays it is possible to change the 
+        /// basis function despite the fact that this method is const.
+        template<typename T>
+        casacore::Matrix<T> BasisFunction<T>::basisFunction(casacore::uInt index) const
+        {
+           ASKAPASSERT(index < itsNumberBases);
+           casacore::Cube<T> tmpCube(itsBasisFunction);
+           return tmpCube.xyPlane(index);
         }
 
         template<class T>

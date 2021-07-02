@@ -156,7 +156,7 @@ private:
 /// @param comms communication object
 /// @param parset ParameterSet for inputs
 AdviseParallel::AdviseParallel(askap::askapparallel::AskapParallel& comms, const LOFAR::ParameterSet& parset) :
-    MEParallelApp(comms, addMissingFields(parset)), itsTangentDefined(false)
+    MEParallelApp(comms, addMissingFields(parset),true), itsTangentDefined(false)
 {
    init(parset);
 }
@@ -209,9 +209,9 @@ void AdviseParallel::estimate()
        broadcastModel();
        receiveModel();
        ASKAPCHECK(params()->has("tangent"), "tangent is not defined. There is likely to be a problem with model broadcast/receive");
-       const casacore::Vector<casacore::Double> tangent = params()->value("tangent");
+       const casacore::Vector<imtype> tangent = params()->valueT("tangent");
        ASKAPCHECK(tangent.nelements() == 2, "Expect a 2-element vector for tangent, you have "<<tangent);
-       itsTangent = casacore::MVDirection(tangent);
+       itsTangent = casacore::MVDirection(tangent(0),tangent(1));
        itsTangentDefined = true;
        ASKAPLOG_INFO_STR(logger, "Using tangent "<<printDirection(itsTangent)<<" (estimated most central direction)");
        // now all ranks should have the same value of itsTangent & itsTangentDefined, ready for the second iteration

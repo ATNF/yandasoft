@@ -52,10 +52,9 @@ namespace askap
 	namespace synthesis
 	{
 
-		void operator<<(askap::scimath::Solver::ShPtr& solver, 
+		void operator<<(askap::scimath::Solver::ShPtr& solver,
 				const LOFAR::ParameterSet &parset)
 		{
-			askap::scimath::Params params;
 			if(parset.getString("solver")=="Clean")
 			{
 				std::vector<float> defaultScales(3);

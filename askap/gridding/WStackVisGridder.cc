@@ -131,7 +131,7 @@ namespace askap
 
     }
 
-    void WStackVisGridder::multiply(casacore::Array<casacore::DComplex>& scratch, int i)
+    void WStackVisGridder::multiply(casacore::Array<imtypeComplex>& scratch, int i)
     {
       ASKAPDEBUGTRACE("WStackVisGridder::multiply");
       /// These are the actual cell sizes used
@@ -142,10 +142,10 @@ namespace askap
       const int ny=itsShape(1);
 
       const float w=2.0f*casacore::C::pi*getWTerm(i);
-      casacore::ArrayIterator<casacore::DComplex> it(scratch, 2);
+      casacore::ArrayIterator<imtypeComplex> it(scratch, 2);
       while (!it.pastEnd())
       {
-        casacore::Matrix<casacore::DComplex> mat(it.array());
+        casacore::Matrix<imtypeComplex> mat(it.array());
 
         /// @todo Optimise multiply loop
         for (int iy=0; iy<ny; iy++)
@@ -161,7 +161,7 @@ namespace askap
               const float r2=x2+y2;
               if (r2<1.0) {
                   const float phase=w*(1.0-sqrt(1.0-r2));
-                  mat(ix, iy)*=casacore::DComplex(cos(phase), -sin(phase));
+                  mat(ix, iy)*=imtypeComplex(cos(phase), -sin(phase));
               }
             }
           }
@@ -170,8 +170,50 @@ namespace askap
       }
     }
 
+    void WStackVisGridder::updatew(casacore::Array<imtypeComplex>& scratch, int i)
+    {
+      ASKAPDEBUGTRACE("WStackVisGridder::updatew");
+      ASKAPDEBUGASSERT(itsUVCellSize(0)>0);
+
+      // estimate the size of the projection in uv (would-be w-proj kernel size)
+      //  - need to know if getWTerm returns the full w or smaller due to snapshotting
+      const imtype wThetaPix = static_cast<imtype>(fabs(getWTerm(i)) / (itsUVCellSize(0) * itsUVCellSize(0)));
+      imtype wKernelPix;
+      if (wThetaPix < 1) {
+        wKernelPix = 3;
+      } else {
+        wKernelPix = 6 + 1.14*wThetaPix;
+      }
+      // PCF gridding should have been done with a boxcar kernel = 1+3i or 1-3i
+      wKernelPix /= 3.;
+
+      const int nx=itsShape(0);
+      const int ny=itsShape(1);
+
+      const float w=2.0f*casacore::C::pi*getWTerm(i);
+      casacore::ArrayIterator<imtypeComplex> it(scratch, 2);
+      while (!it.pastEnd())
+      {
+        casacore::Matrix<imtypeComplex> mat(it.array());
+
+        /// @todo Optimise loop
+        for (int iy=0; iy<ny; iy++)
+        {
+          for (int ix=0; ix<nx; ix++)
+          {
+            if (casacore::abs(mat(ix, iy))>0.0)
+            {
+              // update the imaginary part but not the real part
+              mat(ix, iy) = imtypeComplex(real(mat(ix, iy)), imag(mat(ix, iy)) * wKernelPix);
+            }
+          }
+        }
+        it.next();
+      }
+    }
+
     /// This is the default implementation
-    void WStackVisGridder::finaliseGrid(casacore::Array<double>& out)
+    void WStackVisGridder::finaliseGrid(casacore::Array<imtype>& out)
     {
       ASKAPTRACE("WStackVisGridder::finaliseGrid");
       if (isPSFGridder()) {
@@ -185,37 +227,75 @@ namespace askap
                           << " planes of W stack to get final image");
       }
       ASKAPDEBUGASSERT(itsGrid.size()>0);
-      // buffer for the result as doubles
-      casacore::Array<double> dBuffer(itsGrid[0].shape());
-      ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
 
-      /// Loop over all grids Fourier transforming and accumulating
-      bool first=true;
-      for (unsigned int i=0; i<itsGrid.size(); i++)
-      {
-        if (casacore::max(casacore::amplitude(itsGrid[i]))>0.0)
+      if (isPCFGridder()) {
+
+        // buffer for the result as doubles
+        casacore::Array<imtypeComplex> cBuffer(itsGrid[0].shape());
+        ASKAPDEBUGASSERT(cBuffer.shape().nelements()>=2);
+       
+        /// Loop over all grids Fourier transforming and accumulating
+        bool first=true;
+        for (unsigned int i=0; i<itsGrid.size(); i++)
         {
-          casacore::Array<casacore::DComplex> scratch(itsGrid[i].shape());
-          casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch,itsGrid[i]);
-          scimath::fft2d(scratch, false);
-          multiply(scratch, i);
+          if (casacore::max(casacore::amplitude(itsGrid[i]))>0.0)
+          {
+            casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
+            casacore::convertArray<imtypeComplex,casacore::Complex>(scratch,itsGrid[i]);
+            // Don't FFT yet. Stack uv grids
+            // the w-support terms stored in the imaginary part of itsGrid do not account for w. Update them.
+            updatew(scratch, i);
 
-          if (first)  {
-            first=false;
-            dBuffer = real(scratch);
-          } else {
-            dBuffer += real(scratch);
+            if (first)  {
+              first=false;
+              cBuffer = scratch;
+            } else {
+              cBuffer += scratch;
+            }
           }
         }
+        // Now FFT
+        scimath::fft2d(cBuffer, false);
+        casacore::Array<imtype> dBuffer(itsGrid[0].shape());
+        dBuffer = real(cBuffer);
+        out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
+
+      } else {
+
+        // buffer for the result as doubles
+        casacore::Array<imtype> dBuffer(itsGrid[0].shape());
+        ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
+       
+        /// Loop over all grids Fourier transforming and accumulating
+        bool first=true;
+        for (unsigned int i=0; i<itsGrid.size(); i++)
+        {
+          if (casacore::max(casacore::amplitude(itsGrid[i]))>0.0)
+          {
+            casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
+            casacore::convertArray<imtypeComplex,casacore::Complex>(scratch,itsGrid[i]);
+            scimath::fft2d(scratch, false);
+            multiply(scratch, i);
+       
+            if (first)  {
+              first=false;
+              dBuffer = real(scratch);
+            } else {
+              dBuffer += real(scratch);
+            }
+          }
+        }
+        // Now we can do the convolution correction
+        correctConvolution(dBuffer);
+        dBuffer *= static_cast<imtype>(dBuffer.shape()(0)*dBuffer.shape()(1));
+        out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
+
       }
-      // Now we can do the convolution correction
-      correctConvolution(dBuffer);
-      dBuffer *= double(dBuffer.shape()(0))*double(dBuffer.shape()(1));
-      out = scimath::PaddingUtils::extract(dBuffer, paddingFactor());
+
     }
 
     void WStackVisGridder::initialiseDegrid(const scimath::Axes& axes,
-        const casacore::Array<double>& in)
+        const casacore::Array<imtype>& in)
     {
       ASKAPTRACE("WStackVisGridder::initialiseDegrid");
       itsShape = scimath::PaddingUtils::paddedShape(in.shape(),paddingFactor());
@@ -232,19 +312,19 @@ namespace askap
         itsModelIsEmpty=false;
         ASKAPLOG_INFO_STR(logger, "Filling " << nWPlanes()
                            << " planes of W stack with model");
-        casacore::Array<double> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,0.);
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
         for (int i=0; i<nWPlanes(); ++i)
         {
-          casacore::Array<casacore::DComplex> work(itsShape);
+          casacore::Array<imtypeComplex> work(itsShape);
           toComplex(work, scratch);
           multiply(work, i);
           /// Need to conjugate to get sense of w correction correct
           work = casacore::conj(work);
           scimath::fft2d(work, true);
           itsGrid[i].resize(itsShape);
-          casacore::convertArray<casacore::Complex,casacore::DComplex>(itsGrid[i],work);
+          casacore::convertArray<casacore::Complex,imtypeComplex>(itsGrid[i],work);
         }
       } else {
         itsModelIsEmpty=true;

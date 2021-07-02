@@ -78,7 +78,7 @@ namespace synthesis
 
 SimParallel::SimParallel(askap::askapparallel::AskapParallel& comms,
                          const LOFAR::ParameterSet& parset) :
-        SynParallel(comms,parset), itsModelReadByMaster(true), itsMSWrittenByMaster(false), itsNoiseVariance(-1.), 
+        SynParallel(comms,parset,true), itsModelReadByMaster(true), itsMSWrittenByMaster(false), itsNoiseVariance(-1.),
         itsDoChecksForNoise(false)
 {
   itsModelReadByMaster = parset.getBool("modelReadByMaster", true);
@@ -87,9 +87,9 @@ SimParallel::SimParallel(askap::askapparallel::AskapParallel& comms,
              "Only topocentric reference frame is currently understood by the simulator");
   if (itsMSWrittenByMaster) {
       ASKAPCHECK(comms.isParallel(), "msWrittenByMaster can only be used in the parallel case");
-      ASKAPLOG_INFO_STR(logger, "Master will receive data from workers and write a single measurement set");      
+      ASKAPLOG_INFO_STR(logger, "Master will receive data from workers and write a single measurement set");
   } else if (comms.isParallel()) {
-      ASKAPLOG_INFO_STR(logger, "Each worker will write its own measurement set");        
+      ASKAPLOG_INFO_STR(logger, "Each worker will write its own measurement set");
   }
 }
 
@@ -143,17 +143,17 @@ void SimParallel::init()
         itsDoChecksForNoise = false;
         if (parset().getBool("noise", false)) {
             itsNoiseVariance = getNoise(parset().makeSubset("noise."));
-            ASKAPCHECK(itsNoiseVariance>0., 
+            ASKAPCHECK(itsNoiseVariance>0.,
                "Noise variance is supposed to be positive, you have "<<itsNoiseVariance);
             const double rms = sqrt(itsNoiseVariance);
-            ASKAPLOG_INFO_STR(logger, 
-               "SIGMA column will be scaled to account for simulated Gaussian noise (variance=" << 
+            ASKAPLOG_INFO_STR(logger,
+               "SIGMA column will be scaled to account for simulated Gaussian noise (variance=" <<
                 itsNoiseVariance << " Jy^2 or sigma="<<rms<<" Jy)");
             itsSim->setNoiseRMS(rms);
         }
     }
     // calibration is only dealt with in workers
-    if (itsComms.isWorker()) {    
+    if (itsComms.isWorker()) {
         // initialise calibration solution source, if the visibilities are going to be corrupted
         if (parset().getBool("corrupt", false)) {
             if (parset().isDefined("corrupt.gainsfile")) {
@@ -168,11 +168,11 @@ void SimParallel::init()
             } else {
                 itsSolutionSource = CalibAccessFactory::roCalSolutionSource(parset());
             }
-            ASKAPASSERT(itsSolutionSource);                      
+            ASKAPASSERT(itsSolutionSource);
         } else {
             ASKAPLOG_INFO_STR(logger, "Calibration effects will not be simulated");
             itsSolutionSource.reset();
-        }        
+        }
     }
 }
 
@@ -449,16 +449,16 @@ void SimParallel::predict(const string& ms)
         conv->setFrequencyFrame(casacore::MFrequency::Ref(casacore::MFrequency::TOPO), "Hz");
         conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
         // ensure that time is counted in seconds since 0 MJD
-        conv->setEpochFrame(); 
+        conv->setEpochFrame();
         IDataSharedIter it = ds.createIterator(sel, conv);
         if (itsComms.isWorker()) {
             // default case, workers write their own measurement sets
             predict(it);
-        } 
+        }
         if (itsComms.isMaster() && itsMSWrittenByMaster) {
             // server code
             ParallelWriteIterator::masterIteration(itsComms, it);
-        }        
+        }
         ASKAPLOG_INFO_STR(logger,  "Predicted data for " << ms << " in " << timer.real() << " seconds ");
     }
     if (itsComms.isWorker() && itsMSWrittenByMaster) {
@@ -470,14 +470,14 @@ void SimParallel::predict(const string& ms)
         predict(it);
         ASKAPLOG_INFO_STR(logger,  "Finished prediction in worker at rank " << itsComms.rank() << " in " << timer.real() << " seconds ");
     }
-}       
+}
 
 /// Predict data for current model
 /// @param it data iterator to store the result to
 void SimParallel::predict(IDataSharedIter &it)
 {
-    if (itsComms.isWorker()) { 
-        ASKAPDEBUGASSERT(it);      
+    if (itsComms.isWorker()) {
+        ASKAPDEBUGASSERT(it);
         /// Create the gridder using a factory acting on a
         /// parameterset
         IVisGridder::ShPtr gridder = createGridder(itsComms, parset());
@@ -533,8 +533,8 @@ void SimParallel::predict(IDataSharedIter &it)
         if (itsNoiseVariance > 0.) {
             ASKAPDEBUGASSERT(itsSim);
 
-            const casacore::Int seed1 = getSeed("noise.seed1","time");                  
-            const casacore::Int seed2 = getSeed("noise.seed2","%w");                  
+            const casacore::Int seed1 = getSeed("noise.seed1","time");
+            const casacore::Int seed2 = getSeed("noise.seed2","%w");
 
             ASKAPLOG_INFO_STR(logger, "Set seed1 to " << seed1);
             ASKAPLOG_INFO_STR(logger, "Set seed2 to " << seed2);
@@ -567,15 +567,15 @@ void SimParallel::predict(IDataSharedIter &it)
 /// @return noise variance per visibility in Jy
 double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
 {
-   ASKAPCHECK(parset.isDefined("Tsys") == parset.isDefined("efficiency"), 
+   ASKAPCHECK(parset.isDefined("Tsys") == parset.isDefined("efficiency"),
       "Tsys and efficiency parset parameters should either be both defined (for automatic noise calculation) or not "
       "if noise magnitude is overridden with an explicit value given by rms or variance");
    if (parset.isDefined("Tsys")) {
        // automatic noise estimate
        itsDoChecksForNoise = true;
-       ASKAPCHECK(!parset.isDefined("rms") && !parset.isDefined("variance"), 
+       ASKAPCHECK(!parset.isDefined("rms") && !parset.isDefined("variance"),
           "If an automatic noise estimate is used, neither 'rms', nor 'variance' parset parameters should be given");
-   
+
        const casacore::Vector<double> tSysVector = parset.getDoubleVector("Tsys");
        const casacore::Vector<double> effVector = parset.getDoubleVector("efficiency");
        ASKAPCHECK(tSysVector.nelements()>=1, "At least one Tsys has to be defined");
@@ -592,11 +592,11 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
        double TsysOverEff = tSysVector[0] / effVector[0];
        ASKAPCHECK((tSysVector.nelements() == effVector.nelements()) || (tSysVector.nelements() == 1) || (effVector.nelements() == 1),
                   "If multiple Tsys and efficiencies are given, their numbers should be equal");
-       ASKAPASSERT(itsSim);                          
+       ASKAPASSERT(itsSim);
        if (tSysVector.nelements() * effVector.nelements() > 1) {
            casacore::Vector<double> relWeights(tSysVector.nelements() != 1 ? tSysVector.nelements() : effVector.nelements(), 1.);
            for (casacore::uInt ant=0; ant<relWeights.nelements(); ++ant) {
-                relWeights[ant] = tSysVector[ant < tSysVector.nelements() ? ant : 0] / 
+                relWeights[ant] = tSysVector[ant < tSysVector.nelements() ? ant : 0] /
                                   effVector[ant < effVector.nelements() ? ant : 0];
                 if (relWeights[ant] > TsysOverEff) {
                     TsysOverEff = relWeights[ant];
@@ -610,12 +610,12 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
        const double rms = 1e26*sqrt(2.)*1.38e-23*TsysOverEff/itsSim->areaTimesSqrtBT();
        ASKAPLOG_INFO_STR(logger, " resulting in peak rms of "<<rms<<" Jy");
        return rms*rms;
-   } 
-    
-   ASKAPCHECK(parset.isDefined("rms") || parset.isDefined("variance"), 
+   }
+
+   ASKAPCHECK(parset.isDefined("rms") || parset.isDefined("variance"),
       "If the noise level is explicitly given, either 'rms', or 'variance' parset parameters should be defined");
-                    
-   ASKAPCHECK(parset.isDefined("rms") != parset.isDefined("variance"), 
+
+   ASKAPCHECK(parset.isDefined("rms") != parset.isDefined("variance"),
       "Please give either 'rms' or 'variance' parset parameter, but not both!");
    if (parset.isDefined("rms")) {
        const double rms = parset.getDouble("rms");
@@ -638,7 +638,7 @@ casacore::Int SimParallel::getSeed(const std::string &parname,const std::string 
    const std::string seedStr(parset().getString(parname,defval));
    if (seedStr == "time") {
        return casacore::Int(time(0));
-   }    
+   }
    return utility::fromString<casacore::Int>(substitute(seedStr));
 }
 
@@ -674,7 +674,7 @@ void SimParallel::corruptEquation(boost::shared_ptr<scimath::Equation> &equation
     }
 
     ASKAPDEBUGASSERT(accessorBasedEquation);
-    
+
     boost::shared_ptr<CalibrationMEBase> calME;
     const bool polLeakage = parset().getBool("corrupt.leakage",false);
     if (polLeakage) {

@@ -66,9 +66,9 @@ namespace askap
 {
   namespace synthesis
   {
-    
-      
-    ImageMSMFSolver::ImageMSMFSolver() : 
+
+
+    ImageMSMFSolver::ImageMSMFSolver() :
       itsScales(3,0.), itsDoSpeedUp(false), itsSpeedUpFactor(1.)
     {
       ASKAPDEBUGASSERT(itsScales.size() == 3);
@@ -76,16 +76,16 @@ namespace askap
       itsScales(2)=30;
     }
 
-    ImageMSMFSolver::ImageMSMFSolver(const casacore::Vector<float>& scales) : 
+    ImageMSMFSolver::ImageMSMFSolver(const casacore::Vector<float>& scales) :
           itsScales(scales)
     {
     }
-    
+
     Solver::ShPtr ImageMSMFSolver::clone() const
     {
       return Solver::ShPtr(new ImageMSMFSolver(*this));
     }
-    
+
     void ImageMSMFSolver::init()
     {
       resetNormalEquations();
@@ -98,20 +98,20 @@ namespace askap
       itsDoSpeedUp = true;
       itsSpeedUpFactor = factor;
     }
-              
-    
+
+
     /// @brief Solve for parameters
     /// The solution is constructed from the normal equations
-    /// The solution is constructed from the normal equations. The parameters named 
+    /// The solution is constructed from the normal equations. The parameters named
     /// image* are interpreted as images and solved for.
-    /// @param[in] ip current model (to be updated)        
+    /// @param[in] ip current model (to be updated)
     /// @param[in] quality Solution quality information
     bool ImageMSMFSolver::solveNormalEquations(askap::scimath::Params& ip,askap::scimath::Quality& quality)
     {
       ASKAPTRACE("ImageMSMFSolver::solveNormalEquations");
 
       // Solving A^T Q^-1 V = (A^T Q^-1 A) P
-     
+
       // Find all the free parameters beginning with image
       vector<string> names(ip.completions("image"));
       for (vector<string>::iterator it = names.begin(); it!=names.end(); ++it) {
@@ -121,14 +121,14 @@ namespace askap
       // per facet in this case
       std::map<std::string, int> taylorMap;
       SynthesisParamsHelper::listTaylor(names, taylorMap);
-      
+
       uint nParameters=0;
       ASKAPCHECK(taylorMap.size() != 0, "Solver doesn't have any images to solve for");
-      for (std::map<std::string, int>::const_iterator tmIt = taylorMap.begin(); 
+      for (std::map<std::string, int>::const_iterator tmIt = taylorMap.begin();
            tmIt!=taylorMap.end(); ++tmIt) {
-           
+
            // The MSMF Solver expects 2xNTaylor-1 image parameter for each Stokes parameter.
-           // 
+           //
            // Desired loop structure for multiple stokes and Taylor terms.
            // For image.i loop over Taylor 0,1,2,...
            // For image.q loop over Taylor 0,1,2,...
@@ -149,7 +149,7 @@ namespace askap
            //        latticecleaner[stokes]->getmodel(order,model[order]);
            //
 
-      
+
            try {
                ASKAPLOG_INFO_STR(logger, "MSMFS minor cycle, processing image "<<tmIt->first);
                // Determine the number of stokes planes and ensuring that all Taylor terms
@@ -159,7 +159,7 @@ namespace askap
                ImageParamsHelper iph(tmIt->first);
                // make it 0-order Taylor term
                iph.makeTaylorTerm(0);
-               const casacore::IPosition imageShape = ip.value(iph.paramName()).shape();               
+               const casacore::IPosition imageShape = ip.shape(iph.paramName());
                const uint nPol = imageShape.nelements()>=3 ? uint(imageShape(2)) : 1;
                ASKAPLOG_INFO_STR(logger, "There are " << nPol << " polarisation planes to solve for." );
                nParameters += imageShape.product(); // add up the number of pixels for zero order
@@ -167,25 +167,25 @@ namespace askap
 	           for (int order=1;order<tmIt->second;++order) {
 	                // make the helper a Taylor term of the given order
 	                iph.makeTaylorTerm(order);
-                    const casacore::IPosition thisShape = ip.value(iph.paramName()).shape();               
+                    const casacore::IPosition thisShape = ip.shape(iph.paramName());
                     const uint thisNPol = thisShape.nelements()>=3 ? uint(thisShape(2)) : 1;
 	                ASKAPCHECK(thisNPol == nPol, "Number of polarisations are supposed to be consistent for all Taylor terms, order="<<
 	                           order<<" has "<<thisNPol<<" polarisation planes");
                     nParameters += thisShape.product(); // add up the number of pixels for this order
 	           }
-	           
+
 	           // this check is temporary, to avoid unnecessary surprises while further developing the code
 	           if (imageShape.nelements()>=4) {
 	               ASKAPCHECK(imageShape(3) == 1, "Output cube for MSMFS solver should have just one spectral plane, shape="<<
 	                       imageShape<<" nPol="<<nPol);
 	           }
 	           //
-	           
+
 	           // as polarisations are not necessarily represented by a different parameter
 	           // we have to build a set of parameters which are going to be fixed inside the loop
 	           // (or alternatively fix them multiple times, which is also a reasonable solution)
 	           std::set<std::string> parametersToBeFixed;
-	 
+
 	           // Iterate through Polarisations (former sindex)
 	           for (scimath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
 	                const uint plane = planeIter.sequenceNumber();
@@ -196,26 +196,26 @@ namespace askap
 	                } else {
 	                    tagLogString = "not tagged";
 	                }
-	                
-	                ASKAPLOG_INFO_STR(logger, "In Image MSMFSSolver::solveN..E.. : About to iterate for polarisation " 
+
+	                ASKAPLOG_INFO_STR(logger, "In Image MSMFSSolver::solveN..E.. : About to iterate for polarisation "
 	                                  << plane<<" ("<<tagLogString<<") in image "<<tmIt->first);
                     // make the helper a 0-order Taylor term
-                    iph.makeTaylorTerm(0);	                
+                    iph.makeTaylorTerm(0);
 	                const std::string zeroOrderParam = iph.paramName();
-	                
-                    // Setup the normalization vector	  
+
+                    // Setup the normalization vector
                     ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
                     ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0, "Diagonal not present");
-                    casacore::Vector<double> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
+                    casacore::Vector<imtype> normdiag(normalEquations().normalMatrixDiagonal().find(zeroOrderParam)->second);
 
                     ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
-	  
+
                     const double maxDiag = casacore::max(planeIter.getPlaneVector(normdiag));
                     ASKAPLOG_INFO_STR(logger, "Maximum of weights = " << maxDiag );
-                    
+
                     // a unique string for every Taylor decomposition (unique for every facet for faceting)
                     const std::string imageTag = tmIt->first + planeIter.tag();
-                    
+
                     // number of terms is the number of free parameters
                     const int nOrders = tmIt->second;
                     // number of Taylor terms without cross-terms, except on the first iteration
@@ -223,26 +223,26 @@ namespace askap
                     // dealt with later.
                     int nTaylor = nOrders;
                     // check whether a particular tag has been encountered for the first time
-                    const bool firstcycle = !SynthesisParamsHelper::hasValue(itsCleaners,imageTag);          
+                    const bool firstcycle = !SynthesisParamsHelper::hasValue(itsCleaners,imageTag);
                     if(firstcycle)  {// Initialize everything only once.
                        // have to remove cross-terms from nTaylor
                        ASKAPCHECK(nTaylor % 2 == 1, "Number of free Taylor terms is supposed to be odd at first cycle, you have "<<
                                   nTaylor);
-                       nTaylor = (nTaylor + 1) / 2; // cross-terms are now excluded           
+                       nTaylor = (nTaylor + 1) / 2; // cross-terms are now excluded
 	                   // Initialize the latticecleaners
                        ASKAPLOG_INFO_STR(logger, "Initialising the solver for plane " << plane<<" tag "<<imageTag);
-	    
+
                        itsCleaners[imageTag].reset(new casacore::MultiTermLatticeCleaner<float>());
                        ASKAPDEBUGASSERT(itsCleaners[imageTag]);
-	    
-                       itsCleaners[imageTag]->setcontrol(casacore::CleanEnums::MULTISCALE, niter(), gain(), threshold(), 
+
+                       itsCleaners[imageTag]->setcontrol(casacore::CleanEnums::MULTISCALE, niter(), gain(), threshold(),
 	                                      fractionalThreshold(), false);
                        itsCleaners[imageTag]->ignoreCenterBox(true);
                        itsCleaners[imageTag]->setscales(itsScales);
                        itsCleaners[imageTag]->setntaylorterms(nTaylor);
                        itsCleaners[imageTag]->initialise(planeIter.planeShape()[0],planeIter.planeShape()[1]); // allocates memory once....
 		    }
-          
+
                     // Setup the PSFs - all ( 2 x ntaylor - 1 ) of them for the first time.
                     casacore::Array<float> psfZeroArray(planeIter.planeShape());
                     casacore::Array<float> psfWorkArray;
@@ -259,19 +259,22 @@ namespace askap
                                           " Taylor terms + "<<nTaylor-1<<" cross-terms), parameter name: "<<thisOrderParam);
                         ASKAPCHECK(normalEquations().normalMatrixSlice().count(thisOrderParam)>0,
                             "PSF Slice for plane="<<plane<<" and order="<<order<<" is not present");
-                        casacore::Vector<double> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
-                        ASKAPCHECK(normalEquations().dataVector(thisOrderParam).size()>0,
+                        casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
+                        ASKAPCHECK(normalEquations().dataVectorT(thisOrderParam).size()>0,
                             "Data vector not present for cube plane="<<plane<<" and order="<<order);
-                        casacore::Vector<double> dv = normalEquations().dataVector(thisOrderParam);
-	   
+                        casacore::Vector<imtype> dv = normalEquations().dataVectorT(thisOrderParam);
+
+                        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                        // TODO check which of these copy()'s is actually needed
+                        casacore::Array<float> psfArray(planeIter.getPlane(slice).copy());
+                        casacore::Array<float> dirtyArray(planeIter.getPlane(dv).copy());
+                        #else
                         casacore::Array<float> psfArray(planeIter.planeShape());
-                        casacore::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
+                        casacore::convertArray<float, imtype>(psfArray, planeIter.getPlane(slice));
                         casacore::Array<float> dirtyArray(planeIter.planeShape());
                         casacore::convertArray<float, double>(dirtyArray, planeIter.getPlane(dv));
-                        casacore::Array<float> cleanArray(planeIter.planeShape());
-                        casacore::convertArray<float, double>(cleanArray, 
-                                           planeIter.getPlane(ip.value(thisOrderParam)));
-	   	   	   	                
+	   	   	   	        #endif
+                        casacore::Array<float> cleanArray(planeIter.getPlane(ip.valueF(thisOrderParam)).copy());
                         if (order == 0) {
                             psfZeroArray = psfArray.copy();
                             psfWorkArray.resize(planeIter.planeShape());
@@ -279,31 +282,39 @@ namespace askap
                             ASKAPCHECK(normalEquations().preconditionerSlice().count(thisOrderParam)>0,
                                 "Preconditioner function Slice for plane="<<plane<<
                                 " and order="<<order<<" is not present");
-                            casacore::Vector<double>
+                            casacore::Vector<imtype>
                                 pcf(normalEquations().preconditionerSlice().find(thisOrderParam)->second);
                             if (pcf.shape() > 0) {
+                                #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                                pcfZeroArray.assign(planeIter.getPlane(pcf));
+                                #else
                                 pcfZeroArray.resize(planeIter.planeShape());
                                 casacore::convertArray<float, double>(pcfZeroArray, planeIter.getPlane(pcf));
+                                #endif
                             }
                         }
-	    	   
+
                         psfWorkArray = psfZeroArray.copy();
                         if( doPreconditioning(psfWorkArray,psfArray,pcfZeroArray) ) {
                            // Write PSFs to disk.
                            ASKAPLOG_INFO_STR(logger, "Exporting preconditioned psfs (to be stored to disk later)");
                            Axes axes(ip.axes(thisOrderParam));
                            const std::string psfName="psf."+thisOrderParam;
-                           casacore::Array<double> aargh(planeIter.planeShape());
+                           casacore::Array<imtype> aargh(planeIter.planeShape());
+                           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                           aargh = psfArray;
+                           #else
                            casacore::convertArray<double,float>(aargh,psfArray);
-                           const casacore::Array<double> & APSF(aargh);
+                           #endif
+                           const casacore::Array<imtype> & APSF(aargh);
                            if (!ip.has(psfName)) {
                                // create an empty parameter with the full shape
                                ip.add(psfName, planeIter.shape(), axes);
                            }
-                           // insert the slice at the proper place  
-                           ip.update(psfName, APSF, planeIter.position());                           
+                           // insert the slice at the proper place
+                           ip.update(psfName, APSF, planeIter.position());
 	                    }
-	   
+
                         ASKAPLOG_INFO_STR(logger, "Preconditioning PSF for plane=" << plane<<
                                           " ("<<tagLogString<< ") and order=" << order <<
                                           " parameter name "<<thisOrderParam);
@@ -317,13 +328,13 @@ namespace askap
 
                         casacore::ArrayLattice<float> psf(psfArray);
                         itsCleaners[imageTag]->setpsf(order,psf);
-	   
+
                         // Setup the Residual Images and Model Images  - ( ntaylor ) of them
                         if (order < nTaylor) {
                             // Now precondition the residual images
                             psfWorkArray = psfZeroArray.copy();
                             doPreconditioning(psfWorkArray,dirtyArray,pcfZeroArray);
-		   
+
                             // We need lattice equivalents. We can use ArrayLattice which involves
                             // no copying
                             casacore::ArrayLattice<float> dirty(dirtyArray);
@@ -333,13 +344,13 @@ namespace askap
                             itsCleaners[imageTag]->setresidual(order,dirty);
                             itsCleaners[imageTag]->setmodel(order,clean);
                         }
-	   
+
                     } // end of 'order' loop
-	  
+
                     ASKAPLOG_INFO_STR(logger, "Starting Minor Cycles" );
                     itsCleaners[imageTag]->mtclean();
                     ASKAPLOG_INFO_STR(logger, "Finished Minor Cycles." );
-	  
+
                     // Write the final vector of clean model images into parameters
                     for( int order=0; order < nTaylor; ++order) {
                         // make the helper to correspond to the given order
@@ -350,8 +361,12 @@ namespace askap
                         ASKAPLOG_INFO_STR(logger, "About to get model for plane="<<plane<<" Taylor order="<<order<<
                                                   " for image "<<tmIt->first);
                         itsCleaners[imageTag]->getmodel(order,clean);
-                        casacore::Array<double> slice = planeIter.getPlane(ip.value(thisOrderParam));
+                        #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+                        planeIter.getPlane(ip.valueT(thisOrderParam)) = cleanArray;
+                        #else
+                        casacore::Array<double> slice = planeIter.getPlane(ip.valueT(thisOrderParam));
                         casacore::convertArray<double, float>(slice, cleanArray);
+                        #endif
                     }
                     // add extra parameters (cross-terms) to the to-be-fixed list
                     for (int order = nTaylor; order<tmIt->second; ++order) {
@@ -360,15 +375,15 @@ namespace askap
 	                     const std::string thisOrderParam = iph.paramName();
                          parametersToBeFixed.insert(thisOrderParam);
                     }
-               } // end of polarisation (i.e. plane) loop 
-	
+               } // end of polarisation (i.e. plane) loop
+
                // Make sure that the next set of minor cycles does not redo unnecessary things.
                // Also "fix" parameters for order >= nTaylor. so that the gridding doesn't get done
                // for these extra terms.
 
                // Fix the params corresponding to extra Taylor terms.
 	           // (MV) probably this part needs another careful look
-	           for (std::set<std::string>::const_iterator ci = parametersToBeFixed.begin(); 
+	           for (std::set<std::string>::const_iterator ci = parametersToBeFixed.begin();
 	                ci != parametersToBeFixed.end(); ++ci) {
 	                if (ip.isFree(*ci)) {
 	                    ip.fix(*ci);
@@ -379,20 +394,20 @@ namespace askap
                   throw AskapError("Failed in the MSMFS Minor Cycle : " + x.getMesg() );
            }
       } // loop: tmIt
-      
+
       ASKAPCHECK(nParameters>0, "No free parameters in ImageMSMFSolver");
-      
+
       quality.setDOF(nParameters);
       quality.setRank(0);
       quality.setCond(0.0);
       quality.setInfo("Multi-Scale Multi-Frequency Clean");
-      
+
       /// Save PSFs and Weights into parameter class (to be exported later)
       saveWeights(ip);
       savePSF(ip);
 
       return true;
     };
-    
+
   }
 }
