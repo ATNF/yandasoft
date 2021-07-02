@@ -89,7 +89,8 @@ namespace askap
         /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
         /// does the job and encapsulates all related code.
         /// @param[in] ts template solver (to take parameters from)
-        void configureSolver(const ImageSolver &ts);
+        /// @param[in] doPrecon, copy the PreConditioners from other solver
+        void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
 
 
@@ -101,6 +102,10 @@ namespace askap
         /// @brief set the solver to update residuals to the current model in the params
         /// @param[in] flag true, to switch updating on
         inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
+
+        /// @brief set flag to save the raw psf into a parameter
+        /// @param[in] flag true, to save the raw psf
+        inline void saveRawPsf(bool flag) { itsSaveRawPsf = flag;}
 
         /// @brief solves for and adds residuals
         /// @details Restore solver convolves the current model with the beam and adds the
@@ -143,6 +148,8 @@ namespace askap
         bool itsModelNeedsConvolving;
 
         bool itsResidualNeedsUpdating;
+
+        bool itsSaveRawPsf;
 
     };
 

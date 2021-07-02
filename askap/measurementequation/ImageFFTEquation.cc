@@ -512,6 +512,9 @@ namespace askap
         itsPSFGridders[imageName]->finaliseGrid(imagePSF);
         itsResidualGridders[imageName]->finaliseWeights(imageWeight);
 
+        // just to deallocate the grid memory
+        itsModelGridders[imageName]->finaliseDegrid();
+
         /*{
           casacore::Array<imtype> imagePSFWeight(imageShape);
           itsPSFGridders[imageName]->finaliseWeights(imagePSFWeight);

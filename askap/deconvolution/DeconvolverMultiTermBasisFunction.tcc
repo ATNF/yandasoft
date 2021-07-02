@@ -214,7 +214,7 @@ namespace askap {
 
             for (uInt term = 0; term < (2*this->nTerms() - 1); ++term) {
                 ASKAPCHECK(psfLong(term).nonDegenerate().shape().nelements() == 2, "PSF(" << term << ") has too many dimensions " << psfLong(term).shape());
-                this->itsPsfLongVec(term) = psfLong(term).nonDegenerate();
+                this->itsPsfLongVec(term).reference(psfLong(term).nonDegenerate());
             }
 
         };
@@ -417,9 +417,6 @@ namespace askap {
                  casacore::setReal(basisFunctionFFT, bfRef);
                  scimath::fft2d(basisFunctionFFT, true);
 
-                 // buffer for products
-                 Matrix<FT> work(basisFunctionFFT.shape());
-
                  for (uInt term = 0; term < this->nTerms(); term++) {
 
                     // Calculate transform of residual image
@@ -429,16 +426,15 @@ namespace askap {
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    // Removing the extra convolution with PSF0. Leave text here temporarily.
-                    //work = conj(basisFunctionFFT) * residualFFT * conj(xfrZero);
-                    work = conj(basisFunctionFFT) * residualFFT;
-                    scimath::fft2d(work, false);
+                    residualFFT *= conj(basisFunctionFFT);
+                    scimath::fft2d(residualFFT, false);
+                    Matrix<T> work(real(residualFFT));
 
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
-                                           << ")*Residual(" << term << "): max = " << max(real(work))
-                                           << " min = " << min(real(work)));
+                                           << ")*Residual(" << term << "): max = " << max(work)
+                                           << " min = " << min(work));
 
-                    this->itsResidualBasis(base)(term) = real(work);
+                    this->itsResidualBasis(base)(term) = work;
                 }
             }
             //const double end_time = MPI_Wtime();
@@ -674,7 +670,15 @@ namespace askap {
         {
 
             // Shared constants used by all threads during cleaning process
-            IPosition subPsfShape(this->findSubPsfShape());
+
+            // Need to (re)set the subPsfShape and call validatePSF to get correct psf peak pixels as it gets unset by DeconvolverBase::initialise
+            const IPosition subPsfShape(this->findSubPsfShape());
+            const uInt nx(this->psf(0).shape()(0));
+            const uInt ny(this->psf(0).shape()(1));
+            const IPosition subPsfStart(2, (nx - subPsfShape(0)) / 2, (ny - subPsfShape(1)) / 2);
+            const Slicer subPsfSlicer(subPsfStart, subPsfShape);
+            this->validatePSF(subPsfSlicer);
+
             const uInt nBases(this->itsResidualBasis.nelements());
             IPosition absPeakPos(2, 0);
             T absPeakVal(0.0);
@@ -1054,7 +1058,7 @@ namespace askap {
                                 if (isWeighted) {
                                     #pragma omp single
                                     wt.reference(this->itsWeight(0).nonDegenerate());
-                                    
+
                                     absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
                                 } else {
 

@@ -242,8 +242,7 @@ void GaussianTaperPreconditioner::applyTaper(casacore::Array<float> &image) cons
   casacore::LatticeFFT::cfft2d(scratch, true);
 
   // apply the taper
-  casacore::Array<casacore::Complex> taperCache = taper(shape);
-  casacore::ArrayLattice<casacore::Complex> taperLattice(taperCache);
+  casacore::ArrayLattice<float> taperLattice(taper(shape));
 
   scratch.copyData(casacore::LatticeExpr<casacore::Complex> (taperLattice * scratch));
 

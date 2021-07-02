@@ -70,14 +70,14 @@ namespace askap {
             psfVec(0) = psf.nonDegenerate();
             init(dirtyVec, psfVec);
         }
-        
+
         /// @brief validate PSF, find peak value and position
         /// @details It works with the zero-th term, if there are many
         /// @param[in] slicer optional slicer if only a fraction of the PSF needs to be considered
         /// the default constructed instance of a slicer results in the whole PSF being used.
         /// @note this method updates itsPeakPSFPos and itsPeakPSFVal, this is why it's non-const
         template<typename T, typename FT>
-        void DeconvolverBase<T, FT>::validatePSF(const casacore::Slicer &slicer) 
+        void DeconvolverBase<T, FT>::validatePSF(const casacore::Slicer &slicer)
         {
             ASKAPLOG_INFO_STR(decbaselogger, "Validating PSF");
             casacore::Array<T> psfArr = slicer == casacore::Slicer() ? psf(0) : psf(0).nonDegenerate()(slicer);
@@ -124,8 +124,8 @@ namespace askap {
                 ASKAPASSERT(dirtyVec(term).nonDegenerate().shape().nelements() == 2);
                 ASKAPASSERT(psfVec(term).nonDegenerate().shape().nelements() == 2);
 
-                itsDirty(term) = dirtyVec(term).nonDegenerate().copy();
-                itsPsf(term) = psfVec(term).nonDegenerate().copy();
+                itsDirty(term).reference(dirtyVec(term).nonDegenerate());
+                itsPsf(term).reference(psfVec(term).nonDegenerate());
 
                 ASKAPASSERT(itsPsf(term).shape().conform(itsDirty(term).shape()));
 
@@ -171,7 +171,7 @@ namespace askap {
         void DeconvolverBase<T, FT>::setModel(const Array<T>& model, const uInt term)
         {
             ASKAPCHECK(term < nTerms(), "Term " << term << " greater than allowed " << nTerms());
-            itsModel(term) = model.nonDegenerate().copy();
+            itsModel(term) = model.nonDegenerate();
             validateShapes();
         }
 
@@ -197,7 +197,7 @@ namespace askap {
             if (!newDirty.shape().nonDegenerate().conform(dirty(term).shape())) {
                 throw(AskapError("Updated dirty image has different shape"));
             }
-            itsDirty(term) = newDirty.nonDegenerate().copy();
+            itsDirty(term) = newDirty.nonDegenerate();
             validateShapes();
         }
 
@@ -212,7 +212,7 @@ namespace askap {
                 if (!dirtyVec(term).nonDegenerate().shape().conform(itsDirty(term).nonDegenerate().shape())) {
                     throw(AskapError("Updated dirty image has different shape from original"));
                 }
-                itsDirty(term) = dirtyVec(term).nonDegenerate().copy();
+                itsDirty(term) = dirtyVec(term).nonDegenerate();
             }
             validateShapes();
         }
@@ -241,7 +241,7 @@ namespace askap {
         void DeconvolverBase<T, FT>::setWeight(Array<T> weight, const uInt term)
         {
             ASKAPCHECK(term < nTerms(), "Term " << term << " greater than allowed " << nTerms());
-            itsWeight(term) = weight.nonDegenerate().copy();
+            itsWeight(term).reference(weight.nonDegenerate());
         }
 
         template<class T, class FT>
@@ -343,17 +343,13 @@ namespace askap {
 
             for (uInt term = 0; term < nTerms(); ++term) {
                  const Array<T>& thisTermPSF = psf(term);
-                 if (thisTermPSF.shape() != xfr.shape()) {
-                     xfr.resize(thisTermPSF.shape());
-                 }
+                 xfr.resize(thisTermPSF.shape());
                  xfr.set(0.);
                  casacore::setReal(xfr, thisTermPSF);
                  scimath::fft2d(xfr, true);
                  // Find residuals for current model model
                  const Array<T>& thisTermModel = model(term);
-                 if (thisTermModel.shape() != work.shape()) {
-                     work.resize(thisTermModel.shape());
-                 }
+                 work.resize(thisTermModel.shape());
                  work.set(0.);
                  casacore::setReal(work, thisTermModel);
                  scimath::fft2d(work, true);
