@@ -92,20 +92,22 @@ namespace askap
         /// @param[in] doPrecon, copy the PreConditioners from other solver
         void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
-
-
       protected:
         /// @brief set noise equalisation flag
         /// @param[in] flag true, to switch noise equalisation on
         inline void equaliseNoise(bool flag) { itsEqualiseNoise = flag; }
 
-        /// @brief set the solver to update residuals to the current model in the params
-        /// @param[in] flag true, to switch updating on
-        inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
-
         /// @brief set flag to save the raw psf into a parameter
         /// @param[in] flag true, to save the raw psf
         inline void saveRawPsf(bool flag) { itsSaveRawPsf = flag;}
+
+        /// @brief set flag to save the preconditioned psf into a parameter
+        /// @param[in] flag true, to save the preconditioned psf
+        inline void savePsfImage(bool flag) { itsSavePsfImage = flag;}
+
+        /// @brief set the solver to update residuals to the current model in the params
+        /// @param[in] flag true, to switch updating on
+        inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
 
         /// @brief solves for and adds residuals
         /// @details Restore solver convolves the current model with the beam and adds the
@@ -150,6 +152,8 @@ namespace askap
         bool itsResidualNeedsUpdating;
 
         bool itsSaveRawPsf;
+
+        bool itsSavePsfImage;
 
     };
 

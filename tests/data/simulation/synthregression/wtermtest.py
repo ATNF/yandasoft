@@ -82,3 +82,7 @@ spr.addToParset("Cimager.gridder.snapshotimaging = true")
 spr.addToParset("Cimager.gridder.snapshotimaging.wtolerance = 500")
 spr.runImager()
 analyseResult(spr, False)
+
+#clean up
+import os
+os.system("rm -rf *field1* temp_parset.in log.dat")

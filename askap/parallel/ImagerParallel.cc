@@ -1,5 +1,4 @@
-///
-/// @file
+/// @file ImagerParallel.cc
 ///
 /// Performs synthesis imaging from a data source, using any of a number of
 /// image solvers. Can run in serial or parallel (MPI) mode.
@@ -47,6 +46,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/dataaccess/DataAccessError.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/dataaccess/ParsetInterface.h>
+#include <askap/imageaccess/WeightsLog.h>
+
 
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
@@ -91,25 +92,32 @@ namespace askap
 
     ImagerParallel::ImagerParallel(askap::askapparallel::AskapParallel& comms,
         const LOFAR::ParameterSet& parset) :
-      MEParallelApp(comms,parset,true),
-      itsExportSensitivityImage(false), itsExpSensitivityCutoff(0.)
+      MEParallelApp(comms,parset,true)
     {
       if (itsComms.isMaster())
       {
-        itsRestore=parset.getBool("restore", false);
+        itsRestore=parset.getBool("restore", false); // do restore and write restored image
+        itsWriteFirstRestore=parset.getBool("write.firstrestore",false); // write first restore products if alt specified
+        itsWriteResidual=parset.getBool("residuals",false); // write residual image
+        itsWriteResidual=parset.getBool("write.residualimage",itsWriteResidual); // alternative param name
+        itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
+        itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
+        itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
+        itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
+        itsWriteMaskImage = parset.getBool("write.maskimage", false); // write mask image
+        itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // write clean model
+        itsWriteSensitivityImage = parset.getBool("write.sensitivityimage", false);
+        itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
+        itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
 
-        itsResidual=parset.getBool("residuals",true);
+        itsSensitivityCutoff = parset.getDouble("sensitivityimage.cutoff", 0.01);
 
-        bool reuseModel = parset.getBool("Images.reuse", false);
+        bool reuseModel = parset.getBool("Images.reuse", false); // continue solving from existing model
 
-        itsExportSensitivityImage = parset.getBool("sensitivityimage", true);
-
-        itsExpSensitivityCutoff = parset.getDouble("sensitivityimage.cutoff", 0.01);
-
-        if (itsExportSensitivityImage) {
+        if (itsWriteSensitivityImage) {
             ASKAPLOG_INFO_STR(logger,
                "Theoretical sensitivity images will be generated in addition to weights images, cutoff="<<
-                itsExpSensitivityCutoff);
+                itsSensitivityCutoff);
         }
 
         ASKAPCHECK(itsModel, "itsModel is supposed to be initialized at this stage");
@@ -216,7 +224,7 @@ namespace askap
       if (paramTest) return paramTest;
 
       // test for general missing parameters:
-      if ( cellsizeNeeded && !parset.isDefined("nUVWMachines") ) {
+      if ( !parset.isDefined("nUVWMachines") ) {
           paramTest = true;
       } else if ( cellsizeNeeded && !parset.isDefined("Images.cellsize") ) {
           paramTest = true;
@@ -691,7 +699,7 @@ namespace askap
     /// @brief make sensitivity image
     /// @details This is a helper method intended to be called from writeModel. It
     /// converts the given weights image into a sensitivity image and exports it.
-    /// This method is intended to be called if itsExportSensitivityImage is true.
+    /// This method is intended to be called if itsWriteSensitivityImage is true.
     /// @param[in] wtImage weight image parameter name
     void ImagerParallel::makeSensitivityImage(const std::string &wtImage) const
     {
@@ -707,7 +715,7 @@ namespace askap
       //
       casacore::Array<imtype> wtArr = itsModel->valueT(wtImage);
       casacore::Array<imtype> sensitivityArr(wtArr.shape());
-      const double cutoff = casacore::max(wtArr) * itsExpSensitivityCutoff;
+      const double cutoff = casacore::max(wtArr) * itsSensitivityCutoff;
 
       for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
            const casacore::Vector<imtype> wtPlane = iter.getPlaneVector(wtArr);
@@ -747,7 +755,7 @@ namespace askap
                 hasWeights = true;
             }
         }
-        if (!hasWeights) {
+        if (!hasWeights && (itsWriteWtImage || itsWriteSensitivityImage || itsWriteWtLog)) {
             ASKAPDEBUGASSERT(itsSolver);
             boost::shared_ptr<ImageSolver> image_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
             ASKAPDEBUGASSERT(image_solver);
@@ -755,33 +763,59 @@ namespace askap
             resultimages=itsModel->names();
         }
 
+        if (itsWriteWtLog) {
+            ASKAPLOG_INFO_STR(logger,"Writing Weightslog");
+            askap::accessors::WeightsLog weightslog;
+            string name;
+            for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
+                !=resultimages.end(); it++) {
+                if (it->find("weights") == 0) {
+                    name = *it;
+                }
+            }
+
+            casacore::Array<float> wts = itsModel->valueF(name);
+            float wt = wts.data()[0];
+            if (allEQ(wts,wt)) {
+                weightslog.weightslist()[0] = wt;
+                weightslog.setFilename(name.insert(7,"log") + postfix + ".txt");
+                weightslog.write();
+            } else {
+                ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
+            }
+        }
+
+
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
-            if ((it->find("image") == 0) || (it->find("weights") == 0) || (it->find("mask") == 0) )
+            // always write model if writeAtMajorCycle is true (sets postfix)
+            if (((it->find("image") == 0) && (itsWriteModelImage || postfix!="")) ||
+                ((it->find("weights") == 0) && itsWriteWtImage)  ||
+                ((it->find("mask") == 0) && itsWriteMaskImage) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
-                if (itsExportSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
+                if (itsWriteSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
             }
-            if ((it->find("residual") == 0)) {
+            if ((it->find("residual") == 0) && itsWriteResidual) {
                 if (!iph.isFacet()) {
-                    if (!itsRestore && itsResidual) {
+                    if (!itsRestore && itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                     }
                 }
                 else {
-                    if (itsResidual) {
+                    if (itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
                     }
                 }
 
             }
-            if (it->find("psf") == 0) {
+            if ((it->find("psf") == 0) && itsWritePsfRaw) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
             }
@@ -823,7 +857,8 @@ namespace askap
 
             for (uint pass=0; pass<n_passes; ++pass) {
                 if (pass == 0) {
-                    ASKAPLOG_INFO_STR(logger, "Restore images and writing them to disk");
+                    ASKAPLOG_INFO_STR(logger, "Restore images" <<
+                      (n_passes == 1 || itsWriteFirstRestore ? " and writing them to disk" :""));
                     restore_suffix = "";
                 }
                 else {
@@ -850,11 +885,16 @@ namespace askap
                     }
 
                 }
+                // Set parset parameters for ImageRestoreSolver to avoid saving things we don't need
+                tmpset.replace(LOFAR::KVpair("restore.updateresiduals",itsWriteResidual));
+                tmpset.replace(LOFAR::KVpair("restore.savepsfimage",itsWritePsfImage));
                 boost::shared_ptr<ImageRestoreSolver>
-                    ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
+                ir = ImageRestoreSolver::createSolver(tmpset.makeSubset("restore."));
+
                 ASKAPDEBUGASSERT(ir);
                 ASKAPDEBUGASSERT(itsSolver);
-                    // configure restore solver
+
+                // configure restore solver
                 boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
                 ASKAPDEBUGASSERT(template_solver);
                 // use existing preconditioners for pass 0, special restore ones for pass 1
@@ -867,26 +907,26 @@ namespace askap
 
                 ir->solveNormalEquations(*itsModel,q);
                 // merged image should be a fixed parameter without facet suffixes
-                std::vector<std::string> resultimages2=itsModel->names();
-                for (std::vector<std::string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
-                    const ImageParamsHelper iph(*ci);
-                    if (!iph.isFacet() && ((ci->find("image") == 0)))  {
-                        ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                                << *ci+restore_suffix+".restored" );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
-                    }
-                    if (!iph.isFacet() && ((ci->find("psf.image") == 0)))  {
-                        ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
-                                << *ci+restore_suffix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                    }
-                    if (!iph.isFacet() && ((ci->find("residual") == 0)))  {
-                        if (itsResidual) {
-                            ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
-                                    << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
-                        }
-                    }
+                if (n_passes == 1 || itsWriteFirstRestore || pass > 0) {
+                  std::vector<std::string> resultimages2=itsModel->names();
+                  for (std::vector<std::string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
+                      const ImageParamsHelper iph(*ci);
+                      if (!iph.isFacet() && ((ci->find("image") == 0)))  {
+                          ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                  << *ci+restore_suffix+".restored" );
+                          SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
+                      }
+                      if (!iph.isFacet() && ((ci->find("psf.image") == 0) && itsWritePsfImage))  {
+                          ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
+                                  << *ci+restore_suffix );
+                          SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                      }
+                      if (!iph.isFacet() && ((ci->find("residual") == 0) && itsWriteResidual))  {
+                          ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
+                                  << *ci+restore_suffix );
+                          SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                      }
+                  }
                 }
             }
 
@@ -901,6 +941,7 @@ namespace askap
                 }
             }
             ASKAPLOG_INFO_STR(logger, "Writing out additional parameters made by restore solver as images");
+            // (MHW) Not sure what is suppposed to be written here, turned off psf.image as that is already written above
             std::vector<std::string> resultimages2=itsModel->names();
             for (std::vector<std::string>::const_iterator it=resultimages2.begin(); it !=resultimages2.end(); it++) {
                 ASKAPLOG_INFO_STR(logger, "Checking "<<*it);
@@ -908,9 +949,10 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger, "Found " <<*it);
 
                     if (std::find(resultimages.begin(),resultimages.end(),*it) == resultimages.end()) {
-
-                        ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                        if (it->find("psf.image")!=0) {
+                            ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                        }
                     }
                     else {
                         ASKAPLOG_INFO_STR(logger, "Not Saving as " << *it << " is in the original params list");

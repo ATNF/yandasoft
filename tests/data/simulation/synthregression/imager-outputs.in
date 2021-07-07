@@ -4,24 +4,21 @@ Cimager.imagetype                               = casa
 Cimager.memorybuffers                           = true
 Cimager.barycentre                              = false
 Cimager.nchanpercore                            = 8
+Cimager.combinechannels                         = true
 Cimager.solverpercore                           = false
 Cimager.Channels                                = [8,0]
 Cimager.usetmpfs                                = false
 Cimager.tmpfs                                   = /Volumes/RAMDisk
-Cimager.Images.Names                            = [image.cont]
+Cimager.Images.Names                            = [image.iot]
 Cimager.Images.reuse                            = false
 Cimager.Images.shape                            = [128,128]
 Cimager.Images.cellsize                         = [5arcsec, 5arcsec]
 Cimager.visweights                              = MFS
 Cimager.visweights.MFS.reffreq                  = 1.1e+09
-Cimager.Images.image.cont.frequency             = [1.1e+09,1.1e+09]
-Cimager.Images.image.cont.nterms          = 2
-#Cimager.Images.image.cont.nchan          = 8
-Cimager.Images.image.cont.nchan          = 1
+Cimager.Images.image.iot.frequency             = [1.1e+09,1.1e+09]
+Cimager.Images.image.iot.nterms                = 2
+Cimager.Images.image.iot.nchan                 = 1
 Cimager.nworkergroups                           = 3
-Cimager.nterms                          = 3
-Cimager.sensitivityimage                        = true
-#Cimager.gridder                                 = SphFunc
 
 Cimager.gridder                                 = WProject
 Cimager.gridder.WProject.wmax                   = 20000
@@ -35,12 +32,12 @@ Cimager.gridder.WProject.cutoff                 = 0.001
 Cimager.gridder.WProject.variablesupport        = true
 Cimager.gridder.WProject.offsetsupport          = true
 
-Cimager.ncycles                                 = 6
-Cimager.Images.writeAtMajorCycle                = true
+Cimager.ncycles                                 = 2
+Cimager.Images.writeAtMajorCycle                = false
 
 # Use a multiscale Clean solver
 Cimager.solver                                  = Clean
-Cimager.solver.Clean.solutiontype               = MAXCHISQ
+Cimager.solver.Clean.solutiontype               = MAXBASE
 Cimager.solver.Clean.decoupled			= True
 Cimager.solver.Clean.algorithm                  = BasisfunctionMFS
 Cimager.solver.Clean.scales                     = [0]
@@ -52,13 +49,12 @@ Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
 
 Cimager.solver.Clean.verbose                    = false
 
-#Cimager.preconditioner.preservecf               = true
-#Cimager.preconditioner.Names                    = [Wiener]
-#Cimager.preconditioner.Wiener.robustness        = 2.0
+Cimager.preconditioner.preservecf               = true
+Cimager.preconditioner.Names                    = [Wiener]
+Cimager.preconditioner.Wiener.robustness        = 0.0
 
 Cimager.restore                                 = true
 Cimager.restore.beam                            = fit
-
-Cimager.write.modelimage                        = true
-Cimager.write.residualimage                     = true
-
+Cimager.restore.preconditioner.Names            = [Wiener,GaussianTaper]
+Cimager.restore.preconditioner.GaussianTaper    = [40arcsec, 40arcsec, 0deg] 
+Cimager.restore.preconditioner.Wiener.robustness = 1.0

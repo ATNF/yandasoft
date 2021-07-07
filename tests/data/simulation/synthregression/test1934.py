@@ -57,3 +57,6 @@ spr.initParset()
 spr.addToParset("Cimager.dataset=1934pt1.ms")
 spr.runImager()
 analyseResult(spr,checkFlux = False)
+
+#clean up
+os.system("rm -rf 1934*.ms *.1934.* temp_parset.in")

@@ -177,12 +177,22 @@ void AdviseDI::prepare() {
     int nchanpercore = itsParset.getInt32("nchanpercore", 1);
     ASKAPLOG_DEBUG_STR(logger,"nchanpercore " << nchanpercore);
 
-    const int nwriters = itsParset.getInt32("nwriters", 1);
+    int nwriters = itsParset.getInt32("nwriters",1);
+    ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
+    ASKAPCHECK(nwriters <= nWorkers ,"Number of writers must less than or equal to number of workers");
+    bool writeGrids = itsParset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
+    writeGrids = itsParset.getBool("write.grids",writeGrids); // new name
+    if (writeGrids && nwriters > 1) {
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
+      nwriters = 1;
+    } else if (itsParset.getString("imagetype") == "fits" && nwriters > 1){
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
+      nwriters = 1;
+    }
+
     ASKAPLOG_DEBUG_STR(logger,"nwriters " << nwriters);
     frequency_tolerance = itsParset.getDouble("channeltolerance",0.0);
 
-    ASKAPCHECK(nwriters > 0 ,"Number of writers must be greater than zero");
-    ASKAPCHECK(nwriters <= nWorkers ,"Number of writers must less than or equal to number of workers");
 
     /// Get the channel range
     /// The imager ususally uses the Channels keyword in the parset to
@@ -295,14 +305,14 @@ void AdviseDI::prepare() {
 
         totChanIn = totChanIn + thisChanIn;
 
-        
+
         // MV: see comments above, this is a somewhat ugly approach to get the correct phase centre
         itsTangent.push_back(mdStats.centre());
         itsDirVec.push_back(casa::Vector<casacore::MDirection>(1,casacore::MDirection(itsTangent[n], casacore::MDirection::J2000)));
         const casacore::Vector<casacore::MDirection> oldDirVec(fc.phaseDirMeasCol()(0));
         ASKAPLOG_DEBUG_STR(logger, "Tangent point for "<<ms[n]<<" : "<<printDirection(itsTangent[n])<<
                            " (J2000), old way: "<<printDirection(oldDirVec(0).getValue())<<" (J2000)");
-        
+
 
         // the old way to get phase centre/tangent:
         //itsDirVec.push_back(fc.phaseDirMeasCol()(0));
@@ -921,7 +931,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
                parset.add("wpercentile.advised", wpercentile);
            }
        }
-        
+
        estimate(parset);
        const VisMetaDataStats &advice = estimator();
 
