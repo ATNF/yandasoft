@@ -53,3 +53,4 @@ Cimager.restore.beam                            = fit
 
 Cimager.write.modelimage                        = true
 Cimager.write.residualimage                     = true
+Cimager.write.grids                             = true

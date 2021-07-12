@@ -33,8 +33,44 @@ def analyseResult(spr, checkWeights=True):
    if stats['rms']>0.015 or abs(stats['median'])>0.001:
       raise RuntimeError("Residual image has too high rms or median. Please verify")
 
+   # now check grids
+   stats = spr.complexImageStats('psfgrid.cont')
+   print("Statistics for psf grid: ", stats)
+   if abs(stats['peak'] - 37.4) > 0.1:
+      raise RuntimeError("psf grid peak value is wrong, please verify")
+   if stats['x']!=65 or stats['y']!=67:
+      raise RuntimeError("psf grid peak location is wrong, please verify")
+   if abs(stats['rms-real'] - 2.456) > 0.01:
+      raise RuntimeError("psf grid rms value is wrong, please verify")
+   if abs(stats['median-real'] - 0) > 1e-5:
+      raise RuntimeError("psf grid median value is wrong, please verify")
+
+   stats = spr.complexImageStats('pcfgrid.cont')
+   print("Statistics for pcf grid: ", stats)
+   if abs(stats['peak'] - 90) > 0.1:
+      raise RuntimeError("pcf grid peak value is wrong, please verify")
+   if stats['x']!=59 or stats['y']!=67:
+      raise RuntimeError("pcf grid peak location is wrong, please verify")
+   if abs(stats['rms-real'] - 1.333) > 0.01:
+      raise RuntimeError("pcf grid rms value is wrong, please verify")
+   if abs(stats['median-real'] - 0) > 1e-5:
+      raise RuntimeError("pcf grid median value is wrong, please verify")
+
+   stats = spr.complexImageStats('visgrid.cont')
+   print("Statistics for vis grid: ", stats)
+   if abs(stats['peak'] - 3.035) > 0.1:
+      raise RuntimeError("vis grid peak value is wrong, please verify")
+   if stats['x']!=65 or stats['y']!=67:
+      raise RuntimeError("vis grid peak location is wrong, please verify")
+   if abs(stats['rms-real'] - 0.012) > 0.001:
+      raise RuntimeError("vis grid rms real value is wrong, please verify")
+   if abs(stats['rms-imag'] - 0.0976) > 0.001:
+      raise RuntimeError("vis grid rms imag value is wrong, please verify")
+   if abs(stats['median-real'] - 0) > 1e-5:
+      raise RuntimeError("vis grid median value is wrong, please verify")
+
 import os
-os.system("rm -rf image.*");
+os.system("rm -rf *.cont");
 os.system("rm -rf spectral.ms");
 
 
