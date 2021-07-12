@@ -124,7 +124,8 @@ class SynthesisProgramRunner:
       '''
          Run new imager on a current parset in parallel
       '''
-      mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
+      # mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
+      mpirun = 'mpirun %s -np %d' % (args, nProcs)
       self.runCommand(mpirun + ' ' + self.NewImager)
 
 
