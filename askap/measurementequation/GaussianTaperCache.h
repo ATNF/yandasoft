@@ -78,7 +78,7 @@ public:
    /// The output is guaranteed to have the requested shape.
    /// @param[in] shape required shape
    /// @return array with the taper (casa arrays use reference semantics)
-   casacore::Array<casacore::Complex> taper(const casacore::IPosition &shape) const;
+   casacore::Array<float> taper(const casacore::IPosition &shape) const;
 
    /// @return major axis in pixels
    inline double majorAxis() const {return itsMajorAxis;}
@@ -112,7 +112,7 @@ private:
    double itsPA;
    /// @brief cache of the taper image
    /// @note May be we can make it float?
-   mutable casacore::Array<casacore::Complex> itsTaperCache;
+   mutable casacore::Array<float> itsTaperCache;
    /// @brief actual taper parameters after tuning
    mutable casacore::Vector<double> itsTaper;
 };

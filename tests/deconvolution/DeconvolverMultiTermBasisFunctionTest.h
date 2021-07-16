@@ -49,6 +49,7 @@ class DeconvolverMultiTermBasisFunctionTest : public CppUnit::TestFixture
   CPPUNIT_TEST(testDeconvolveCenter);
   CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
   CPPUNIT_TEST_EXCEPTION(testDeconvolveOffsetPSF, AskapError);
+  CPPUNIT_TEST(testDeconvolvePSFSubset);
   CPPUNIT_TEST_SUITE_END();
 public:
    
@@ -106,7 +107,6 @@ public:
     itsDB->updateDirty(*itsDirty);
   }
   void testDeconvolveOffsetPSF() {
-    IPosition dimensions(2,100,100);
     itsDB->dirty()(IPosition(2,30,20))=1.0;
     itsDB->psf().set(0.0);
     itsDB->psf()(IPosition(2,70,70))=1.0;
@@ -120,7 +120,23 @@ public:
     CPPUNIT_ASSERT(itsDB->deconvolve());
     CPPUNIT_ASSERT(itsDB->control()->terminationCause()==DeconvolverControl<Float>::CONVERGED);
   }
-   
+
+  void testDeconvolvePSFSubset() {
+    // this test was added in response to a bug where reuse of the deconvolver triggered shape mismatch when
+    // a subset of the PSF was used for deconvolution
+    itsDB->dirty().set(0.0);
+    itsDB->dirty()(IPosition(2,50,50))=1.0;
+    itsDB->control()->setPSFWidth(50);
+    CPPUNIT_ASSERT(itsDB->deconvolve());
+    CPPUNIT_ASSERT(itsDB->control()->terminationCause()==DeconvolverControl<Float>::CONVERGED);
+    // second "major cycle"
+    itsDB->dirty().set(0.0);
+    itsDB->dirty()(IPosition(2,49,49))=1.0;
+    itsDB->state()->setCurrentIter(0);
+    CPPUNIT_ASSERT(itsDB->deconvolve());
+    CPPUNIT_ASSERT(itsDB->control()->terminationCause()==DeconvolverControl<Float>::CONVERGED);
+  }
+
 private:
 
   boost::shared_ptr< Array<Float> > itsDirty;

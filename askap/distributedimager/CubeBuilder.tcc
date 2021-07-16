@@ -89,7 +89,7 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
     // UV cellsize is probably
     casacore::Vector<casacore::Double> UVCellSize;
     UVCellSize.resize(2);
-    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
+    ASKAPDEBUGASSERT(imageShapeVector.size()>=2);
     UVCellSize[0] = 1./(xcellsize.getValue("rad")*(imageShapeVector[0]));
     UVCellSize[1] = 1./(ycellsize.getValue("rad")*(imageShapeVector[1]));
 

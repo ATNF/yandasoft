@@ -38,6 +38,7 @@
 #include <askap/scimath/fitting/Params.h>
 #include <askap/dataaccess/TableDataSource.h>
 #include <askap/gridding/IVisGridder.h>
+#include <askap/askap/StatReporter.h>
 
 // Local includes
 #include "askap/distributedimager/AdviseDI.h"
@@ -54,7 +55,7 @@ class ContinuumWorker
     {
     public:
         ContinuumWorker(LOFAR::ParameterSet& parset,
-                           CubeComms& comms);
+                           CubeComms& comms, StatReporter& stats);
         ~ContinuumWorker();
 
         void run(void);
@@ -83,7 +84,7 @@ class ContinuumWorker
         void preProcessWorkUnit(ContinuumWorkUnit& wu);
         // Compress all continuous channel allocations into individual workunits
         void compressWorkUnits();
-        
+
         // Delete a workunit from the cache
         void deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
         // clear the current cached files
@@ -114,6 +115,9 @@ class ContinuumWorker
         // Communications class
         CubeComms& itsComms;
 
+        // statistics
+        StatReporter& itsStats;
+
         // No support for assignment
         ContinuumWorker& operator=(const ContinuumWorker& rhs);
 
@@ -140,13 +144,13 @@ class ContinuumWorker
 
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsImageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFCube;
-        boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPCFCube;
+        boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPCFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPSFGridCube;
+        boost::shared_ptr<CubeBuilder<casacore::Complex> > itsVisGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
-        boost::shared_ptr<CubeBuilder<casacore::Complex> > itsGriddedVis;
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
 
@@ -157,10 +161,40 @@ class ContinuumWorker
         void storeBeam(const unsigned int cubeChannel);
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
-
         unsigned int itsBeamReferenceChannel;
         void logBeamInfo();
 
+        void initialiseWeightsLog(const unsigned int numChannels);
+        void recordWeight(float wt, const unsigned int globalChannel);
+        std::map<unsigned int, float> itsWeightsList;
+        void logWeightsInfo();
+
+        /// @brief Do we want a restored image?
+        bool itsRestore;
+
+        /// @brief Do we want a residual image
+        bool itsWriteResidual;
+
+        /// @brief write 'raw', unnormalised, natural weight psf
+        bool itsWritePsfRaw;
+
+        /// @brief write normalised, preconditioned psf
+        bool itsWritePsfImage;
+
+        /// @brief write weights image
+        bool itsWriteWtImage;
+
+        /// @brief write a weights log
+        bool itsWriteWtLog;
+
+        /// @brief write out the (clean) model image
+        bool itsWriteModelImage;
+
+        /// @brief write out the gridded data, pcf and psf
+        bool itsWriteGrids;
+
+        /// @brief the number of rank that can write to the cube
+        int itsNumWriters;
 
 };
 

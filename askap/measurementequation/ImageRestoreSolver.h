@@ -89,7 +89,8 @@ namespace askap
         /// solver-specific prefies, so parsing a parset in createSolver is not a good idea. This method
         /// does the job and encapsulates all related code.
         /// @param[in] ts template solver (to take parameters from)
-        void configureSolver(const ImageSolver &ts);
+        /// @param[in] doPrecon, copy the PreConditioners from other solver
+        void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
         /// @brief set extra oversampling during cleaning and image output if needed
         /// @param[in] factor extra oversampling factor
@@ -99,6 +100,14 @@ namespace askap
         /// @brief set noise equalisation flag
         /// @param[in] flag true, to switch noise equalisation on
         inline void equaliseNoise(bool flag) { itsEqualiseNoise = flag; }
+
+        /// @brief set flag to save the raw psf into a parameter
+        /// @param[in] flag true, to save the raw psf
+        inline void saveRawPsf(bool flag) { itsSaveRawPsf = flag;}
+
+        /// @brief set flag to save the preconditioned psf into a parameter
+        /// @param[in] flag true, to save the preconditioned psf
+        inline void savePsfImage(bool flag) { itsSavePsfImage = flag;}
 
         /// @brief set the solver to update residuals to the current model in the params
         /// @param[in] flag true, to switch updating on
@@ -148,6 +157,10 @@ namespace askap
         bool itsModelNeedsConvolving;
 
         bool itsResidualNeedsUpdating;
+
+        bool itsSaveRawPsf;
+
+        bool itsSavePsfImage;
 
     };
 

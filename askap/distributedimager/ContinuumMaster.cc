@@ -73,8 +73,8 @@ using namespace askap;
 ASKAP_LOGGER(logger, ".ContinuumMaster");
 
 ContinuumMaster::ContinuumMaster(LOFAR::ParameterSet& parset,
-                                       CubeComms& comms)
-    : itsParset(parset), itsComms(comms), itsBeamList()
+                                       CubeComms& comms, StatReporter& stats)
+    : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList()
 {
 }
 
@@ -86,7 +86,7 @@ void ContinuumMaster::run(void)
 {
     // print out the parset
     ASKAPLOG_INFO_STR(logger,"Parset: \n"<<itsParset);
-    // Read from the configruation the list of datasets to process
+    // Read from the configuration the list of datasets to process
     const vector<string> ms = getDatasets(itsParset);
     if (ms.size() == 0) {
         ASKAPTHROW(std::runtime_error, "No datasets specified in the parameter set file");
@@ -103,15 +103,7 @@ void ContinuumMaster::run(void)
     const double targetPeakResidual = synthesis::SynthesisParamsHelper::convertQuantity(
                 itsParset.getString("threshold.majorcycle", "-1Jy"), "Jy");
 
-
-
-
-
-
-
     LOFAR::ParameterSet unitParset = itsParset;
-
-
 
     const bool writeAtMajorCycle = unitParset.getBool("Images.writeAtMajorCycle", false);
     const int nCycles = unitParset.getInt32("ncycles", 0);
@@ -171,6 +163,7 @@ ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 1")
 ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 2");
     diadvise.addMissingParameters();
 
+    itsStats.logSummary();
 
 
     if (localSolver) {
@@ -191,6 +184,7 @@ ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 2")
         imager.calcNE(); // Needed here because it resets the itsNE
         imager.receiveNE();
         imager.writeModel();
+        itsStats.logSummary();
 
     }
     else {
@@ -246,14 +240,16 @@ ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumMaster::run 2")
             else {
                 ASKAPLOG_DEBUG_STR(logger, "Not writing out model");
             }
+            itsStats.logSummary();
 
         }
         ASKAPLOG_INFO_STR(logger, "Cycles complete - Receiving residuals for latest model");
-        imager.calcNE(); // Needed here becuase it resets the itsNE as Master
+        imager.calcNE(); // Needed here because it resets the itsNE as Master
                         // Nothing else is done
         imager.receiveNE(); // updates the residuals from workers
         ASKAPLOG_INFO_STR(logger, "Writing out model");
         imager.writeModel();
+        itsStats.logSummary();
 
     }
 

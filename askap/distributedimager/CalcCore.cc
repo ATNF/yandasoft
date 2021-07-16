@@ -84,6 +84,18 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     /// Not sure whether to use it directly or copy it.
     const std::string solver_par = parset.getString("solver");
     const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
+    // tell gridder it can throw the grids away if we don't need to write them out
+    bool writeGrids = parset.getBool("dumpgrids",false);
+    writeGrids = parset.getBool("write.grids",writeGrids); // new name
+    parset.replace(LOFAR::KVpair("gridder.cleargrids",!writeGrids));
+    // tell restore solver to save the raw (unnormalised, unpreconditioned) psf
+    parset.replace(LOFAR::KVpair("restore.saverawpsf",writeGrids));
+    // only switch on updateResiduals if we want the residuals written out
+    bool writeResiduals = parset.getBool("write.residualimage",false);
+    parset.replace(LOFAR::KVpair("restore.updateresiduals",writeResiduals));
+    // only switch on savepsfimage if we want the preconditioned psf written out
+    bool writePsfImage = parset.getBool("write.psfimage",false);
+    parset.replace(LOFAR::KVpair("restore.savepsfimage",writePsfImage));
     itsSolver = ImageSolverFactory::make(parset);
     itsGridder_p = VisGridderFactory::make(parset); // this is private to an inherited class so have to make a new one
     itsRestore = itsParset.getBool("restore", false);
@@ -178,7 +190,9 @@ void CalcCore::doCalc()
     }
     else {
         ASKAPLOG_INFO_STR(logger, "Reusing measurement equation and updating with latest model images" );
-        itsEquation->setParameters(*itsModel);
+        // Try changing this to reference instead of copy - passes tests
+        //itsEquation->setParameters(*itsModel);
+        itsEquation->reference(itsModel);
     }
     ASKAPCHECK(itsEquation, "Equation not defined");
     ASKAPCHECK(itsNe, "NormalEquations not defined");
@@ -187,21 +201,16 @@ void CalcCore::doCalc()
     ASKAPLOG_INFO_STR(logger,"Calculated normal equations in "<< timer.real()
                       << " seconds ");
 
-    }
+}
+
 casacore::Array<casacore::Complex> CalcCore::getGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping vis grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
 
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -211,16 +220,10 @@ casacore::Array<casacore::Complex> CalcCore::getGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping pcf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -232,16 +235,10 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping psf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -351,8 +348,9 @@ void CalcCore::solveNE()
     }
     itsModel->fix("peak_residual");
 
-
 }
+
+// This code is not called from anywhere at present
 void CalcCore::writeLocalModel(const std::string &postfix) {
 
     ASKAPLOG_DEBUG_STR(logger, "Writing out results as images");
@@ -388,7 +386,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         }
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
-        ImageSolverFactory::configurePreconditioners(itsParset,ir);
+        //ImageSolverFactory::configurePreconditioners(itsParset,ir);
         ir->configureSolver(*template_solver);
         ir->copyNormalEquations(*template_solver);
         Quality q;
@@ -434,13 +432,18 @@ void CalcCore::restoreImage()
     boost::shared_ptr<ImageSolver>
     template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
     ASKAPDEBUGASSERT(template_solver);
-    ImageSolverFactory::configurePreconditioners(itsParset, ir);
+
+    // Can we copy the preconditioners from itsSolver to avoid some work & memory?
+    // Both Wiener and Gaussian keep a cache we should try to reuse
+    // added code to configureSolver to do this.
+    // ImageSolverFactory::configurePreconditioners(itsParset, ir);
     ir->configureSolver(*template_solver);
 
     try {
       ir->copyNormalEquations(*template_solver);
     }
     catch (...) {
+      ASKAPLOG_WARN_STR(logger, "Adding missing normal equations for restore");
       template_solver->addNormalEquations(*itsNe);
       try {
           ir->copyNormalEquations(*template_solver);
@@ -452,11 +455,11 @@ void CalcCore::restoreImage()
 
     Quality q;
     ir->solveNormalEquations(*itsModel, q);
-    std::vector<std::string> resultimages=itsModel->names();
+    std::vector<std::string> resultimages=itsModel->completions("image",true);
 
     for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
 
-        ASKAPLOG_INFO_STR(logger, "Restored image " << *ci);
+        ASKAPLOG_INFO_STR(logger, "Restored image " << "image"+*ci);
 
     }
     ASKAPDEBUGASSERT(itsModel);

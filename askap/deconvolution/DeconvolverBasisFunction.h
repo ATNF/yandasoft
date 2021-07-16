@@ -141,8 +141,13 @@ namespace askap {
                 casacore::Vector<T> findCoefficients(const casacore::Matrix<casacore::Double>& invCoupling,
                                                  const casacore::Vector<T>& peakValues);
 
+                /// @brief basically matrix multiplication across the basis function domain
+                /// @details This method applies inverse coupling matrix to every pixel of the data array
+                /// @param[in] invCoupling inverse coupling matrix (i.e. the matrix multiplied by the data array)
+                /// @param[in] dataArray data array (with basis function decomposition)
+                /// @return new data array after the inverse coupling matrix is applied
                 static casacore::Array<T> applyInverse(const casacore::Matrix<casacore::Double>& invCoupling,
-                                            const casacore::Array<T> dataArray);
+                                            const casacore::Array<T>& dataArray);
 
                 static casacore::Array<T> apply(const casacore::Matrix<casacore::Double>& invCoupling,
                                      const casacore::Vector<T> dataVector);

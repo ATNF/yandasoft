@@ -259,16 +259,25 @@ namespace synthesis
             const casacore::IPosition &shape, const std::string &prefix, const casacore::Array<float> &arr,
             const casacore::IPosition &pos);
 
-   /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
-   /// @param[in] osfactor extra oversampling factor
-   /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
-   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
-   void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true) const;
+        /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+        /// @param[in] osfactor extra oversampling factor
+        /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
+        /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+        void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true) const;
 
-   /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
-   /// @param[in] osfactor extra oversampling factor
-   /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
-   void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.) const;
+        /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+        /// @param[in] osfactor extra oversampling factor
+        /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+        void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.) const;
+
+        /// @brief copy the map of preconditioners from another ImageSolver
+        /// @details The map is copied by reference to avoid copying large caches,
+        /// so ideally original solver should not be modified after this
+        /// @param[in] is ImageSolver
+        void setPreconditioners(const ImageSolver& is)
+        {
+            itsPreconditioners = is.itsPreconditioners;
+        }
 
     private:
         /// Instance of a preconditioner
