@@ -124,7 +124,8 @@ class SynthesisProgramRunner:
       '''
          Run new imager on a current parset in parallel
       '''
-      mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
+      # mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
+      mpirun = 'mpirun %s -np %d' % (args, nProcs)
       self.runCommand(mpirun + ' ' + self.NewImager)
 
 
@@ -180,6 +181,51 @@ class SynthesisProgramRunner:
          finally:
             f.close()
       return result
+
+   def complexImageStats(self, name):
+      '''
+         Get image statistics
+fro
+         name - image name
+      '''
+      import re
+      if not os.path.exists(name):
+         raise RuntimeError("Image %s doesn't exist" % name)
+      imgstat_out = ".tmp.imgstat"
+      if os.path.exists(imgstat_out):
+         os.system("rm -f %s" % imgstat_out)
+      res = os.system("%s -C %s > %s" % (self.imgstat,name,imgstat_out))
+      if res != 0:
+         raise RuntimeError("Command %s failed with error %s" % (self.imgstat,res))
+      result = {}
+      with open(imgstat_out) as f:
+         try:
+            row = 0
+            for line in f:
+               line2 = re.split('[(,) \[\]]',line)
+               parts = [x for x in line2 if x]
+               if len(parts)<2 and row>0:
+                  raise RuntimeError("Expected at least 2 elements in row %i, you have: %s" % (row+1,parts))
+               if row == 0:
+                  if len(parts)<4:
+                     raise RuntimeError("Expected at least 4 columns on the first row, you have: %s " % (parts,))
+                  result['peak'] = float(parts[0])
+                  result['x'] = int(parts[2])
+                  result['y'] = int(parts[3])
+                  if len(parts)>4:
+                      result['pol'] = int(parts[4])
+                  if len(parts)>5:
+                      result['chan'] = int(parts[5])
+               elif row == 1:
+                  result['rms-real'] = float(parts[0])
+                  result['rms-imag'] = float(parts[1])
+                  result['median-real'] = float(parts[2])
+                  result['median-imag'] = float(parts[3])
+               row = row + 1
+         finally:
+            f.close()
+      return result
+
 
 # angular distance in degrees of the peak from the given point
 # ra and dec are J2000 coordinates in degrees
