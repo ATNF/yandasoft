@@ -964,7 +964,7 @@ void TableVisGridder::toComplex(casacore::Array<imtypeComplex>& out,
 }
 
 /// @brief Conversion helper function
-/// @details Copies real part of in into double array and
+/// @details Copies real part of in into imtype array and
 /// extracting an inner rectangle if necessary (itsPaddingFactor is more than 1)
 /// @param[out] out real output array
 /// @param[in] in complex input array
@@ -1109,7 +1109,7 @@ void TableVisGridder::initRepresentativeFieldAndFeed()
 void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     ASKAPTRACE("TableVisGridder::finaliseGrid");
     ASKAPDEBUGASSERT(itsGrid.size() > 0);
-    // buffer for result as doubles
+    // buffer for result
     casacore::Array<imtype> dBuffer(itsGrid[0].shape());
     ASKAPDEBUGASSERT(dBuffer.shape().nelements()>=2);
     ASKAPDEBUGASSERT(itsShape == scimath::PaddingUtils::paddedShape(out.shape(),paddingFactor()));
@@ -1117,7 +1117,14 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
     /// Loop over all grids Fourier transforming and accumulating
     for (unsigned int i=0; i<itsGrid.size(); i++) {
         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-        casacore::Array<imtypeComplex> scratch(itsGrid[i]);
+        casacore::Array<imtypeComplex> scratch;
+        if (itsClearGrid) {
+            // we'll throw the grid away at the end, so we can use it as scratch space
+            scratch.reference(itsGrid[i]);
+        } else {
+            // we want the pre-fft grid, make a copy
+            scratch = itsGrid[i];
+        }
         #else
         casacore::Array<imtypeComplex> scratch(itsGrid[i].shape());
         casacore::convertArray<imtypeComplex,casacore::Complex>(scratch, itsGrid[i]);
@@ -1185,6 +1192,7 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
 
     // Free up the grid memory?
     if (itsClearGrid) {
+        ASKAPLOG_INFO_STR(logger,"Clearing the grid");
         itsGrid.resize(0);
         its2dGrid.resize(0,0);
         itsGridIndex=-1;
