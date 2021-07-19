@@ -1461,7 +1461,6 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   // Write PSF
   if (!params->has("psf.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
-  }
   } else if (itsPSFCube) {
     if (!itsWriteGrids) {
       itsPSFCube->writeSlice(params->valueF("psf.slice"), chan);
@@ -1502,13 +1501,13 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsGriddedVis->writeSliceBaseRes(grid,chan);
+    itsVisGridCube->writeSliceBaseRes(grid,chan);
   }
   if (params->has("pcf.slice") && itsPCFGridCube) {
     ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPCFCube->writeSliceBaseRes(grid,chan);
+    itsPCFGridCube->writeSliceBaseRes(grid,chan);
   }
   if (params->has("psfgrid.slice") && itsPSFGridCube) {
     ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");

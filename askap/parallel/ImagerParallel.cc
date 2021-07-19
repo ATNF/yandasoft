@@ -846,7 +846,7 @@ namespace askap
                 ((it->find("mask") == 0) && itsWriteMaskImage) )
             {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                 if (itsWriteSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
@@ -985,12 +985,12 @@ namespace askap
                         if (!iph.isFacet() && ((ci->find("psf.image") == 0) && itsWritePsfImage))  {
                             ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
                                     << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
                         }
                         if (!iph.isFacet() && ((ci->find("residual") == 0) && itsWriteResidual))  {
                             ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
                                     << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
                         }
                     }
                 }
@@ -1017,7 +1017,7 @@ namespace askap
                     if (std::find(resultimages.begin(),resultimages.end(),*it) == resultimages.end()) {
                         if (it->find("psf.image")!=0) {
                             ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
                         }
                     }
                     else {

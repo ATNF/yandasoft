@@ -371,6 +371,8 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->names();
     }
 
+    const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
+
     if (itsRestore && postfix == "")
     {
         ASKAPLOG_DEBUG_STR(logger, "Restore images and writing them to disk");
@@ -395,10 +397,17 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->fixedNames();
         for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
             const ImageParamsHelper iph(*ci);
-            if (!iph.isFacet() && (ci->find("image") == 0)) {
+            if (!iph.isFacet() && (extraOS == 1.) && (ci->find("image") == 0)) {
                 ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
                               << *ci+string(".restored") );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,*ci+string(".restored"));
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+string(".restored"));
+            }
+            if (!iph.isFacet() && (extraOS > 1.) && (ci->find("fullres") == 0)) {
+                string tmpname = *ci;
+                tmpname.replace(0,7,"image");
+                ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
+                              << tmpname+string(".restored") );
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+string(".restored"));
             }
         }
     }
@@ -410,7 +419,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
             resultimages.end(),*it) == resultimages.end())) {
             ASKAPLOG_DEBUG_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
         }
     }
 
