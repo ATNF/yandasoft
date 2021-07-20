@@ -767,10 +767,17 @@ namespace askap
             ASKAPLOG_INFO_STR(logger,"Writing Weightslog");
             askap::accessors::WeightsLog weightslog;
             string name;
-            for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
-                !=resultimages.end(); it++) {
+            // look for name of weights image
+            for (std::vector<std::string>::const_iterator it=resultimages.begin();
+                it !=resultimages.end(); it++) {
                 if (it->find("weights") == 0) {
                     name = *it;
+                    // could be taylor2 - change to taylor0
+                    int n = name.find(".taylor.");
+                    if (n != string::npos) {
+                        name.replace(n+8,1,"0");
+                    }
+                    break;
                 }
             }
 
