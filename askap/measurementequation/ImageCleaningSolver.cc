@@ -176,25 +176,6 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
 }
 
 
-/// @brief zero-pad in the Fourier domain to increase resolution before cleaning
-/// @param[in] osfactor extra oversampling factor
-/// @param[in] image input image to be oversampled
-/// @return oversampled image
-void ImageCleaningSolver::oversample(casacore::Array<float> &image, const float osfactor, const bool norm) const
-{
-  ImageSolver::oversample(image, osfactor, norm);
-}
-
-/// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
-/// @param[in] osfactor extra oversampling factor
-/// @param[in] image input oversampled image
-/// @return downsampled image
-void ImageCleaningSolver::downsample(casacore::Array<float> &image, const float osfactor) const
-{
-  ImageSolver::downsample(image, osfactor);
-}
-
-
 /// @brief configure basic parameters of the solver
 /// @details This method encapsulates extraction of basic solver parameters from the parset.
 /// @param[in] parset parset's subset (should have solver.Clean or solver.Dirty removed)

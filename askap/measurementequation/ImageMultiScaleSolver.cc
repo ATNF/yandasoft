@@ -37,6 +37,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagemultiscalesolver");
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/profile/AskapProfiler.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -250,11 +251,11 @@ namespace askap
           if (itsExtraOversamplingFactor > 1.0) {
             ASKAPLOG_INFO_STR(logger,
                 "Oversampling by an extra factor of "<<itsExtraOversamplingFactor<<" before cleaning");
-            oversample(dirtyArray,itsExtraOversamplingFactor);
-            oversample(psfArray,itsExtraOversamplingFactor);
-            oversample(maskArray,itsExtraOversamplingFactor);
+            SynthesisParamsHelper::oversample(dirtyArray,itsExtraOversamplingFactor);
+            SynthesisParamsHelper::oversample(psfArray,itsExtraOversamplingFactor);
+            SynthesisParamsHelper::oversample(maskArray,itsExtraOversamplingFactor);
             if (importModelFromNE) {
-                oversample(cleanArray,itsExtraOversamplingFactor,false);
+                SynthesisParamsHelper::oversample(cleanArray,itsExtraOversamplingFactor,false);
             } else {
                 scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                 cleanArray.reference( fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
@@ -317,7 +318,7 @@ namespace askap
                 "Image offsets not supported with variable image resolution");
             saveArrayIntoParameter(ip, indit->first, ip.shape(fullResName), "fullres", cleanArray, planeIter.position());
             // remove Fourier padding before returning to degridders
-            downsample(cleanArray,itsExtraOversamplingFactor);
+            SynthesisParamsHelper::downsample(cleanArray,itsExtraOversamplingFactor);
           }
           planeIter.getPlane(ip.valueT(indit->first)) = unpadImage(cleanArray);
         } // loop over all planes of the image cube

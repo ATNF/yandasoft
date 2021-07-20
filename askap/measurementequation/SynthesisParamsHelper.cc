@@ -200,6 +200,7 @@ namespace askap
     {
       ASKAPDEBUGTRACE("SynthesisParamsHelper::loadImages");
       ASKAPDEBUGASSERT(params);
+      const float extraOS = parset.getFloat("extraoversampling",1.0);
       try {
          const vector<string> images=parset.getStringVector("Names");
          for (vector<string>::const_iterator ci = images.begin(); ci != images.end(); ++ci) {
@@ -224,7 +225,7 @@ namespace askap
                    }
                    if (nfacets == 1) {
                        ASKAPLOG_INFO_STR(logger, "Reading image "<<iph.paramName());
-                       SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName());
+                       SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName(), extraOS);
                    } else {
                        ASKAPLOG_INFO_STR(logger, "Loading multi-facet image image "<<iph.paramName());
                        SynthesisParamsHelper::getMultiFacetImage(*params,iph.paramName(),iph.paramName(), nfacets);
@@ -749,9 +750,8 @@ namespace askap
     }
 
 
-// DAM also need to update loadImageParameter for extraOversampleFactor? Load full-res images into fullres params?
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
-						 const string& imagename)
+						 const string& imagename, const float extraOversampleFactor)
     {
       ASKAPTRACE("SynthesisParamsHelper::loadImageParameter");
       casacore::Array<float> imagePixels = imageHandler().read(imagename);
@@ -859,6 +859,100 @@ namespace askap
                 loadImageParameter(ip,paramName,fileName);
            }
       }
+    }
+
+
+    /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+    /// @param[in] osfactor extra oversampling factor
+    /// @param[in] image input image to be oversampled
+    /// @return oversampled image
+    /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+    /// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
+    void SynthesisParamsHelper::oversample(casacore::Array<float> &image, const float osfactor, const bool norm)
+    {
+
+        ASKAPCHECK(osfactor >= 1.0,
+            "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+        if (osfactor == 1.) return;
+
+        casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
+
+        // this is how it's done in SynthesisParamsHelper::saveImageParameter():
+        //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
+        //scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
+
+        // destroy Agrid before resizing image. Small memory saving.
+        {
+            // Set up scratch arrays and lattices for changing resolution
+            casacore::Array<casacore::Complex> Agrid(image.shape());
+            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+     
+            // copy image into a complex scratch space
+            casacore::convertArray<casacore::Complex,float>(Agrid, image);
+     
+            // renormalise based on the imminent padding
+            if (norm) {
+                Agrid *= static_cast<float>(osfactor*osfactor);
+            } 
+
+            // fft to uv
+            casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
+     
+            // "extract" original Fourier grid into the central portion of the new Fourier grid
+            casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+            subGrid = Agrid;
+
+            // ifft back to image and return the real part
+            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+            casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
+        }
+
+        image.resize(AgridOS.shape());
+        image = real(AgridOS);
+
+    }
+
+    /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+    /// @param[in] osfactor extra oversampling factor
+    /// @param[in] image input oversampled image
+    /// @return downsampled image
+    /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+    /// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
+    void SynthesisParamsHelper::downsample(casacore::Array<float> &image, const float osfactor)
+    {
+
+        ASKAPCHECK(osfactor >= 1.0,
+            "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+        if (osfactor == 1.) return;
+
+        casacore::Array<casacore::Complex> Agrid;
+
+        // destroy AgridOS before resizing image. Small memory saving.
+        {
+            // Set up scratch arrays and lattices for changing resolution
+            casacore::Array<casacore::Complex> AgridOS(image.shape());
+            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+     
+            // copy image into a complex scratch space
+            casacore::convertArray<casacore::Complex,float>(AgridOS, image);
+     
+            // fft to uv. This is what we need to degrid from, so no need to renormalise
+            casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
+     
+            // extract the central portion of the Fourier grid
+            Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+     
+            // renormalise based on the imminent padding
+            //Agrid /= static_cast<float>(osfactor*osfactor);
+     
+            // ifft back to image and return the real part
+            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+            casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
+        }
+
+        image.resize(Agrid.shape());
+        image = real(Agrid);
+
     }
 
     boost::shared_ptr<casacore::TempImage<float> >

@@ -523,8 +523,8 @@ namespace askap
                     if ( itsExtraOversamplingFactor > 1. ) {
                         ASKAPLOG_INFO_STR(logger,
                             "Oversampling dirty image and PSF by an extra factor of "<<itsExtraOversamplingFactor);
-                        oversample(dirtyArray,itsExtraOversamplingFactor);
-                        oversample(psfArray,itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(dirtyArray,itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(psfArray,itsExtraOversamplingFactor);
                     }
 
                     // Add the residual image
