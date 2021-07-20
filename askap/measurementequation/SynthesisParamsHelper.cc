@@ -648,8 +648,13 @@ namespace askap
       }
       else {
           imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),extraOversampleFactor));
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
           scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
-// DAM may need to use ip.valueT(name), because fftPad works with imtype rather than float
+          #else
+          casa::Array<imtype> imageTmp(imagePixels.shape());
+          scimath::PaddingUtils::fftPad(ip.valueT(name),imageTmp);
+          casa::convertArray<float, imtype>(imagePixels, imageTmp);
+          #endif
 
           // update the coordinate system for the new resolution
           const int whichDir = imageCoords.findCoordinate(Coordinate::DIRECTION);
