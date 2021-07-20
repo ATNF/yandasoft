@@ -36,6 +36,7 @@
 #include <askap/askap/AskapError.h>
 #include <askap/askap/StatReporter.h>
 #include <askap/askapparallel/AskapParallel.h>
+#include <askap/imageaccess/WeightsLog.h>
 
 /// CASA includes
 #include <casacore/images/Images/ImageInterface.h>
@@ -69,7 +70,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   int nchanCube = -1;
   // load the parset
   if ( !accumulator.loadParset(parset) ) return;
-
   // initialise an image accessor
   accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
   // Do we want to use collective I/O or individual/independent I/O
@@ -90,6 +90,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   map<string,string> outWgtNames = accumulator.outWgtNames();
 
   // Ahh this loops over the output mosaicks first
+  // This will be just a single image or all taylor terms for an image (if findmosaics=false)
 
   for(map<string,string>::iterator ii=outWgtNames.begin(); ii!=outWgtNames.end(); ++ii) {
 
@@ -114,7 +115,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED ) {
       inWgtNames = accumulator.inWgtNameVecs()[outImgName];
-      ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
+      if (accumulator.useWeightsLog()) {
+          ASKAPLOG_INFO_STR(logger, " - input weightslog files: " << inWgtNames);
+      } else {
+          ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
+      }
     }
 
     if (accumulator.weightType() == FROM_BP_MODEL|| accumulator.weightType() == COMBINED) {
@@ -238,16 +243,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         ASKAPLOG_INFO_STR(logger," - ImageAccess Shape " << shape);
 
         casa::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
-        casa::IPosition intrc(shape);
-        nchanCube = intrc[3];
+        casa::IPosition intrc(shape-1);
+        nchanCube = shape(3);
         inblc[3] = channel;
-        // change the indexing?? .... not sure I understand this ....
-        // ahh maybe the shape in the number of elements but it uses 0 indexing
-        intrc[0] = intrc[0]-1;
-        intrc[1] = intrc[1]-1;
-        intrc[2] = intrc[2]-1;
         intrc[3] = channel;
-
 
 
         ASKAPCHECK(inblc[3]>=0 && inblc[3]<shape[3], "Start channel is outside the number of channels or negative, shape: "<<shape);
@@ -256,9 +255,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         ASKAPLOG_INFO_STR(logger, " - Corners " << "input bottom lc  = " << inblc << ", input top rc = " << intrc << "\n");
         inCoordSysVec.push_back(iacc.coordSysSlice(*it,inblc,intrc));
         // reset the shape to be the size ...
-        intrc[0] = intrc[0]+1;
-        intrc[1] = intrc[1]+1;
-        intrc[2] = intrc[2]+1;
+        intrc = shape;
         intrc[3] = 1;
         const casa::IPosition shape3(intrc);
         ASKAPLOG_INFO_STR(logger, " - Calculated Shape for this accumulator and this image is" << shape3);
@@ -350,8 +347,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         for (uInt img = 0; img < inImgNames.size(); ++img ) {
         // set up an iterator for all directionCoordinate planes in the input images
 
-
-
         // short cuts
           string inImgName = inImgNames[img];
           string inWgtName, inSenName;
@@ -359,29 +354,29 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
             inWgtName = inWgtNames[img];
-            ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+            if (accumulator.useWeightsLog()) {
+                ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
+            } else {
+                ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+            }
           }
           if (accumulator.doSensitivity()) {
             inSenName = inSenNames[img];
             ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
           }
 
-          //casa::PagedImage<casa::Float> inImg(inImgName);
           const casa::IPosition shape = iacc.shape(inImgName);
           casa::IPosition blc(shape.nelements(),0);
-          casa::IPosition trc(shape);
+          casa::IPosition trc(shape-1);
 
           if (nchanCube < 0) {
-            nchanCube = trc[3];
+            nchanCube = shape(3);
           }
           else {
-            ASKAPCHECK(nchanCube == trc[3],"Nchan missmatch in merge" );
+            ASKAPCHECK(nchanCube == shape(3),"Nchan missmatch in merge" );
           }
           // this assumes all allocations
           blc[3] = channel;
-          trc[0] = trc[0]-1;
-          trc[1] = trc[1]-1;
-          trc[2] = trc[2]-1;
           trc[3] = channel;
 
           accumulator.setInputParameters(inShapeVec[img], inCoordSysVec[img], img);
@@ -524,17 +519,24 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
 
-            const casa::IPosition shape = iacc.shape(inWgtName);
-            casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
+            if (accumulator.useWeightsLog()) {
+                ASKAPLOG_INFO_STR(logger,"Reading weights log file :"<< inWgtName);
+                accessors::WeightsLog wtlog(inWgtName);
+                wtlog.read();
 
-            blc[3] = channel;
-            trc[0] = trc[0]-1;
-            trc[1] = trc[1]-1;
-            trc[2] = trc[2]-1;
-            trc[3] = channel + 1-1;
+                inWgtPix.resize(inPix.shape());
+                inWgtPix = wtlog.weight(channel);
 
-            inWgtPix = iacc.read(inWgtName,blc,trc);
+            } else {
+                const casa::IPosition shape = iacc.shape(inWgtName);
+                casa::IPosition blc(shape.nelements(),0);
+                casa::IPosition trc(shape-1);
+
+                blc[3] = channel;
+                trc[3] = channel;
+
+                inWgtPix = iacc.read(inWgtName,blc,trc);
+            }
 
             ASKAPASSERT(inPix.shape() == inWgtPix.shape());
           }
@@ -543,13 +545,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           // casa::PagedImage<casa::Float> inImg(inSenName);
             const casa::IPosition shape = iacc.shape(inSenName);
             casa::IPosition blc(shape.nelements(),0);
-            casa::IPosition trc(shape);
+            casa::IPosition trc(shape-1);
 
             blc[3] = channel;
-            trc[0] = trc[0]-1;
-            trc[1] = trc[1]-1;
-            trc[2] = trc[2]-1;
-            trc[3] = channel + 1-1;
+            trc[3] = channel;
 
             inSenPix = iacc.read(inSenName,blc,trc);
 
