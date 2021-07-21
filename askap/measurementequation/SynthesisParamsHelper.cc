@@ -830,13 +830,50 @@ namespace askap
       freq.toWorld(startFreq, 0.0);
       freq.toWorld(endFreq, double(nChan-1));
       axes.add("FREQUENCY", startFreq, endFreq);
-      const casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
-      ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
-                  " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-      ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
-                                "Hz, nChan="<<nChan);
+
+      casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
       ASKAPDEBUGASSERT(targetShape.product() == imagePixels.shape().product());
-      ip.add(name, imagePixels.reform(targetShape),axes);
+
+      if (extraOversampleFactor == 1.) {
+          ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                                    "Hz, nChan="<<nChan);
+          ip.add(name, imagePixels.reform(targetShape), axes);
+      }
+      else {
+
+          // need to add two params: the full-res image and the downsampled image
+
+          // first save the full-res image
+          std::string fullresname = name;
+          const size_t index = fullresname.find("image", index);
+          ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+          fullresname.replace(index,5,"fullres");
+
+          ASKAPLOG_INFO_STR(logger, "About to add new image parameters with name "<<fullresname<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                                    "Hz, nChan="<<nChan);
+          ip.add(fullresname, imagePixels.reform(targetShape), axes);
+
+          // now downsample the input sky model to the working resolution
+          /// @todo should this be done at higher precision ifndef ASKAP_FLOAT_IMAGE_PARAMS?
+          downsample(imagePixels,extraOversampleFactor);
+          // update the target shape for the new resolution
+          targetShape(0) = imagePixels.shape()(0);
+          targetShape(1) = imagePixels.shape()(1);
+          // update the coordinate system for the new resolution
+          /// @todo double check that the rounding is correct for the ref pixel
+          radec.setReferencePixel(radec.referencePixel()/double(extraOversampleFactor));
+          radec.setIncrement(radec.increment()*double(extraOversampleFactor));
+          axes.addDirectionAxis(radec);
+
+          ASKAPLOG_INFO_STR(logger, "Also adding downsampled image parameters with name "<<name<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ip.add(name, imagePixels.reform(targetShape), axes);
+
+      }
 
     }
 
@@ -1544,7 +1581,6 @@ namespace askap
          // Find all the free parameters beginning with image
          vector<string> names(params->completions("image"));
          for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
-// DAM adding support for fullres image parameters
               //const std::string name="image"+*it;
               std::string name="image"+*it;
               if (params->isFree(name)) {
