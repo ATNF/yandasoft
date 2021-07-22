@@ -61,80 +61,77 @@ namespace askap
 
       CPPUNIT_TEST_SUITE(NyquistGriddingTests);
       CPPUNIT_TEST(testReversibility);      // test reversibility for perfectly band-limited uv plane
-      //CPPUNIT_TEST(testCoordinates);        // test coordinate reversibility? Not sure they're handled at this level
       //CPPUNIT_TEST(testPreconditioning);    // test that preconditioning is unaffected by downsampling
-      //CPPUNIT_TEST(testHogbom);             // test that Hogbom cleaning is unaffected by downsampling
       //CPPUNIT_TEST(testCube);               // test that resolution changes work for cubes?
       CPPUNIT_TEST_SUITE_END();
 
-    public:
+    private:
         const bool printDetails = false;
+        const int n = 128;
+        casacore::Array<float> dirty_orig;
 
     public:
+        void setUp()
+        {
+            // Generate an empty uv plane
+            const casacore::IPosition shape(2,n,n);
+            casacore::Array<casacore::Complex> scratch(shape);
+            casacore::ArrayLattice<casacore::Complex> scratchLattice(scratch);
+            scratchLattice.set(0.);
+      
+            // Fill central region of the uv plane
+            //  - don't go below row/col n/4 or above row/col 3*n/4
+            scratch(casacore::IPosition(2,54,66)) = 1.;
+            scratch(casacore::IPosition(2,44,75)) = 1.;
+            scratch(casacore::IPosition(2,40,45)) = 1.;
+            scratch(casacore::IPosition(2,55,37)) = 1.;
+            scratch(casacore::IPosition(2,86,45)) = 1.;
+            scratch(casacore::IPosition(2,74,85)) = 1.;
+            scratch(casacore::IPosition(2,74,85)) = 1.;
+            const float normFactor = shape.product() / casacore::sum(real(scratch));
+      
+            // iFFT to the image domain
+            casacore::LatticeFFT::cfft2d(scratchLattice, false);
+      
+            // set image
+            dirty_orig = casacore::Array<float>(shape);
+            casacore::ArrayLattice<float> dirtyLattice(dirty_orig);
+            dirtyLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
+            dirty_orig *= normFactor;
+            if (printDetails) {
+                std::cout << std::endl;
+                std::cout << "Original shape: "<<dirty_orig.shape() << std::endl;
+            }
+        }
+
         void testReversibility()
         {
 
-          // Generate an empty uv plane
-          const int n_over = 128;
-          casacore::IPosition shape(2,n_over,n_over);
-          casacore::Array<casacore::Complex> scratch(shape);
-          casacore::ArrayLattice<casacore::Complex> scratchLattice(scratch);
-          scratchLattice.set(0.);
-
-          // Fill central region of the uv plane
-          //  - don't go below row/col 32 or above row/col 96
-          scratchLattice.putAt(1., casacore::IPosition(2,54,66));
-          scratchLattice.putAt(1., casacore::IPosition(2,44,75));
-          scratchLattice.putAt(1., casacore::IPosition(2,40,45));
-          scratchLattice.putAt(1., casacore::IPosition(2,55,37));
-          scratchLattice.putAt(1., casacore::IPosition(2,86,45));
-          scratchLattice.putAt(1., casacore::IPosition(2,74,85));
-          scratchLattice.putAt(1., casacore::IPosition(2,74,85));
-          const float normFactor = shape.product() / casacore::sum(real(scratch));
-
-          // iFFT to the image domain
-          casacore::LatticeFFT::cfft2d(scratchLattice, false);
-
-          // set image
-          casacore::Array<float> dirty_orig(shape);
-          casacore::ArrayLattice<float> dirtyLattice(dirty_orig);
-          dirtyLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
-          dirty_orig *= normFactor;
-          if (printDetails) {
-              std::cout << std::endl;
-              std::cout << "Original shape: "<<dirty_orig.shape() << std::endl;
-          }
-
-          for (int n_down = n_over/2; n_down < n_over/2+8; ++n_down) {
-
-              // set the desired oversampling factor (ratio between downsampled and final output/cleaning resolution)
-              const double extraOversampleFactor = double(n_over) / double(n_down);
-
-              // save a copy
+          // step through several different pixel ratios to make sure there are no issues commuting
+          for (int n_down = n/2; n_down < n/2 + 8; ++n_down) {
+              // make a copy of the original
               casacore::Array<float> dirty = dirty_orig;
-
+              // set the oversampling factor
+              const double extraOversampleFactor = double(n) / double(n_down);
               // downsample
               SynthesisParamsHelper::downsample(dirty,extraOversampleFactor);
               if (printDetails) {
                   std::cout << "Nyquist shape:  "<<dirty.shape() << std::endl;
                   std::cout << " - oversampling factor = "<<extraOversampleFactor << std::endl;
               }
-
               // oversample
               SynthesisParamsHelper::oversample(dirty,extraOversampleFactor,false);
               if (printDetails) {
                   std::cout << " - final shape = "<<dirty.shape() << std::endl;
               }
-
               // compare images
-              CPPUNIT_ASSERT(dirty.shape().isEqual(shape));
+              CPPUNIT_ASSERT(dirty.shape().isEqual(dirty_orig.shape()));
               if (printDetails) {
-                  std::cout << " - error(n/2,n/2) = "<<std::abs(dirty(casacore::IPosition(2,64,64))-1.) << std::endl;
-                  std::cout << " - max(error)     = "<<casacore::max(casacore::abs(dirty-dirty_orig)) << std::endl;
+                  std::cout << " - error_peak = "<<std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.) << std::endl;
+                  std::cout << " - error_max  = "<<casacore::max(casacore::abs(dirty-dirty_orig)) << std::endl;
               }
-              CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,64,64))-1.)<1e-6);
+              CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.)<1e-6);
               CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty-dirty_orig))<1e-6);
-
           }
 
         }
