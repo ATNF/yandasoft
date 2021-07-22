@@ -45,6 +45,7 @@
 #include "PreAvgCalBufferTest.h"
 #include "RestoringBeamHelperTest.h"
 #include "VisMetaDataStatsTest.h"
+#include "NyquistGriddingTests.h"
 
 // avoid use of MPI for unit tests
 double MPI_Wtime() { return double(time(0)); }
@@ -71,6 +72,7 @@ int main( int argc, char **argv)
     runner.addTest(askap::synthesis::PolLeakageTest::suite());
     runner.addTest(askap::synthesis::RestoringBeamHelperTest::suite());
     runner.addTest(askap::synthesis::VisMetaDataStatsTest::suite());
+    runner.addTest(askap::synthesis::NyquistGriddingTests::suite());
 
     const bool wasSucessful = runner.run();
 
