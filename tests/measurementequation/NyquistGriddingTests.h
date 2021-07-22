@@ -61,7 +61,6 @@ namespace askap
 
       CPPUNIT_TEST_SUITE(NyquistGriddingTests);
       CPPUNIT_TEST(testReversibility);      // test reversibility for perfectly band-limited uv plane
-      //CPPUNIT_TEST(testFactors);            // make sure reversibility works for different ratios
       //CPPUNIT_TEST(testCoordinates);        // test coordinate reversibility? Not sure they're handled at this level
       //CPPUNIT_TEST(testPreconditioning);    // test that preconditioning is unaffected by downsampling
       //CPPUNIT_TEST(testHogbom);             // test that Hogbom cleaning is unaffected by downsampling
@@ -76,7 +75,8 @@ namespace askap
         {
 
           // Generate an empty uv plane
-          casacore::IPosition shape(2,128,128);
+          const int n_over = 128;
+          casacore::IPosition shape(2,n_over,n_over);
           casacore::Array<casacore::Complex> scratch(shape);
           casacore::ArrayLattice<casacore::Complex> scratchLattice(scratch);
           scratchLattice.set(0.);
@@ -96,58 +96,46 @@ namespace askap
           casacore::LatticeFFT::cfft2d(scratchLattice, false);
 
           // set image
-          casacore::Array<float> dirty(shape);
-          casacore::ArrayLattice<float> dirtyLattice(dirty);
+          casacore::Array<float> dirty_orig(shape);
+          casacore::ArrayLattice<float> dirtyLattice(dirty_orig);
           dirtyLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
-          dirty *= normFactor;
-          // save a copy
-          casacore::Array<float> saved = dirty;
-
+          dirty_orig *= normFactor;
           if (printDetails) {
               std::cout << std::endl;
-              std::cout << "Original" << std::endl;
-              std::cout << " - dirty shape   = "<<dirty.shape() << std::endl;
-              std::cout << " - dirty min/max = "<<casacore::min(dirty)<<", "<<casacore::max(dirty) << std::endl;
-              std::cout << " - dirty(64,64)  = "<<dirty(casacore::IPosition(2,64,64)) << std::endl;
+              std::cout << "Original shape: "<<dirty_orig.shape() << std::endl;
           }
 
-          // set the desired oversampling factor (ratio between downsampled and final output/cleaning resolution)
-          double extraOversampleFactor = 1.9;
+          for (int n_down = n_over/2; n_down < n_over/2+8; ++n_down) {
 
-          // as in AdviseDI, tweak the ratio to result in an integer number of pixels and reset the gridding cell size
-          double nPix = ceil(double(shape[0])/extraOversampleFactor);
-          // also ensure that it is even
-          nPix += int(nPix) % 2;
-          // reset the extra multiplicative factor
-          extraOversampleFactor = double(shape[0]) / nPix;
+              // set the desired oversampling factor (ratio between downsampled and final output/cleaning resolution)
+              const double extraOversampleFactor = double(n_over) / double(n_down);
 
-          // downsample
-          SynthesisParamsHelper::downsample(dirty,extraOversampleFactor);
-          if (printDetails) {
-              std::cout << "After downsampling by a factor of "<<extraOversampleFactor << std::endl;
-              std::cout << " - dirty shape   = "<<dirty.shape() << std::endl;
-              std::cout << " - dirty min/max = "<<casacore::min(dirty)<<", "<<casacore::max(dirty) << std::endl;
-              std::cout << " - dirty(64,64)  = "<<dirty(casacore::IPosition(2,64,64)) << std::endl;
+              // save a copy
+              casacore::Array<float> dirty = dirty_orig;
+
+              // downsample
+              SynthesisParamsHelper::downsample(dirty,extraOversampleFactor);
+              if (printDetails) {
+                  std::cout << "Nyquist shape:  "<<dirty.shape() << std::endl;
+                  std::cout << " - oversampling factor = "<<extraOversampleFactor << std::endl;
+              }
+
+              // oversample
+              SynthesisParamsHelper::oversample(dirty,extraOversampleFactor,false);
+              if (printDetails) {
+                  std::cout << " - final shape = "<<dirty.shape() << std::endl;
+              }
+
+              // compare images
+              CPPUNIT_ASSERT(dirty.shape().isEqual(shape));
+              if (printDetails) {
+                  std::cout << " - error(n/2,n/2) = "<<std::abs(dirty(casacore::IPosition(2,64,64))-1.) << std::endl;
+                  std::cout << " - max(error)     = "<<casacore::max(casacore::abs(dirty-dirty_orig)) << std::endl;
+              }
+              CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,64,64))-1.)<1e-6);
+              CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty-dirty_orig))<1e-6);
+
           }
-
-          // oversample
-          SynthesisParamsHelper::oversample(dirty,extraOversampleFactor,false);
-          if (printDetails) {
-              std::cout << "After oversampling back" << std::endl;
-              std::cout << " - dirty shape   = "<<dirty.shape() << std::endl;
-              std::cout << " - dirty min/max = "<<casacore::min(dirty)<<", "<<casacore::max(dirty) << std::endl;
-              std::cout << " - dirty(64,64)  = "<<dirty(casacore::IPosition(2,64,64)) << std::endl;
-          }
-
-          // compare images
-          CPPUNIT_ASSERT(dirty.shape().isEqual(shape));
-          if (printDetails) {
-              std::cout << "After oversampling back" << std::endl;
-              std::cout << " - abs(error(64,64)) = "<<std::abs(dirty(casacore::IPosition(2,64,64))-1.) << std::endl;
-              std::cout << " - max(abs(error))   = "<<casacore::max(casacore::abs(dirty-saved)) << std::endl;
-          }
-          CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,64,64))-1.)<1e-6);
-          CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty-saved))<1e-6);
 
         }
 /*
