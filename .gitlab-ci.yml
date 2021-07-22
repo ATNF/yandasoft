@@ -62,9 +62,7 @@ robottests:
     - export CDIR=${PWD}
     - cd build
     - cmake --install . 
-    - cd ${CDIR}
-    - chmod go+rw public
-    - chmod go+rw public/robot
+    - cd ..
     - cd tests/data/simulation/synthregression
     - python -m robot synthregression.robot
   artifacts:
