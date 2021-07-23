@@ -142,6 +142,9 @@ namespace askap
       } else {
           ASKAPLOG_INFO_STR(logger, "Generating and applying Wiener filter of size " << pcfIn.shape());
           //itsPcf.reference(pcfIn);
+          if (!pcfIn.shape().isEqual(itsPcf.shape())) {
+              itsPcf.resize(pcfIn.shape());
+          }
           itsPcf = pcfIn.nonDegenerate();
       }
       ASKAPCHECK(itsPcf.shape().conform(shape),

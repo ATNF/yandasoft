@@ -30,6 +30,8 @@
 
 // own includes
 #include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/measurementequation/WienerPreconditioner.h>
+#include <Common/ParameterSet.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Complex.h>
@@ -61,7 +63,7 @@ namespace askap
 
       CPPUNIT_TEST_SUITE(NyquistGriddingTests);
       CPPUNIT_TEST(testReversibility);      // test reversibility for perfectly band-limited uv plane
-      //CPPUNIT_TEST(testPreconditioning);    // test that preconditioning is unaffected by downsampling
+      CPPUNIT_TEST(testPreconditioning);    // test that preconditioning is unaffected by downsampling
       //CPPUNIT_TEST(testCube);               // test that resolution changes work for cubes?
       CPPUNIT_TEST_SUITE_END();
 
@@ -69,6 +71,8 @@ namespace askap
         const bool printDetails = false;
         const int n = 128;
         casacore::Array<float> dirty_orig;
+        casacore::Array<float> psf_orig;
+        casacore::Array<float> pcf_orig;
 
     public:
         void setUp()
@@ -77,114 +81,138 @@ namespace askap
             const casacore::IPosition shape(2,n,n);
             casacore::Array<casacore::Complex> scratch(shape);
             casacore::ArrayLattice<casacore::Complex> scratchLattice(scratch);
-            scratchLattice.set(0.);
-      
+           
             // Fill central region of the uv plane
             //  - don't go below row/col n/4 or above row/col 3*n/4
-            scratch(casacore::IPosition(2,54,66)) = 1.;
-            scratch(casacore::IPosition(2,44,75)) = 1.;
-            scratch(casacore::IPosition(2,40,45)) = 1.;
-            scratch(casacore::IPosition(2,55,37)) = 1.;
-            scratch(casacore::IPosition(2,86,45)) = 1.;
-            scratch(casacore::IPosition(2,74,85)) = 1.;
-            scratch(casacore::IPosition(2,74,85)) = 1.;
-            const float normFactor = shape.product() / casacore::sum(real(scratch));
-      
-            // iFFT to the image domain
-            casacore::LatticeFFT::cfft2d(scratchLattice, false);
-      
-            // set image
+            const std::vector<int> u = {54,44,44,40,55,86,74,74,74,74,74,74,74,74,74};
+            const std::vector<int> v = {66,75,75,45,37,45,85,85,85,85,85,85,85,85,85};
+            const float normFactor = shape.product() / float(u.size());
+           
+            // Form the dirty image, starting with gridded visibilities
+            scratchLattice.set(0.);
+            for (int k=0; k<u.size(); ++k) {
+                scratch(casacore::IPosition(2,u[k],v[k])) += 1.; // could include a phase term
+            }
+            casacore::LatticeFFT::cfft2d(scratchLattice, false); // iFFT to the image domain
             dirty_orig = casacore::Array<float>(shape);
             casacore::ArrayLattice<float> dirtyLattice(dirty_orig);
             dirtyLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
             dirty_orig *= normFactor;
+           
+            // Form the PSF image, starting with gridded visibilities
+            scratchLattice.set(0.);
+            for (int k=0; k<u.size(); ++k) {
+                scratch(casacore::IPosition(2,u[k],v[k])) += 1.;
+            }
+            casacore::LatticeFFT::cfft2d(scratchLattice, false); // iFFT to the image domain
+            psf_orig = casacore::Array<float>(shape);
+            casacore::ArrayLattice<float> psfLattice(psf_orig);
+            psfLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
+            psf_orig *= normFactor;
+           
+            // Form the PCF image, starting with gridded visibilities
+            scratchLattice.set(0.);
+            for (int k=0; k<u.size(); ++k) {
+                // weighted w kernel size is accumulated in the imaginary part, but needs conjugate symmetry
+                const float w = v > n/2 ? 1. : -1.; // more complicated if v==n/2, but that isn't the case
+                scratch(casacore::IPosition(2,u[k],v[k])) += casacore::Complex(1.,w);
+            }
+            casacore::LatticeFFT::cfft2d(scratchLattice, false); // iFFT to the image domain
+            pcf_orig = casacore::Array<float>(shape);
+            casacore::ArrayLattice<float> pcfLattice(pcf_orig);
+            pcfLattice.copyData(casacore::LatticeExpr<float> ( real(scratchLattice) ));
+            pcf_orig *= normFactor;
+           
             if (printDetails) {
                 std::cout << std::endl;
                 std::cout << "Original shape: "<<dirty_orig.shape() << std::endl;
             }
+
         }
 
         void testReversibility()
         {
 
-          // step through several different pixel ratios to make sure there are no issues commuting
-          for (int n_down = n/2; n_down < n/2 + 8; ++n_down) {
-              // make a copy of the original
-              casacore::Array<float> dirty = dirty_orig;
-              // set the oversampling factor
-              const double extraOversampleFactor = double(n) / double(n_down);
-              // downsample
-              SynthesisParamsHelper::downsample(dirty,extraOversampleFactor);
-              if (printDetails) {
-                  std::cout << "Nyquist shape:  "<<dirty.shape() << std::endl;
-                  std::cout << " - oversampling factor = "<<extraOversampleFactor << std::endl;
-              }
-              // oversample
-              SynthesisParamsHelper::oversample(dirty,extraOversampleFactor,false);
-              if (printDetails) {
-                  std::cout << " - final shape = "<<dirty.shape() << std::endl;
-              }
-              // compare images
-              CPPUNIT_ASSERT(dirty.shape().isEqual(dirty_orig.shape()));
-              if (printDetails) {
-                  std::cout << " - error_peak = "<<std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.) << std::endl;
-                  std::cout << " - error_max  = "<<casacore::max(casacore::abs(dirty-dirty_orig)) << std::endl;
-              }
-              CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.)<1e-6);
-              CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty-dirty_orig))<1e-6);
-          }
+            // step through several different pixel ratios to make sure there are no issues commuting
+            for (int n_down = n/2; n_down < n/2 + 8; ++n_down) {
+                // set the oversampling factor
+                const double extraOversampleFactor = double(n) / double(n_down);
+                // make a copy of the original
+                casacore::Array<float> dirty = dirty_orig.copy();
+                // downsample
+                SynthesisParamsHelper::downsample(dirty,extraOversampleFactor);
+                if (printDetails) {
+                    std::cout << "Nyquist shape:  "<<dirty.shape() << std::endl;
+                    std::cout << " - oversampling factor = "<<extraOversampleFactor << std::endl;
+                }
+                // oversample
+                SynthesisParamsHelper::oversample(dirty,extraOversampleFactor,false);
+                if (printDetails) {
+                    std::cout << " - final shape = "<<dirty.shape() << std::endl;
+                }
+                // compare images
+                CPPUNIT_ASSERT(dirty.shape().isEqual(dirty_orig.shape()));
+                if (printDetails) {
+                    std::cout << " - error_peak = "<<std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.) << std::endl;
+                    std::cout << " - error_max  = "<<casacore::max(casacore::abs(dirty-dirty_orig)) << std::endl;
+                }
+                CPPUNIT_ASSERT(std::abs(dirty(casacore::IPosition(2,n/2,n/2))-1.)<1e-6);
+                CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty-dirty_orig))<1e-6);
+            }
 
         }
-/*
         void testPreconditioning()
         {
-          GaussianTaperPreconditioner gtp(25.,15.,M_PI/18.);
-          casacore::IPosition shape(2,128,128);
-          casacore::Array<float> psf(shape), dirty(shape), pcf;
-          psf.set(0.); dirty.set(0.);
-          dirty(casacore::IPosition(2,64,64)) = 1.;
 
-          casacore::IPosition index(2);
-          const double fwhm2sigma = sqrt(8.*log(2.));
-          for (index[0] = 0; index[0]<128; ++index[0]) {
-               for (index[1] = 0; index[1]<128; ++index[1]) {
-                    const double xOffset = (double(index[0])-64.);
-                    const double yOffset = (double(index[1])-64.);
-                    const double expFactor = exp(-casacore::square(xOffset/2*fwhm2sigma)/2.-
-                            casacore::square(yOffset/1.3*fwhm2sigma)/2.);
-                    psf(index) = expFactor;
-               }
-          }
+            const float robustness = -2.;
+            const int n_down = n/2 + 2;
+            const double extraOversampleFactor = double(n) / double(n_down);
+           
+            casacore::Array<float> dirty1 = dirty_orig.copy();
+            casacore::Array<float> psf1 = psf_orig.copy();
+            casacore::Array<float> pcf1 = pcf_orig.copy();
+                     
+            casacore::LogIO logger;
 
-          gtp.doPreconditioning(psf,dirty,pcf);
+            WienerPreconditioner wp1(robustness);
+            wp1.doPreconditioning(psf1,dirty1,pcf1);
+            if (printDetails) {
+                std::cout << "After preconditioning (full resolution)" << std::endl;
+                std::cout << " - shape = "<<dirty1.shape() << std::endl;
+                std::cout << " - mid = "<<dirty1(casacore::IPosition(2,n/2,n/2)) << std::endl;
+                std::cout << " - uni - nat max error = "<<casacore::max(casacore::abs(dirty1-dirty_orig)) << std::endl;
+            }
+           
+            casacore::Array<float> dirty2 = dirty_orig.copy();
+            casacore::Array<float> psf2 = psf_orig.copy();
+            casacore::Array<float> pcf2 = pcf_orig.copy();
+            SynthesisParamsHelper::downsample(dirty2,extraOversampleFactor);
+            SynthesisParamsHelper::downsample(psf2,extraOversampleFactor);
+            SynthesisParamsHelper::downsample(pcf2,extraOversampleFactor);
+            if (printDetails) {
+                std::cout << "Nyquist preconditioning:" << std::endl;
+                std::cout << " - shape = "<<dirty2.shape() << std::endl;
+            }
 
-          casacore::ArrayLattice<float> psfLattice(psf);
-          casacore::ArrayLattice<casacore::Complex> scratch(psf.shape());
-          scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(psfLattice)));
-          casacore::LatticeFFT::cfft2d(scratch, true);
-          psfLattice.copyData(casacore::LatticeExpr<float> ( real(scratch) ));
+            // use the createPreconditioner function to set itsUseCachedPcf = false (since size will have changed)
+            LOFAR::ParameterSet parset;
+            parset.add("robustness", utility::toString(robustness));
+            boost::shared_ptr<WienerPreconditioner> wp2 = WienerPreconditioner::createPreconditioner(parset, false);
+            wp2->doPreconditioning(psf2,dirty2,pcf2);
 
+            SynthesisParamsHelper::oversample(dirty2,extraOversampleFactor,false);
+            SynthesisParamsHelper::oversample(psf2,extraOversampleFactor,false);
+            if (printDetails) {
+                std::cout << "After preconditioning and oversampling" << std::endl;
+                std::cout << " - shape = "<<dirty2.shape() << std::endl;
+                std::cout << " - mid = "<<dirty2(casacore::IPosition(2,n/2,n/2)) << std::endl;
+                std::cout << " - uni - nat max error = "<<casacore::max(casacore::abs(dirty2-dirty_orig)) << std::endl;
+                std::cout << " - nyq - uni max error = "<<casacore::max(casacore::abs(dirty2-dirty1)) << std::endl;
+            }
+            CPPUNIT_ASSERT(casacore::max(casacore::abs(dirty2-dirty1))<1e-6);
+            CPPUNIT_ASSERT(casacore::max(casacore::abs(psf2-psf1))<1e-6);
 
-          casacore::LogIO logger;
-          casacore::Fit2D fitter(logger);
-          casacore::Vector<casacore::Double> param = fitter.estimate(casacore::Fit2D::GAUSSIAN, psf);
-          fitter.addModel(casacore::Fit2D::GAUSSIAN, param);
-          casacore::Array<float> sigma(psf.shape());
-          sigma.set(1.);
-          CPPUNIT_ASSERT(fitter.fit(psf,sigma) == casacore::Fit2D::OK);
-          param = fitter.availableSolution();
-
-          /// @todo We need to revisit normalisation factors at some stage,
-          /// I am still not happy.
-          //std::cout<<param<<std::endl;
-          CPPUNIT_ASSERT(param.size() == 6);
-          CPPUNIT_ASSERT(std::abs(param[1]-64.)<1e-5);
-          CPPUNIT_ASSERT(std::abs(param[2]-64.)<1e-5);
-          CPPUNIT_ASSERT(std::abs(param[3]-25.)<1);
-          CPPUNIT_ASSERT(std::abs(param[4]-15.)<1);
-          CPPUNIT_ASSERT(std::abs(param[5]/M_PI*180.-100.)<1);
         }
-*/
     };
 
   } // namespace synthesis
