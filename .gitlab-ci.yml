@@ -62,20 +62,12 @@ robottests:
     - export CDIR=${PWD}
     - cd build
     - cmake --install . 
-    - cd ${CDIR}
-    - mkdir -p public/robot
-    - chmod go+rw public
-    - chmod go+rw public/robot
+    - cd ..
     - cd tests/data/simulation/synthregression
     - python -m robot synthregression.robot
-    - mv output.xml ${CDIR}/public/robot/output.xml
-    - mv log.html ${CDIR}/public/robot/log.html
-    - mv report.html ${CDIR}/public/robot/report.html
-    - mv *.stdout.txt ${CDIR}/public/robot/
-    - mv *.stderr.txt ${CDIR}/public/robot/
   artifacts:
     paths:
-      - public/robot    
+      - tests/data/simulation/synthregression    
     when: always
 
 pages:
