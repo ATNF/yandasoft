@@ -185,7 +185,7 @@ class SynthesisProgramRunner:
    def complexImageStats(self, name):
       '''
          Get image statistics
-fro
+
          name - image name
       '''
       import re
@@ -210,17 +210,18 @@ fro
                   if len(parts)<4:
                      raise RuntimeError("Expected at least 4 columns on the first row, you have: %s " % (parts,))
                   result['peak'] = float(parts[0])
-                  result['x'] = int(parts[2])
-                  result['y'] = int(parts[3])
+                  result['x'] = int(parts[1])
+                  result['y'] = int(parts[2])
+                  if len(parts)>3:
+                      result['pol'] = int(parts[3])
                   if len(parts)>4:
-                      result['pol'] = int(parts[4])
-                  if len(parts)>5:
-                      result['chan'] = int(parts[5])
+                      result['chan'] = int(parts[4])
                elif row == 1:
                   result['rms-real'] = float(parts[0])
-                  result['rms-imag'] = float(parts[1])
-                  result['median-real'] = float(parts[2])
-                  result['median-imag'] = float(parts[3])
+                  result['median-real'] = float(parts[1])
+               elif row == 2:
+                  result['rms-imag'] = float(parts[0])
+                  result['median-imag'] = float(parts[1])
                row = row + 1
          finally:
             f.close()
