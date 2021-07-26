@@ -141,10 +141,12 @@ namespace askap
           newFilter = false;
       } else {
           ASKAPLOG_INFO_STR(logger, "Generating and applying Wiener filter of size " << pcfIn.shape());
-          //itsPcf.reference(pcfIn);
-          if (!pcfIn.shape().isEqual(itsPcf.shape())) {
+          // Usually only get here is itsPcf is empty. But with Nyquist gridding that may not be the case.
+          // So check, and if it has already be set but is a different size, reset it.
+          if (!itsPcf.empty() && !itsPcf.shape().isEqual(pcfIn.shape())) {
               itsPcf.resize(pcfIn.shape());
           }
+          //itsPcf.reference(pcfIn);
           itsPcf = pcfIn.nonDegenerate();
       }
       ASKAPCHECK(itsPcf.shape().conform(shape),
