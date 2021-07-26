@@ -85,7 +85,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
 
   // loop over the mosaics, reading each in an adding to the output pixel arrays
-  vector<string> inImgNames, inWgtNames, inSenNames;
+  vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
   string outImgName, outWgtName, outSenName;
   map<string,string> outWgtNames = accumulator.outWgtNames();
 
@@ -129,6 +129,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     if (accumulator.doSensitivity()) {
       inSenNames = accumulator.inSenNameVecs()[outImgName];
       ASKAPLOG_INFO_STR(logger, " - input sensitivity images: " << inSenNames);
+    }
+
+    if (accumulator.doLeakage()) {
+        inStokesINames = accumulator.inStokesINameVecs()[outImgName];
+        if (inStokesINames.size()>0) {
+            ASKAPLOG_INFO_STR(logger, " - and using input Stokes I images: " << inStokesINames);
+        }
     }
 
     // set the output coordinate system and shape, based on the overlap of input images
@@ -349,7 +356,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         // short cuts
           string inImgName = inImgNames[img];
-          string inWgtName, inSenName;
+          string inWgtName, inSenName, inStokesIName;
 
           ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
@@ -363,6 +370,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           if (accumulator.doSensitivity()) {
             inSenName = inSenNames[img];
             ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
+          }
+
+          if (accumulator.doLeakage() && inStokesINames.size()>img) {
+              inStokesIName = inStokesINames[img];
+              ASKAPLOG_INFO_STR(logger, " - and input Stokes I image " << inStokesIName);
           }
 
           const casa::IPosition shape = iacc.shape(inImgName);
@@ -500,14 +512,16 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
               }
               if (found) {
                   // find corresponding Stokes I image
-                  string ImgName = inImgName;
-                  ImgName.replace(pos,3,".i.");
-                  Array<float> stokesI = iacc.read(ImgName,blc,trc);
+                  if (inStokesIName=="") {
+                      //try to find it
+                      inStokesIName = inImgName;
+                      inStokesIName.replace(pos,3,".i.");
+                  }
+                  Array<float> stokesI = iacc.read(inStokesIName,blc,trc);
                   ASKAPCHECK(stokesI.shape()==inPix.shape(),"Stokes I and Pol image shapes don't match");
                   // do leakage correction
-                  // TODO: what should thispos be? 0 or blc? It's used to get the frequency
-                  casa::IPosition thispos(blc); // thispos(inPix.ndim(),0);
-                  ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<ImgName<<" for channel " << thispos(3));
+                  casa::IPosition thispos(blc);
+                  ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<inStokesIName<<" for channel " << thispos(3));
                   accumulator.removeLeakage(inPix,stokesI,pol,thispos,iacc.coordSys(inImgName));
               } else {
                   ASKAPLOG_WARN_STR(logger,"Skipping removeLeakage - cannot determine polarisation of input");
