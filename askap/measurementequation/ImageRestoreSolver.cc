@@ -181,7 +181,7 @@ namespace askap
                         if ( itsExtraOversamplingFactor > 1. ) {
                             // also setBeam for the fullres param
                             std::string fullresname = iph.paramName();
-                            size_t index = fullresname.find("image", index);
+                            size_t index = fullresname.find("image");
                             ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
                             fullresname.replace(index,5,"fullres");
                             ASKAPASSERT(ip.has(fullresname));
@@ -483,7 +483,7 @@ namespace askap
                         // Check if a separate full-resolution clean model has been saved
                         // It will be in a param with the starting "image" swapped to "fullres"):
                         if ( itsExtraOversamplingFactor > 1. ) {
-                            size_t index = imagename.find("image", index);
+                            size_t index = imagename.find("image");
                             ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
                             imagename.replace(index,5,"fullres");
                             ASKAPASSERT(ip.has(imagename));
