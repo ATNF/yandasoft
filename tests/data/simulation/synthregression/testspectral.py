@@ -36,7 +36,7 @@ def analyseResult(spr, checkWeights=True):
    # now check grids
    stats = spr.complexImageStats('psfgrid.cont')
    print("Statistics for psf grid: ", stats)
-   if abs(stats['peak'] - 37.4) > 0.1:
+   if abs(stats['peak'] - 37.44) > 0.1:
       raise RuntimeError("psf grid peak value is wrong, please verify")
    if stats['x']!=65 or stats['y']!=67:
       raise RuntimeError("psf grid peak location is wrong, please verify")
@@ -44,29 +44,39 @@ def analyseResult(spr, checkWeights=True):
       raise RuntimeError("psf grid rms value is wrong, please verify")
    if abs(stats['median-real'] - 0) > 1e-5:
       raise RuntimeError("psf grid median value is wrong, please verify")
+   if abs(stats['rms-imag'] - 0.003827) > 0.001:
+      raise RuntimeError("psf grid rms value is wrong, please verify")
+   if abs(stats['median-imag'] - 0) > 1e-5:
+      raise RuntimeError("psf grid median value is wrong, please verify")
 
    stats = spr.complexImageStats('pcfgrid.cont')
    print("Statistics for pcf grid: ", stats)
-   if abs(stats['peak'] - 90) > 0.1:
+   if abs(stats['peak'] - 284.6) > 0.1:
       raise RuntimeError("pcf grid peak value is wrong, please verify")
    if stats['x']!=59 or stats['y']!=67:
       raise RuntimeError("pcf grid peak location is wrong, please verify")
-   if abs(stats['rms-real'] - 1.333) > 0.01:
+   if abs(stats['rms-real'] - 3.6928) > 0.01:
       raise RuntimeError("pcf grid rms value is wrong, please verify")
    if abs(stats['median-real'] - 0) > 1e-5:
+      raise RuntimeError("pcf grid median value is wrong, please verify")
+   if abs(stats['rms-imag'] - 11.0782) > 0.01:
+      raise RuntimeError("pcf grid rms value is wrong, please verify")
+   if abs(stats['median-imag'] - 0) > 1e-5:
       raise RuntimeError("pcf grid median value is wrong, please verify")
 
    stats = spr.complexImageStats('visgrid.cont')
    print("Statistics for vis grid: ", stats)
-   if abs(stats['peak'] - 3.035) > 0.1:
+   if abs(stats['peak'] - 5.22346) > 0.1:
       raise RuntimeError("vis grid peak value is wrong, please verify")
    if stats['x']!=65 or stats['y']!=67:
       raise RuntimeError("vis grid peak location is wrong, please verify")
-   if abs(stats['rms-real'] - 0.012) > 0.001:
+   if abs(stats['rms-real'] - 0.1794) > 0.001:
       raise RuntimeError("vis grid rms real value is wrong, please verify")
-   if abs(stats['rms-imag'] - 0.0976) > 0.001:
-      raise RuntimeError("vis grid rms imag value is wrong, please verify")
    if abs(stats['median-real'] - 0) > 1e-5:
+      raise RuntimeError("vis grid median value is wrong, please verify")
+   if abs(stats['rms-imag'] - 0.2038) > 0.001:
+      raise RuntimeError("vis grid rms imag value is wrong, please verify")
+   if abs(stats['median-imag'] - 0) > 1e-5:
       raise RuntimeError("vis grid median value is wrong, please verify")
 
 import os
