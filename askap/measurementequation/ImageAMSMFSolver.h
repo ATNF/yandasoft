@@ -84,6 +84,10 @@ namespace askap
       /// Set the scales
       void setScales(const casacore::Vector<float>& scales);
 
+      /// @brief set extra oversampling during cleaning and image output if needed
+      /// @param[in] factor extra oversampling factor
+      inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
+
       /// @brief configure basic parameters of the solver
       /// @details This method encapsulates extraction of basic solver parameters from the parset.
       /// @param[in] parset parset's subset (should have solver.Clean or solver.Dirty removed)
@@ -128,6 +132,9 @@ namespace askap
       Bool itsOrthogonal;
 
     private:
+
+      /// @brief extra oversampling factor to use during clean
+      float itsExtraOversamplingFactor;
 
     };
 

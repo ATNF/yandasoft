@@ -38,6 +38,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/scimath/utils/PaddingUtils.h>
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 
@@ -72,7 +73,7 @@ namespace askap
 
 
     ImageAMSMFSolver::ImageAMSMFSolver() : itsScales(3,0.),itsNumberTaylor(0),
-        itsSolutionType("MINCHISQ"), itsOrthogonal(False)
+        itsSolutionType("MINCHISQ"), itsOrthogonal(False), itsExtraOversamplingFactor(1.)
     {
       ASKAPDEBUGASSERT(itsScales.size() == 3);
       itsScales(1)=10;
@@ -87,7 +88,8 @@ namespace askap
     }
 
     ImageAMSMFSolver::ImageAMSMFSolver(const casacore::Vector<float>& scales) :
-      itsScales(scales), itsNumberTaylor(0), itsSolutionType("MINCHISQ"), itsOrthogonal(False)
+      itsScales(scales), itsNumberTaylor(0), itsSolutionType("MINCHISQ"), itsOrthogonal(False),
+      itsExtraOversamplingFactor(1.)
     {
       // Now set up controller
       itsControl.reset(new DeconvolverControl<Float>());
@@ -114,7 +116,7 @@ namespace askap
     /// image* are interpreted as images and solved for.
     /// @param[in] ip current model (to be updated)
     /// @param[in] quality Solution quality information
-    bool ImageAMSMFSolver::solveNormalEquations(askap::scimath::Params& ip,askap::scimath::Quality& quality)
+    bool ImageAMSMFSolver::solveNormalEquations(askap::scimath::Params& ip, askap::scimath::Quality& quality)
     {
       ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations");
 
@@ -132,8 +134,7 @@ namespace askap
 
       uint nParameters=0;
       ASKAPCHECK(taylorMap.size() != 0, "Solver doesn't have any images to solve for");
-      for (std::map<std::string, int>::const_iterator tmIt = taylorMap.begin();
-           tmIt!=taylorMap.end(); ++tmIt) {
+      for (std::map<std::string, int>::const_iterator tmIt = taylorMap.begin(); tmIt!=taylorMap.end(); ++tmIt) {
 
         // The MSMF Solver expects 2xNTaylor-1 image parameter for each Stokes parameter.
         //
@@ -191,7 +192,7 @@ namespace askap
         ASKAPLOG_INFO_STR(logger, "There are " << nPol << " polarisation planes to solve" );
         nParameters += imageShape.product(); // add up the number of pixels for zero order
         // check consistency
-        for (uInt order=1;order<uInt(tmIt->second);++order) {
+        for (uInt order=1; order<nOrders; ++order) {
             // make the helper a Taylor term of the given order
             iph.makeTaylorTerm(order);
             const casacore::IPosition thisShape = ip.shape(iph.paramName());
@@ -210,6 +211,53 @@ namespace askap
         }
         //
         */
+
+        // Support for cleaning at higher resolution than that used in calcNE
+        // Check if a separate full-resolution clean model has been saved
+        // It will be in a param with the starting "image" swapped to "fullres"):
+        bool importModelFromNE = true;
+        if (itsExtraOversamplingFactor > 1.0) {
+            // if the 0-order param exists, assume they all do. If not, assume they all need to be initialised
+            if (this->itsNumberTaylor>1) {
+                iph.makeTaylorTerm(0);
+            }
+            string fullResName = iph.paramName();
+            fullResName.replace(0,5,"fullres");
+            if (ip.has(fullResName)) {
+                // the full-resolution 0-order param already exists, so update those
+                importModelFromNE = false;
+            }
+            else {
+                // the full-resolution 0-order param does not exist
+                // use the NE models, but first set up a new params for storing the results
+                // set the shape of a full-resolution model and also an iterator.
+                casacore::IPosition fullResPlaneShape(scimath::PaddingUtils::paddedShape(ip.shape(iph.paramName()),
+                                                                                         itsExtraOversamplingFactor));
+                casacore::IPosition fullResIterShape(ip.shape(iph.paramName()));
+                fullResIterShape(0) = fullResPlaneShape(0);
+                fullResIterShape(1) = fullResPlaneShape(1);
+                // copy the low-resolution axes from the 0-order param
+                scimath::Axes axes(ip.axes(iph.paramName()));
+                // update for the new resolution
+                casacore::DirectionCoordinate radec = axes.directionAxis();
+                /// @todo double check that the rounding is correct for the ref pixel
+                radec.setReferencePixel(radec.referencePixel()*double(itsExtraOversamplingFactor));
+                radec.setIncrement(radec.increment()/double(itsExtraOversamplingFactor));
+                axes.addDirectionAxis(radec);
+                // I should not need to save full-resolution models for order >= nTaylor (i.e. upto 2*nTaylor-1)
+                for( uInt order=0; order < this->itsNumberTaylor; ++order) {
+                    if(this->itsNumberTaylor>1) {
+                        iph.makeTaylorTerm(order);
+                    }
+                    fullResName = iph.paramName();
+                    fullResName.replace(0,5,"fullres");
+                    ASKAPLOG_INFO_STR(logger, "Creating empty parameter "<<fullResName<<
+                        " with shape "<<fullResIterShape);
+                    // add the new param
+                    ip.add(fullResName, fullResIterShape, axes);
+                }
+            }
+        }
 
         // as polarisations are not necessarily represented by a different parameter
         // we have to build a set of parameters which are going to be fixed inside the loop
@@ -307,8 +355,13 @@ namespace askap
                         "PSF Slice for plane="<< plane<<" and order="<<order<<" is not present");
                     casacore::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(thisOrderParam)->second);
                     #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                    // use a reference
-                    psfLongVec(order).reference(planeIter.getPlane(slice));
+                    if (itsExtraOversamplingFactor > 1.0) {
+                        // copy for oversampling later
+                        psfLongVec(order) = planeIter.getPlane(slice);
+                    } else {
+                        // use a reference
+                        psfLongVec(order).reference(planeIter.getPlane(slice));
+                    }
                     #else
                     psfLongVec(order).resize(planeIter.planeShape());
                     casacore::convertArray<float, double>(psfLongVec(order), planeIter.getPlane(slice));
@@ -318,20 +371,31 @@ namespace askap
                 // For the dirty images, we need all terms
                 ASKAPCHECK(normalEquations().dataVectorT(thisOrderParam).size()>0,
                     "Data vector not present for cube plane="<<plane<<" and order="<<order);
-                dirtyLongVec(order).resize(planeIter.planeShape());
                 casacore::Vector<imtype> dv = normalEquations().dataVectorT(thisOrderParam);
                 #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-                // use a reference
-                dirtyLongVec(order).reference(planeIter.getPlane(dv));
+                if (itsExtraOversamplingFactor > 1.0) {
+                    // copy for oversampling later
+                    dirtyLongVec(order) = planeIter.getPlane(dv);
+                } else {
+                    // use a reference
+                    dirtyLongVec(order).reference(planeIter.getPlane(dv));
+                }
                 #else
+                dirtyLongVec(order).resize(planeIter.planeShape());
                 casacore::convertArray<float, double>(dirtyLongVec(order), planeIter.getPlane(dv));
                 #endif
                
                 // For the clean images, we need only the first nTaylor
-                if(order < this->itsNumberTaylor) {
-                    // use a reference
+                if(importModelFromNE && (order < this->itsNumberTaylor)) {
                     //cleanVec(order).assign(planeIter.getPlane(ip.valueF(thisOrderParam)));
-                    cleanVec(order).reference(planeIter.getPlane(ip.valueF(thisOrderParam)));
+                    // if extraOS>1 should only get here if the model is empty. But do the following for consistency
+                    if (itsExtraOversamplingFactor > 1.0) {
+                        // copy for oversampling later
+                        cleanVec(order) = planeIter.getPlane(ip.valueF(thisOrderParam));
+                    } else {
+                        // use a reference
+                        cleanVec(order).reference(planeIter.getPlane(ip.valueF(thisOrderParam)));
+                    }
                 }
             } // Loop over order
            
@@ -424,10 +488,37 @@ namespace askap
                 }// Loop over order
             }
 
+            // sinc interpolate via Fourier padding if cleaning requires higher resolution
+            if (itsExtraOversamplingFactor > 1.0) {
+                ASKAPLOG_INFO_STR(logger,
+                    "Oversampling by an extra factor of "<<itsExtraOversamplingFactor<<" before cleaning");
+                SynthesisParamsHelper::oversample(maskArray,itsExtraOversamplingFactor);
+                for (uInt order=0; order < limit; ++order) {
+                    SynthesisParamsHelper::oversample(psfLongVec(order),itsExtraOversamplingFactor);
+                    if(order < this->itsNumberTaylor) {
+                        SynthesisParamsHelper::oversample(dirtyVec(order),itsExtraOversamplingFactor);
+                        psfVec(order).reference(psfLongVec(order));
+                    }
+                    if (importModelFromNE) {
+                        SynthesisParamsHelper::oversample(cleanVec(order),itsExtraOversamplingFactor,false);
+                    } else {
+                        if (this->itsNumberTaylor>1) {
+                            iph.makeTaylorTerm(order);
+                        }
+                        string fullResName = iph.paramName();
+                        fullResName.replace(0,5,"fullres");
+                        scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
+                        cleanVec(order).reference(
+                            fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
+                    }
+
+                }
+            }
+
             // Now that we have all the required images, we can initialise the deconvolver
             if (firstcycle) {// Initialize everything only once.
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._fc_initdeconvolver");
-           
+          
                 ASKAPLOG_INFO_STR(logger, "Creating solver for plane " << plane <<" tag "<<imageTag);
                 itsCleaners[imageTag].reset(
                     new DeconvolverMultiTermBasisFunction<Float, Complex>(dirtyVec, psfVec, psfLongVec));
@@ -478,20 +569,45 @@ namespace askap
                 const std::string thisOrderParam = iph.paramName();
            
                 if(saveIntermediate()) {
-                    ASKAPLOG_DEBUG_STR(logger, "Dirty(" << order << ") shape = " << dirtyVec(order).shape());
-                    saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "residual",
-                    unpadImage(dirtyVec(order)), planeIter.position());
+                    // Save create/update parameters after preconditioning.
+                    // Will need downsampling if params are stored with lower resolution
+                    if (itsExtraOversamplingFactor > 1.0) {
+                        Array<Float> tmpImg = dirtyVec(order);
+                        SynthesisParamsHelper::downsample(tmpImg,itsExtraOversamplingFactor);
+                        ASKAPLOG_DEBUG_STR(logger, "Dirty(" << order << ") shape = " << dirtyVec(order).shape());
+                        saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "residual",
+                            unpadImage(tmpImg), planeIter.position());
+                    } else {
+                        saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "residual",
+                            unpadImage(dirtyVec(order)), planeIter.position());
+                    }
                     if(firstcycle) {
-                        ASKAPLOG_DEBUG_STR(logger, "PSF(" << order << ") shape = " << psfVec(order).shape());
-                        saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "psf.image",
-                        unpadImage(psfVec(order)), planeIter.position());
+                        if (itsExtraOversamplingFactor > 1.0) {
+                            ASKAPLOG_DEBUG_STR(logger, "PSF(" << order << ") shape = " << psfVec(order).shape());
+                            Array<Float> tmpImg = psfVec(order);
+                            SynthesisParamsHelper::downsample(tmpImg,itsExtraOversamplingFactor);
+                            saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "psf.image",
+                                unpadImage(tmpImg), planeIter.position());
+                        } else {
+                            saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "psf.image",
+                                unpadImage(psfVec(order)), planeIter.position());
+                        }
                         if(order==0&&maskArray.nelements()) {
-                            saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "mask", unpadImage(maskArray),
-                            planeIter.position());
+                            if (itsExtraOversamplingFactor > 1.0) {
+                                Array<Float> tmpImg = maskArray;
+                                SynthesisParamsHelper::downsample(tmpImg,itsExtraOversamplingFactor);
+                                saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "mask",
+                                    unpadImage(tmpImg), planeIter.position());
+                            } else {
+                                saveArrayIntoParameter(ip, thisOrderParam, planeIter.shape(), "mask",
+                                    unpadImage(maskArray), planeIter.position());
+                            }
                         }
                     }
                 }
-                itsCleaners[imageTag]->setModel(planeIter.getPlane(ip.valueF(thisOrderParam)), order);
+                // cleanVec already references valueF, except in Nyquist node where it has been copied & oversampled
+                //itsCleaners[imageTag]->setModel(planeIter.getPlane(ip.valueF(thisOrderParam)), order);
+                itsCleaners[imageTag]->setModel(cleanVec(order), order);
             } // end of 'order' loop
            
             {
@@ -521,13 +637,32 @@ namespace askap
                   ASKAPLOG_INFO_STR(logger, "No Taylor terms were solved");
                 }
                 const std::string thisOrderParam = iph.paramName();
+
                 ASKAPLOG_INFO_STR(logger, "About to get model for plane="<<plane<<" Taylor order="<<order<<
                     " for image "<<tmIt->first);
-                planeIter.getPlane(ip.valueT(thisOrderParam)).nonDegenerate() =
-                    unpadImage(itsCleaners[imageTag]->model(order));
+                // if we cleaned at higher resolution, need to update the high-res params then downsample back
+                if (itsExtraOversamplingFactor > 1.0) {
+                    // copy the new model back to the working vector of arrays
+                    Array<Float> tmpImg = itsCleaners[imageTag]->model(order);
+                    // store full-res model in a slice of the new fullres parameter
+                    ASKAPCHECK(planeIter.position()(0)==0 && planeIter.position()(1)==0,
+                        "Image offsets not supported with variable image resolution");
+                    string fullResName = thisOrderParam;
+                    fullResName.replace(0,5,"fullres");
+                    const uInt numDegenerate = ip.shape(fullResName).size() - tmpImg.ndim();
+                    saveArrayIntoParameter(ip, thisOrderParam, ip.shape(fullResName),
+                        "fullres", tmpImg.addDegenerate(numDegenerate), planeIter.position());
+                    // remove Fourier padding before returning to degridders
+                    SynthesisParamsHelper::downsample(tmpImg,itsExtraOversamplingFactor);
+                    planeIter.getPlane(ip.valueF(thisOrderParam)).nonDegenerate() =
+                        unpadImage(tmpImg);
+                } else {
+                    planeIter.getPlane(ip.valueT(thisOrderParam)).nonDegenerate() =
+                        unpadImage(itsCleaners[imageTag]->model(order));
+                }
             }
             // add extra parameters (cross-terms) to the to-be-fixed list
-            for (uInt order = itsNumberTaylor; order<uInt(tmIt->second); ++order) {
+            for (uInt order = itsNumberTaylor; order<nOrders; ++order) {
                 // make the helper to correspond to the given order
                 if(this->itsNumberTaylor>1) {
                     iph.makeTaylorTerm(order);
