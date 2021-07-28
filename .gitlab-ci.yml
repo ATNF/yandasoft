@@ -85,7 +85,6 @@ pages:
     - cp build/ctest.xml public/build/reports/unit-tests.xml
     - doxygen doxy.conf && mv html public/doxygen
     - cd public
-    - curl -s https://gitlab.com/ska-telescope/ci-metrics-utilities/raw/master/scripts/ci-badges-func.sh | sh
   artifacts:
     paths:
       - ${CI_PROJECT_DIR}/public
