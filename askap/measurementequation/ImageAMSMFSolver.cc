@@ -498,24 +498,21 @@ namespace askap
                     if(order < this->itsNumberTaylor) {
                         SynthesisParamsHelper::oversample(dirtyVec(order),itsExtraOversamplingFactor);
                         psfVec(order).reference(psfLongVec(order));
-                    }
-                    if (importModelFromNE) {
-                        SynthesisParamsHelper::oversample(cleanVec(order),itsExtraOversamplingFactor,false);
-                    } else {
-                        if (this->itsNumberTaylor>1) {
-                            iph.makeTaylorTerm(order);
+                        if (importModelFromNE) {
+                            SynthesisParamsHelper::oversample(cleanVec(order),itsExtraOversamplingFactor,false);
+                        } else {
+                            if (this->itsNumberTaylor>1) {
+                                iph.makeTaylorTerm(order);
+                            }
+                            string fullResName = iph.paramName();
+                            fullResName.replace(0,5,"fullres");
+                            scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
+                            cleanVec(order).reference(
+                                fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
                         }
-                        string fullResName = iph.paramName();
-                        fullResName.replace(0,5,"fullres");
-                        scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
-                        cleanVec(order).reference(
-                            fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
                     }
 
                 }
-            }
-            for (uInt order=0; order < limit; ++order) {
-                ASKAPLOG_INFO_STR(logger, "cleanVec("<<order<<") peak value: "<<casacore::max(cleanVec(order)));
             }
 
             // Now that we have all the required images, we can initialise the deconvolver
