@@ -1038,7 +1038,8 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
            ASKAPASSERT(uv_max > 0);
            // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
            //  - the reciprical of twice the longest baseline plus the largest w support
-           gCellSize[0] = 0.5 / (uv_max + wk_max) * 3600.0 * 180.0 / M_PI;
+           //  - doubled wk_max because it seemed too small
+           gCellSize[0] = 0.5 / (uv_max + 2*wk_max) * 3600.0 * 180.0 / M_PI;
            gCellSize[1] = gCellSize[0];
        }
 
