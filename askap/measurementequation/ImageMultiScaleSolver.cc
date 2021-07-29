@@ -149,11 +149,6 @@ namespace askap
                 // set the shape of a full-resolution model and also an iterator.
                 casacore::IPosition fullResShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),
                                                                                     itsExtraOversamplingFactor));
-                for (uInt dim = 2; dim < fullResShape.size(); ++dim) {
-                    ASKAPCHECK(fullResShape(dim) == 1,
-                        "Multi-slice sky model images are not currently supported with Nyquist gridding. "<<
-                        "Sky model image shape is "<<fullResShape);
-                }
                 casacore::IPosition fullResIterShape(ip.shape(indit->first));
                 fullResIterShape(0) = fullResShape(0);
                 fullResIterShape(1) = fullResShape(1);

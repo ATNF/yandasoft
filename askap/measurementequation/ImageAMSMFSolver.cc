@@ -233,11 +233,6 @@ namespace askap
                 // set the shape of a full-resolution model and also an iterator.
                 casacore::IPosition fullResShape(scimath::PaddingUtils::paddedShape(ip.shape(iph.paramName()),
                                                                                     itsExtraOversamplingFactor));
-                for (uInt dim = 2; dim < fullResShape.size(); ++dim) {
-                    ASKAPCHECK(fullResShape(dim) == 1,
-                        "Multi-slice sky model images are not currently supported with Nyquist gridding. "<<
-                        "Sky model image shape is "<<fullResShape);
-                }
                 casacore::IPosition fullResIterShape(ip.shape(iph.paramName()));
                 fullResIterShape(0) = fullResShape(0);
                 fullResIterShape(1) = fullResShape(1);
@@ -518,6 +513,9 @@ namespace askap
                     }
 
                 }
+            }
+            for (uInt order=0; order < limit; ++order) {
+                ASKAPLOG_INFO_STR(logger, "cleanVec("<<order<<") peak value: "<<casacore::max(cleanVec(order)));
             }
 
             // Now that we have all the required images, we can initialise the deconvolver
