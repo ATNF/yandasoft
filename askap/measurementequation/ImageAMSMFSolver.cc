@@ -216,7 +216,7 @@ namespace askap
         // Check if a separate full-resolution clean model has been saved
         // It will be in a param with the starting "image" swapped to "fullres"):
         bool importModelFromNE = true;
-        if (itsExtraOversamplingFactor > 1.0) {
+       if (itsExtraOversamplingFactor > 1.0) {
             // if the 0-order param exists, assume they all do. If not, assume they all need to be initialised
             if (this->itsNumberTaylor>1) {
                 iph.makeTaylorTerm(0);
@@ -231,11 +231,16 @@ namespace askap
                 // the full-resolution 0-order param does not exist
                 // use the NE models, but first set up a new params for storing the results
                 // set the shape of a full-resolution model and also an iterator.
-                casacore::IPosition fullResPlaneShape(scimath::PaddingUtils::paddedShape(ip.shape(iph.paramName()),
-                                                                                         itsExtraOversamplingFactor));
+                casacore::IPosition fullResShape(scimath::PaddingUtils::paddedShape(ip.shape(iph.paramName()),
+                                                                                    itsExtraOversamplingFactor));
+                for (uInt dim = 2; dim < fullResShape.size(); ++dim) {
+                    ASKAPCHECK(fullResShape(dim) == 1,
+                        "Multi-slice sky model images are not currently supported with Nyquist gridding. "<<
+                        "Sky model image shape is "<<fullResShape);
+                }
                 casacore::IPosition fullResIterShape(ip.shape(iph.paramName()));
-                fullResIterShape(0) = fullResPlaneShape(0);
-                fullResIterShape(1) = fullResPlaneShape(1);
+                fullResIterShape(0) = fullResShape(0);
+                fullResIterShape(1) = fullResShape(1);
                 // copy the low-resolution axes from the 0-order param
                 scimath::Axes axes(ip.axes(iph.paramName()));
                 // update for the new resolution
@@ -654,7 +659,7 @@ namespace askap
                         "fullres", tmpImg.addDegenerate(numDegenerate), planeIter.position());
                     // remove Fourier padding before returning to degridders
                     SynthesisParamsHelper::downsample(tmpImg,itsExtraOversamplingFactor);
-                    planeIter.getPlane(ip.valueF(thisOrderParam)).nonDegenerate() =
+                    planeIter.getPlane(ip.valueT(thisOrderParam)).nonDegenerate() =
                         unpadImage(tmpImg);
                 } else {
                     planeIter.getPlane(ip.valueT(thisOrderParam)).nonDegenerate() =

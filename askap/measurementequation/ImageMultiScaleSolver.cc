@@ -147,17 +147,22 @@ namespace askap
             else {
                 // use the NE model. But first, set up a new param for storing the results
                 // set the shape of a full-resolution model and also an iterator.
-                casacore::IPosition fullResPlaneShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),
-                                                                                         itsExtraOversamplingFactor));
+                casacore::IPosition fullResShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),
+                                                                                    itsExtraOversamplingFactor));
+                for (uInt dim = 2; dim < fullResShape.size(); ++dim) {
+                    ASKAPCHECK(fullResShape(dim) == 1,
+                        "Multi-slice sky model images are not currently supported with Nyquist gridding. "<<
+                        "Sky model image shape is "<<fullResShape);
+                }
                 casacore::IPosition fullResIterShape(ip.shape(indit->first));
-                fullResIterShape(0) = fullResPlaneShape(0);
-                fullResIterShape(1) = fullResPlaneShape(1);
+                fullResIterShape(0) = fullResShape(0);
+                fullResIterShape(1) = fullResShape(1);
                 ASKAPLOG_INFO_STR(logger, "Create empty parameter "<<fullResName<<" with shape " << fullResIterShape);
                 // copy the low-resolution axes
                 scimath::Axes axes(ip.axes(indit->first));
                 // update for the new resolution
                 casacore::DirectionCoordinate radec = axes.directionAxis();
-                /// @todo double check that the rounding is correctfor the ref pixel
+                /// @todo double check that the rounding is correct for the ref pixel
                 radec.setReferencePixel(radec.referencePixel()*double(itsExtraOversamplingFactor));
                 radec.setIncrement(radec.increment()/double(itsExtraOversamplingFactor));
                 axes.addDirectionAxis(radec);
@@ -165,12 +170,6 @@ namespace askap
                 ip.add(fullResName, fullResIterShape, axes);
             }
         }
-        /// @todo load non-zero starting models (e.g. Cimager.Images.reuse) into fullResName params
-        /// @todo will need to account for the other dims of planeIter here...
-        /// @todo  - test multi-polarisation cleaning
-        /// @todo  - test multi-frequency cleaning
-        /// @todo  - test Taylor terms
-        /// @todo  - facets? Note the fullResName will need to be expanded for facets, and the restore solver updated
 
         // Iteratate over planes to be preconditioned and cleaned
         // Axes are dof, dof for each parameter
@@ -203,7 +202,7 @@ namespace askap
           // don't copy into cleanArray if instead referencing an existing cache
           casacore::Array<float> cleanArray;
           if (importModelFromNE) {
-              cleanArray = padImage(planeIter.getPlane(ip.valueT(indit->first)));
+              cleanArray = padImage(planeIter.getPlane(ip.valueF(indit->first)));
           }
           ASKAPLOG_INFO_STR(logger, "Plane shape "<<planeIter.planeShape()<<" becomes "<<
                             dirtyArray.shape()<<" after padding");
@@ -316,7 +315,8 @@ namespace askap
             // store full-res model in a slice of the new fullres parameter
             ASKAPCHECK(planeIter.position()(0)==0 && planeIter.position()(1)==0,
                 "Image offsets not supported with variable image resolution");
-            saveArrayIntoParameter(ip, indit->first, ip.shape(fullResName), "fullres", cleanArray, planeIter.position());
+            saveArrayIntoParameter(ip, indit->first, ip.shape(fullResName),
+                "fullres", cleanArray, planeIter.position());
             // remove Fourier padding before returning to degridders
             SynthesisParamsHelper::downsample(cleanArray,itsExtraOversamplingFactor);
           }
