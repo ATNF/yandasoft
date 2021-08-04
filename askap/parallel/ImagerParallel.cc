@@ -785,7 +785,7 @@ namespace askap
             float wt = wts.data()[0];
             if (allEQ(wts,wt)) {
                 weightslog.weightslist()[0] = wt;
-                weightslog.setFilename(name.insert(7,"log") + postfix + ".txt");
+                weightslog.setFilename(name + postfix + ".txt");
                 weightslog.write();
             } else {
                 ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
