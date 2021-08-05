@@ -26,30 +26,22 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
-/// local includes
+
+// Package level header file
 #include <askap/askap_synthesis.h>
+
+/// ASKAP includes
 #include <askap/utils/LinmosUtils.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-/// ASKAP includes
-#include <askap/askap/Application.h>
-#include <askap/askap/AskapLogging.h>
-#include <askap/askap/AskapError.h>
-#include <askap/askap/StatReporter.h>
 #include <askap/askapparallel/AskapParallel.h>
 #include <askap/imageaccess/WeightsLog.h>
-
-/// CASA includes
-#include <casacore/images/Images/ImageInterface.h>
-#include <casacore/images/Images/PagedImage.h>
-#include <casacore/images/Images/SubImage.h>
-#include <casacore/images/Images/ImageProxy.h>
+#include <askap/imagemath/linmos/LinmosAccumulator.h>
 
 /// 3rd party
 #include <Common/ParameterSet.h>
 
 
 ASKAP_LOGGER(logger, ".linmos");
-
 
 using namespace askap::synthesis;
 
@@ -338,16 +330,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       }
 
       // set up an indexing vector for the arrays
-      casa::IPosition curpos(outPix.shape());
+      casa::IPosition curpos(outPix.ndim(),0);
       ASKAPASSERT(curpos.nelements()>=2);
-      for (uInt dim=0; dim<curpos.nelements(); ++dim) {
-        curpos[dim] = 0;
-      }
 
       // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
 
       scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
-      // loop over the input images, reading each in an adding to the output pixel arrays
+      // loop over the input images, reading each in and adding to the output pixel arrays
       // remember this is for the current output mosaick
 
       for (; planeIter.hasMore(); planeIter.next()) { // this is a loop over the polarisations as well as channels
@@ -488,6 +477,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           }
 
           if (parset.getBool("removeleakage",false)) {
+              ASKAPCHECK(inPix.shape()[2]==1,"Pol axis should have size 1 for removeleakage");
               // only do this if we're processing a Q, U or V image
               int pol = 0;
               size_t pos = inImgName.find(".q.");
@@ -519,6 +509,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                   }
                   Array<float> stokesI = iacc.read(inStokesIName,blc,trc);
                   ASKAPCHECK(stokesI.shape()==inPix.shape(),"Stokes I and Pol image shapes don't match");
+
                   // do leakage correction
                   casa::IPosition thispos(blc);
                   ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<inStokesIName<<" for channel " << thispos(3));
@@ -556,7 +547,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           }
           if (accumulator.doSensitivity()) {
 
-          // casa::PagedImage<casa::Float> inImg(inSenName);
             const casa::IPosition shape = iacc.shape(inSenName);
             casa::IPosition blc(shape.nelements(),0);
             casa::IPosition trc(shape-1);
@@ -623,7 +613,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
       //build the mask
       //use the outWgtPix to define the mask
-      //i dont care about planes etc ... just going to run through
 
       float itsCutoff = 0.01;
 
