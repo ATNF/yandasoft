@@ -1681,9 +1681,9 @@ void ContinuumWorker::logWeightsInfo()
         // Need to pick an image we are actually writing, if neither of these is written
         // we probably don't need the weights
         if (itsRestoredCube) {
-            weightslog.setFilename("weightslog." + itsRestoredCube->filename() + ".txt");
+            weightslog.setFilename("weights." + itsRestoredCube->filename() + ".txt");
         } else if (itsResidualCube) {
-            weightslog.setFilename("weightslog." + itsResidualCube->filename() + ".txt");
+            weightslog.setFilename("weights." + itsResidualCube->filename() + ".txt");
         }
         if (weightslog.filename()!="") {
             ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
