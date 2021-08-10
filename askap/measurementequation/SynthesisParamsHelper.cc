@@ -200,7 +200,14 @@ namespace askap
     {
       ASKAPDEBUGTRACE("SynthesisParamsHelper::loadImages");
       ASKAPDEBUGASSERT(params);
-      const float extraOS = parset.getFloat("extraoversampling",1.0);
+
+      // Check whether or not images will need to be downsampled after loading
+      boost::optional<float> extraOS;
+      if (parset.isDefined("extraoversampling")) {
+          extraOS = parset.getFloat("extraoversampling");
+          ASKAPDEBUGASSERT(*extraOS > 1.);
+      }
+
       try {
          const vector<string> images=parset.getStringVector("Names");
          for (vector<string>::const_iterator ci = images.begin(); ci != images.end(); ++ci) {
@@ -225,10 +232,14 @@ namespace askap
                    }
                    if (nfacets == 1) {
                        ASKAPLOG_INFO_STR(logger, "Reading image "<<iph.paramName());
-                       SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName(), extraOS);
+                       if (extraOS) {
+                           SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName(),*extraOS);
+                       } else {
+                           SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName());
+                       }
                    } else {
                        ASKAPLOG_INFO_STR(logger, "Loading multi-facet image image "<<iph.paramName());
-                       SynthesisParamsHelper::getMultiFacetImage(*params,iph.paramName(),iph.paramName(), nfacets);
+                       SynthesisParamsHelper::getMultiFacetImage(*params,iph.paramName(),iph.paramName(),nfacets);
                    }
               }
          }
@@ -634,21 +645,16 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-					 const string& imagename, const float extraOversampleFactor)
+					 const string& imagename, const boost::optional<float> extraOversampleFactor)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
-
-      ASKAPCHECK(extraOversampleFactor >= 1.,
-                 "Oversampling factor should be greater than or equal to 1, you have "<<extraOversampleFactor);
 
       casacore::Array<float> imagePixels;
       casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
 
-      if (extraOversampleFactor == 1.) {
-          imagePixels.reference(ip.valueF(name));
-      }
-      else {
-          imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),extraOversampleFactor));
+      if (extraOversampleFactor) {
+          ASKAPCHECK(*extraOversampleFactor > 1.,"Oversampling factor should be > 1, not "<<*extraOversampleFactor);
+          imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),*extraOversampleFactor));
           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
           scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
           #else
@@ -668,9 +674,12 @@ namespace askap
                    "At present we support only images with first axes being the direction pixel axes, image "<<name<<
                    " has "<< axesDir);
           /// @todo double check that the rounding is correct for the ref pixel
-          radec.setReferencePixel(radec.referencePixel()*double(extraOversampleFactor));
-          radec.setIncrement(radec.increment()/double(extraOversampleFactor));
+          radec.setReferencePixel(radec.referencePixel()*double(*extraOversampleFactor));
+          radec.setIncrement(radec.increment()/double(*extraOversampleFactor));
           imageCoords.replaceCoordinate(radec, whichDir);
+      }
+      else {
+          imagePixels.reference(ip.valueF(name));
       }
 
       ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
@@ -751,7 +760,7 @@ namespace askap
 
 
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
-						 const string& imagename, const float extraOversampleFactor)
+						 const string& imagename, const boost::optional<float> extraOversampleFactor)
     {
       ASKAPTRACE("SynthesisParamsHelper::loadImageParameter");
       casacore::Array<float> imagePixels = imageHandler().read(imagename);
@@ -834,20 +843,14 @@ namespace askap
       casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
       ASKAPDEBUGASSERT(targetShape.product() == imagePixels.shape().product());
 
-      if (extraOversampleFactor == 1.) {
-          ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
-                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
-                                    "Hz, nChan="<<nChan);
-          ip.add(name, imagePixels.reform(targetShape), axes);
-      }
-      else {
+      if (extraOversampleFactor) {
+          ASKAPCHECK(*extraOversampleFactor > 1.,"Oversampling factor should be > 1, not "<<*extraOversampleFactor);
 
-          // need to add two params: the full-res image and the downsampled image
+          // need to add two params: the loaded full-res image and the downsampled image
 
           // first save the full-res image
           std::string fullresname = name;
-          const size_t index = fullresname.find("image", index);
+          const size_t index = fullresname.find("image");
           ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
           fullresname.replace(index,5,"fullres");
 
@@ -859,20 +862,27 @@ namespace askap
 
           // now downsample the input sky model to the working resolution
           /// @todo should this be done at higher precision ifndef ASKAP_FLOAT_IMAGE_PARAMS?
-          downsample(imagePixels,extraOversampleFactor);
+          downsample(imagePixels,*extraOversampleFactor);
           // update the target shape for the new resolution
           targetShape(0) = imagePixels.shape()(0);
           targetShape(1) = imagePixels.shape()(1);
           // update the coordinate system for the new resolution
           /// @todo double check that the rounding is correct for the ref pixel
-          radec.setReferencePixel(radec.referencePixel()/double(extraOversampleFactor));
-          radec.setIncrement(radec.increment()*double(extraOversampleFactor));
+          radec.setReferencePixel(radec.referencePixel()/double(*extraOversampleFactor));
+          radec.setIncrement(radec.increment()*double(*extraOversampleFactor));
           axes.addDirectionAxis(radec);
 
           ASKAPLOG_INFO_STR(logger, "Also adding downsampled image parameters with name "<<name<<
                       " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
           ip.add(name, imagePixels.reform(targetShape), axes);
 
+      }
+      else {
+          ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                                    "Hz, nChan="<<nChan);
+          ip.add(name, imagePixels.reform(targetShape), axes);
       }
 
     }

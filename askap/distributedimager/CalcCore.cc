@@ -60,6 +60,8 @@
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
 
+#include <boost/optional.hpp>
+
 // Local includes
 
 
@@ -371,7 +373,12 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->names();
     }
 
-    const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
+    // Check whether or not the model has been stored at a higher resolution
+    boost::optional<float> extraOSfactor;
+    if (parset().isDefined("Images.extraoversampling")) {
+        extraOSfactor = parset().getFloat("Images.extraoversampling");
+        ASKAPDEBUGASSERT(*extraOSfactor > 1.);
+    }
 
     if (itsRestore && postfix == "")
     {
@@ -380,11 +387,10 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ASKAPDEBUGASSERT(ir);
         ASKAPDEBUGASSERT(itsSolver);
         // configure restore solver the same way as normal imaging solver
-        if (parset().isDefined("Images.extraoversampling")) {
-            const float factor = parset().getFloat("Images.extraoversampling");
-            ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
-                              factor);
-            ir->setExtraOversampling(factor);
+        if (extraOSfactor) {
+            ASKAPLOG_INFO_STR(logger,
+                "Configuring restore solver with an extra oversampling factor of "<<*extraOSfactor);
+            ir->setExtraOversampling(*extraOSfactor);
         }
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
@@ -397,17 +403,20 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->fixedNames();
         for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
             const ImageParamsHelper iph(*ci);
-            if (!iph.isFacet() && (extraOS == 1.) && (ci->find("image") == 0)) {
-                ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
-                              << *ci+string(".restored") );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+string(".restored"));
-            }
-            if (!iph.isFacet() && (extraOS > 1.) && (ci->find("fullres") == 0)) {
-                string tmpname = *ci;
-                tmpname.replace(0,7,"image");
-                ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
-                              << tmpname+string(".restored") );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+string(".restored"));
+            if (extraOSfactor) {
+                if (!iph.isFacet() && (ci->find("fullres") == 0)) {
+                    string tmpname = *ci;
+                    tmpname.replace(0,7,"image");
+                    ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
+                                  << tmpname+string(".restored") );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+string(".restored"));
+                }
+            } else {
+                if (!iph.isFacet() && (ci->find("image") == 0)) {
+                    ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
+                                  << *ci+string(".restored") );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+string(".restored"));
+                }
             }
         }
     }
@@ -419,7 +428,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
             resultimages.end(),*it) == resultimages.end())) {
             ASKAPLOG_DEBUG_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
         }
     }
 
@@ -431,11 +440,13 @@ void CalcCore::restoreImage()
     ir = ImageRestoreSolver::createSolver(itsParset.makeSubset("restore."));
     ASKAPDEBUGASSERT(ir);
     ASKAPDEBUGASSERT(itsSolver);
-    if (itsParset.isDefined("Images.extraoversampling")) {
-        const float factor = itsParset.getFloat("Images.extraoversampling");
-        ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<
-                          factor);
-        ir->setExtraOversampling(factor);
+
+    if (parset().isDefined("Images.extraoversampling")) {
+        const float extraOSfactor = parset().getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(extraOSfactor > 1.);
+        ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<extraOSfactor);
+        ir->setExtraOversampling(extraOSfactor);
     }
     // configure restore solver the same way as normal imaging solver
     boost::shared_ptr<ImageSolver>

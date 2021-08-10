@@ -34,9 +34,9 @@
 
 // ASKAPsoft includes
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 #include <Common/ParameterSet.h>
 #include <askap/imageaccess/ImageAccessFactory.h>
-
 
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/lattices/Lattices/PagedArray.h>
@@ -62,8 +62,8 @@ class CubeBuilder {
         /// Destructor
         ~CubeBuilder();
 
-        void writeSliceBaseRes(const casacore::Array<T>& arr, const casacore::uInt chan);
-        void writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan);
+        void writeRigidSlice(const casacore::Array<T>& arr, const casacore::uInt chan);
+        void writeFlexibleSlice(const casacore::Array<float>& arr, const casacore::uInt chan);
 
         casacore::CoordinateSystem
         createCoordinateSystem(const LOFAR::ParameterSet& parset,
@@ -76,7 +76,7 @@ class CubeBuilder {
         void setUnits(const std::string &units);
         void setDateObs(const casacore::MVEpoch &dateObs);
 
-    std::string filename() const{return itsFilename;};
+        std::string filename() const{return itsFilename;};
 
     private:
 
@@ -84,17 +84,17 @@ class CubeBuilder {
         boost::shared_ptr<accessors::IImageAccess<T> > itsCube;
 
 
-    /// Image name from parset - must start with "image."
+        /// Image name from parset - must start with "image."
         std::string itsFilename;
 
-    /// Rest frequency to be written to the cubes
+        /// Rest frequency to be written to the cubes
         casacore::Quantum<double> itsRestFrequency;
 
-    /// Description of the polarisation properties of the output cubes
+        /// Description of the polarisation properties of the output cubes
         casacore::Vector<casacore::Stokes::StokesTypes> itsStokes;
 
-    /// @brief extra oversampling factor to use when building cubes
-        float itsExtraOversamplingFactor;
+        /// @brief extra oversampling factor to use when building cubes
+        boost::optional<float> itsExtraOversamplingFactor;
 };
 
 }

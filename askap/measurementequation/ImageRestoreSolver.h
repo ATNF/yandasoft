@@ -38,6 +38,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/measurementequation/RestoringBeamHelper.h>
 
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -151,7 +152,7 @@ namespace askap
         bool itsEqualiseNoise;
 
         /// @brief extra oversampling factor to use during clean
-        float itsExtraOversamplingFactor;
+        boost::optional<float> itsExtraOversamplingFactor;
 
         //mutable bool itsModelNeedsConvolving;
         bool itsModelNeedsConvolving;

@@ -33,6 +33,7 @@
 #include <askap/askap/AskapUtil.h>
 
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 
 #include <askap/deconvolution/BasisFunction.h>
 
@@ -134,7 +135,7 @@ namespace askap
     private:
 
       /// @brief extra oversampling factor to use during clean
-      float itsExtraOversamplingFactor;
+      boost::optional<float> itsExtraOversamplingFactor;
 
     };
 

@@ -71,8 +71,7 @@ namespace askap
     {
         ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
             itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true),
-            itsResidualNeedsUpdating(true), itsSaveRawPsf(false), itsSavePsfImage(false),
-            itsExtraOversamplingFactor(1.)
+            itsResidualNeedsUpdating(true), itsSaveRawPsf(false), itsSavePsfImage(false)
         {
             setIsRestoreSolver();
         }
@@ -178,11 +177,11 @@ namespace askap
                             iph.makeTaylorTerm(order);
                         }
                         SynthesisParamsHelper::setBeam(ip, iph.paramName(), itsBeamHelper.value());
-                        if ( itsExtraOversamplingFactor > 1. ) {
+                        if (itsExtraOversamplingFactor) {
                             // also setBeam for the fullres param
                             std::string fullresname = iph.paramName();
-                            size_t index = fullresname.find("image");
-                            ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+                            const size_t index = fullresname.find("image");
+                            ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
                             fullresname.replace(index,5,"fullres");
                             ASKAPASSERT(ip.has(fullresname));
                             SynthesisParamsHelper::setBeam(ip, fullresname, itsBeamHelper.value());
@@ -482,9 +481,9 @@ namespace askap
                         name = imagename;
                         // Check if a separate full-resolution clean model has been saved
                         // It will be in a param with the starting "image" swapped to "fullres"):
-                        if ( itsExtraOversamplingFactor > 1. ) {
-                            size_t index = imagename.find("image");
-                            ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+                        if (itsExtraOversamplingFactor) {
+                            const size_t index = imagename.find("image");
+                            ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
                             imagename.replace(index,5,"fullres");
                             ASKAPASSERT(ip.has(imagename));
                             out.reference(ip.valueT(imagename));
@@ -520,11 +519,11 @@ namespace askap
                     }
 
                     // sinc interpolate via Fourier padding if restoring requires higher resolution
-                    if ( itsExtraOversamplingFactor > 1. ) {
+                    if (itsExtraOversamplingFactor) {
                         ASKAPLOG_INFO_STR(logger,
-                            "Oversampling dirty image and PSF by an extra factor of "<<itsExtraOversamplingFactor);
-                        SynthesisParamsHelper::oversample(dirtyArray,itsExtraOversamplingFactor);
-                        SynthesisParamsHelper::oversample(psfArray,itsExtraOversamplingFactor);
+                            "Oversampling dirty image and PSF by an extra factor of "<<*itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(dirtyArray,*itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(psfArray,*itsExtraOversamplingFactor);
                     }
 
                     // Add the residual image

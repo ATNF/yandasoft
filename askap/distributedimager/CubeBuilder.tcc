@@ -312,11 +312,6 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
     const casacore::uInt ny = imageShapeVector[1];
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
-    // Use a tile shape appropriate for plane-by-plane access
-    casacore::IPosition tileShape(cubeShape.nelements(), 1);
-    tileShape(0) = 256;
-    tileShape(1) = 256;
-
     const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
@@ -394,18 +389,23 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     const casacore::uInt npol=itsStokes.size();
 
     // Check whether image param is stored at a lower resolution
-    itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling", 1.);
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+    }
 
     // Get the image shape
     const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
-    const casacore::uInt nx = imageShapeVector[0] * itsExtraOversamplingFactor;
-    const casacore::uInt ny = imageShapeVector[1] * itsExtraOversamplingFactor;
+    casacore::uInt nx = imageShapeVector[0];
+    casacore::uInt ny = imageShapeVector[1];
+    if (itsExtraOversamplingFactor) {
+        const casacore::IPosition fullShape =
+            scimath::PaddingUtils::paddedShape(casacore::IPosition(2,nx,ny),*itsExtraOversamplingFactor);
+        nx = fullShape[0];
+        ny = fullShape[1];
+    }
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
-
-    // Use a tile shape appropriate for plane-by-plane access
-    casacore::IPosition tileShape(cubeShape.nelements(), 1);
-    tileShape(0) = 256;
-    tileShape(1) = 256;
 
     const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
 
@@ -429,25 +429,25 @@ CubeBuilder<T>::~CubeBuilder()
 }
 
 template < class T >
-void CubeBuilder<T>::writeSliceBaseRes(const casacore::Array<T>& arr, const casacore::uInt chan)
+void CubeBuilder<T>::writeRigidSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
 {
     casacore::IPosition where(4, 0, 0, 0, chan);
     itsCube->write(itsFilename, arr, where);
 }
 
 template < class T >
-void CubeBuilder<T>::writeSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
+void CubeBuilder<T>::writeFlexibleSlice(const casacore::Array<float>& arr, const casacore::uInt chan)
 {
-    casacore::IPosition where(4, 0, 0, 0, chan);
 
-    if (itsExtraOversamplingFactor == 1.) {
-        itsCube->write(itsFilename, arr, where);
+    if (itsExtraOversamplingFactor) {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*itsExtraOversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        casacore::IPosition where(4, 0, 0, 0, chan);
+        itsCube->write(itsFilename, fullresarr, where);
     }
     else {
-        // Image param is stored at a lower resolution, so increase to desired resolution before writing
-        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),itsExtraOversamplingFactor));
-        scimath::PaddingUtils::fftPad(arr,fullresarr);
-        itsCube->write(itsFilename, fullresarr, where);
+        writeRigidSlice(arr, chan);
     }
 
 }
@@ -475,16 +475,22 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Direction: " << ra.getValue() << " degrees, "
                            << dec.getValue() << " degrees");
 
-        const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec")/itsExtraOversamplingFactor * -1.;
-        const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec")/itsExtraOversamplingFactor;
+        Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec") * -1.;
+        Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
+
+        if (itsExtraOversamplingFactor) {
+            // have already checked this, but may as well check again
+            ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+            xcellsize /= *itsExtraOversamplingFactor;
+            ycellsize /= *itsExtraOversamplingFactor;
+        }
         ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Cellsize: " << xcellsize.getValue()
                            << " arcsec, " << ycellsize.getValue() << " arcsec");
 
         casacore::MDirection::Types type;
         casacore::MDirection::getType(type, dirVector.at(2));
-        const DirectionCoordinate radec(type, Projection(Projection::SIN),
-                                        ra, dec, xcellsize, ycellsize,
-                                        xform, nx / 2, ny / 2);
+        const DirectionCoordinate radec(type, Projection(Projection::SIN), ra, dec, xcellsize, ycellsize, xform,
+                                        nx / 2, ny / 2);
 
         coordsys.addCoordinate(radec);
     }

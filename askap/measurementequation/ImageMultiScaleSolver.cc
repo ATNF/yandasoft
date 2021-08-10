@@ -75,8 +75,7 @@ namespace askap
     // processed by every thread.
 
     ImageMultiScaleSolver::ImageMultiScaleSolver() :
-      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsExtraOversamplingFactor(1.),
-      itsUseCleanModelCache(false)
+      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsUseCleanModelCache(false)
     {
       itsScales.resize(3);
       itsScales(0)=0;
@@ -85,8 +84,7 @@ namespace askap
     }
 
     ImageMultiScaleSolver::ImageMultiScaleSolver(const casacore::Vector<float>& scales) :
-      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsExtraOversamplingFactor(1.),
-      itsUseCleanModelCache(false)
+      itsCleaners(8), itsDoSpeedUp(false), itsSpeedUpFactor(1.), itsUseCleanModelCache(false)
     {
       itsScales.resize(scales.size());
       itsScales=scales;
@@ -137,29 +135,31 @@ namespace askap
         // Check if a separate full-resolution clean model has been saved
         // It will be in a param with the starting "image" swapped to "fullres"):
         string fullResName = indit->first;
-        fullResName.replace(0,5,"fullres");
+        const size_t index = fullResName.find("image");
+        ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+        fullResName.replace(index,5,"fullres");
         bool importModelFromNE = true;
-        if (itsExtraOversamplingFactor > 1.0) {
+        if (itsExtraOversamplingFactor) {
+            ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
             if (ip.has(fullResName)) {
                 // an existing model has already be saved into a param. Use that.
                 importModelFromNE = false;
             }
             else {
-                // use the NE model. But first, set up a new param for storing the results
-                // set the shape of a full-resolution model and also an iterator.
+                // Use the NE model. But first, set up a new param for storing the results.
+                // Set the shape of a full-resolution model and also an iterator.
                 casacore::IPosition fullResShape(scimath::PaddingUtils::paddedShape(ip.shape(indit->first),
-                                                                                    itsExtraOversamplingFactor));
+                                                                                    *itsExtraOversamplingFactor));
                 casacore::IPosition fullResIterShape(ip.shape(indit->first));
-                fullResIterShape(0) = fullResShape(0);
-                fullResIterShape(1) = fullResShape(1);
+                fullResIterShape.setFirst(fullResShape.getFirst(2));
                 ASKAPLOG_INFO_STR(logger, "Create empty parameter "<<fullResName<<" with shape " << fullResIterShape);
                 // copy the low-resolution axes
                 scimath::Axes axes(ip.axes(indit->first));
                 // update for the new resolution
                 casacore::DirectionCoordinate radec = axes.directionAxis();
                 /// @todo double check that the rounding is correct for the ref pixel
-                radec.setReferencePixel(radec.referencePixel()*double(itsExtraOversamplingFactor));
-                radec.setIncrement(radec.increment()/double(itsExtraOversamplingFactor));
+                radec.setReferencePixel(radec.referencePixel()*double(*itsExtraOversamplingFactor));
+                radec.setIncrement(radec.increment()/double(*itsExtraOversamplingFactor));
                 axes.addDirectionAxis(radec);
                 // add the new param
                 ip.add(fullResName, fullResIterShape, axes);
@@ -242,14 +242,14 @@ namespace askap
           // no copying
 
           // sinc interpolate via Fourier padding if cleaning requires higher resolution
-          if (itsExtraOversamplingFactor > 1.0) {
+          if (itsExtraOversamplingFactor) {
             ASKAPLOG_INFO_STR(logger,
-                "Oversampling by an extra factor of "<<itsExtraOversamplingFactor<<" before cleaning");
-            SynthesisParamsHelper::oversample(dirtyArray,itsExtraOversamplingFactor);
-            SynthesisParamsHelper::oversample(psfArray,itsExtraOversamplingFactor);
-            SynthesisParamsHelper::oversample(maskArray,itsExtraOversamplingFactor);
+                "Oversampling by an extra factor of "<<*itsExtraOversamplingFactor<<" before cleaning");
+            SynthesisParamsHelper::oversample(dirtyArray,*itsExtraOversamplingFactor);
+            SynthesisParamsHelper::oversample(psfArray,*itsExtraOversamplingFactor);
+            SynthesisParamsHelper::oversample(maskArray,*itsExtraOversamplingFactor);
             if (importModelFromNE) {
-                SynthesisParamsHelper::oversample(cleanArray,itsExtraOversamplingFactor,false);
+                SynthesisParamsHelper::oversample(cleanArray,*itsExtraOversamplingFactor,false);
             } else {
                 scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                 cleanArray.reference( fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
@@ -306,14 +306,14 @@ namespace askap
             ip.add(peakResParam, lc->strengthOptimum());
           }
           ip.fix(peakResParam);
-          if (itsExtraOversamplingFactor > 1.0) {
+          if (itsExtraOversamplingFactor) {
             // store full-res model in a slice of the new fullres parameter
             ASKAPCHECK(planeIter.position()(0)==0 && planeIter.position()(1)==0,
                 "Image offsets not supported with variable image resolution");
             saveArrayIntoParameter(ip, indit->first, ip.shape(fullResName),
                 "fullres", cleanArray, planeIter.position());
             // remove Fourier padding before returning to degridders
-            SynthesisParamsHelper::downsample(cleanArray,itsExtraOversamplingFactor);
+            SynthesisParamsHelper::downsample(cleanArray,*itsExtraOversamplingFactor);
           }
           planeIter.getPlane(ip.valueT(indit->first)) = unpadImage(cleanArray);
         } // loop over all planes of the image cube

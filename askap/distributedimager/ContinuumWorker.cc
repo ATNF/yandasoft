@@ -298,7 +298,6 @@ void ContinuumWorker::run(void)
   }
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
-ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumWorker::run");
   itsAdvisor->addMissingParameters();
 
   try {
@@ -1447,41 +1446,53 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   // Write image
   if (!params->has("model.slice")) {
     ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
-  } else if (itsImageCube)  {
-    ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
-    if (params->has("fullres.slice")) {
-      // model has been set at a higher resolution
-      itsImageCube->writeSliceBaseRes(params->valueF("model.slice"), chan);
-    }
-    else {
-      itsImageCube->writeSlice(params->valueF("model.slice"), chan);
+  }
+  else {
+    if (itsImageCube) {
+      ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
+      if (params->has("fullres.slice")) {
+        // model has been set at a higher resolution
+        // If the restored image has full resolution, so will the model. Avoid further oversampling
+        ASKAPDEBUGASSERT(params->shape("model.slice").isEqual(params->shape("fullres.slice")));
+        itsImageCube->writeRigidSlice(params->valueF("model.slice"), chan);
+      }
+      else {
+        itsImageCube->writeFlexibleSlice(params->valueF("model.slice"), chan);
+      }
     }
   }
 
   // Write PSF
   if (!params->has("psf.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
-  } else if (itsPSFCube) {
-    if (!itsWriteGrids) {
-      itsPSFCube->writeSlice(params->valueF("psf.slice"), chan);
+  }
+  else {
+    if (itsPSFCube) {
+      if (!itsWriteGrids) {
+        itsPSFCube->writeFlexibleSlice(params->valueF("psf.slice"), chan);
+      }
     }
   }
 
   // Write residual
   if (!params->has("residual.slice")) {
     ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
-  } else if (itsResidualCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing Residual");
-    itsResidualCube->writeSlice(params->valueF("residual.slice"), chan);
+  }
+  else {
+    if (itsResidualCube) {
+      ASKAPLOG_INFO_STR(logger, "Writing Residual");
+      itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+    }
   }
 
   // Write weights
   if (!params->has("weights.slice")) {
     ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-  } else {
+  }
+  else {
     if (itsWeightsCube) {
       ASKAPLOG_INFO_STR(logger, "Writing Weights");
-      itsWeightsCube->writeSlice(params->valueF("weights.slice"), chan);
+      itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
     }
     if (itsWriteWtLog) {
       ASKAPLOG_INFO_STR(logger,"Writing Weights log");
@@ -1501,24 +1512,24 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsVisGridCube->writeSliceBaseRes(grid,chan);
+    itsVisGridCube->writeRigidSlice(grid,chan);
   }
   if (params->has("pcf.slice") && itsPCFGridCube) {
     ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPCFGridCube->writeSliceBaseRes(grid,chan);
+    itsPCFGridCube->writeRigidSlice(grid,chan);
   }
   if (params->has("psfgrid.slice") && itsPSFGridCube) {
     ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPSFGridCube->writeSliceBaseRes(grid,chan);
+    itsPSFGridCube->writeRigidSlice(grid,chan);
   }
   if (params->has("psf.raw.slice") && itsPSFCube) {
     if (itsWriteGrids) {
       ASKAPLOG_INFO_STR(logger, "Writing un-normalised PSF");
-      itsPSFCube->writeSlice(params->valueF("psf.raw.slice"), chan);
+      itsPSFCube->writeFlexibleSlice(params->valueF("psf.raw.slice"), chan);
     }
   }
 
@@ -1529,7 +1540,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       if (itsPSFimageCube) {
           ASKAPCHECK(params->has("psf.image.slice"), "Params are missing psf.image parameter");
           ASKAPLOG_INFO_STR(logger, "Writing preconditioned PSF");
-          itsPSFimageCube->writeSlice(params->valueF("psf.image.slice"), chan);
+          itsPSFimageCube->writeFlexibleSlice(params->valueF("psf.image.slice"), chan);
       }
     }
 
@@ -1541,12 +1552,12 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
     if (itsRestoredCube) {
         ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
         if (params->has("fullres.slice")) {
-          // model has been set at a higher resolution
-          itsRestoredCube->writeSliceBaseRes(params->valueF("fullres.slice"), chan);
+          // Restored image has been generated at full resolution, so avoid further oversampling
+          itsRestoredCube->writeRigidSlice(params->valueF("fullres.slice"), chan);
         }
         else {
           ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
-          itsRestoredCube->writeSlice(params->valueF("image.slice"), chan);
+          itsRestoredCube->writeFlexibleSlice(params->valueF("image.slice"), chan);
         }
     }
 

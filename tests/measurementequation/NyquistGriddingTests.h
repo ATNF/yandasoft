@@ -64,6 +64,7 @@ namespace askap
       CPPUNIT_TEST_SUITE(NyquistGriddingTests);
       CPPUNIT_TEST(testReversibility);      // test reversibility for perfectly band-limited uv plane
       CPPUNIT_TEST(testPreconditioning);    // test that preconditioning is unaffected by downsampling
+      //CPPUNIT_TEST(testIO);                 // test that imported sky model matches original?
       //CPPUNIT_TEST(testCube);               // test that resolution changes work for cubes?
       CPPUNIT_TEST_SUITE_END();
 

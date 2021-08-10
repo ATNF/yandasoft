@@ -290,10 +290,11 @@ class CdeconvolverApp : public askap::Application
                     // write out the slice
                     // FIXME: THis is the issue with npol I need to use some position
                     
-                    itsPsfCube->writeSlice(psfout, channel);
-                    itsResidualCube->writeSlice(dirty, channel);
-                    itsModelCube->writeSlice(model, channel);
-                    itsRestoredCube->writeSlice(restored, channel);
+                    // FIXME: not yet setup for Nyquist gridding. Will need to hange Psf and Residual to writeFlexibleSlice.
+                    itsPsfCube->writeRigidSlice(psfout, channel);
+                    itsResidualCube->writeRigidSlice(dirty, channel);
+                    itsModelCube->writeRigidSlice(model, channel);
+                    itsRestoredCube->writeRigidSlice(restored, channel);
 
                     if (comms.rank() < comms.nProcs()-1) { // last rank doesnot use this method
                       int buf;

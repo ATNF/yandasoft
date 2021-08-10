@@ -35,6 +35,8 @@
 #include <casacore/lattices/LatticeMath/LatticeCleaner.h>
 #include <askap/scimath/utils/FixedSizeCache.h>
 
+#include <boost/optional.hpp>
+
 #include <map>
 
 namespace askap {
@@ -103,7 +105,7 @@ namespace askap {
                 float itsSpeedUpFactor;
 
                 /// @brief extra oversampling factor to use during clean
-                float itsExtraOversamplingFactor;
+                boost::optional<float> itsExtraOversamplingFactor;
 
                 /// @brief flag to enable or disable a high-resolution cache for the clean model
                 bool itsUseCleanModelCache;

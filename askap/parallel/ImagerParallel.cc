@@ -77,6 +77,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <vector>
 #include <string>
 
+#include <boost/optional.hpp>
+
 using namespace askap;
 using namespace askap::scimath;
 using namespace askap::synthesis;
@@ -472,39 +474,72 @@ namespace askap
           }
       }
 
+      // add Nyquist gridding parameters if needed. Wait until after doing others requiring VisMetaDataStats.
+      // @todo should probably throw an exception if individual cell or image sizes are given
       ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
-      if (parset.isDefined("Images.griddingcellsize")) {
-
-          const std::vector<double> gCellSize =
-              SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.griddingcellsize"),"arcsec");
-          ASKAPCHECK((gCellSize[0]>=cellSize[0]) &&(gCellSize[1]>=cellSize[1]),
-              "griddingcellsize must not be less than cellsize");
-          const double extraOsFactor = gCellSize[0]/cellSize[0];
-          ASKAPCHECK(extraOsFactor == gCellSize[1]/cellSize[1],
-              "griddingcellsize must have the same aspect ratio as cellsize");
-
+      if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
+   
+          ASKAPCHECK(parset.isDefined("Images.cellsize") && parset.isDefined("Images.shape"),
+              "The global image cellsize and shape are currently required with Nyquist gridding");
+   
+          const std::vector<double>
+              cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.cellsize"),"arcsec");
           const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
-          ASKAPLOG_INFO_STR(logger, "  Adding parameter extraoversampling = "<<extraOsFactor);
-          ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<" to "<<
-                                    "["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]");
-          ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<" to "<<
-                                    "["<<imSize[0]/extraOsFactor<<","<<imSize[1]/extraOsFactor<<"]");
-
-          {
-              std::ostringstream pstr;
-              pstr<<extraOsFactor;
-              parset.add("Images.extraoversampling", pstr.str().c_str());
+   
+          // need to make sure that extraOsFactor results in an integer number of pixels,
+          // which could get complicated for rectangular grids and pixels.
+          ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
+          ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
+          ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
+   
+          std::vector<double> gCellSize(2);
+          if (parset.isDefined("Images.griddingcellsize")) {
+              const std::vector<string> gParam = parset.getStringVector("Images.griddingcellsize");
+              ASKAPCHECK(gParam.size() == 2, "nyquistgridding requires a griddingcellsize vector of length 2");
+              gCellSize = SynthesisParamsHelper::convertQuantity(gParam,"arcsec");
+              ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
+              ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
           }
-          {
-              std::ostringstream pstr;
-              pstr<<"["<<cellSize[0]*extraOsFactor<<"arcsec,"<<cellSize[1]*extraOsFactor<<"arcsec]";
-              parset.replace("Images.cellsize", pstr.str().c_str());
+          else {
+              const double uv_max = casacore::max(advice.maxU(), advice.maxV());
+              const double fov = cellSize[0] * imSize[0] * casacore::C::arcsec;
+              const double wk_max = 6/fov + advice.maxW()*fov;
+              ASKAPASSERT(uv_max > 0);
+              // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
+              //  - the reciprical of twice the longest baseline plus the largest w support
+              //  - doubled wk_max because it seemed too small
+              gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
+              gCellSize[1] = gCellSize[0];
           }
-          {
-              // DAM use PaddingUtils::paddedShape()?
-              std::ostringstream pstr;
-              pstr<<"["<<long(imSize[0]/extraOsFactor)<<","<<long(imSize[1]/extraOsFactor)<<"]";
-              parset.replace("Images.shape", pstr.str().c_str());
+   
+          // nominal ratio between gridding resolution and cleaning resolution
+          ASKAPDEBUGASSERT(cellSize[0] > 0);
+          double extraOsFactor = gCellSize[0]/cellSize[0];
+          // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
+          ASKAPDEBUGASSERT(extraOsFactor >= 1);
+          double nPix = ceil(double(imSize[0])/extraOsFactor);
+          // also ensure that it is even
+          nPix += int(nPix) % 2;
+          // reset the extra multiplicative factor
+          ASKAPDEBUGASSERT(nPix > 0);
+          extraOsFactor = static_cast<double>(imSize[0]) / nPix;
+          ASKAPDEBUGASSERT(extraOsFactor >= 1);
+   
+          gCellSize[0] = cellSize[0] * extraOsFactor;
+          gCellSize[1] = gCellSize[0];
+   
+          ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
+          ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
+                                    " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
+          ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
+                                    " to "<<"["<<long(nPix)<<","<<long(nPix)<<"]");
+   
+          // Only set or reset these parameters if they are needed
+          //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
+          if (extraOsFactor > 1.) {
+              parset.add("Images.extraoversampling", utility::toString(extraOsFactor));
+              parset.replace("Images.cellsize", "["+toString(gCellSize[0])+"arcsec,"+toString(gCellSize[1])+"arcsec]");
+              parset.replace("Images.shape", "["+toString(long(nPix))+","+toString(long(nPix))+"]");
           }
       }
 
@@ -766,10 +801,16 @@ namespace askap
            }
       }
 
-      const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
       tempPar.add(outParName,sensitivityArr,axes);
       ASKAPLOG_INFO_STR(logger, "Saving " << outParName);
-      SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName, extraOS);
+      if (parset().isDefined("Images.extraoversampling")) {
+          // should only be defined if it is set to a legitimate value. Check anyway.
+          const float extraOSfactor = parset().getFloat("Images.extraoversampling");
+          ASKAPDEBUGASSERT(extraOSfactor > 1.);
+          SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName, extraOSfactor);
+      } else {
+          SynthesisParamsHelper::saveImageParameter(tempPar, outParName, outParName);
+      }
     }
 
 
@@ -799,7 +840,13 @@ namespace askap
             resultimages=itsModel->names();
         }
 
-        const float extraOS = parset().getFloat("Images.extraoversampling",1.0);
+        // Check whether or not the model has been stored with a higher resolution
+        boost::optional<float> extraOSfactor;
+        if (parset().isDefined("Images.extraoversampling")) {
+            extraOSfactor = parset().getFloat("Images.extraoversampling");
+            // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+            ASKAPDEBUGASSERT(*extraOSfactor > 1.);
+        }
 
         if (itsWriteWtLog) {
             ASKAPLOG_INFO_STR(logger,"Writing Weightslog");
@@ -834,26 +881,25 @@ namespace askap
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
 
-            // if extraOS>1, "image.*" is retained for degridding but "fullres.*" is used for cleaning and restoring
+            // if true, "image.*" is retained for degridding but "fullres.*" is used for cleaning & restoring
             // always write model if writeAtMajorCycle is true (sets postfix)
-            if ((extraOS == 1.) && (it->find("image") == 0) && (itsWriteModelImage || postfix!=""))
-            {
-                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+            if (extraOSfactor) {
+                if ((it->find("fullres") == 0) && (itsWriteModelImage || postfix!="")) {
+                    // change "fullres" back to "image" for output
+                    string tmpname = *it;
+                    tmpname.replace(0,7,"image");
+                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << tmpname+postfix );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, tmpname+postfix);
+                }
+            } else {
+                if ((it->find("image") == 0) && (itsWriteModelImage || postfix!="")) {
+                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                }
             }
-            if ((extraOS > 1.) && (it->find("fullres") == 0) && (itsWriteModelImage || postfix!=""))
-            {
-                // change "fullres" back to "image" for output
-                string tmpname = *it;
-                tmpname.replace(0,7,"image");
-                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << tmpname+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, tmpname+postfix);
-            }
-            if (((it->find("weights") == 0) && itsWriteWtImage)  ||
-                ((it->find("mask") == 0) && itsWriteMaskImage) )
-            {
+            if (((it->find("weights") == 0) && itsWriteWtImage) || ((it->find("mask") == 0) && itsWriteMaskImage))  {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
                 if (itsWriteSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
@@ -862,25 +908,24 @@ namespace askap
                 if (!iph.isFacet()) {
                     if (!itsRestore && itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
                     }
                 }
                 else {
                     if (itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+                        SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
                     }
                 }
 
             }
             if ((it->find("psf") == 0) && itsWritePsfRaw) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
             }
         }
 
-        if (itsRestore && postfix == "")
-        {
+        if (itsRestore && postfix == "") {
             // add a second pass if a separate restore preconditioner is defined
             LOFAR::ParameterSet tmpset = parset();
             string restore_suffix;
@@ -952,11 +997,10 @@ namespace askap
                 ASKAPDEBUGASSERT(itsSolver);
 
                 // configure restore solver
-                if (tmpset.isDefined("Images.extraoversampling")) {
-                    const float factor = tmpset.getFloat("Images.extraoversampling");
+                if (extraOSfactor) {
                     ASKAPLOG_INFO_STR(logger,"Configuring restore solver with an extra oversampling factor of "<<
-                                      factor);
-                    ir->setExtraOversampling(factor);
+                        *extraOSfactor);
+                    ir->setExtraOversampling(*extraOSfactor);
                 }
 
                 // configure restore solver
@@ -974,30 +1018,38 @@ namespace askap
                 // merged image should be a fixed parameter without facet suffixes
                 if (n_passes == 1 || itsWriteFirstRestore || pass > 0) {
                     std::vector<std::string> resultimages2=itsModel->names();
-                    for (std::vector<std::string>::const_iterator ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
+                    for (std::vector<std::string>::const_iterator
+                            ci=resultimages2.begin(); ci!=resultimages2.end(); ++ci) {
                         const ImageParamsHelper iph(*ci);
-                        // if extraOS>1, "image.*" is retained for degridding but "fullres.*" is used for restoring
-                        if (!iph.isFacet() && (extraOS == 1.) && ((ci->find("image") == 0)))  {
-                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                                    << *ci+restore_suffix+".restored" );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored");
-                        }
-                        if (!iph.isFacet() && (extraOS > 1.) && ((ci->find("fullres") == 0)))  {
-                            string tmpname = *ci;
-                            tmpname.replace(0,7,"image");
-                            ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
-                                    << tmpname+restore_suffix+".restored" );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+restore_suffix+".restored");
+                        // if true, "image.*" is retained for degridding but "fullres.*" is used for restoring
+                        if (extraOSfactor) {
+                            if (!iph.isFacet() && ((ci->find("fullres") == 0)))  {
+                                string tmpname = *ci;
+                                tmpname.replace(0,7,"image");
+                                ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                        << tmpname+restore_suffix+".restored" );
+                                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,
+                                    tmpname+restore_suffix+".restored");
+                            }
+                        } else {
+                            if (!iph.isFacet() && ((ci->find("image") == 0)))  {
+                                ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
+                                        << *ci+restore_suffix+".restored" );
+                                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,
+                                    *ci+restore_suffix+".restored");
+                            }
                         }
                         if (!iph.isFacet() && ((ci->find("psf.image") == 0) && itsWritePsfImage))  {
                             ASKAPLOG_INFO_STR(logger, "Saving psf image " << *ci << " with name "
                                     << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix,
+                                extraOSfactor);
                         }
                         if (!iph.isFacet() && ((ci->find("residual") == 0) && itsWriteResidual))  {
                             ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
                                     << *ci+restore_suffix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOS);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix,
+                                extraOSfactor);
                         }
                     }
                 }
@@ -1024,7 +1076,7 @@ namespace askap
                     if (std::find(resultimages.begin(),resultimages.end(),*it) == resultimages.end()) {
                         if (it->find("psf.image")!=0) {
                             ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOS);
+                            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
                         }
                     }
                     else {

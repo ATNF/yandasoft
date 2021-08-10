@@ -44,10 +44,10 @@
 #include <casacore/coordinates/Coordinates/Projection.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
-
 #include <askap/imageaccess/IImageAccess.h>
 #include <askap/askapparallel/AskapParallel.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -285,7 +285,7 @@ namespace askap
         /// @param imagename Name of image file
         /// @param extraOversampleFactor factor to downsample image after loading
         static void loadImageParameter(askap::scimath::Params& ip, const string& name,
-          const string& imagename, const float extraOversampleFactor=1.);
+          const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none);
 
         /// @brief Get parameters corresponding to all facets from a CASA image
         /// @param[in] ip Parameters
@@ -301,7 +301,7 @@ namespace askap
         /// @param imagename Name of image file
         /// @param extraOversampleFactor factor to oversample image before saving
         static void saveImageParameter(const askap::scimath::Params& ip, const string& name,
-          const string& imagename, const float extraOversampleFactor=1.);
+          const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none);
 
         /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
         /// @param[in] osfactor extra oversampling factor
