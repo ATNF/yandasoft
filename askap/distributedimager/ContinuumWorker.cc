@@ -540,7 +540,6 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
 
-ASKAPLOG_DEBUG_STR(logger, "DAM addMissingParameters in ContinuumWorker::preProcessWorkUnit");
   itsAdvisor->addMissingParameters(unitParset);
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
@@ -1681,9 +1680,9 @@ void ContinuumWorker::logWeightsInfo()
         // Need to pick an image we are actually writing, if neither of these is written
         // we probably don't need the weights
         if (itsRestoredCube) {
-            weightslog.setFilename("weights." + itsRestoredCube->filename() + ".txt");
+            weightslog.setFilename("weightslog." + itsRestoredCube->filename() + ".txt");
         } else if (itsResidualCube) {
-            weightslog.setFilename("weights." + itsResidualCube->filename() + ".txt");
+            weightslog.setFilename("weightslog." + itsResidualCube->filename() + ".txt");
         }
         if (weightslog.filename()!="") {
             ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
