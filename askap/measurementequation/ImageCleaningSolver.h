@@ -128,7 +128,6 @@ protected:
    casacore::Vector<imtype> padDiagonal(const casacore::Array<imtype> &diag) const;
 
 
-
 private:
   /// @brief Fractional cleaning threshold
   /// @details it means it is defined with respect to the peak flux (i.e. 0.2 from the peak flux).

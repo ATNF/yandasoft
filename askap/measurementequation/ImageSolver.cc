@@ -598,6 +598,5 @@ namespace askap
         return itsInverseCouplingMatrixCache;
     }
 
-
   } // namespace synthesis
 } // namespace askap

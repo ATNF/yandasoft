@@ -70,8 +70,8 @@ namespace askap
     namespace synthesis
     {
         ImageRestoreSolver::ImageRestoreSolver(const RestoringBeamHelper &beamHelper) :
-        itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true), itsResidualNeedsUpdating(true),
-        itsSaveRawPsf(false), itsSavePsfImage(false)
+            itsBeamHelper(beamHelper), itsEqualiseNoise(false), itsModelNeedsConvolving(true),
+            itsResidualNeedsUpdating(true), itsSaveRawPsf(false), itsSavePsfImage(false)
         {
             setIsRestoreSolver();
         }
@@ -124,7 +124,7 @@ namespace askap
                 if ((ci->second != 1) && !ip.has(ci->first)) {
                     // this is a multi-facet image, add a fixed parameter representing the whole image
                     ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter " << ci->first<<
-                    " representing faceted image with "<<ci->second<<" facets");
+                        " representing faceted image with "<<ci->second<<" facets");
                     SynthesisParamsHelper::add(ip,ci->first,ci->second);
                     ip.fix(ci->first);
                 }
@@ -142,7 +142,7 @@ namespace askap
             uInt nOrders = 1;
 
             for (std::map<std::string, int>::const_iterator tmIt = taylorMap.begin();
-            tmIt!=taylorMap.end(); ++tmIt) {
+                                                            tmIt != taylorMap.end(); ++tmIt) {
                 // create a helper
                 ImageParamsHelper iph(tmIt->first);
                 // nOrders is the number of separate image cubes (e.g. Taylor terms)
@@ -177,6 +177,15 @@ namespace askap
                             iph.makeTaylorTerm(order);
                         }
                         SynthesisParamsHelper::setBeam(ip, iph.paramName(), itsBeamHelper.value());
+                        if (itsExtraOversamplingFactor) {
+                            // also setBeam for the fullres param
+                            std::string fullresname = iph.paramName();
+                            const size_t index = fullresname.find("image");
+                            ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
+                            fullresname.replace(index,5,"fullres");
+                            ASKAPASSERT(ip.has(fullresname));
+                            SynthesisParamsHelper::setBeam(ip, fullresname, itsBeamHelper.value());
+                        }
                     }
 
                 } else {
@@ -213,8 +222,8 @@ namespace askap
                     // add residuals
                     for (int xFacet = 0; xFacet<ci->second; ++xFacet) {
                         for (int yFacet = 0; yFacet<ci->second; ++yFacet) {
-                            ASKAPLOG_INFO_STR(logger, "Adding residuals for facet ("<<xFacet<<","
-                            <<yFacet<<")");
+                            ASKAPLOG_INFO_STR(logger,
+                                "Adding residuals for facet ("<<xFacet<<","<<yFacet<<")");
                             // ci->first may have taylor suffix defined, load it first and then add facet indices
                             ImageParamsHelper iph(ci->first);
                             iph.makeFacet(xFacet,yFacet);
@@ -271,9 +280,9 @@ namespace askap
                 if (getInverseCouplingMatrix().shape() > 0) {
                     inverseCouplingMatrix = getInverseCouplingMatrix();
                     ASKAPCHECK((inverseCouplingMatrix.nrow() == nOrders) &&
-                    (inverseCouplingMatrix.ncolumn() == nOrders),
-                    "Inconsistent inv coupling matrix. " << inverseCouplingMatrix.shape() <<
-                    " != [" << nOrders << ", " << nOrders << "]");
+                               (inverseCouplingMatrix.ncolumn() == nOrders),
+                        "Inconsistent inv coupling matrix. " << inverseCouplingMatrix.shape() <<
+                        " != [" << nOrders << ", " << nOrders << "]");
                     ASKAPLOG_INFO_STR(logger, "Inverse coupling matrix = " << inverseCouplingMatrix.row(0));
                     for (uInt order = 1; order < nOrders; order++) {
                         ASKAPLOG_INFO_STR(logger, "                          " << inverseCouplingMatrix.row(order));
@@ -293,7 +302,6 @@ namespace askap
                 name = facetname;
             }
             const casa::IPosition shape = ip.shape(name);
-            const scimath::Axes axes = ip.axes(name);
 
             // The following need to be done once and only once for each order (i.e. once for all planeIter)
             // So set to true here then to false at the end of the first planeIter loop.
@@ -333,22 +341,22 @@ namespace askap
                     }
 
                     ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(name)>0,
-                    "Diagonal not present " << name);
+                        "Diagonal not present " << name);
                     casa::Vector<imtype> diag(normalEquations().normalMatrixDiagonal().find(name)->second);
                     ASKAPCHECK(normalEquations().dataVectorT(name).size()>0,
-                    "Data vector not present " << name);
+                        "Data vector not present " << name);
                     casa::Vector<imtype> dv = normalEquations().dataVectorT(name);
                     ASKAPCHECK(normalEquations().normalMatrixSlice().count(name)>0,
-                    "PSF Slice not present " << name);
+                        "PSF Slice not present " << name);
                     casa::Vector<imtype> slice(normalEquations().normalMatrixSlice().find(name)->second);
                     ASKAPCHECK(normalEquations().preconditionerSlice().count(name)>0,
-                    "Preconditioner fuction Slice not present for " << name);
+                        "Preconditioner fuction Slice not present for " << name);
                     casa::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(name)->second);
 
                     if (planeIter.tag()!="") {
                         // it is not a single plane case, there is something to report
                         ASKAPLOG_INFO_STR(logger, "Processing plane "<<planeIter.sequenceNumber()<<
-                        " tagged as "<<planeIter.tag());
+                            " tagged as "<<planeIter.tag());
 
                     }
 
@@ -362,7 +370,7 @@ namespace askap
                     #endif
 
                     ASKAPLOG_INFO_STR(logger, "Maximum of data vector corresponding to "<<name<<" and plane "<<
-                    planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
+                        planeIter.sequenceNumber()<<" is "<<casa::max(dirtyArray));
 
                     #ifdef ASKAP_FLOAT_IMAGE_PARAMS
                     casa::Array<float> psfArray(planeIter.getPlane(slice));
@@ -471,7 +479,17 @@ namespace askap
                     casa::Array<imtype> out;
                     if (facetname == "") {
                         name = imagename;
-                        out.reference(ip.valueT(name));
+                        // Check if a separate full-resolution clean model has been saved
+                        // It will be in a param with the starting "image" swapped to "fullres"):
+                        if (itsExtraOversamplingFactor) {
+                            const size_t index = imagename.find("image");
+                            ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
+                            imagename.replace(index,5,"fullres");
+                            ASKAPASSERT(ip.has(imagename));
+                            out.reference(ip.valueT(imagename));
+                        } else {
+                            out.reference(ip.valueT(name));
+                        }
                     } else {
                         name = facetname;
                         out.reference(SynthesisParamsHelper::getFacet(ip,name));
@@ -481,7 +499,7 @@ namespace askap
                         // Store the current dirtyImage parameter class to be saved to disk later
                         ASKAPLOG_INFO_STR(logger, "Saving current residual image to model parameter");
                         ASKAPLOG_INFO_STR(logger, "Shape is " << dirtyArray.shape() << " position is " <<
-                        planeIter.position());
+                            planeIter.position());
                         saveArrayIntoParameter(ip,name,dirtyArray.shape(),"residual",
                         dirtyArray,planeIter.position());
                     }
@@ -489,15 +507,23 @@ namespace askap
                     if (itsSavePsfImage) {
                         if (saveNewPSFRequired) {
                             // Store the new PSF in parameter class to be saved to disk later
-                            ASKAPLOG_INFO_STR(logger, "Saving new PSF parameter as model NEW parameter -- needs full shape");
-                            saveArrayIntoParameter(ip, name, shape, "psf.image", psfArray,
-                            planeIter.position());
+                            ASKAPLOG_INFO_STR(logger,
+                                "Saving new PSF parameter as model NEW parameter -- needs full shape");
+                            saveArrayIntoParameter(ip, name, shape, "psf.image", psfArray, planeIter.position());
                         } else {
                             ASKAPLOG_INFO_STR(logger,
                                 "Saving new PSF parameter as model EXISTING parameter -- using plane shape");
                                 saveArrayIntoParameter(ip, name, psfArray.shape(), "psf.image", psfArray,
-                                planeIter.position());
+                                    planeIter.position());
                         }
+                    }
+
+                    // sinc interpolate via Fourier padding if restoring requires higher resolution
+                    if (itsExtraOversamplingFactor) {
+                        ASKAPLOG_INFO_STR(logger,
+                            "Oversampling dirty image and PSF by an extra factor of "<<*itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(dirtyArray,*itsExtraOversamplingFactor);
+                        SynthesisParamsHelper::oversample(psfArray,*itsExtraOversamplingFactor);
                     }
 
                     // Add the residual image
@@ -514,27 +540,31 @@ namespace askap
                             casa::convertArray<double, float>(psfDArray, psfArray);
                             #endif
                             ASKAPLOG_INFO_STR(logger, "Fitting restoring beam");
+                            // this was set by "name" for facets, but surely it should be equal for all facets
+                            const scimath::Axes axes = ip.axes(imagename);
                             restoringBeam = SynthesisParamsHelper::fitBeam(psfDArray, axes, itsBeamHelper.cutoff());
                             ASKAPDEBUGASSERT(restoringBeam.size() == 3);
                             ASKAPLOG_INFO_STR(logger, "Restore solver will convolve with the 2D gaussian: " <<
-                            restoringBeam[0].getValue("arcsec") << " x "<<restoringBeam[1].getValue("arcsec") <<
-                            " arcsec at position angle "<<restoringBeam[2].getValue("deg")<<" deg");
+                                restoringBeam[0].getValue("arcsec") << " x "<<restoringBeam[1].getValue("arcsec") <<
+                                " arcsec at position angle "<<restoringBeam[2].getValue("deg")<<" deg");
                             itsBeamHelper.assign(restoringBeam);
                         } else {
                             restoringBeam = itsBeamHelper.value();
                         }
-                        ASKAPLOG_INFO_STR(logger, "Convolving the model image to the resolution of the synthesised beam");
+                        ASKAPLOG_INFO_STR(logger,
+                            "Convolving the model image to the resolution of the synthesised beam");
                         // Create a temporary image
                         boost::shared_ptr<casa::TempImage<float> >
-                        image(SynthesisParamsHelper::tempImage(ip, imagename));
+                            image(SynthesisParamsHelper::tempImage(ip, imagename));
+
                         askap::synthesis::Image2DConvolver<float> convolver;
                         const casa::IPosition pixelAxes(2, 0, 1);
                         convolver.convolve(*image, *image, casa::VectorKernel::GAUSSIAN,
-                            pixelAxes, restoringBeam, true, 1.0, false);
-                            SynthesisParamsHelper::update(ip, imagename, *image);
-                            // for some reason update makes the parameter free as well
-                            ip.fix(imagename);
-                        }
+                                           pixelAxes, restoringBeam, true, 1.0, false);
+                        SynthesisParamsHelper::update(ip, imagename, *image);
+                        // for some reason update makes the parameter free as well
+                        ip.fix(imagename);
+                    }
 
                     // The following can probably be done once.
                     // Even for facets, if addResiduals is called separately for each facet
@@ -593,6 +623,7 @@ namespace askap
             return Solver::ShPtr(new ImageRestoreSolver(*this));
         }
 
+
         /// @brief static method to create solver
         /// @details Each solver should have a static factory method, which is
         /// able to create a particular type of the solver and initialise it with
@@ -607,8 +638,8 @@ namespace askap
             const vector<string> beam = parset.getStringVector("beam");
             if (beam.size() == 1) {
                 ASKAPCHECK(beam[0] == "fit",
-                "beam parameter should be either equal to 'fit' or contain 3 elements defining the beam size. You have "
-                <<beam[0]);
+                    "beam parameter should be either equal to 'fit' or contain 3 elements defining the beam size."<<
+                    " You have "<<beam[0]);
                 rbh.configureFit(parset.getDouble("beam.cutoff",0.05));
             } else {
                 ASKAPCHECK(beam.size() == 3, "Need three elements for beam or a single word 'fit'. You have "<<beam);
@@ -656,7 +687,6 @@ namespace askap
                 setPreconditioners(ts);
             }
         }
-
 
     } // namespace synthesis
 } // namespace askap

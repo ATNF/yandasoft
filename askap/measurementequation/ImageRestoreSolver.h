@@ -38,6 +38,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/measurementequation/RestoringBeamHelper.h>
 
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -92,6 +93,10 @@ namespace askap
         /// @param[in] doPrecon, copy the PreConditioners from other solver
         void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
+        /// @brief set extra oversampling during cleaning and image output if needed
+        /// @param[in] factor extra oversampling factor
+        inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
+
       protected:
         /// @brief set noise equalisation flag
         /// @param[in] flag true, to switch noise equalisation on
@@ -145,6 +150,9 @@ namespace askap
         /// recovered in the model, this weighting scheme potentially introduces some
         /// direction-dependent flux error (but gives flat noise).
         bool itsEqualiseNoise;
+
+        /// @brief extra oversampling factor to use during clean
+        boost::optional<float> itsExtraOversamplingFactor;
 
         //mutable bool itsModelNeedsConvolving;
         bool itsModelNeedsConvolving;

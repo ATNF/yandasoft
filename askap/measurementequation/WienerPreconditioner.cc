@@ -140,7 +140,12 @@ namespace askap
           useCachedFilter = false;
           newFilter = false;
       } else {
-          ASKAPLOG_INFO_STR(logger, "Generating and applying Wiener filter of size " << pcfIn.shape());
+          ASKAPLOG_INFO_STR(logger, "Generating and applying Wiener filter of size " << pcfIn.nonDegenerate().shape());
+          // Usually only get here is itsPcf is empty. But with Nyquist gridding that may not be the case.
+          // So check, and if it has already be set but is a different size, reset it.
+          if (!itsPcf.empty() && !itsPcf.shape().isEqual(pcfIn.nonDegenerate().shape())) {
+              itsPcf.resize(pcfIn.nonDegenerate().shape());
+          }
           //itsPcf.reference(pcfIn);
           itsPcf = pcfIn.nonDegenerate();
       }
@@ -465,8 +470,15 @@ namespace askap
     {
 
       float xfrMax = max(abs(real(pcf)));
+
       // The default threshold. Will be overwritten if useAutoThreshold==true.
-      float scratchThreshold = 1e-5 * xfrMax;
+      float scratchThreshold = 1e-6 * xfrMax;
+
+      // Auto thresholding in this way will not work with Nyquist gridding.
+      // Upcoming changes to the PCF should remove the necessity of the PCF.
+      ASKAPLOG_INFO_STR(logger, "Bypassing statistical thresholding of the uv sampling function and instead using " <<
+                        scratchThreshold << " (" << 100.0*scratchThreshold/xfrMax << "% of max) instead");
+      return scratchThreshold;
 
       // set a test value that we expect the noise to be below
       float thresholdTestVal = 1e-2 * xfrMax;
