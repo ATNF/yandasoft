@@ -159,7 +159,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     const casa::IPosition shape = iacc.shape(testImage);
 
-    ASKAPCHECK(shape.nelements()>=3,"Work with at least 3D cubes!");
+    ASKAPCHECK(shape.nelements()==4,"linmos-mpi can only work with 4D cubes: (RA,Dec,Pol,Freq)");
     ASKAPLOG_INFO_STR(logger," - ImageAccess Shape " << shape);
 
     // lets calculate the allocations ...
@@ -237,7 +237,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         const casa::IPosition shape = iacc.shape(*it);
 
-        ASKAPCHECK(shape.nelements()>=3,"Work with at least 3D cubes!");
+        ASKAPCHECK(shape.nelements()==4,"Work with 4D cubes!");
 
         ASKAPLOG_INFO_STR(logger," - ImageAccess Shape " << shape);
 
