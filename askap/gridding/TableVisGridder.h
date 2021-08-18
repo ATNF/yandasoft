@@ -172,6 +172,11 @@ namespace askap
       /// @param[in] flag new value of the flag
       void inline doSwapPols(const bool flag) { itsSwapPols = flag;}
 
+      /// @brief set or reset flag telling gridder to clear the grid after use
+      /// @details the grid can usually be cleared to save memory
+      /// @param[in] flag new value of the flag
+      void inline doClearGrid(const bool flag) { itsClearGrid = flag;}
+
       /// @brief set the largest angular separation between the pointing centre and the image centre
       /// @details If the threshold is positive, it is interpreted as the largest allowed angular
       /// separation between the beam (feed in the accessor terminology) pointing centre and the
@@ -600,6 +605,9 @@ protected:
       /// @brief number of full-samples to offset buffer for degridded model data.
       /// Used in direction-dependent calibration
       mutable int itsSourceIndex;
+
+      /// @brief release grid memory in finalise(De)Grid
+      bool itsClearGrid;
 
     };
   }

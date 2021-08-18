@@ -21,7 +21,7 @@ def analyseResult(spr, checkWeights=True):
       raise RuntimeError("Offset between true and expected position exceeds 1 cell size (8 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
    if abs(stats['peak']-1.)>0.1:
       raise RuntimeError("Peak flux in the image is notably different from 1 Jy, F=%f" % stats['peak'])
-   
+
    stats = spr.imageStats('image.cont.taylor.0')
    print("Statistics for modelimage: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
@@ -53,3 +53,5 @@ else:
 
 analyseResult(spr2)
 
+#clean up
+os.system("rm -rf testmsmfs.ms *.cont.* temp_parset.in")

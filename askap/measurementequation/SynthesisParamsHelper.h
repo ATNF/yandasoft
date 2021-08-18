@@ -44,10 +44,10 @@
 #include <casacore/coordinates/Coordinates/Projection.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
-
 #include <askap/imageaccess/IImageAccess.h>
 #include <askap/askapparallel/AskapParallel.h>
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -283,8 +283,9 @@ namespace askap
         /// @param ip Parameters
         /// @param name Name of parameter
         /// @param imagename Name of image file
+        /// @param extraOversampleFactor factor to downsample image after loading
         static void loadImageParameter(askap::scimath::Params& ip, const string& name,
-          const string& imagename);
+          const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none);
 
         /// @brief Get parameters corresponding to all facets from a CASA image
         /// @param[in] ip Parameters
@@ -292,14 +293,26 @@ namespace askap
         /// @param[in] fileName Base name of the image file (.facet.x.y will be added)
         /// @param[in] nfacets Number of facets on each axis (assumed the same for both axes)
         static void getMultiFacetImage(askap::scimath::Params &ip, const string &name,
-           const string &fileName, const int nfacets);
+          const string &fileName, const int nfacets);
 
         /// @brief Save a parameter as a CASA image
         /// @param ip Parameters
         /// @param name Name of parameter
         /// @param imagename Name of image file
+        /// @param extraOversampleFactor factor to oversample image before saving
         static void saveImageParameter(const askap::scimath::Params& ip, const string& name,
-          const string& imagename);
+          const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none);
+
+        /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+        /// @param[in] osfactor extra oversampling factor
+        /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
+        /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+        static void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true);
+
+        /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+        /// @param[in] osfactor extra oversampling factor
+        /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
+        static void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.);
 
         /// @brief Copy a parameter to a CASA TempImage
         /// Note that this will be a reference if possible

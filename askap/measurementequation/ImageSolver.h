@@ -297,6 +297,8 @@ namespace synthesis
         /// @details needed by the restore solver, but it doesn't have all 2N-1 PSFs needed for generation. So store.
         static casa::Matrix<casa::Double> itsInverseCouplingMatrixCache;
 
+        static casa::Array<float> itsCleanModelCache;
+
     };
 
 }

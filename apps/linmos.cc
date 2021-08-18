@@ -4,7 +4,7 @@
 /// @details This is a utility to merge images into a mosaic. Images can be set
 /// explicitly or found automatically based on input tags.
 ///
-/// @copyright (c) 2012,2014,2015 CSIRO
+/// @copyright (c) 2012,2014,2015,2021 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -32,31 +32,20 @@
 // Package level header file
 #include "askap/askap_synthesis.h"
 
-// System includes
-#include <sstream>
-#include <typeinfo>
-#include <iostream>
-
-// other 3rd party
-#include <Common/ParameterSet.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
-#include <casacore/casa/Arrays/Array.h>
-#include <casacore/coordinates/Coordinates/Coordinate.h>
-#include <casacore/images/Images/ImageRegrid.h>
-
-// Local packages includes
-#include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/imagemath/linmos/LinmosAccumulator.h>
+// ASKAP includes
 #include <askap/utils/LinmosUtils.h>
+#include <askap/measurementequation/SynthesisParamsHelper.h>
+#include <askap/imageaccess/WeightsLog.h>
+#include <askap/imagemath/linmos/LinmosAccumulator.h>
+
+// 3rd party
+#include <Common/ParameterSet.h>
+
 
 ASKAP_LOGGER(logger, ".linmos");
 
-using namespace casa;
+//using namespace casa;
 using namespace askap::synthesis;
-
 
 namespace askap {
 
@@ -76,8 +65,8 @@ static void merge(const LOFAR::ParameterSet &parset) {
     // initialise an image accessor
     accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
-    // loop over the mosaics, reading each in an adding to the output pixel arrays
-    vector<string> inImgNames, inWgtNames, inSenNames;
+    // loop over the mosaics, reading each in and adding to the output pixel arrays
+    vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
     string outImgName, outWgtName, outSenName;
     map<string,string> outWgtNames = accumulator.outWgtNames();
     for(map<string,string>::iterator ii=outWgtNames.begin(); ii!=outWgtNames.end(); ++ii) {
@@ -102,14 +91,26 @@ static void merge(const LOFAR::ParameterSet &parset) {
         ASKAPLOG_INFO_STR(logger, " - input images: "<<inImgNames);
         if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
             inWgtNames = accumulator.inWgtNameVecs()[outImgName];
-            ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
+            if (accumulator.useWeightsLog()) {
+                ASKAPLOG_INFO_STR(logger, " - input weightslog files: " << inWgtNames);
+            } else {
+                ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
+            }
         }
-        else if (accumulator.weightType() == FROM_BP_MODEL) {
+
+        if (accumulator.weightType() == FROM_BP_MODEL || accumulator.weightType() == COMBINED) {
             accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
         }
         if (accumulator.doSensitivity()) {
             inSenNames = accumulator.inSenNameVecs()[outImgName];
             ASKAPLOG_INFO_STR(logger, " - input sensitivity images: " << inSenNames);
+        }
+
+        if (accumulator.doLeakage()) {
+            inStokesINames = accumulator.inStokesINameVecs()[outImgName];
+            if (inStokesINames.size()>0) {
+                ASKAPLOG_INFO_STR(logger, " - and using input Stokes I images: " << inStokesINames);
+            }
         }
 
         // set the output coordinate system and shape, based on the overlap of input images
@@ -132,27 +133,33 @@ static void merge(const LOFAR::ParameterSet &parset) {
         }
 
         // set up an indexing vector for the arrays
-        IPosition curpos(outPix.shape());
+        IPosition curpos(outPix.ndim(),0);
         ASKAPASSERT(curpos.nelements()>=2);
-        for (uInt dim=0; dim<curpos.nelements(); ++dim) {
-            curpos[dim] = 0;
-        }
 
         // loop over the input images, reading each in an adding to the output pixel arrays
         for (uInt img = 0; img < inImgNames.size(); ++img ) {
 
             // short cuts
             string inImgName = inImgNames[img];
-            string inWgtName, inSenName;
+            string inWgtName, inSenName, inStokesIName;
 
             ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
                 inWgtName = inWgtNames[img];
-                ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+                if (accumulator.useWeightsLog()) {
+                    ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
+                } else {
+                    ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+                }
             }
             if (accumulator.doSensitivity()) {
                 inSenName = inSenNames[img];
                 ASKAPLOG_INFO_STR(logger, " - and input sensitivity image " << inSenName);
+            }
+
+            if (accumulator.doLeakage() && inStokesINames.size()>img) {
+                inStokesIName = inStokesINames[img];
+                ASKAPLOG_INFO_STR(logger, " - and input Stokes I image " << inStokesIName);
             }
 
             // set the input coordinate system and shape
@@ -237,23 +244,91 @@ static void merge(const LOFAR::ParameterSet &parset) {
                 switch (inPixIsTaylor)
                 {
                 case 0:
-                    inPix = taylor0.copy();
+                    inPix = taylor0;
                     break;
                 case 1:
-                    inPix = taylor1.copy();
+                    inPix = taylor1;
                     break;
                 case 2:
-                    inPix = taylor2.copy();
+                    inPix = taylor2;
                     break;
                 }
 
-            }            
+            }
+
+            if (parset.getBool("removeleakage",false)) {
+                ASKAPCHECK(inPix.shape()[2]==1,"Pol axis should have size 1 for removeleakage");
+                // only do this if we're processing a Q, U or V image
+                int pol = 0;
+                size_t pos = inImgName.find(".q.");
+                bool found = false;
+                if (pos != string::npos) {
+                    found = true;
+                    pol = 1;
+                }
+                if (!found) {
+                    pos = inImgName.find(".u.");
+                    if (pos != string::npos) {
+                        found = true;
+                        pol = 2;
+                    }
+                }
+                if (!found) {
+                    pos = inImgName.find(".v.");
+                    if (pos !=string::npos) {
+                        found = true;
+                        pol = 3;
+                    }
+                }
+                if (found) {
+                    // find corresponding Stokes I image
+                    if (inStokesIName=="") {
+                        //try to find it
+                        inStokesIName = inImgName;
+                        inStokesIName.replace(pos,3,".i.");
+                    }
+                    Array<float> stokesI = iacc.read(inStokesIName);
+                    ASKAPCHECK(stokesI.shape()==inPix.shape(),"Stokes I and Pol image shapes don't match");
+
+                    // do leakage correction
+                    ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<inStokesIName);
+
+                    // iterator over planes (e.g. freq & polarisation)
+                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                        // set the indices of any higher-order dimensions for this slice
+                        curpos = planeIter.position();
+                        // removeLeakage works on single frequency planes
+                        Array<float> inPlane = planeIter.getPlane(inPix);
+                        Array<float> stokesIplane = planeIter.getPlane(stokesI);
+                        accumulator.removeLeakage(inPlane,stokesIplane,pol,curpos,iacc.coordSys(inImgName));
+                    }
+                } else {
+                    ASKAPLOG_WARN_STR(logger,"Skipping removeLeakage - cannot determine polarisation of input");
+                }
+            }
 
             Array<float> inWgtPix;
             Array<float> inSenPix;
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
-                inWgtPix = iacc.read(inWgtName);
-                ASKAPASSERT(inPix.shape() == inWgtPix.shape());
+                if (accumulator.useWeightsLog()) {
+                    ASKAPLOG_INFO_STR(logger,"Reading weights log file :"<< inWgtName);
+                    accessors::WeightsLog wtlog(inWgtName);
+                    wtlog.read();
+
+                    inWgtPix.resize(inPix.shape());
+                    ASKAPCHECK(inWgtPix.ndim()==4,"Cannot use weightslog for non-standard cubes - need axes ra,dec,pol,freq");
+                    // iterator over planes (e.g. freq & polarisation)
+                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                        // set the indices of any higher-order dimensions for this slice
+                        curpos = planeIter.position();
+                        // set weight value for this frequency plane
+                        planeIter.getPlane(inWgtPix) = wtlog.weight(curpos[3]);
+                    }
+
+                } else {
+                    inWgtPix = iacc.read(inWgtName);
+                    ASKAPASSERT(inPix.shape() == inWgtPix.shape());
+                }
             }
             if (accumulator.doSensitivity()) {
                 inSenPix = iacc.read(inSenName);
@@ -289,7 +364,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
                 // not regridding so point output image buffers at the input buffers
                 accumulator.initialiseInputBuffers();
                 accumulator.redirectOutputBuffers();
-                }
+            }
 
             // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
             for (; planeIter.hasMore(); planeIter.next()) {
@@ -313,17 +388,13 @@ static void merge(const LOFAR::ParameterSet &parset) {
             }
 
         } // img loop (over input images)
+
         //build the mask
         //use the outWgtPix to define the mask
-        //i dont care about planes etc ... just going to run through
 
         float itsCutoff = 0.01;
 
         if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
-        Array<bool>::iterator iterMask = outMask.begin();
-        Array<float>::iterator iterWgt = outWgtPix.begin();
-
-
 
         /// This logic is in addition to the mask in the accumulator
         /// which works on an individual beam weight
@@ -337,16 +408,33 @@ static void merge(const LOFAR::ParameterSet &parset) {
         /// masked pixels by NaN - which has the nice secondary effect of implementing
         /// the FITS mask.
 
-        float wgtCutoff = itsCutoff * itsCutoff;
-        for( ; iterWgt != outWgtPix.end() ; iterWgt++ ) {
-            if (*iterWgt >= wgtCutoff) {
-                *iterMask = casa::True;
-            } else {
-                *iterMask = casa::False;
-                setNaN(*iterWgt);
+        /// Since I added the scheme to incorporate a variance weight in the mosaicking
+        /// I can no longer assume max weight is 1
+
+        // Need to do this plane by plane, since weight varies by channel
+
+        for (scimath::MultiDimArrayPlaneIter outIter(accumulator.outShape()); outIter.hasMore(); outIter.next()) {
+
+            float minVal, maxVal;
+            IPosition minPos, maxPos;
+            Array<float> outWgtPlane = outIter.getPlane(outWgtPix);
+            Array<bool> outMaskPlane = outIter.getPlane(outMask);
+            minMax(minVal,maxVal,minPos,maxPos,outWgtPlane);
+            ASKAPLOG_INFO_STR(logger, "Maximum pixel weight is " << maxVal << ", slice "<<outIter.position());
+
+            float wgtCutoff = itsCutoff * itsCutoff * maxVal;
+
+            for(size_t i=0;i<outMaskPlane.size();i++){
+                if (outWgtPlane.data()[i] >= wgtCutoff) {
+                    outMaskPlane.data()[i] = casa::True;
+                } else {
+                    outMaskPlane.data()[i] = casa::False;
+                    setNaN(outWgtPlane.data()[i]);
+                }
             }
-            iterMask++;
         }
+
+        ASKAPLOG_INFO_STR(logger, "Power fraction cutoff is " << itsCutoff*itsCutoff);
 
         // deweight the image pixels
         // use another iterator to loop over planes

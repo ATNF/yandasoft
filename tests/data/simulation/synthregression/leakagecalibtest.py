@@ -130,3 +130,7 @@ def runTests(solverType):
 
 runTests("SVD")
 runTests("LSQR")
+
+#clean up
+import os
+os.system("rm -rf *field1* temp_parset.in result.dat")

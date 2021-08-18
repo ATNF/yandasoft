@@ -60,6 +60,8 @@
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
 
+#include <boost/optional.hpp>
+
 // Local includes
 
 
@@ -84,6 +86,18 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     /// Not sure whether to use it directly or copy it.
     const std::string solver_par = parset.getString("solver");
     const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
+    // tell gridder it can throw the grids away if we don't need to write them out
+    bool writeGrids = parset.getBool("dumpgrids",false);
+    writeGrids = parset.getBool("write.grids",writeGrids); // new name
+    parset.replace(LOFAR::KVpair("gridder.cleargrids",!writeGrids));
+    // tell restore solver to save the raw (unnormalised, unpreconditioned) psf
+    parset.replace(LOFAR::KVpair("restore.saverawpsf",writeGrids));
+    // only switch on updateResiduals if we want the residuals written out
+    bool writeResiduals = parset.getBool("write.residualimage",false);
+    parset.replace(LOFAR::KVpair("restore.updateresiduals",writeResiduals));
+    // only switch on savepsfimage if we want the preconditioned psf written out
+    bool writePsfImage = parset.getBool("write.psfimage",false);
+    parset.replace(LOFAR::KVpair("restore.savepsfimage",writePsfImage));
     itsSolver = ImageSolverFactory::make(parset);
     itsGridder_p = VisGridderFactory::make(parset); // this is private to an inherited class so have to make a new one
     itsRestore = itsParset.getBool("restore", false);
@@ -194,17 +208,11 @@ void CalcCore::doCalc()
 casacore::Array<casacore::Complex> CalcCore::getGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping vis grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
 
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -214,16 +222,10 @@ casacore::Array<casacore::Complex> CalcCore::getGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping pcf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -235,16 +237,10 @@ casacore::Array<casacore::Complex> CalcCore::getPCFGrid() {
 casacore::Array<casacore::Complex> CalcCore::getPSFGrid() {
 
     ASKAPCHECK(itsEquation, "Equation not defined");
-    ASKAPLOG_INFO_STR(logger,"Dumping grid for channel " << itsChannel);
+    ASKAPLOG_INFO_STR(logger,"Dumping psf grid for channel " << itsChannel);
     boost::shared_ptr<ImageFFTEquation> fftEquation = boost::dynamic_pointer_cast<ImageFFTEquation>(itsEquation);
     // We will need to loop over all completions i.e. all sources
     const std::vector<std::string> completions(itsModel->completions("image"));
-
-    // To minimize the number of data passes, we keep copies of the gridders in memory, and
-    // switch between these. This optimization may not be sufficient in the long run.
-    // Set up initial gridders for model and for the residuals. This enables us to
-    // do both at the same time.
-
 
     std::vector<std::string>::const_iterator it=completions.begin();
     const string imageName("image"+(*it));
@@ -377,6 +373,13 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->names();
     }
 
+    // Check whether or not the model has been stored at a higher resolution
+    boost::optional<float> extraOSfactor;
+    if (parset().isDefined("Images.extraoversampling")) {
+        extraOSfactor = parset().getFloat("Images.extraoversampling");
+        ASKAPDEBUGASSERT(*extraOSfactor > 1.);
+    }
+
     if (itsRestore && postfix == "")
     {
         ASKAPLOG_DEBUG_STR(logger, "Restore images and writing them to disk");
@@ -384,6 +387,11 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         ASKAPDEBUGASSERT(ir);
         ASKAPDEBUGASSERT(itsSolver);
         // configure restore solver the same way as normal imaging solver
+        if (extraOSfactor) {
+            ASKAPLOG_INFO_STR(logger,
+                "Configuring restore solver with an extra oversampling factor of "<<*extraOSfactor);
+            ir->setExtraOversampling(*extraOSfactor);
+        }
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
         //ImageSolverFactory::configurePreconditioners(itsParset,ir);
@@ -395,10 +403,20 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         resultimages=itsModel->fixedNames();
         for (std::vector<std::string>::const_iterator ci=resultimages.begin(); ci!=resultimages.end(); ++ci) {
             const ImageParamsHelper iph(*ci);
-            if (!iph.isFacet() && (ci->find("image") == 0)) {
-                ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
-                              << *ci+string(".restored") );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,*ci+string(".restored"));
+            if (extraOSfactor) {
+                if (!iph.isFacet() && (ci->find("fullres") == 0)) {
+                    string tmpname = *ci;
+                    tmpname.replace(0,7,"image");
+                    ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
+                                  << tmpname+string(".restored") );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+string(".restored"));
+                }
+            } else {
+                if (!iph.isFacet() && (ci->find("image") == 0)) {
+                    ASKAPLOG_DEBUG_STR(logger, "Saving restored image " << *ci << " with name "
+                                  << *ci+string(".restored") );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+string(".restored"));
+                }
             }
         }
     }
@@ -410,7 +428,7 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         if ((it->find("psf") == 0) && (std::find(resultimages.begin(),
             resultimages.end(),*it) == resultimages.end())) {
             ASKAPLOG_DEBUG_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+            SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
         }
     }
 
@@ -422,6 +440,14 @@ void CalcCore::restoreImage()
     ir = ImageRestoreSolver::createSolver(itsParset.makeSubset("restore."));
     ASKAPDEBUGASSERT(ir);
     ASKAPDEBUGASSERT(itsSolver);
+
+    if (parset().isDefined("Images.extraoversampling")) {
+        const float extraOSfactor = parset().getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(extraOSfactor > 1.);
+        ASKAPLOG_INFO_STR(logger, "Configuring restore solver with an extra oversampling factor of "<<extraOSfactor);
+        ir->setExtraOversampling(extraOSfactor);
+    }
     // configure restore solver the same way as normal imaging solver
     boost::shared_ptr<ImageSolver>
     template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);

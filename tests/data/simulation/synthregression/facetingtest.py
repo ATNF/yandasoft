@@ -70,3 +70,7 @@ spr.addToParset("Cimager.Images.shape  = [512,512]")
 spr.addToParset("Cimager.gridder.padding  = 2")
 spr.runImager()
 analyseResult(spr)
+
+#clean up
+import os
+os.system("rm -rf *field1* temp_parset.in")

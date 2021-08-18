@@ -561,6 +561,7 @@ namespace askap
         setTol(parset.getFloat("tolerance", 0.1));
         setVerbose(parset.getBool("verbose", true));
         setSaveIntermediate(parset.getBool("saveintermediate", true));
+        ASKAPLOG_INFO_STR(logger,(saveIntermediate() ? "Saving ":"Not saving ") << "intermediate images");
         zeroWeightCutoffMask(!parset.getBool("weightcutoff.clean",false));
         const std::string weightCutoff = parset.getString("weightcutoff","truncate");
         if (weightCutoff == "zero") {
@@ -596,7 +597,6 @@ namespace askap
     casa::Matrix<casa::Double> ImageSolver::getInverseCouplingMatrix() {
         return itsInverseCouplingMatrixCache;
     }
-
 
   } // namespace synthesis
 } // namespace askap
