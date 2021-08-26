@@ -158,7 +158,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     if (itsWriteGrids && nwriters > 1) {
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
       itsNumWriters = 1;
-    } else if (parset.getString("imagetype") == "fits" && nwriters > 1){
+    } else if (parset.getString("imagetype","casa") == "casa" && nwriters > 1){
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
       itsNumWriters = 1;
     } else {
