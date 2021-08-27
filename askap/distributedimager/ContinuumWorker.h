@@ -151,6 +151,7 @@ class ContinuumWorker
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
+        std::string itsWeightsName;
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
 
