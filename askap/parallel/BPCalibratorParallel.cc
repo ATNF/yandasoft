@@ -112,7 +112,10 @@ using askap::operator<<;
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset),false),
       itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false),
-      itsSolveLeakage(false), itsSolveBandpass(false), itsStoreLeakage(false), itsStoreBandpass(false)
+      itsSolveLeakage(false), itsSolveBandpass(false), itsStoreLeakage(false), itsStoreBandpass(false),
+      itsPerformGainThresholding(parset.getBool("threshold.gain.enable", false)), 
+      itsExpectedGainAmplitude(parset.getDouble("threshold.gain.expected", 1.)),
+      itsPerformLeakageThresholding(parset.getBool("threshold.leakage.enable", false))
 {
   ASKAPLOG_INFO_STR(logger, "Bandpass or Leakage will be solved for using a specialised pipeline");
   const std::string what2solve = parset.getString("solve","bandpass");
@@ -148,7 +151,24 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       ASKAPLOG_INFO_STR(logger, "Essentially a dry run will occur (store='"<<what2store<<"', solve='"<<what2solve<<"')");
   }
 
- if (itsComms.isMaster()) {
+  if (itsPerformGainThresholding) {
+      ASKAPCHECK(itsSolveBandpass, "Unable to perform gain thresholding on the solution as the solver is not configured to solve for bandpass!");
+      const std::string tolerancePar("threshold.gain.tolerance");
+      ASKAPCHECK(parset.isDefined(tolerancePar), "Tolerance for bandpass gains is not defined - unable to perform thresholding");
+      itsGainAmplitudeTolerance = parset.getDouble(tolerancePar);
+      ASKAPLOG_INFO_STR(logger, "For each beam and channel, the whole solution will be flagged invalid for antennas with gain amplitude deviating by more than "<<
+           itsGainAmplitudeTolerance<<" from the expected value of "<<itsExpectedGainAmplitude);
+  }
+  if (itsPerformLeakageThresholding) {
+      ASKAPCHECK(itsSolveLeakage, "Unable to perform leakage thresholding on the solution as the solver is not configured to solve for leakages!");
+      const std::string tolerancePar("threshold.leakage.tolerance");
+      ASKAPCHECK(parset.isDefined(tolerancePar), "Tolerance for bandpass leakages is not defined - unable to perform thresholding");
+      itsLeakageTolerance = parset.getDouble(tolerancePar);
+      ASKAPLOG_INFO_STR(logger, "For each beam and channel, the whole solution will be flagged invalid for antennas with leakages deviating by more than "<<
+           itsLeakageTolerance<<" from zero");
+  }    
+
+  if (itsComms.isMaster()) {
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = accessors::CalibAccessFactory::rwCalSolutionSource(parset);
       ASKAPASSERT(itsSolutionSource);
@@ -550,6 +570,10 @@ void BPCalibratorParallel::writeModel(const std::string &)
   ASKAPASSERT(itsSolAcc);
 
   ASKAPDEBUGASSERT(itsModel);
+
+  size_t nDiscardedIntentionally = 0;
+  size_t nDiscarded = 0;
+
   std::vector<std::string> parlist = itsModel->freeNames();
   for (std::vector<std::string>::const_iterator it = parlist.begin(); it != parlist.end(); ++it) {
        const casacore::Complex val = itsModel->complexValue(*it);
@@ -560,11 +584,41 @@ void BPCalibratorParallel::writeModel(const std::string &)
        ASKAPDEBUGASSERT(static_cast<casacore::uInt>(paramType.first.beam()) == indices.first);
        const bool isBandpass = paramType.second == casacore::Stokes::XX || paramType.second == casacore::Stokes::YY;
        const bool isLeakage = paramType.second == casacore::Stokes::XY || paramType.second == casacore::Stokes::YX;
-       const bool toBeStored = (isBandpass && itsStoreBandpass) || (isLeakage && itsStoreLeakage);
+       bool toBeStored = (isBandpass && itsStoreBandpass) || (isLeakage && itsStoreLeakage);
+
+       // it is not clear whether it is better to build the list up front which would result in another loop over
+       // all parameters + parsing or, as we do here, build it on-the-fly which results in repeats for all products
+       // but the number of parameters is small anyway as we partition by beam and channel
+       if (toBeStored) {
+           if (itsPerformGainThresholding) {
+               const std::string xGainPar = accessors::CalParamNameHelper::paramName(paramType.first.antenna(), paramType.first.beam(), casacore::Stokes::XX);
+               const std::string yGainPar = accessors::CalParamNameHelper::paramName(paramType.first.antenna(), paramType.first.beam(), casacore::Stokes::YY);
+               if ((casacore::abs(casacore::abs(itsModel->complexValue(xGainPar)) - itsExpectedGainAmplitude) >= itsGainAmplitudeTolerance) || 
+                   (casacore::abs(casacore::abs(itsModel->complexValue(yGainPar)) - itsExpectedGainAmplitude) >= itsGainAmplitudeTolerance)) {
+                    toBeStored = false;
+               }
+           }
+       } else {
+         ++nDiscardedIntentionally;
+       } 
+       if (toBeStored) {
+           if (itsPerformLeakageThresholding) {
+               const std::string leakagePar1 = accessors::CalParamNameHelper::paramName(paramType.first.antenna(), paramType.first.beam(), casacore::Stokes::XY);
+               const std::string leakagePar2 = accessors::CalParamNameHelper::paramName(paramType.first.antenna(), paramType.first.beam(), casacore::Stokes::YX);
+               if ((casacore::abs(itsModel->complexValue(leakagePar1)) >= itsLeakageTolerance) || 
+                   (casacore::abs(itsModel->complexValue(leakagePar2)) >= itsLeakageTolerance)) {
+                    toBeStored = false;
+               }
+           }
+       }    
        if (toBeStored) {
            itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
+       } else {
+         ++nDiscarded;
        }
   }
+  ASKAPLOG_DEBUG_STR(logger, "Total number of calibration parameters: "<<parlist.size()<<" intentionally discarded: "<<nDiscardedIntentionally<<
+       " discarded due to thresholding: "<<nDiscarded - nDiscardedIntentionally);
 }
 
 /// @brief create measurement equation

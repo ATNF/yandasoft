@@ -275,6 +275,24 @@ namespace askap
 
       /// @brief flag enabling writing bandpass solution (otherwise it is only solved for)
       bool itsStoreBandpass;
+
+      /// @brief if true, gain thresholding will be performed 
+      /// @details Solutions will be flagged as invalid for antennas with bandpass gains outside the given tolerance
+      bool itsPerformGainThresholding;
+
+      /// @brief expected bandpass gain amplitude (only used if gain thresholding is enabled)
+      double itsExpectedGainAmplitude;
+
+      /// @brief tolerance for bandpass gain amplitude (only used if gain thresholding is enabled)
+      double itsGainAmplitudeTolerance;
+
+      /// @brief if true, leakage thresholding will be performed 
+      /// @details Solutions will be flagged as invalid for antennas with bandpass leakages outside the given tolerance.
+      bool itsPerformLeakageThresholding;
+
+      /// @brief tolerance for bandpass leakage amplitude (only used if leakage thresholding is enabled)
+      /// @note Expected leakage amplitude is zero
+      double itsLeakageTolerance;
     };
 
   }
