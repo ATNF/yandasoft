@@ -270,6 +270,11 @@ namespace askap
       /// @brief flag switching the bandpass calibration on
       bool itsSolveBandpass;
 
+      /// @brief flag enabling writing leakage solution (otherwise it is only solved for)
+      bool itsStoreLeakage;
+
+      /// @brief flag enabling writing bandpass solution (otherwise it is only solved for)
+      bool itsStoreBandpass;
     };
 
   }

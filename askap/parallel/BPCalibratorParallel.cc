@@ -112,20 +112,42 @@ using askap::operator<<;
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset),false),
       itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false),
-      itsSolveBandpass(false), itsSolveLeakage(false)
+      itsSolveLeakage(false), itsSolveBandpass(false), itsStoreLeakage(false), itsStoreBandpass(false)
 {
   ASKAPLOG_INFO_STR(logger, "Bandpass or Leakage will be solved for using a specialised pipeline");
   const std::string what2solve = parset.getString("solve","bandpass");
+
+  const std::string what2store = parset.getString("store", what2solve);
+  if (what2store.find("leakages") != std::string::npos) {
+      itsStoreLeakage = true;
+  }
+  if (what2store.find("bandpass") != std::string::npos) {
+      itsStoreBandpass = true;
+  }
+
   if (what2solve.find("leakages") != std::string::npos) {
-      ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"')");
+      if (itsStoreLeakage) {
+          ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"')");
+      } else {
+          ASKAPLOG_INFO_STR(logger, "Leakages will be solved for (solve='"<<what2solve<<"'), but not stored (store='"<<what2store<<"')");
+      }
       itsSolveLeakage = true;
   }
 
   if (what2solve.find("bandpass") != std::string::npos) {
-      ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for (solve='"<<what2solve<<"')");
+      if (itsStoreBandpass) {
+          ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for (solve='"<<what2solve<<"')");
+      } else {
+          ASKAPLOG_INFO_STR(logger, "Bandpass will be solved for (solve='"<<what2solve<<"'), but not stored (store='"<<what2store<<"')");
+      }
       itsSolveBandpass = true;
   }
   ASKAPCHECK(itsSolveLeakage || itsSolveBandpass,"Need to specify solve=leakages or solve=bandpass");
+
+  if ((itsStoreLeakage != itsSolveLeakage) && (itsStoreBandpass != itsSolveBandpass)) {
+      ASKAPLOG_INFO_STR(logger, "Essentially a dry run will occur (store='"<<what2store<<"', solve='"<<what2solve<<"')");
+  }
+
  if (itsComms.isMaster()) {
       // setup solution source (or sink to be exact, because we're writing the solution here)
       itsSolutionSource = accessors::CalibAccessFactory::rwCalSolutionSource(parset);
@@ -536,7 +558,12 @@ void BPCalibratorParallel::writeModel(const std::string &)
        // beam is also coded in the parameters, although we don't need it because the data are partitioned
        // just cross-check it
        ASKAPDEBUGASSERT(static_cast<casacore::uInt>(paramType.first.beam()) == indices.first);
-       itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
+       const bool isBandpass = paramType.second == casacore::Stokes::XX || paramType.second == casacore::Stokes::YY;
+       const bool isLeakage = paramType.second == casacore::Stokes::XY || paramType.second == casacore::Stokes::YX;
+       const bool toBeStored = (isBandpass && itsStoreBandpass) || (isLeakage && itsStoreLeakage);
+       if (toBeStored) {
+           itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
+       }
   }
 }
 
