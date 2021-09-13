@@ -123,7 +123,10 @@ void ImageConvolver<T>::convolve(casacore::ImageInterface<T>& imageOut,
     casacore::LatticeExpr<T> kernelExpr(node);
 
     // Create convolver
-    casacore::LatticeConvolver<T> lc(kernelExpr, imageIn.shape(),  casacore::ConvEnums::LINEAR);
+    // In some builds the LINEAR convolution type can lead to big performance hits, so use CIRCULAR
+    ASKAPLOG_INFO_STR(imageconvlogger, "Calling CIRCULAR LatticeConvolver for "<<imageIn.shape().nonDegenerate()<<
+        " image and "<<kernel.shape().nonDegenerate()<<" kernel. Masked?: "<<imageIn.isMasked());
+    casacore::LatticeConvolver<T> lc(kernelExpr, imageIn.shape(),  casacore::ConvEnums::CIRCULAR);
 
     if (imageIn.isMasked()) {
         // Generate output mask if needed
