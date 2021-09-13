@@ -111,7 +111,7 @@ using askap::operator<<;
 /// @param[in] parset ParameterSet for inputs
 BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& comms,
           const LOFAR::ParameterSet& parset) : MEParallelApp(comms,emptyDatasetKeyword(parset),false),
-      itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1), itsSolutionIDValid(false),
+      itsPerfectModel(new scimath::Params()), itsRefAntenna(-1), itsSolutionID(-1),
       itsSolveLeakage(false), itsSolveBandpass(false), itsStoreLeakage(false), itsStoreBandpass(false),
       itsPerformGainThresholding(parset.getBool("threshold.gain.enable", false)), 
       itsExpectedGainAmplitude(parset.getDouble("threshold.gain.expected", 1.)),
@@ -167,6 +167,11 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       ASKAPLOG_INFO_STR(logger, "For each beam and channel, the whole solution will be flagged invalid for antennas with leakages deviating by more than "<<
            itsLeakageTolerance<<" from zero");
   }    
+  const std::string stOverridePar("solution_time");
+  if (parset.isDefined(stOverridePar)) {
+      itsSolutionTimeOverride = parset.getDouble(stOverridePar);
+      ASKAPLOG_INFO_STR(logger, "Solution time will be set to "<<*itsSolutionTimeOverride<<" MJD discarding data time stamp (user override)");
+  }
 
   if (itsComms.isMaster()) {
       // setup solution source (or sink to be exact, because we're writing the solution here)
@@ -189,7 +194,6 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
         itsSolutionSource.reset(new ServiceCalSolutionSource(parset));
         ASKAPLOG_INFO_STR(logger,"Obtaining calibration information from service source");
         ASKAPLOG_INFO_STR(logger,"SolutionID determined by ServiceSource");
-        itsSolutionIDValid=true;
         // we are only solving for bandpass
         boost::shared_ptr<ServiceCalSolutionSource> src = boost::dynamic_pointer_cast<ServiceCalSolutionSource>(itsSolutionSource);
         src->solveBandpass();
@@ -267,21 +271,6 @@ LOFAR::ParameterSet BPCalibratorParallel::emptyDatasetKeyword(const LOFAR::Param
 /// then sends the result to master for writing.
 void BPCalibratorParallel::run()
 {
-  if (itsComms.isMaster()) {
-    ASKAPLOG_DEBUG_STR(logger, "About to set the solution accessor");
-    if (!itsSolutionIDValid) {
-        // obtain solution ID only once, the results can come in random order and the
-        // accessor is responsible for aggregating all of them together. This is done based on this ID.
-        //@todo Can probably get rid of this
-        itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
-        itsSolutionIDValid = true;
-    }
-    ASKAPLOG_INFO_STR(logger, "Have set solutionID");
-    itsSolAcc = itsSolutionSource->rwSolution(itsSolutionID);
-    ASKAPLOG_INFO_STR(logger, "Have set solution accessor");
-    ASKAPASSERT(itsSolAcc);
-  }
-
   if (itsComms.isWorker()) {
       ASKAPDEBUGASSERT(itsModel);
       const int nCycles = parset().getInt32("ncycles", 1);
@@ -335,6 +324,10 @@ void BPCalibratorParallel::run()
                itsModel->add("channel",static_cast<double>(indices.second));
                itsModel->fix("beam");
                itsModel->fix("channel");
+               // unlike for ccalibtator we don't send normal equations to master. Therefore, we need to
+               // extract solution time on the worker explicitly
+               itsModel->add("solution_time", solutionTime());
+               itsModel->fix("solution_time");
                sendModelToMaster();
            } else {
                // serial operation, just write the result
@@ -354,9 +347,8 @@ void BPCalibratorParallel::run()
            }
       }
   }
-
   // Destroy the accessor, which should call syncCache and write the table out.
-  ASKAPLOG_INFO_STR(logger, "Syncing the cached bandpass table to disk");
+  ASKAPLOG_DEBUG_STR(logger, "Syncing the cached bandpass table to disk");
   itsSolAcc.reset();
 }
 
@@ -567,8 +559,6 @@ void BPCalibratorParallel::writeModel(const std::string &)
 
   ASKAPCHECK(itsSolutionSource, "Solution source has to be defined by this stage");
 
-  ASKAPASSERT(itsSolAcc);
-
   ASKAPDEBUGASSERT(itsModel);
 
   size_t nDiscardedIntentionally = 0;
@@ -612,6 +602,19 @@ void BPCalibratorParallel::writeModel(const std::string &)
            }
        }    
        if (toBeStored) {
+           if (!itsSolAcc) {
+               // this is the first attempt to write calibration information - set up the accessor
+               // solution accessor shared pointer acts as a flag that we need to set everything up
+               ASKAPLOG_DEBUG_STR(logger, "About to set the solution accessor");
+               ASKAPDEBUGASSERT(itsComms.isMaster()); 
+               // obtain solution ID only once, the results can come in random order and the
+               // accessor is responsible for aggregating all of them together. This is done based on this ID.
+               itsSolutionID = itsSolutionSource->newSolutionID(solutionTime());
+
+               itsSolAcc = itsSolutionSource->rwSolution(itsSolutionID);
+               ASKAPLOG_DEBUG_STR(logger, "Have set up the solution accessor with id = "<<itsSolutionID);
+               ASKAPDEBUGASSERT(itsSolAcc);
+           }
            itsSolAcc->setBandpassElement(paramType.first, paramType.second, indices.second, val);
        } else {
          ++nDiscarded;
@@ -639,8 +642,7 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    boost::shared_ptr<PreAvgCalMEBase> preAvgME;
    // solve as normal gains (rather than bandpass) because only one channel is supposed to be selected
    // this also opens a possibility to use several (e.g. 54 = coarse resolution) channels to get one gain
-   // solution which is then replicated to all channels involved. We can also add frequency-dependent leakage, if
-   // tests show it is required (currently it is not in the calibration model)
+   // solution which is then replicated to all channels involved. 
    if (itsSolveBandpass && !itsSolveLeakage) {
           preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
    } else if (itsSolveLeakage && !itsSolveBandpass) {
@@ -722,17 +724,34 @@ void BPCalibratorParallel::rotatePhases()
   }
 }
 
-/// @brief helper method to extract solution time from NE.
+/// @brief helper method to extract solution time from NE or model
 /// @details To be able to time tag the calibration solutions we add
 /// start and stop times extracted from the dataset as metadata to normal
-/// equations. It allows us to send these times to the master, which
-/// ultimately writes the calibration solution. Otherwise, these times
-/// could only be obtained in workers who deal with the actual data.
+/// equations. This method extracts start time from NE. Because NEs are not
+/// shipped to the master for bp-calibrator, if called on master the method looks
+/// for a different fixed keyword in the model (which should be created on the worker
+/// before the model is sent to master). 
 /// @return solution time (seconds since 0 MJD)
-/// @note if no start/stop time metadata are present in the normal equations
-/// this method returns 0.
+/// @note if no start/stop time metadata are present in the normal equations or model
+/// this method returns 0. In addition, if itsSolutionTimeOverride field is defined,
+/// it will be returned instead.
 double BPCalibratorParallel::solutionTime() const
 {
+  if (itsSolutionTimeOverride) {
+      // override field is in days for user convenience
+      return (*itsSolutionTimeOverride) * 86400;
+  }
+  // for bp-calibrator normal equations with actual solution time are available only on workers (in the parallel case)
+  // for master we rely on explicit copy shipped together with the solution
+  if (itsComms.isParallel() && itsComms.isMaster()) {
+      if (itsModel) {
+          if (itsModel->has("solution_time")) {
+              return itsModel->scalarValue("solution_time");
+          }
+      }
+      return 0;
+  }
+
   // use the earliest time corresponding to the data used to make this calibration solution
   // to tag the solution. A request for any latest time than this would automatically
   // extract this solution as most recent.
