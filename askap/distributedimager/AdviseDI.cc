@@ -144,8 +144,8 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
 /// @return const reference to the object populated with resulted metadata statistics
 const VisMetaDataStats& AdviseDI::computeVisMetaDataStats(const std::string &ms)
 {
-   // a very basic estimator with all defaults - we currently use it only to get tangent point
-   boost::shared_ptr<VisMetaDataStats> stats(new VisMetaDataStats());
+   // a very basic estimator - we currently use it only to get tangent point
+   boost::shared_ptr<VisMetaDataStats> stats(new VisMetaDataStats(true));
    // work with this estimator until the next call to this method or until the proper parallel procedure is performed
    // via estimate() - note, it seems to be tied down to the original design of cimager and doesn't map on what the
    // current imager is doing / its distribution pattern
