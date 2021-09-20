@@ -298,6 +298,11 @@ namespace askap
       /// @brief tolerance for bandpass leakage amplitude (only used if leakage thresholding is enabled)
       /// @note Expected leakage amplitude is zero
       double itsLeakageTolerance;
+
+      /// @brief ignore parallel-hand products when making equations
+      /// @details This option can only used for for leakage-only solutions to improve robustness. It forces the code
+      /// to ignore parallel-hand correlations and build equations based only on cross-pols.
+      bool itsUseXPolOnly;
     };
 
   }

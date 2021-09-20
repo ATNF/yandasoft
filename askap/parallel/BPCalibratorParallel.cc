@@ -75,6 +75,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/PreAvgCalMEBase.h>
 #include <askap/measurementequation/ComponentEquation.h>
 #include <askap/measurementequation/NoXPolGain.h>
+#include <askap/measurementequation/KeepXPolOnly.h>
 #include <askap/measurementequation/LeakageTerm.h>
 #include <askap/measurementequation/Product.h>
 #include <askap/measurementequation/ImagingEquationAdapter.h>
@@ -115,7 +116,8 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       itsSolveLeakage(false), itsSolveBandpass(false), itsStoreLeakage(false), itsStoreBandpass(false),
       itsPerformGainThresholding(parset.getBool("threshold.gain.enable", false)), 
       itsExpectedGainAmplitude(parset.getDouble("threshold.gain.expected", 1.)),
-      itsPerformLeakageThresholding(parset.getBool("threshold.leakage.enable", false))
+      itsPerformLeakageThresholding(parset.getBool("threshold.leakage.enable", false)),
+      itsUseXPolOnly(parset.getBool("xpol_only", false))
 {
   ASKAPLOG_INFO_STR(logger, "Bandpass or Leakage will be solved for using a specialised pipeline");
   const std::string what2solve = parset.getString("solve","bandpass");
@@ -146,6 +148,10 @@ BPCalibratorParallel::BPCalibratorParallel(askap::askapparallel::AskapParallel& 
       itsSolveBandpass = true;
   }
   ASKAPCHECK(itsSolveLeakage || itsSolveBandpass,"Need to specify solve=leakages or solve=bandpass");
+  if (itsUseXPolOnly) {
+      ASKAPCHECK(itsSolveLeakage && !itsSolveBandpass, "xpol_only = true option is allowed for leakage-only solutions");
+      ASKAPLOG_INFO_STR(logger, "Parallel-hand products will be ignored when making equations"); 
+  }
 
   if ((itsStoreLeakage != itsSolveLeakage) && (itsStoreBandpass != itsSolveBandpass)) {
       ASKAPLOG_INFO_STR(logger, "Essentially a dry run will occur (store='"<<what2store<<"', solve='"<<what2solve<<"')");
@@ -646,7 +652,11 @@ void BPCalibratorParallel::createCalibrationME(const accessors::IDataSharedIter 
    if (itsSolveBandpass && !itsSolveLeakage) {
           preAvgME.reset(new CalibrationME<NoXPolGain, PreAvgCalMEBase>());
    } else if (itsSolveLeakage && !itsSolveBandpass) {
-          preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+          if (itsUseXPolOnly) {
+              preAvgME.reset(new CalibrationME<Product<KeepXPolOnly,LeakageTerm>, PreAvgCalMEBase>());
+          } else {
+              preAvgME.reset(new CalibrationME<LeakageTerm, PreAvgCalMEBase>());
+          }
    } else if (itsSolveLeakage && itsSolveBandpass) {
           preAvgME.reset(new CalibrationME<Product<NoXPolGain,LeakageTerm>, PreAvgCalMEBase>());
    }
