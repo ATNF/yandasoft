@@ -297,6 +297,24 @@ namespace askap
             mfmss->setSpeedUp(factor);
           }
         }
+
+        if (parset.isDefined("Images.extraoversampling")) {
+          const boost::shared_ptr<ImageMultiScaleSolver>
+              mss = boost::dynamic_pointer_cast<ImageMultiScaleSolver>(solver);
+          const boost::shared_ptr<ImageAMSMFSolver>
+              amsmfs = boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
+          ASKAPCHECK(mss || amsmfs, "Nyquist gridding only supported with Hogbom or BasisfunctionMFS solvers");
+          const float factor = parset.getFloat("Images.extraoversampling");
+          ASKAPCHECK(factor>1., "extra oversampling factor should be greater than 1");
+          ASKAPLOG_INFO_STR(logger,"Using an extra oversampling factor of "<<factor<<" in lattice clean");
+          if (mss) {
+            mss->setExtraOversampling(factor);
+          }
+          if (amsmfs) {
+            amsmfs->setExtraOversampling(factor);
+          }
+        }
+
       } else if(parset.getString("solver")=="Fista") {
         ASKAPLOG_INFO_STR(logger, "Constructing FISTA solver" );
         solver.reset(new ImageFistaSolver());

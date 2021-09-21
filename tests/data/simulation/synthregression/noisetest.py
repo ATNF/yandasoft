@@ -78,3 +78,7 @@ spr.addToParset("Csimulator.noise.Tsys = %f" % Tsys)
 spr.addToParset("Csimulator.noise.efficiency = %f" % efficiency)
 spr.runSimulator()
 doTests(spr,rmsNoise)
+
+#clean up
+import os
+os.system("rm -rf *field1* temp_parset.in")

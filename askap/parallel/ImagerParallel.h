@@ -206,11 +206,46 @@ namespace askap
       /// @param discard Discard old equation?
       void calcOne(const string& dataset, bool discard=false);
 
-      /// Do we want a restored image?
+      /// @brief Do we want a restored image?
       bool itsRestore;
 
-      /// Do we want a residual image
-      bool itsResidual;
+      /// @brief write the first pass restored images if there is a second pass
+      bool itsWriteFirstRestore;
+
+      /// @brief Do we want a residual image
+      bool itsWriteResidual;
+
+      /// @brief write 'raw', unnormalised, natural weight psf
+      bool itsWritePsfRaw;
+
+      /// @brief write normalised, preconditioned psf
+      bool itsWritePsfImage;
+
+      /// @brief write weights image
+      bool itsWriteWtImage;
+
+      /// @brief write a weights log
+      bool itsWriteWtLog;
+
+      /// @brief write out the mask image
+      bool itsWriteMaskImage;
+
+      /// @brief write out the (clean) model image
+      bool itsWriteModelImage;
+
+      /// @brief export sensitivity image?
+      /// @details If true, the weight image is converted to sensitivity image and
+      /// exported in addition to the original weight image.
+      bool itsWriteSensitivityImage;
+
+      /// @brief fraction of peak sensitivity to crop on
+      /// @details We normally don't want to divide by small numbers when calculating
+      /// sensitivity images. This field gives the fraction of the maximum weight
+      /// below which the sensitivity image will be set to 0.
+      double itsSensitivityCutoff;
+
+      /// @brief write out the gridded data, pcf and psf
+      bool itsWriteGrids;
 
       /// @brief solution source to get calibration data from
       /// @details This object is initialised by workers. It knows how to
@@ -226,16 +261,6 @@ namespace askap
       /// required. We could have created a brand new object each time.
       boost::shared_ptr<IMeasurementEquation> itsVoidME;
 
-      /// @brief export sensitivity image?
-      /// @details If true, the weight image is converted to sensitivity image and
-      /// exported in addition to the original weight image.
-      bool itsExportSensitivityImage;
-
-      /// @brief fraction of peak sensitivity to crop on
-      /// @details We normally don't want to divide by small numbers when calculating
-      /// sensitivity images. This field gives the fraction of the maximum weight
-      /// below which the sensitivity image will be set to 0.
-      double itsExpSensitivityCutoff;
     };
 
   }

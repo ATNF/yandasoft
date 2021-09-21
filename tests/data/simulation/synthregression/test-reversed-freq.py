@@ -14,21 +14,21 @@ def analyseResult(spr, checkWeights=True):
 #   src_offset = 0.000
    psf_peak=[294.854166667,-63.7125]
    true_peak=sinProjection(psf_peak,src_offset,0)
-   stats = spr.imageStats('image.restored.wr.1.cont')
+   stats = spr.imageStats('image.restored.cont')
    print("Statistics for taylor-0 restored image: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
    if disterr > 5:
       raise RuntimeError("Offset between true and expected position exceeds 1 cell size (5 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
    if abs(stats['peak']-1.)>0.1:
       raise RuntimeError("Peak flux in the image is notably different from 1 Jy, F=%f" % stats['peak'])
-   
-   stats = spr.imageStats('image.wr.1.cont')
+
+   stats = spr.imageStats('image.cont')
    print("Statistics for modelimage: ",stats)
    disterr = getDistance(stats,true_peak[0],true_peak[1])*3600.
    if disterr > 5:
       raise RuntimeError("Offset between true and expected position exceeds 1 cell size (5 arcsec), d=%f, true_peak=%s" % (disterr,true_peak))
 
-   stats = spr.imageStats('residual.wr.1.cont')
+   stats = spr.imageStats('residual.cont')
    print("Statistics for residual image: ",stats)
    if stats['rms']>0.015 or abs(stats['median'])>0.001:
       raise RuntimeError("Residual image has too high rms or median. Please verify")
@@ -52,3 +52,5 @@ else:
 
 analyseResult(spr2)
 
+#clean up
+os.system("rm -rf reversed.ms *.cont *.cont.txt temp_parset.in")

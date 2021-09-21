@@ -57,3 +57,6 @@ spr.addToParset("Cimager.restore.equalise = True")
 spr.runImager()
 analyseResult(spr,3.14/2.)
 
+#clean up
+import os
+os.system("rm -rf *field1* temp_parset.in")

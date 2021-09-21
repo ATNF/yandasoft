@@ -5,7 +5,7 @@
 ///
 /// @brief combine a number of images as a linear mosaic
 /// @details This is a utility to merge images into a mosaic. Images can be set
-/// explicitly or found automatically based on input tags. 
+/// explicitly or found automatically based on input tags.
 ///
 /// @copyright (c) 2012,2014,2015 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -34,21 +34,13 @@
 // other 3rd party
 
 #include <Common/ParameterSet.h>
-#include <boost/shared_ptr.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/algorithm/string.hpp>
-#include <casacore/casa/Arrays/Array.h>
+#include <casacore/casa/Arrays/Vector.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>
-#include <casacore/images/Images/ImageRegrid.h>
-
+#include <casacore/casa/Quanta/MVDirection.h>
 // Local packages includes
-#include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <linmos/LinmosAccumulator.h>
-
+#include <askap/imageaccess/IImageAccess.h>
 
 using namespace casa;
-using namespace askap::synthesis;
 
 namespace askap {
 
@@ -76,5 +68,3 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
 } // namespace askap
 
 #endif
-
-

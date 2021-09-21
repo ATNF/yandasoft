@@ -40,6 +40,8 @@ ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 #include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/lattices/Lattices/ArrayLattice.h>
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
 
 
 namespace askap {
@@ -172,6 +174,7 @@ casacore::Array<imtype> ImageCleaningSolver::unpadImage(const casacore::Array<fl
   #endif
   return result;
 }
+
 
 /// @brief configure basic parameters of the solver
 /// @details This method encapsulates extraction of basic solver parameters from the parset.

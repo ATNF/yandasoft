@@ -55,6 +55,8 @@ ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 #include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
+#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+
 #include <Common/ParameterSet.h>
 #include <Common/Exceptions.h>
 
@@ -198,6 +200,14 @@ namespace askap
     {
       ASKAPDEBUGTRACE("SynthesisParamsHelper::loadImages");
       ASKAPDEBUGASSERT(params);
+
+      // Check whether or not images will need to be downsampled after loading
+      boost::optional<float> extraOS;
+      if (parset.isDefined("extraoversampling")) {
+          extraOS = parset.getFloat("extraoversampling");
+          ASKAPDEBUGASSERT(*extraOS > 1.);
+      }
+
       try {
          const vector<string> images=parset.getStringVector("Names");
          for (vector<string>::const_iterator ci = images.begin(); ci != images.end(); ++ci) {
@@ -222,10 +232,14 @@ namespace askap
                    }
                    if (nfacets == 1) {
                        ASKAPLOG_INFO_STR(logger, "Reading image "<<iph.paramName());
-                       SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName());
+                       if (extraOS) {
+                           SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName(),*extraOS);
+                       } else {
+                           SynthesisParamsHelper::loadImageParameter(*params,iph.paramName(),iph.paramName());
+                       }
                    } else {
                        ASKAPLOG_INFO_STR(logger, "Loading multi-facet image image "<<iph.paramName());
-                       SynthesisParamsHelper::getMultiFacetImage(*params,iph.paramName(),iph.paramName(), nfacets);
+                       SynthesisParamsHelper::getMultiFacetImage(*params,iph.paramName(),iph.paramName(),nfacets);
                    }
               }
          }
@@ -631,13 +645,44 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-						const string& imagename)
+					 const string& imagename, const boost::optional<float> extraOversampleFactor)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
-      const casacore::Array<float> imagePixels(ip.valueF(name));
-      ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
-      const casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
 
+      casacore::Array<float> imagePixels;
+      casacore::CoordinateSystem imageCoords(coordinateSystem(ip,name));
+
+      if (extraOversampleFactor) {
+          ASKAPCHECK(*extraOversampleFactor > 1.,"Oversampling factor should be > 1, not "<<*extraOversampleFactor);
+          imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),*extraOversampleFactor));
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+          scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
+          #else
+          casa::Array<imtype> imageTmp(imagePixels.shape());
+          scimath::PaddingUtils::fftPad(ip.valueT(name),imageTmp);
+          casa::convertArray<float, imtype>(imagePixels, imageTmp);
+          #endif
+
+          // update the coordinate system for the new resolution
+          const int whichDir = imageCoords.findCoordinate(Coordinate::DIRECTION);
+          ASKAPCHECK(whichDir>-1, "No direction coordinate present in the image "<<name);
+          casacore::DirectionCoordinate radec(imageCoords.directionCoordinate(whichDir));
+          casacore::Vector<casacore::Int> axesDir = imageCoords.pixelAxes(whichDir);
+          ASKAPCHECK(axesDir.nelements() == 2, "Direction axis "<<whichDir<<
+                     " is expected to correspond to just two pixel axes, you have "<<axesDir);
+          ASKAPCHECK((axesDir[0] == 0) && (axesDir[1] == 1),
+                   "At present we support only images with first axes being the direction pixel axes, image "<<name<<
+                   " has "<< axesDir);
+          /// @todo double check that the rounding is correct for the ref pixel
+          radec.setReferencePixel(radec.referencePixel()*double(*extraOversampleFactor));
+          radec.setIncrement(radec.increment()/double(*extraOversampleFactor));
+          imageCoords.replaceCoordinate(radec, whichDir);
+      }
+      else {
+          imagePixels.reference(ip.valueF(name));
+      }
+
+      ASKAPDEBUGASSERT(imagePixels.ndim()!=0);
       ASKAPLOG_DEBUG_STR(logger, "Data of "<<name<<" parameter peak at "<<casacore::max(imagePixels));
 
       imageHandler().create(imagename, imagePixels.shape(), imageCoords);
@@ -715,7 +760,7 @@ namespace askap
 
 
     void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
-						 const string& imagename)
+						 const string& imagename, const boost::optional<float> extraOversampleFactor)
     {
       ASKAPTRACE("SynthesisParamsHelper::loadImageParameter");
       casacore::Array<float> imagePixels = imageHandler().read(imagename);
@@ -794,13 +839,51 @@ namespace askap
       freq.toWorld(startFreq, 0.0);
       freq.toWorld(endFreq, double(nChan-1));
       axes.add("FREQUENCY", startFreq, endFreq);
-      const casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
-      ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
-                  " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-      ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
-                                "Hz, nChan="<<nChan);
+
+      casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
       ASKAPDEBUGASSERT(targetShape.product() == imagePixels.shape().product());
-      ip.add(name, imagePixels.reform(targetShape),axes);
+
+      if (extraOversampleFactor) {
+          ASKAPCHECK(*extraOversampleFactor > 1.,"Oversampling factor should be > 1, not "<<*extraOversampleFactor);
+
+          // need to add two params: the loaded full-res image and the downsampled image
+
+          // first save the full-res image
+          std::string fullresname = name;
+          const size_t index = fullresname.find("image");
+          ASKAPCHECK(index == 0, "Trying to swap to full-resolution param name but something is wrong");
+          fullresname.replace(index,5,"fullres");
+
+          ASKAPLOG_INFO_STR(logger, "About to add new image parameters with name "<<fullresname<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                                    "Hz, nChan="<<nChan);
+          ip.add(fullresname, imagePixels.reform(targetShape), axes);
+
+          // now downsample the input sky model to the working resolution
+          /// @todo should this be done at higher precision ifndef ASKAP_FLOAT_IMAGE_PARAMS?
+          downsample(imagePixels,*extraOversampleFactor);
+          // update the target shape for the new resolution
+          targetShape(0) = imagePixels.shape()(0);
+          targetShape(1) = imagePixels.shape()(1);
+          // update the coordinate system for the new resolution
+          /// @todo double check that the rounding is correct for the ref pixel
+          radec.setReferencePixel(radec.referencePixel()/double(*extraOversampleFactor));
+          radec.setIncrement(radec.increment()*double(*extraOversampleFactor));
+          axes.addDirectionAxis(radec);
+
+          ASKAPLOG_INFO_STR(logger, "Also adding downsampled image parameters with name "<<name<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ip.add(name, imagePixels.reform(targetShape), axes);
+
+      }
+      else {
+          ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
+                      " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
+          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                                    "Hz, nChan="<<nChan);
+          ip.add(name, imagePixels.reform(targetShape), axes);
+      }
 
     }
 
@@ -823,6 +906,100 @@ namespace askap
                 loadImageParameter(ip,paramName,fileName);
            }
       }
+    }
+
+
+    /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+    /// @param[in] osfactor extra oversampling factor
+    /// @param[in] image input image to be oversampled
+    /// @return oversampled image
+    /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+    /// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
+    void SynthesisParamsHelper::oversample(casacore::Array<float> &image, const float osfactor, const bool norm)
+    {
+
+        ASKAPCHECK(osfactor >= 1.0,
+            "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+        if (osfactor == 1.) return;
+
+        casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
+
+        // this is how it's done in SynthesisParamsHelper::saveImageParameter():
+        //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
+        //scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
+
+        // destroy Agrid before resizing image. Small memory saving.
+        {
+            // Set up scratch arrays and lattices for changing resolution
+            casacore::Array<casacore::Complex> Agrid(image.shape());
+            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+     
+            // copy image into a complex scratch space
+            casacore::convertArray<casacore::Complex,float>(Agrid, image);
+     
+            // renormalise based on the imminent padding
+            if (norm) {
+                Agrid *= static_cast<float>(osfactor*osfactor);
+            } 
+
+            // fft to uv
+            casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
+     
+            // "extract" original Fourier grid into the central portion of the new Fourier grid
+            casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+            subGrid = Agrid;
+
+            // ifft back to image and return the real part
+            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+            casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
+        }
+
+        image.resize(AgridOS.shape());
+        image = real(AgridOS);
+
+    }
+
+    /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+    /// @param[in] osfactor extra oversampling factor
+    /// @param[in] image input oversampled image
+    /// @return downsampled image
+    /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
+    /// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
+    void SynthesisParamsHelper::downsample(casacore::Array<float> &image, const float osfactor)
+    {
+
+        ASKAPCHECK(osfactor >= 1.0,
+            "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
+        if (osfactor == 1.) return;
+
+        casacore::Array<casacore::Complex> Agrid;
+
+        // destroy AgridOS before resizing image. Small memory saving.
+        {
+            // Set up scratch arrays and lattices for changing resolution
+            casacore::Array<casacore::Complex> AgridOS(image.shape());
+            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+     
+            // copy image into a complex scratch space
+            casacore::convertArray<casacore::Complex,float>(AgridOS, image);
+     
+            // fft to uv. This is what we need to degrid from, so no need to renormalise
+            casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
+     
+            // extract the central portion of the Fourier grid
+            Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+     
+            // renormalise based on the imminent padding
+            //Agrid /= static_cast<float>(osfactor*osfactor);
+     
+            // ifft back to image and return the real part
+            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
+            casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
+        }
+
+        image.resize(Agrid.shape());
+        image = real(Agrid);
+
     }
 
     boost::shared_ptr<casacore::TempImage<float> >
@@ -1414,7 +1591,12 @@ namespace askap
          // Find all the free parameters beginning with image
          vector<string> names(params->completions("image"));
          for (vector<string>::const_iterator it=names.begin(); it!=names.end(); ++it) {
-              const std::string name="image"+*it;
+              //const std::string name="image"+*it;
+              std::string name="image"+*it;
+              if (params->isFree(name)) {
+                  params->valueT(name).set(0.);
+              }
+              name="fullres"+*it;
               if (params->isFree(name)) {
                   params->valueT(name).set(0.);
               }

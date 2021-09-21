@@ -118,3 +118,9 @@ Cimager.ncycles                                 = 5
 Cimager.restore                                 = True
 Cimager.restore.beam                            = [20arcsec, 20arcsec, 0deg]
 
+Cimager.write.residualimage                     = true 
+Cimager.write.psfrawimage                       = true 
+Cimager.write.psfimage                          = true 
+Cimager.write.weightsimage                      = true 
+Cimager.write.modelimage                        = true
+

@@ -4,26 +4,26 @@ import subprocess
 
 # helper class to run a program from synthesis
 class SynthesisProgramRunner:
-   
+
    def __init__(self, template_parset = None):
       '''
          initialise the class
- 
+
          template_parset - file name for the template parset file
                   containing all parameters, which are not supposed to
-                  change 
+                  change
       '''
       if not os.path.exists(template_parset):
          raise RuntimeError("Template parset file %s is not found" % template_parset)
       self.template_parset = template_parset
 
 
-      self.simulator = os.popen('which csimulator').read().rstrip() 
+      self.simulator = os.popen('which csimulator').read().rstrip()
       self.imager = os.popen('which cimager').read().rstrip()
       self.NewImager = os.popen('which imager').read().rstrip()
       self.calibrator = os.popen('which ccalibrator').read().rstrip()
       self.imgstat = os.popen('which imgstat').read().rstrip()
-      
+
       if not os.path.exists(self.simulator):
           raise RuntimeError("csimulator is missing at %s" % self.simulator)
 
@@ -38,8 +38,8 @@ class SynthesisProgramRunner:
 
       self.tmp_parset = "temp_parset.in"
       self.initParset()
-      
-   
+
+
    def initParset(self):
       '''
          Initialise temporary parset to the template
@@ -51,14 +51,14 @@ class SynthesisProgramRunner:
          os.system("rm -f %s" %  self.tmp_parset)
       print("INFO copying %s to %s" % (self.template_parset, self.tmp_parset))
       os.system("cp %s %s" % (self.template_parset, self.tmp_parset))
-      print("INFO Done")      
+      print("INFO Done")
 
    def addToParset(self,str):
       '''
          Add the given string to the temporary parset file (created in
          the constructor and passed to all commands executed throughout
          the lifetime of this object
-  
+
          str string to add
       '''
       os.system("echo \'%s\' >> %s" % (str, self.tmp_parset))
@@ -124,6 +124,7 @@ class SynthesisProgramRunner:
       '''
          Run new imager on a current parset in parallel
       '''
+      # mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
       mpirun = 'mpirun %s -np %d' % (args, nProcs)
       self.runCommand(mpirun + ' ' + self.NewImager)
 
@@ -180,7 +181,53 @@ class SynthesisProgramRunner:
          finally:
             f.close()
       return result
-      
+
+   def complexImageStats(self, name):
+      '''
+         Get image statistics
+
+         name - image name
+      '''
+      import re
+      if not os.path.exists(name):
+         raise RuntimeError("Image %s doesn't exist" % name)
+      imgstat_out = ".tmp.imgstat"
+      if os.path.exists(imgstat_out):
+         os.system("rm -f %s" % imgstat_out)
+      res = os.system("%s -C %s > %s" % (self.imgstat,name,imgstat_out))
+      if res != 0:
+         raise RuntimeError("Command %s failed with error %s" % (self.imgstat,res))
+      result = {}
+      with open(imgstat_out) as f:
+         try:
+            row = 0
+            for line in f:
+               line2 = re.split('[(,) \[\]]',line)
+               parts = [x for x in line2 if x]
+               if len(parts)<2 and row>0:
+                  raise RuntimeError("Expected at least 2 elements in row %i, you have: %s" % (row+1,parts))
+               if row == 0:
+                  if len(parts)<4:
+                     raise RuntimeError("Expected at least 4 columns on the first row, you have: %s " % (parts,))
+                  result['peak'] = float(parts[0])
+                  result['x'] = int(parts[1])
+                  result['y'] = int(parts[2])
+                  if len(parts)>3:
+                      result['pol'] = int(parts[3])
+                  if len(parts)>4:
+                      result['chan'] = int(parts[4])
+               elif row == 1:
+                  result['rms-real'] = float(parts[0])
+                  result['median-real'] = float(parts[1])
+               elif row == 2:
+                  result['rms-imag'] = float(parts[0])
+                  result['median-imag'] = float(parts[1])
+               row = row + 1
+         finally:
+            f.close()
+      return result
+
+
 # angular distance in degrees of the peak from the given point
 # ra and dec are J2000 coordinates in degrees
 # stats - dictionary with 'ra' and 'dec' field giving the position of the peak
@@ -198,7 +245,7 @@ def offsetDirection(ref,l,m):
    '''
    if len(ref)!=2:
       raise RuntimeError("Expected two-element list or tuple, you have: %s" % (ref,))
-   # sin and cos of the longitude offset 
+   # sin and cos of the longitude offset
    sL = math.sin(l/180.*math.pi)
    cL = math.cos(l/180.*math.pi)
    # sin and cos of the reference longitude
@@ -215,7 +262,7 @@ def offsetDirection(ref,l,m):
    resLat = math.asin(r3)/math.pi*180.
    resLong = math.atan2(r2,r1)/math.pi*180.
    return (resLong, resLat)
-  
+
 
 # formulae for SIN-projection to test that position is at the right spot
 def sinProjection(ref,l,m):

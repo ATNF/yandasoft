@@ -58,93 +58,141 @@ void printDirection(std::ostream &os,const casa::MDirection &dir)  {
 
 
 // Main function
-int main(int argc, const char** argv) { 
+int main(int argc, const char** argv) {
   try {
      cmdlineparser::Parser parser; // a command line parser
 	 // command line parameters
-	 cmdlineparser::FlagParameter doWtStats("-w");      
+     cmdlineparser::FlagParameter doWtStats("-w");
+     cmdlineparser::FlagParameter doComplexStats("-C");
 	 cmdlineparser::GenericParameter<std::string> imgfile;
-	 parser.add(doWtStats,cmdlineparser::Parser::return_default);
+     parser.add(doWtStats,cmdlineparser::Parser::return_default);
+     parser.add(doComplexStats,cmdlineparser::Parser::return_default);
 	 parser.add(imgfile);
 
 	 // I hope const_cast is temporary here
 	 parser.process(argc, const_cast<char**> (argv));
-     casa::PagedImage<casa::Float> img(imgfile.getValue());
-     casa::ImageStatistics<casa::Float> imstat(img, casa::False);
-     float tmin,tmax;
-     imstat.getFullMinMax(tmin,tmax);
-     casa::IPosition minPos,maxPos;
-     imstat.getMinMaxPos(minPos,maxPos);
-     casa::Int direction_coordinate = img.coordinates().findCoordinate(casa::Coordinate::DIRECTION);
-     ASKAPASSERT(direction_coordinate>=0);
-     ASKAPASSERT(maxPos.nelements()>=2);
-     const casa::DirectionCoordinate &dc = img.coordinates().directionCoordinate(direction_coordinate);
-     casa::Vector<casa::Double> pixel(2);
-     pixel(0)=casa::Double(maxPos[0]);
-     pixel(1)=casa::Double(maxPos[1]);
-     casa::MDirection res;
-     ASKAPASSERT(dc.toWorld(res,pixel));
-     
-     // print peak in the image and position of the peak 
-     std::cout<<tmax<<" ";
-     printDirection(std::cout,res);
-     std::cout<<" # Max RA Dec (Epoch)"<<std::endl;
-     
-     std::cout<<std::setprecision(15)<<res.getValue().getLong("deg").getValue()<<" "<<
-                res.getValue().getLat("deg").getValue()<<" # RA DEC"<<std::endl;
-     
-     casa::Array<float> statBuf;
-     if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::RMS)) {
-         casa::Vector<float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
-         ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);         
-         std::cout<<statVec[0]<<" ";
-     }
-     if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::MEDIAN)) {
-         casa::Vector<float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
-         ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);         
-         std::cout<<statVec[0]<<" # RMS MEDIAN"<<std::endl;
-     }
-     if (doWtStats.defined()) {
-         // making a slice to get inner quarter
-         const casa::IPosition shape = img.shape();
-         ASKAPCHECK(shape.nelements() >= 2, "Need 2D images for the '-w' option");
-         casa::IPosition blc(shape.nelements(),0);
-         casa::IPosition trc(shape);
-         for (size_t dim = 0; dim<trc.nelements(); ++dim) {
-              --trc[dim];
-              if (dim>=2) {
-                  trc[dim] = 0;
-              } 
+     if (!doComplexStats.defined()) {
+         casa::PagedImage<casa::Float> img(imgfile.getValue());
+         casa::ImageStatistics<casa::Float> imstat(img, casa::False);
+         float tmin,tmax;
+         imstat.getFullMinMax(tmin,tmax);
+         casa::IPosition minPos,maxPos;
+         imstat.getMinMaxPos(minPos,maxPos);
+         casa::Int direction_coordinate = img.coordinates().findCoordinate(casa::Coordinate::DIRECTION);
+         ASKAPASSERT(direction_coordinate>=0);
+         ASKAPASSERT(maxPos.nelements()>=2);
+         const casa::DirectionCoordinate &dc = img.coordinates().directionCoordinate(direction_coordinate);
+         casa::Vector<casa::Double> pixel(2);
+         pixel(0)=casa::Double(maxPos[0]);
+         pixel(1)=casa::Double(maxPos[1]);
+         casa::MDirection res;
+         ASKAPASSERT(dc.toWorld(res,pixel));
+
+         // print peak in the image and position of the peak
+         std::cout<<tmax<<" ";
+         printDirection(std::cout,res);
+         std::cout<<" # Max RA Dec (Epoch)"<<std::endl;
+
+         std::cout<<std::setprecision(15)<<res.getValue().getLong("deg").getValue()<<" "<<
+                    res.getValue().getLat("deg").getValue()<<" # RA DEC"<<std::endl;
+
+         casa::Array<float> statBuf;
+         if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::RMS)) {
+             casa::Vector<float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+             ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+             std::cout<<statVec[0]<<" ";
          }
-         blc[0] = shape[0]/4;
-         blc[1] = shape[1]/4;
-         trc[0] = 3*blc[0];
-         trc[1] = 3*blc[1];
-         ASKAPCHECK(blc[0]>=0 && blc[1]>=0, "BLC is negative: "<<blc<<", shape="<<shape);
-         ASKAPCHECK(trc[1]<shape[1] && trc[0]<shape[0], "TRC extends beyond the edge: "<<trc<<", shape="<<shape<<" blc="<<blc);
-         casa::Slicer slc(blc,trc,casa::IPosition(shape.nelements(),1),casa::Slicer::endIsLast);
-         casa::SubImage<casa::Float> si(img,slc,casa::AxesSpecifier(casa::True));
-         casa::ImageStatistics<casa::Float> imStatWt(si, casa::False);
-         imStatWt.getFullMinMax(tmin,tmax);
-         std::cout<<tmax<<" "<<tmin<<" # MAX MIN in the inner quarter"<<std::endl; 
-     }     
+         if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::MEDIAN)) {
+             casa::Vector<float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+             ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+             std::cout<<statVec[0]<<" # RMS MEDIAN"<<std::endl;
+         }
+         if (doWtStats.defined()) {
+             // making a slice to get inner quarter
+             const casa::IPosition shape = img.shape();
+             ASKAPCHECK(shape.nelements() >= 2, "Need 2D images for the '-w' option");
+             casa::IPosition blc(shape.nelements(),0);
+             casa::IPosition trc(shape);
+             for (size_t dim = 0; dim<trc.nelements(); ++dim) {
+                  --trc[dim];
+                  if (dim>=2) {
+                      trc[dim] = 0;
+                  }
+             }
+             blc[0] = shape[0]/4;
+             blc[1] = shape[1]/4;
+             trc[0] = 3*blc[0];
+             trc[1] = 3*blc[1];
+             ASKAPCHECK(blc[0]>=0 && blc[1]>=0, "BLC is negative: "<<blc<<", shape="<<shape);
+             ASKAPCHECK(trc[1]<shape[1] && trc[0]<shape[0], "TRC extends beyond the edge: "<<trc<<", shape="<<shape<<" blc="<<blc);
+             casa::Slicer slc(blc,trc,casa::IPosition(shape.nelements(),1),casa::Slicer::endIsLast);
+             casa::SubImage<casa::Float> si(img,slc,casa::AxesSpecifier(casa::True));
+             casa::ImageStatistics<casa::Float> imStatWt(si, casa::False);
+             imStatWt.getFullMinMax(tmin,tmax);
+             std::cout<<tmax<<" "<<tmin<<" # MAX MIN in the inner quarter"<<std::endl;
+         }
+     } else {
+         casa::PagedImage<casa::Complex> img(imgfile.getValue());
+         {
+             casa::LatticeExpr<casa::Float> lat(abs(img));
+             casa::LatticeStatistics<casa::Float> imstat(lat,casa::False,casa::False,casa::False);
+             casa::Float tmin,tmax;
+             imstat.getFullMinMax(tmin,tmax);
+             casa::IPosition minPos,maxPos;
+             imstat.getMinMaxPos(minPos,maxPos);
+             std::cout<<tmax<<" "<<maxPos << " # Max pixel position" << std::endl;
+         }
+         {
+             casa::LatticeExpr<casa::Float> lat(real(img));
+             casa::LatticeStatistics<casa::Float> imstat(lat,casa::False,casa::False,casa::False);
+
+             casa::Array<casa::Float> statBuf;
+             if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::RMS)) {
+                 casa::Vector<casa::Float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+                 ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+                 std::cout<<statVec[0]<<" ";
+             }
+             if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::MEDIAN)) {
+                 casa::Vector<casa::Float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+                 ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+                 std::cout<<statVec[0]<<" # RMS MEDIAN (real)"<<std::endl;
+             }
+         }
+         {
+             casa::LatticeExpr<casa::Float> lat(imag(img));
+             casa::LatticeStatistics<casa::Float> imstat(lat,casa::False,casa::False,casa::False);
+
+             casa::Array<casa::Float> statBuf;
+             if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::RMS)) {
+                 casa::Vector<casa::Float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+                 ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+                 std::cout<<statVec[0]<<" ";
+             }
+             if (imstat.getConvertedStatistic(statBuf,casa::LatticeStatsBase::MEDIAN)) {
+                 casa::Vector<casa::Float> statVec(statBuf.reform(casa::IPosition(1,statBuf.nelements())));
+                 ASKAPCHECK(statVec.nelements() == 1, "Expect exactly one element in the array returned by getConvertedStatistics; you have: "<<statVec);
+                 std::cout<<statVec[0]<<" # RMS MEDIAN (imag)"<<std::endl;
+             }
+         }
+     }
   }
   ///==============================================================================
   catch (const cmdlineparser::XParser &ex) {
-	 std::cerr << "Usage: " << argv[0] << " [-w] imagefile"
+	 std::cerr << "Usage: " << argv[0] << " [-w] [-C] imagefile"
 			<< std::endl<<
-			"  -w print min/max of the inner quarter (useful for weights analysis)"<<std::endl;
+			"  -w print min/max of the inner quarter (useful for weights analysis)"<<std::endl<<
+            "  -C handle complex valued image" << std::endl;
   }
 
   catch (const askap::AskapError& x) {
      std::cerr << "Askap error in " << argv[0] << ": " << x.what()
         << std::endl;
      exit(1);
-  } 
+  }
   catch (const std::exception& x) {
 	 std::cerr << "Unexpected exception in " << argv[0] << ": " << x.what()
 			<< std::endl;
 	 exit(1);
   }
-  exit(0);  
+  exit(0);
 }

@@ -38,6 +38,7 @@
 #include <Common/ParameterSet.h>
 #include <askap/measurementequation/RestoringBeamHelper.h>
 
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -92,20 +93,26 @@ namespace askap
         /// @param[in] doPrecon, copy the PreConditioners from other solver
         void configureSolver(const ImageSolver &ts, bool doPrecon = true);
 
-
+        /// @brief set extra oversampling during cleaning and image output if needed
+        /// @param[in] factor extra oversampling factor
+        inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
 
       protected:
         /// @brief set noise equalisation flag
         /// @param[in] flag true, to switch noise equalisation on
         inline void equaliseNoise(bool flag) { itsEqualiseNoise = flag; }
 
-        /// @brief set the solver to update residuals to the current model in the params
-        /// @param[in] flag true, to switch updating on
-        inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
-
         /// @brief set flag to save the raw psf into a parameter
         /// @param[in] flag true, to save the raw psf
         inline void saveRawPsf(bool flag) { itsSaveRawPsf = flag;}
+
+        /// @brief set flag to save the preconditioned psf into a parameter
+        /// @param[in] flag true, to save the preconditioned psf
+        inline void savePsfImage(bool flag) { itsSavePsfImage = flag;}
+
+        /// @brief set the solver to update residuals to the current model in the params
+        /// @param[in] flag true, to switch updating on
+        inline void updateResiduals(bool flag) { itsResidualNeedsUpdating = flag;}
 
         /// @brief solves for and adds residuals
         /// @details Restore solver convolves the current model with the beam and adds the
@@ -144,12 +151,17 @@ namespace askap
         /// direction-dependent flux error (but gives flat noise).
         bool itsEqualiseNoise;
 
+        /// @brief extra oversampling factor to use during clean
+        boost::optional<float> itsExtraOversamplingFactor;
+
         //mutable bool itsModelNeedsConvolving;
         bool itsModelNeedsConvolving;
 
         bool itsResidualNeedsUpdating;
 
         bool itsSaveRawPsf;
+
+        bool itsSavePsfImage;
 
     };
 
