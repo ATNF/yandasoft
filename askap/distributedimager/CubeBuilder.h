@@ -62,6 +62,8 @@ class CubeBuilder {
         /// Destructor
         ~CubeBuilder();
 
+        static std::string makeImageName(const LOFAR::ParameterSet& parset, const std:: string& name);
+
         void writeRigidSlice(const casacore::Array<T>& arr, const casacore::uInt chan);
         void writeFlexibleSlice(const casacore::Array<float>& arr, const casacore::uInt chan);
 

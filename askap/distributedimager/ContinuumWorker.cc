@@ -158,7 +158,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     if (itsWriteGrids && nwriters > 1) {
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
       itsNumWriters = 1;
-    } else if (parset.getString("imagetype") == "fits" && nwriters > 1){
+    } else if (parset.getString("imagetype","casa") == "casa" && nwriters > 1){
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
       itsNumWriters = 1;
     } else {
@@ -619,6 +619,7 @@ void ContinuumWorker::processChannels()
     std::string img_name = "image" + postfix;
     std::string psf_name = "psf" + postfix;
     std::string residual_name = "residual" + postfix;
+    // may need this name for the weightslog
     std::string weights_name = "weights" + postfix;
     std::string visgrid_name = "visgrid" + postfix;
     std::string pcfgrid_name = "pcfgrid" + postfix;
@@ -633,6 +634,10 @@ void ContinuumWorker::processChannels()
     // We want the start of observations stored in the image keywords
     // The velocity calculations use the first MS for this, so we'll do that too
     casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
+
+    if (itsWriteWtLog) {
+        itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
+    }
 
     if ( itsComms.isCubeCreator() ) {
 
@@ -1443,11 +1448,11 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   // Pre-conditions
 
   // Write image
-  if (!params->has("model.slice")) {
-    ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
-  }
-  else {
-    if (itsImageCube) {
+  if (itsImageCube) {
+      if (!params->has("model.slice")) {
+        ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
+      }
+      else {
       ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
       if (params->has("fullres.slice")) {
         // model has been set at a higher resolution
@@ -1462,48 +1467,50 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
 
   // Write PSF
-  if (!params->has("psf.slice")) {
-    ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
-  }
-  else {
-    if (itsPSFCube) {
-      if (!itsWriteGrids) {
-        itsPSFCube->writeFlexibleSlice(params->valueF("psf.slice"), chan);
+  if (itsPSFCube) {
+      if (!params->has("psf.slice")) {
+        ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
       }
-    }
+      else {
+          if (!itsWriteGrids) {
+            itsPSFCube->writeFlexibleSlice(params->valueF("psf.slice"), chan);
+          }
+      }
   }
 
   // Write residual
-  if (!params->has("residual.slice")) {
-    ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
-  }
-  else {
-    if (itsResidualCube) {
-      ASKAPLOG_INFO_STR(logger, "Writing Residual");
-      itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
-    }
+  if (itsResidualCube) {
+      if (!params->has("residual.slice")) {
+          ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
+      }
+      else {
+          ASKAPLOG_INFO_STR(logger, "Writing Residual");
+          itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+      }
   }
 
   // Write weights
-  if (!params->has("weights.slice")) {
-    ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-  }
-  else {
-    if (itsWeightsCube) {
-      ASKAPLOG_INFO_STR(logger, "Writing Weights");
-      itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
-    }
-    if (itsWriteWtLog) {
-      ASKAPLOG_INFO_STR(logger,"Writing Weights log");
-      Array<float> wts = params->valueF("weights.slice");
-      float wt = wts.data()[0];
-      if (allEQ(wts,wt)) {
-        recordWeight(wt, chan);
-      } else {
-        ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
-        recordWeight(-1.0, chan);
+  if (itsWeightsCube || itsWriteWtLog) {
+      if (!params->has("weights.slice")) {
+          ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
       }
-    }
+      else {
+          if (itsWeightsCube) {
+              ASKAPLOG_INFO_STR(logger, "Writing Weights");
+              itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
+          }
+          if (itsWriteWtLog) {
+              ASKAPLOG_INFO_STR(logger,"Writing Weights log");
+              Array<float> wts = params->valueF("weights.slice");
+              float wt = wts.data()[0];
+              if (allEQ(wts,wt)) {
+                recordWeight(wt, chan);
+              } else {
+                ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights log");
+                recordWeight(-1.0, chan);
+              }
+          }
+      }
   }
 
   // Write the grids
@@ -1677,18 +1684,10 @@ void ContinuumWorker::logWeightsInfo()
                 return;
             }
         }
-        // Need to pick an image we are actually writing, if neither of these is written
-        // we probably don't need the weights
-        if (itsRestoredCube) {
-            weightslog.setFilename("weightslog." + itsRestoredCube->filename() + ".txt");
-        } else if (itsResidualCube) {
-            weightslog.setFilename("weightslog." + itsResidualCube->filename() + ".txt");
-        }
-        if (weightslog.filename()!="") {
-            ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
-              << weightslog.filename());
-            weightslog.write();
-        }
+        weightslog.setFilename(itsWeightsName + ".txt");
+        ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
+            << weightslog.filename());
+        weightslog.write();
     }
   }
 

@@ -179,36 +179,11 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
     return coordsys;
 }
 
+
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
-    // as long as the cube exists all should be fine
-    vector<string> filenames;
-    if (parset.isDefined("Images.Names")) {
-        filenames = parset.getStringVector("Images.Names", true);
-        itsFilename = filenames[0];
-    }
-    else if(parset.isDefined("Images.name")) {
-        itsFilename = parset.getString("Images.name");
-    }
-    else {
-        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
-    }
-    ASKAPCHECK(itsFilename.substr(0,5)=="image",
-               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
-
-    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
-    // unless name='restored', in which case we append ".restored"
-    if (!name.empty()) {
-        if (name == "restored") {
-            itsFilename = itsFilename + ".restored";
-        } else {
-            const string orig = "image";
-            const size_t f = itsFilename.find(orig);
-            itsFilename.replace(f, orig.length(), name);
-        }
-    }
-
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
+    itsFilename = makeImageName(parset, name);
     boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
     itsCube = iaCASA;
 }
@@ -216,33 +191,8 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,co
 template <class T>
 CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     // as long as the cube exists all should be fine
-    vector<string> filenames;
-    if (parset.isDefined("Images.Names")) {
-        filenames = parset.getStringVector("Images.Names", true);
-        itsFilename = filenames[0];
-    }
-    else if(parset.isDefined("Images.name")) {
-        itsFilename = parset.getString("Images.name");
-    }
-    else {
-        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
-    }
-    ASKAPCHECK(itsFilename.substr(0,5)=="image",
-               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
-
-    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
-    // unless name='restored', in which case we append ".restored"
-    if (!name.empty()) {
-        if (name == "restored") {
-            itsFilename = itsFilename + ".restored";
-        } else {
-            const string orig = "image";
-            const size_t f = itsFilename.find(orig);
-            itsFilename.replace(f, orig.length(), name);
-        }
-    }
-
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
+    itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
 
 }
@@ -253,32 +203,8 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::Quantity& inc,
                          const std::string& name)
 {
-    vector<string> filenames;
-    if (parset.isDefined("Images.Names")) {
-        filenames = parset.getStringVector("Images.Names", true);
-        itsFilename = filenames[0];
-    }
-    else if(parset.isDefined("Images.name")) {
-        itsFilename = parset.getString("Images.name");
-    }
-    else {
-        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
-    }
-    ASKAPCHECK(itsFilename.substr(0,5)=="image",
-               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
-
-    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
-    // unless name='restored', in which case we append ".restored"
-    if (!name.empty()) {
-        if (name == "restored") {
-            itsFilename = itsFilename + ".restored";
-        } else {
-            const string orig = "image";
-            const size_t f = itsFilename.find(orig);
-            itsFilename.replace(f, orig.length(), name);
-        }
-    }
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
+    itsFilename = makeImageName(parset, name);
     boost::shared_ptr<CasaImageAccess<casacore::Complex> > iaCASA(new CasaImageAccess<casacore::Complex>());
     itsCube = iaCASA;
 
@@ -336,32 +262,8 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::Quantity& inc,
                          const std::string& name)
 {
-    vector<string> filenames;
-    if (parset.isDefined("Images.Names")) {
-        filenames = parset.getStringVector("Images.Names", true);
-        itsFilename = filenames[0];
-    }
-    else if(parset.isDefined("Images.name")) {
-        itsFilename = parset.getString("Images.name");
-    }
-    else {
-        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
-    }
-    ASKAPCHECK(itsFilename.substr(0,5)=="image",
-               "Images.name (Names) must start with 'image' starts with " << itsFilename.substr(0,5));
-
-    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
-    // unless name='restored', in which case we append ".restored"
-    if (!name.empty()) {
-        if (name == "restored") {
-            itsFilename = itsFilename + ".restored";
-        } else {
-            const string orig = "image";
-            const size_t f = itsFilename.find(orig);
-            itsFilename.replace(f, orig.length(), name);
-        }
-    }
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
+    itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
@@ -427,6 +329,38 @@ template < class T >
 CubeBuilder<T>::~CubeBuilder()
 {
 }
+
+template <class T>
+std::string CubeBuilder<T>::makeImageName(const LOFAR::ParameterSet& parset, const std:: string& name) {
+    vector<string> filenames;
+    std::string filename;
+    if (parset.isDefined("Images.Names")) {
+        filenames = parset.getStringVector("Images.Names", true);
+        filename = filenames[0];
+    }
+    else if(parset.isDefined("Images.name")) {
+        filename = parset.getString("Images.name");
+    }
+    else {
+        ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not find the image name(s) ");
+    }
+    ASKAPCHECK(filename.substr(0,5)=="image",
+               "Images.name (Names) must start with 'image' starts with " << filename.substr(0,5));
+
+    // If necessary, replace "image" with _name_ (e.g. "psf", "weights")
+    // unless name='restored', in which case we append ".restored"
+    if (!name.empty()) {
+        if (name == "restored") {
+            filename = filename + ".restored";
+        } else {
+            const string orig = "image";
+            const size_t f = filename.find(orig);
+            filename.replace(f, orig.length(), name);
+        }
+    }
+    return filename;
+}
+
 
 template < class T >
 void CubeBuilder<T>::writeRigidSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
