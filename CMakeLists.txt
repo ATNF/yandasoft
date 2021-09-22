@@ -259,6 +259,7 @@ find_package(Components REQUIRED)
 find_package(MPI)
 find_package(CPPUnit)
 
+message(STATUS "---> ENABLE_OPENMP = ${ENABLE_OPENMP}")
 if (ENABLE_OPENMP)
 	find_package(OpenMP)
     if (OPENMP_FOUND)
