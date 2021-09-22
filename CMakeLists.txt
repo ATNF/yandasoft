@@ -67,7 +67,7 @@ include(FetchContent)
 # We need this before any other Fetch calls so we have the find_package routines available
 # -------- askap cmake modules --------
 FetchContent_Declare(askap-cmake
-  GIT_REPOSITORY    https://bitbucket.csiro.au/scm/askapsdp/askap-cmake.git
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-cmake.git
   GIT_TAG           ${ASKAP_CMAKE_TAG}
   SOURCE_DIR        askap-cmake
 )
@@ -86,97 +86,85 @@ include(version_utils)
 
 # -------- askap-dev --------
 # askap-dev/config/modulefiles has our template module definition file
-get_clone_url(askap-dev)
 FetchContent_Declare(askap-dev
-  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-dev}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-dev.git
   GIT_TAG           ${ASKAP_DEV_TAG}
   SOURCE_DIR        askap-dev
 )
 
 # -------- lofar common --------
-get_clone_url(lofar-common)
 FetchContent_Declare(lofar-common
-  GIT_REPOSITORY    ${GIT_CLONE_URL_lofar-common}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-common.git
   GIT_TAG           ${LOFAR_COMMON_TAG}
   SOURCE_DIR        lofar-common
 )
 
 # -------- lofar blob --------
-get_clone_url(lofar-blob)
 FetchContent_Declare(lofar-blob
-  GIT_REPOSITORY    ${GIT_CLONE_URL_lofar-blob}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-blob.git
   GIT_TAG           ${LOFAR_BLOB_TAG}
   SOURCE_DIR        lofar-blob
 )
 
 # -------- base-askap --------
-get_clone_url(base-askap)
 FetchContent_Declare(base-askap
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-askap}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askap.git
   GIT_TAG           ${BASE_ASKAP_TAG}
   SOURCE_DIR        base-askap
 )
 
 # -------- base-logfilters --------
-get_clone_url(base-logfilters)
 FetchContent_Declare(base-logfilters
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-logfilters}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-logfilters.git
   GIT_TAG           ${BASE_LOGFILTERS_TAG}
   SOURCE_DIR        base-logfilters
 )
 
 # -------- base-imagemath --------
-get_clone_url(base-imagemath)
 FetchContent_Declare(base-imagemath
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-imagemath}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-imagemath.git
   GIT_TAG           ${BASE_IMAGEMATH_TAG}
   SOURCE_DIR        base-imagemath
 )
 
 # -------- base-askapparallel --------
-get_clone_url(base-askapparallel)
 FetchContent_Declare(base-askapparallel
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-askapparallel}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askapparallel.git
   GIT_TAG           ${BASE_ASKAPPARRALLEL_TAG}
   SOURCE_DIR        base-askapparallel
 )
 
 # -------- base-scimath --------
-get_clone_url(base-scimath)
 FetchContent_Declare(base-scimath
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-scimath}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-scimath.git
   GIT_TAG           ${BASE_SCIMATH_TAG}
   SOURCE_DIR        base-scimath
 )
 
 # -------- base-accessors --------
-get_clone_url(base-accessors)
 FetchContent_Declare(base-accessors
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-accessors}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-accessors.git
   GIT_TAG           ${BASE_ACCESSORS_TAG}
   SOURCE_DIR        base-accessors
 )
 
 # -------- base-components --------
-get_clone_url(base-components)
 FetchContent_Declare(base-components
-  GIT_REPOSITORY    ${GIT_CLONE_URL_base-components}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-components.git
   GIT_TAG           ${BASE_COMPONENTS_TAG}
   SOURCE_DIR        base-components
 )
 
 # -------- askap-analysis --------
-get_clone_url(askap-analysis)
 FetchContent_Declare(askap-analysis
-  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-analysis}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-analysis.git
   GIT_TAG           ${ASKAP_ANALYSIS_TAG}
   SOURCE_DIR        askap-analysis
 )
 
 # -------- askap-interfaces --------
-get_clone_url(askap-interfaces)
 FetchContent_Declare(askap-interfaces
-  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-interfaces}
+  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-interfaces.git
   GIT_TAG           ${ASKAP_INTERFACES_TAG}
   SOURCE_DIR        askap-interfaces
 )
