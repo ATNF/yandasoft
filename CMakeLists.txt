@@ -1,26 +1,197 @@
+cmake_minimum_required(VERSION 3.15)
 
-cmake_minimum_required (VERSION 3.12.0)
-include(CheckCXXCompilerFlag)
-option(UPDATE_CMAKE "Update the cmake modules" ON)
- 
-if (UPDATE_CMAKE)
+set (VERSION 1.3.0)
 
-if (EXISTS ${CMAKE_SOURCE_DIR}/askap-cmake)
-    execute_process(COMMAND git pull 
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/askap-cmake
-    TIMEOUT 10)
-else ()	
-    execute_process(COMMAND git clone https://bitbucket.csiro.au/scm/askapsdp/askap-cmake.git
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-endif ()
+# ASKAP Integration (askapsoft)
+#
+# Creates a full build of the ASKAP Yanda system including associated packages suitable for deployment
+# to the HPC system as a module.
+#
+# A typical dependency project is defined as follows:
+#
+# FetchContent_Declare(<project>
+#   GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/<project>.git
+#   GIT_TAG           ${<PROJECT_VERSION_TAG_VAR_from_dependencies.cmake>}
+#   SOURCE_DIR        <project>
+# )
+#
+# Author: Eric Bastholm (bas091)
 
-endif ()
+find_package(Git REQUIRED)
 
-set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/askap-cmake")
+option(IS_DEFAULT_VERSION "Create the .version file to make this build the default module" OFF )
+option(BUILD_DOCKER       "Build for Docker" OFF)
+
+set (MODULE_NAME yandasoft)
+include (GNUInstallDirs)
+
+message (STATUS "Forming build label")
+execute_process(
+   COMMAND git describe --tags --always --dirty
+   OUTPUT_VARIABLE BUILD_STR
+   OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Build label is ${BUILD_STR}")
+
+# Note: This has to be done prior to the cmake project command in case the
+# CMAKE_CXX_COMPILER and CMAKE_C_COMPILER are set in cmake config overrides file.
+# Otherwise, these two variable are not used if they are set after the project command
+# is called.
+# Load any developer overrides for FetchContent behaviour like external sources, feature branch inclusion, non default version inclusion, etc.
+# DEV_OVERRIDES should be a full path to a cmake script.
+message (STATUS "DEV_OVERRIDES = $ENV{DEV_OVERRIDES}")
+if(DEFINED ENV{DEV_OVERRIDES})
+  message (STATUS "cmake config overrides file specified, $ENV{DEV_OVERRIDES}")
+  include($ENV{DEV_OVERRIDES} OPTIONAL)
+else()
+  message (STATUS "No cmake config overrides file specified, using defaults")
+endif()
+
+if (NOT ${BUILD_DOCKER})
+  set (BASE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "The original CMAKE_INSTALL_PREFIX passed in." FORCE)
+  set (CMAKE_INSTALL_PREFIX ${BASE_INSTALL_PREFIX}/${MODULE_NAME}/${BUILD_STR} CACHE PATH "Added module name and version to the install prefix." FORCE)
+  message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
+  message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
+endif()
+
+message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
+
+# Load the version IDs of all the dependency sub repos
+include(dependencies.cmake)
+
+# Declare all of sub repos and tools
+include(FetchContent)
+
+# Put our askap cmake modules in the cmake path
+# We need this before any other Fetch calls so we have the find_package routines available
+# -------- askap cmake modules --------
+FetchContent_Declare(askap-cmake
+  GIT_REPOSITORY    https://bitbucket.csiro.au/scm/askapsdp/askap-cmake.git
+  GIT_TAG           ${ASKAP_CMAKE_TAG}
+  SOURCE_DIR        askap-cmake
+)
+
+message (STATUS "Fetching askap-cmake files")
+FetchContent_GetProperties(askap-cmake)
+if(NOT askap-cmake_POPULATED)
+  FetchContent_Populate(askap-cmake)
+
+endif()
+list(APPEND CMAKE_MODULE_PATH "${askap-cmake_SOURCE_DIR}")
+#message(STATUS "askap-cmake path is ${askap-cmake_SOURCE_DIR}")
+message(STATUS "askap-cmake path is ${CMAKE_MODULE_PATH}")
+
 include(version_utils)
-get_version_string()
 
-project(yandasoft VERSION ${VERSION_SHORT} LANGUAGES C CXX)
+# -------- askap-dev --------
+# askap-dev/config/modulefiles has our template module definition file
+get_clone_url(askap-dev)
+FetchContent_Declare(askap-dev
+  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-dev}
+  GIT_TAG           ${ASKAP_DEV_TAG}
+  SOURCE_DIR        askap-dev
+)
+
+# -------- lofar common --------
+get_clone_url(lofar-common)
+FetchContent_Declare(lofar-common
+  GIT_REPOSITORY    ${GIT_CLONE_URL_lofar-common}
+  GIT_TAG           ${LOFAR_COMMON_TAG}
+  SOURCE_DIR        lofar-common
+)
+
+# -------- lofar blob --------
+get_clone_url(lofar-blob)
+FetchContent_Declare(lofar-blob
+  GIT_REPOSITORY    ${GIT_CLONE_URL_lofar-blob}
+  GIT_TAG           ${LOFAR_BLOB_TAG}
+  SOURCE_DIR        lofar-blob
+)
+
+# -------- base-askap --------
+get_clone_url(base-askap)
+FetchContent_Declare(base-askap
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-askap}
+  GIT_TAG           ${BASE_ASKAP_TAG}
+  SOURCE_DIR        base-askap
+)
+
+# -------- base-logfilters --------
+get_clone_url(base-logfilters)
+FetchContent_Declare(base-logfilters
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-logfilters}
+  GIT_TAG           ${BASE_LOGFILTERS_TAG}
+  SOURCE_DIR        base-logfilters
+)
+
+# -------- base-imagemath --------
+get_clone_url(base-imagemath)
+FetchContent_Declare(base-imagemath
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-imagemath}
+  GIT_TAG           ${BASE_IMAGEMATH_TAG}
+  SOURCE_DIR        base-imagemath
+)
+
+# -------- base-askapparallel --------
+get_clone_url(base-askapparallel)
+FetchContent_Declare(base-askapparallel
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-askapparallel}
+  GIT_TAG           ${BASE_ASKAPPARRALLEL_TAG}
+  SOURCE_DIR        base-askapparallel
+)
+
+# -------- base-scimath --------
+get_clone_url(base-scimath)
+FetchContent_Declare(base-scimath
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-scimath}
+  GIT_TAG           ${BASE_SCIMATH_TAG}
+  SOURCE_DIR        base-scimath
+)
+
+# -------- base-accessors --------
+get_clone_url(base-accessors)
+FetchContent_Declare(base-accessors
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-accessors}
+  GIT_TAG           ${BASE_ACCESSORS_TAG}
+  SOURCE_DIR        base-accessors
+)
+
+# -------- base-components --------
+get_clone_url(base-components)
+FetchContent_Declare(base-components
+  GIT_REPOSITORY    ${GIT_CLONE_URL_base-components}
+  GIT_TAG           ${BASE_COMPONENTS_TAG}
+  SOURCE_DIR        base-components
+)
+
+# -------- askap-analysis --------
+get_clone_url(askap-analysis)
+FetchContent_Declare(askap-analysis
+  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-analysis}
+  GIT_TAG           ${ASKAP_ANALYSIS_TAG}
+  SOURCE_DIR        askap-analysis
+)
+
+# -------- askap-interfaces --------
+get_clone_url(askap-interfaces)
+FetchContent_Declare(askap-interfaces
+  GIT_REPOSITORY    ${GIT_CLONE_URL_askap-interfaces}
+  GIT_TAG           ${ASKAP_INTERFACES_TAG}
+  SOURCE_DIR        askap-interfaces
+)
+
+
+message (STATUS "Fetching sub repos")
+FetchContent_MakeAvailable(askap-dev
+                           lofar-common lofar-blob
+                           base-askap base-logfilters base-imagemath base-askapparallel base-scimath
+                           base-accessors base-components askap-analysis 
+                           askap-interfaces 
+)
+message (STATUS "Done - Fetching sub repos")
+
+project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 
 configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
