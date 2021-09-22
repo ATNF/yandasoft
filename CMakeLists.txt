@@ -148,34 +148,11 @@ FetchContent_Declare(base-accessors
   SOURCE_DIR        base-accessors
 )
 
-# -------- base-components --------
-FetchContent_Declare(base-components
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-components.git
-  GIT_TAG           ${BASE_COMPONENTS_TAG}
-  SOURCE_DIR        base-components
-)
-
-# -------- askap-analysis --------
-FetchContent_Declare(askap-analysis
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-analysis.git
-  GIT_TAG           ${ASKAP_ANALYSIS_TAG}
-  SOURCE_DIR        askap-analysis
-)
-
-# -------- askap-interfaces --------
-FetchContent_Declare(askap-interfaces
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-interfaces.git
-  GIT_TAG           ${ASKAP_INTERFACES_TAG}
-  SOURCE_DIR        askap-interfaces
-)
-
-
 message (STATUS "Fetching sub repos")
 FetchContent_MakeAvailable(askap-dev
                            lofar-common lofar-blob
                            base-askap base-logfilters base-imagemath base-askapparallel base-scimath
-                           base-accessors base-components askap-analysis 
-                           askap-interfaces 
+                           base-accessors 
 )
 message (STATUS "Done - Fetching sub repos")
 
@@ -190,8 +167,7 @@ configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 # 
 set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
 
-
-
+include(CheckCXXCompilerFlag)
 option (CXX11 "Compile as C++11 if possible" YES)
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
