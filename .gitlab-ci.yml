@@ -42,8 +42,13 @@ test:
     - build
   before_script:
     - apt update && apt install -y cmake xsltproc 
+  variable:
+    - CASARCFILES: ${CI_PROJECT_DIR}/_build/base-askap/test_gitlab_casarc.cfg
   script:
     - cd _build
+    - tar -xjf /askap/data/measdata.tar.bz2
+    - "echo 'measures.directory: '${PWD}'/data' > ${CASARCFILES}"
+    - cat $CASARCFILES
     - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
     - cd _build
