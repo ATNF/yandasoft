@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 
-set (VERSION 1.3.0)
+#set (VERSION "")
+if ( "${VERSION}" STREQUAL "")
+    project(yandasoft LANGUAGES C CXX)
+else()
+    project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
+endif()
 
 # ASKAP Integration (askapsoft)
 #
@@ -23,7 +28,11 @@ option(IS_DEFAULT_VERSION "Create the .version file to make this build the defau
 option(BUILD_DOCKER       "Build for Docker" OFF)
 
 set (MODULE_NAME yandasoft)
+include(CheckCXXCompilerFlag)
 include (GNUInstallDirs)
+# Load the version IDs of all the dependency sub repos
+include(dependencies.cmake)
+
 
 message (STATUS "Forming build label")
 execute_process(
@@ -47,18 +56,18 @@ else()
   message (STATUS "No cmake config overrides file specified, using defaults")
 endif()
 
-if (NOT ${BUILD_DOCKER})
-  set (BASE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "The original CMAKE_INSTALL_PREFIX passed in." FORCE)
-  set (CMAKE_INSTALL_PREFIX ${BASE_INSTALL_PREFIX}/${MODULE_NAME}/${BUILD_STR} CACHE PATH "Added module name and version to the install prefix." FORCE)
-  message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
-  message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
+if ( "${CMAKE_PROJECT_NAME}" STREQUAL "yandasoft" )
+    # this cmake file is the top level cmakefile, for example it is not part of the askap-askapsoft build
+    message(STATUS "--- yandasoft is a top level project")
+    set (BASE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "The original CMAKE_INSTALL_PREFIX passed in." FORCE)
+    set (CMAKE_INSTALL_PREFIX ${BASE_INSTALL_PREFIX}/${MODULE_NAME}/${BUILD_STR} CACHE PATH "Added module name and version to the install prefix." FORCE)
+else()
+    message(STATUS "--- yandasoft is not a top level project")
 endif()
 
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
 
-# Load the version IDs of all the dependency sub repos
-include(dependencies.cmake)
 
 # Declare all of sub repos and tools
 include(FetchContent)
@@ -156,9 +165,6 @@ FetchContent_MakeAvailable(askap-dev
 )
 message (STATUS "Done - Fetching sub repos")
 
-project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
-
-
 configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 
 # Required Version of ASKAP dependencies is the MAJOR and MINOR version
@@ -167,7 +173,6 @@ configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 # 
 set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
 
-include(CheckCXXCompilerFlag)
 option (CXX11 "Compile as C++11 if possible" YES)
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
@@ -213,6 +218,16 @@ option (BUILD_SHARED_LIBS "" YES)
         set(CMAKE_INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib" )
         set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
         set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+        if ( APPLE )
+            # on OSX, the app/executable may not run because it can not find
+            # the shared libraries (e.g: ICE and/or log4cxx libraries etc).
+            # At least this is what I saw on my MacOS laptop when I tried to
+            # get this repo to build and run. I could be wrong but I assume 
+            # this is because of the way I installed log4cxx on my laptop.
+            # I got the old version of log4cxx (0.11.0) while brew install 
+            # will install log4cxx (0.12.0).
+            list(APPEND CMAKE_INSTALL_RPATH "${log4cxx_LIBRARY}" "${ICE_LIB}")
+        endif()
     endif (ENABLE_RPATH)
 endif(ENABLE_SHARED)
 
@@ -235,7 +250,6 @@ find_package(Components REQUIRED)
 find_package(MPI)
 find_package(CPPUnit)
 
-message(STATUS "---> ENABLE_OPENMP = ${ENABLE_OPENMP}")
 if (ENABLE_OPENMP)
 	find_package(OpenMP)
     if (OPENMP_FOUND)
@@ -375,7 +389,3 @@ if (BUILD_TESTING)
 	add_subdirectory(tests/opcal)
 endif ()
 
-
-
-include(yanda_export)
-yanda_export(askap)
