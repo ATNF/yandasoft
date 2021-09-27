@@ -38,7 +38,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagemsmfsolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 #include <casacore/lattices/LatticeMath/LatticeCleaner.h>
 #include <casacore/lattices/LatticeMath/MultiTermLatticeCleaner.h>
@@ -187,7 +187,7 @@ namespace askap
 	           std::set<std::string> parametersToBeFixed;
 
 	           // Iterate through Polarisations (former sindex)
-	           for (scimath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
+	           for (imagemath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
 	                const uint plane = planeIter.sequenceNumber();
 	                ASKAPDEBUGASSERT(plane<nPol);
                     std::string tagLogString(planeIter.tag());

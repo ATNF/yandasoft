@@ -37,7 +37,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
@@ -271,7 +271,7 @@ namespace askap
         bool firstcycle;
 
         // Iterate through Polarisations
-        for (scimath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
+        for (imagemath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
             const uint plane = planeIter.sequenceNumber();
             std::string tagLogString(planeIter.tag());
             if (tagLogString.size()) {
@@ -512,7 +512,7 @@ namespace askap
                             const size_t index = fullResName.find("image");
                             ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
                             fullResName.replace(index,5,"fullres");
-                            scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
+                            imagemath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                             cleanVec(order).reference(
                                 fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
                         }

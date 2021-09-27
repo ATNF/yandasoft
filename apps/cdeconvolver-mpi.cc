@@ -55,7 +55,7 @@
 #include <askap/deconvolution/DeconvolverHogbom.h>
 #include <askap/distributedimager/CubeBuilder.h>
 #include <askap/askapparallel/AskapParallel.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/fft/FFTWrapper.h>
 #include <askap/scimath/utils/SpheroidalFunction.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -247,7 +247,7 @@ class CdeconvolverApp : public askap::Application
                 grid.doGetSlice(buffer, slicer);
      
                 // do the work
-                scimath::MultiDimArrayPlaneIter planeIter(buffer.shape());
+                imagemath::MultiDimArrayPlaneIter planeIter(buffer.shape());
                 
                 for ( ; planeIter.hasMore(); planeIter.next()) {
                     /// FIXME: this is supposed to loop over the polarisations as well as channels

@@ -26,7 +26,7 @@
 #include <askap/imageaccess/ImageAccessFactory.h>
 #include <askap/scimath/utils/PolConverter.h>
 #include <askap/scimath/fitting/Axes.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/gridding/SupportSearcher.h>
 #include <casacore/lattices/LatticeMath/Fit2D.h>
@@ -1457,7 +1457,7 @@ namespace askap
                              "), using the first 2D plane only to fit the beam");
        }
 
-       casacore::Array<imtype> psfSlice = MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
+       casacore::Array<imtype> psfSlice = imagemath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
        ASKAPDEBUGASSERT(psfSlice.shape().nelements() == 2);
        casacore::Matrix<imtype> psfSliceMatrix = psfSlice;
 
