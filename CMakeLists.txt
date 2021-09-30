@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-#set (VERSION "")
+set (VERSION "1.4.0")
 if ( "${VERSION}" STREQUAL "")
     project(yandasoft LANGUAGES C CXX)
 else()
