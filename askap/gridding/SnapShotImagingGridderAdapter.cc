@@ -45,7 +45,7 @@ ASKAP_LOGGER(logger, ".gridding.snapshotimaginggridderadapter");
 
 #include <askap/gridding/SnapShotImagingGridderAdapter.h>
 #include <askap/askap/AskapError.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 
 #include <askap/scimath/fft/FFTWrapper.h>
@@ -525,7 +525,7 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<imtype> &i
    }
 
    // iterator over planes
-   scimath::MultiDimArrayPlaneIter planeIter(input.shape());
+   imagemath::MultiDimArrayPlaneIter planeIter(input.shape());
 
    // regridder
    casacore::ImageRegrid<imtype> regridder;

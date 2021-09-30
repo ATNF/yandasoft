@@ -55,7 +55,7 @@
 #include <askap/dataaccess/ParsetInterface.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/parallel/GroupVisAggregator.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -70,6 +70,7 @@ using namespace askap;
 using namespace askap::accessors;
 using namespace askap::cp;
 using namespace askap::scimath;
+using namespace askap::imagemath;
 using namespace askap::synthesis;
 
 ASKAP_LOGGER(logger, ".CalcCore");

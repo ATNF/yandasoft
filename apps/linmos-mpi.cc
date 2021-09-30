@@ -36,6 +36,7 @@
 #include <askap/askapparallel/AskapParallel.h>
 #include <askap/imageaccess/WeightsLog.h>
 #include <askap/imagemath/linmos/LinmosAccumulator.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 /// 3rd party
 #include <Common/ParameterSet.h>
@@ -335,7 +336,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
       // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
 
-      scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
+      imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
       // loop over the input images, reading each in and adding to the output pixel arrays
       // remember this is for the current output mosaick
 
@@ -654,7 +655,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       // deweight the image pixels
       // use another iterator to loop over planes
       ASKAPLOG_INFO_STR(logger, "Deweighting accumulated images");
-      scimath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
+      imagemath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
       for (; deweightIter.hasMore(); deweightIter.next()) {
         curpos = deweightIter.position();
         accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);

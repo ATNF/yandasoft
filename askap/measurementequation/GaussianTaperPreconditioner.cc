@@ -48,7 +48,7 @@ ASKAP_LOGGER(logger, ".measurementequation.gaussiantaperpreconditioner");
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/scimath/Mathematics/SquareMatrix.h>
 #include <casacore/scimath/Mathematics/RigidVector.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 namespace askap {
 
@@ -157,7 +157,7 @@ casacore::Vector<double> GaussianTaperPreconditioner::fitPsf(casacore::Array<flo
     ASKAPTRACE("GaussianTaperPreconditioner::fitPsf");
     ASKAPCHECK(psfArray.shape().nelements()>=2,"PSF image is supposed to be at least 2-dimensional, shape="
     <<psfArray.shape());
-    casacore::Matrix<float> psf = scimath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
+    casacore::Matrix<float> psf = imagemath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
     SupportSearcher ss(itsCutoff);
     ss.search(psf);
     // search only looks in x and y direction, now extend the support to diagonals
