@@ -130,20 +130,20 @@ bool GaussianTaperPreconditioner::doPreconditioning(casacore::Array<float>& psf,
       // just to initialise
       taper(psf.shape());
       origPsf = psf;
-      int converged = 0;
+      GaussianTaperCache::TuningStatus status = GaussianTaperCache::NOTCONVERGED;
       int count = 0;
 
-      while (converged == 0 && count++ < 20) {
+      while (status == NOTCONVERGED && count++ < 20) {
           ASKAPLOG_DEBUG_STR(logger, "Taper tuning iteration: "<<count);
           casacore::Vector<double> beam = fitPsf(psf);
           float tolerance = itsTolerance;
-          converged = tuneTaper(beam, tolerance, count);
-          if (converged == 0) {
+          status = tuneTaper(beam, tolerance, count);
+          if (status == GaussianTaperCache::NOTCONVERGED) {
               psf = origPsf;
               applyTaper(psf);
           }
       }
-      if (converged != 1) {
+      if (status != GaussianTaperCache::CONVERGED) {
           ASKAPLOG_WARN_STR(logger,"Failed to achieve requested beam size");
       }
       itsFitBeam = false; // Do we need this? Yes - avoids refitting in restore phase

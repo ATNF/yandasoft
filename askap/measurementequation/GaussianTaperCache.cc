@@ -117,14 +117,15 @@ casacore::Vector<double> poly2Beam(const casacore::Vector<double> & poly) {
 /// @param[in] beam - fitted beam fwhm major,minor in image pixels and pos angle in radians
 /// @param[in] tolerance - fractional tolerance in fwhm, also tolerance in rad for pa
 /// @param[in] iter - iteration count, starting from 1
-/// @return 1 if converged within tolerance, 0 if not converged, -1 if not possible
-int GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double tolerance,
+/// @return CONVERGED,  NOTCONVERGED, or NOTPOSSIBLE
+GaussianTaperCache::TuningStatus GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double tolerance,
     int iter) const
 {
     // first time round we don't apply any taper
     if (iter>1) {
         ASKAPASSERT(itsTaper.nelements() == 3 && itsTaperCache.shape().nelements()>=2);
     }
+    ASKAPASSERT(beam(0)>0 && beam(1)>0);
     ASKAPLOG_DEBUG_STR(logger,"Current fitted beam parameters: "<< beam );
     // beam is in image pixels, taper in uvplane pixels
     // The relation between FWHMs in fourier and image plane is
@@ -138,10 +139,8 @@ int GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleranc
     double taper0 = (nx / beam(0)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
     double taper1 = (ny / beam(1)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
     double pa = beam(2);
-    //ASKAPLOG_DEBUG_STR(logger,"Eqv taper parameters   : "<< taper0*fwhm2sigma <<" "<<
-    //taper1*fwhm2sigma <<" "<< pa);
-    //ASKAPLOG_DEBUG_STR(logger,"Orig taper parameters  : "<< majorAxis()*fwhm2sigma <<" "<<
-    //minorAxis()*fwhm2sigma <<" "<< posAngle());
+    ASKAPASSERT(taper0 > 0 && taper1 >0);
+    ASKAPASSERT(majorAxis()>0 && minorAxis()>0);
     casacore::Vector<double> cbeam(3);
     cbeam(0) = nx / (majorAxis() * fwhm2sigma / (4 * log(2)/casacore::C::pi));
     cbeam(1) = ny / (minorAxis() * fwhm2sigma / (4 * log(2)/casacore::C::pi));
@@ -151,9 +150,11 @@ int GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleranc
     // check if we've achieved the requested size
     if (abs(taper0 / majorAxis() - 1) < tolerance &&
         abs(taper1 / minorAxis() - 1) < tolerance &&
-        abs((pa - posAngle())*(taper0-taper1)/taper0) < tolerance) return 1;
-    //ASKAPLOG_DEBUG_STR(logger,"Applied taper parameters: "<< itsTaper(0)*fwhm2sigma <<" "<<
-    //itsTaper(1)*fwhm2sigma <<" "<< itsTaper(2));
+        abs((pa - posAngle())*(taper0-taper1)/taper0) < tolerance)
+    {
+            return GaussianTaperCache::CONVERGED;
+    }
+    ASKAPASSERT(itsTaper(0)>0 && itsTaper(1)>0);
     casacore::Vector<double> abeam(3);
     abeam(0) = nx / (itsTaper(0) * fwhm2sigma / (4 * log(2)/casacore::C::pi));
     abeam(1) = ny / (itsTaper(1) * fwhm2sigma / (4 * log(2)/casacore::C::pi));
@@ -185,7 +186,7 @@ int GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleranc
             ASKAPLOG_DEBUG_STR(logger,"Updated convolving beam poly parameters : "<< a << " damping: "<<damping);
         } else {
             ASKAPLOG_WARN_STR(logger,"Failed: Requested beam smaller than untapered beam");
-            return -1;
+            return GaussianTaperCache::NOTPOSSIBLE;
         }
     }
     abeam = poly2Beam(a);
@@ -196,10 +197,8 @@ int GaussianTaperCache::tuneTaper(casacore::Vector<double> beam, double toleranc
     itsTaper(0) = (nx / abeam(0)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
     itsTaper(1) = (ny / abeam(1)) * (4 * log(2)/casacore::C::pi)/fwhm2sigma;
     itsTaper(2) = abeam(2);
-    //ASKAPLOG_DEBUG_STR(logger,"Updated taper parameters: "<< itsTaper(0)*fwhm2sigma <<" "<<
-    //itsTaper(1)*fwhm2sigma <<" "<< itsTaper(2));
     initTaperCache(itsTaperCache.shape());
-    return 0;
+    return GaussianTaperCache::NOTCONVERGED;
  }
 
 
