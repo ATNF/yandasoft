@@ -100,8 +100,9 @@ protected:
    /// @brief tune taper parameters based on achieved resolution
    /// @param[in] beam - fitted beam fwhm major,minor in image pixels and pos angle in radians
    /// @param[in] tolerance - fractional tolerance in fwhm, also tolerance in rad for pa
-   /// @return true if converged within tolerance
-   bool tuneTaper(casacore::Vector<double> beam, double tolerance) const;
+   /// @param[in] iter - iteration number
+   /// @return 1 if converged within tolerance, 0 if not yet converged, -1 if impossible
+   int tuneTaper(casacore::Vector<double> beam, double tolerance, int iter) const;
 
 private:
    /// @brief Major axis (sigma, rather than FWHM) in pixels

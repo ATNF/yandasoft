@@ -179,7 +179,7 @@ namespace askap
           // the way of dealing with this complication.
           ASKAPCHECK(parset.isDefined("preconditioner.GaussianTaper"),
                      "preconditioner.GaussianTaper showing the taper size should be defined to use GaussianTaper");
-          const vector<double> taper = 
+          const vector<double> taper =
               SynthesisParamsHelper::convertQuantity(parset.getStringVector("preconditioner.GaussianTaper"),"rad");
           ASKAPCHECK((taper.size() == 3) || (taper.size() == 1),
                      "preconditioner.GaussianTaper can have either single element or "
@@ -187,15 +187,16 @@ namespace askap
           ASKAPCHECK(parset.isDefined("Images.shape") && parset.isDefined("Images.cellsize"),
                      "Imager.shape and Imager.cellsize should be defined to convert the taper fwhm specified in "
                      "angular units in the image plane into uv cells");
-          const std::vector<double> cellsize = 
+          const std::vector<double> cellsize =
               SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.cellsize"),"rad");
           const std::vector<int> shape = parset.getInt32Vector("Images.shape");
           ASKAPCHECK((cellsize.size() == 2) && (shape.size() == 2),
                      "Images.cellsize and Images.shape parameters should have exactly two values");
           bool isPsfSize = parset.getBool("preconditioner.GaussianTaper.isPsfSize",False);
           double tol = parset.getDouble("preconditioner.GaussianTaper.tolerance",0.005);
-          // Try to use the same cutoff as used by the restore solver so final beams will match
+          // Try to use the same cutoff & support as used by the restore solver so final beams will match
           double cutoff = parset.getDouble("restore.beam.cutoff",0.5);
+          int support = parset.getInt("restore.beam.maxsupport",101);
 
           // additional scaling factor due to padding. by default - no padding
           const boost::shared_ptr<ImageCleaningSolver> ics = boost::dynamic_pointer_cast<ImageCleaningSolver>(solver);
@@ -210,19 +211,19 @@ namespace askap
             ASKAPDEBUGASSERT((taper[0]!=0) && (taper[1]!=0));
             solver->addPreconditioner(IImagePreconditioner::ShPtr(
             new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[1],taper[2],
-                                            isPsfSize,cutoff,tol)));
+                                            isPsfSize,cutoff,support,tol)));
           } else {
             ASKAPDEBUGASSERT(taper[0]!=0);
             if (std::abs(xFactor-yFactor)<4e-15) {
               // the image is square, can use the short cut
               solver->addPreconditioner(IImagePreconditioner::ShPtr(
-              new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,tol)));
+              new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,support,tol)));
             } else {
               // the image is rectangular. Although the gaussian taper is symmetric in
               // angular coordinates, it will be elongated along the vertical axis in
               // the uv-coordinates.
               solver->addPreconditioner(IImagePreconditioner::ShPtr(
-              new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol)));
+              new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,support,tol)));
             } // xFactor!=yFactor
           } // else: taper.size() == 3
 

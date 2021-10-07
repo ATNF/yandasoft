@@ -933,18 +933,18 @@ namespace askap
             // Set up scratch arrays and lattices for changing resolution
             casacore::Array<casacore::Complex> Agrid(image.shape());
             casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-     
+
             // copy image into a complex scratch space
             casacore::convertArray<casacore::Complex,float>(Agrid, image);
-     
+
             // renormalise based on the imminent padding
             if (norm) {
                 Agrid *= static_cast<float>(osfactor*osfactor);
-            } 
+            }
 
             // fft to uv
             casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
-     
+
             // "extract" original Fourier grid into the central portion of the new Fourier grid
             casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
             subGrid = Agrid;
@@ -979,19 +979,19 @@ namespace askap
             // Set up scratch arrays and lattices for changing resolution
             casacore::Array<casacore::Complex> AgridOS(image.shape());
             casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
-     
+
             // copy image into a complex scratch space
             casacore::convertArray<casacore::Complex,float>(AgridOS, image);
-     
+
             // fft to uv. This is what we need to degrid from, so no need to renormalise
             casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
-     
+
             // extract the central portion of the Fourier grid
             Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
-     
+
             // renormalise based on the imminent padding
             //Agrid /= static_cast<float>(osfactor*osfactor);
-     
+
             // ifft back to image and return the real part
             casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
             casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
@@ -1430,7 +1430,7 @@ namespace askap
     ///            defined by 5% cutoff from the peak)
     /// @param[in] name full name of the parameter representing the PSF (default is to figure this out)
     casacore::Vector<casacore::Quantum<double> > SynthesisParamsHelper::fitBeam(const askap::scimath::Params &ip,
-                                     const double cutoff, const std::string &name)
+                        const double cutoff, const int maxsupport, const std::string &name)
     {
        ASKAPTRACE("SynthesisParamsHelper::fitBeam");
 
@@ -1443,32 +1443,73 @@ namespace askap
        ASKAPLOG_INFO_STR(logger, "Fitting 2D Gaussian into PSF parameter "<<psfName);
 
        casacore::Array<imtype> psfArray = ip.valueT(psfName);
-       return fitBeam(psfArray, ip.axes(psfName), cutoff);
+       return fitBeam(psfArray, ip.axes(psfName), cutoff, maxsupport);
 
     }
 
     casacore::Vector<casacore::Quantum<double> > SynthesisParamsHelper::fitBeam(casacore::Array<imtype> &psfArray,
-       const scimath::Axes &axes, const double cutoff) {
+       const scimath::Axes &axes, const double cutoff, const int maxsupport)
+    {
+        ASKAPCHECK(axes.hasDirection(), "Direction axes are missing from the PSF parameter, unable to convert pixels to angular units");
+        const casacore::Vector<casacore::Double> increments = axes.directionAxis().increment();
+        ASKAPCHECK(increments.nelements() == 2, "Expect just two elements for increments of the direction axis, you have "<<
+                   increments);
+        ASKAPCHECK(increments[1]>0, "Expect positive increment on the declination axis. increments="<<increments);
+        ASKAPCHECK(fabs(fabs(increments[0])-fabs(increments[1]))<1e-6,
+                   "Different cell sizes mean that the current beam fitting code would give a wrong position angle. increments="
+                   <<increments);
+
+       casacore::Vector<double> result = fitBeam(psfArray, cutoff, maxsupport);
+
+       casacore::Vector<casacore::Quantum<double> > beam(3);
+       beam[0] = casacore::Quantum<double>(fabs(increments[0])*result[0],"rad");
+       beam[1] = casacore::Quantum<double>(fabs(increments[1])*result[1],"rad");
+       // position angle in radians
+       // fitBeam call above already does the pi/2 offset
+       //double pa = increments[0]<0 ? result[2] - casacore::C::pi/2 : casacore::C::pi/2 - result[2];
+       double pa = increments[0]<0 ? result[2] : -result[2];
+       if (pa < -casacore::C::pi/2) {
+           pa += casacore::C::pi;
+       }
+       beam[2] = casacore::Quantum<double>(pa,"rad");
+       return beam;
+    }
+
+    casacore::Vector<double> SynthesisParamsHelper::fitBeam(casacore::Array<imtype> &psfArray,
+        const double cutoff, const int maxsupport) {
 
        const casacore::IPosition shape = psfArray.shape();
        ASKAPCHECK(shape.nelements()>=2,"PSF image is supposed to be at least 2-dimensional, shape="<<psfArray.shape());
+       ASKAPCHECK(cutoff>0 && cutoff<1,"beam cutoff level should be between 0 and 1");
+       // make maxsupport a valid odd value
+       int maxSupport = maxsupport;
+       maxSupport = casacore::min(maxSupport,shape(0)-1);
+       maxSupport = casacore::min(maxSupport,shape(1)-1);
+       maxSupport = casacore::max(3,maxSupport);
+       maxSupport = 2 * (maxSupport/2) + 1;
+
        if (shape.product() != shape[0]*shape[1]) {
            ASKAPLOG_WARN_STR(logger, "Multi-dimensional PSF is present (shape="<<shape<<
                              "), using the first 2D plane only to fit the beam");
        }
 
-       casacore::Array<imtype> psfSlice = imagemath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
-       ASKAPDEBUGASSERT(psfSlice.shape().nelements() == 2);
-       casacore::Matrix<imtype> psfSliceMatrix = psfSlice;
+       casacore::Matrix<imtype> psfSlice = imagemath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
 
        // search for support to speed up beam fitting
        ASKAPLOG_INFO_STR(logger, "Searching for support with the relative cutoff of "<<cutoff<<" to speed fitting up");
        SupportSearcher ss(cutoff);
-       ss.search(psfSliceMatrix);
+       ss.search(psfSlice);
        // search only looks in x and y direction, now extend the support to diagonals
-       ss.extendedSupport(psfSliceMatrix);
+       ss.extendedSupport(psfSlice);
        casacore::uInt support = ss.symmetricalSupport(psfSlice.shape());
        support = 2 * (support/2) + 1; // if even, move up to next odd.
+       // limit support size to roughly 100 pixels per beam
+       // some mostly flagged channels can have very large support, fit will take too long
+       if (support > maxSupport) {
+           // maybe we should just fail here and abort processing of the channel
+           ASKAPLOG_DEBUG_STR(logger, "Reducing support size for beam fit from "<<support<<" to "<<maxSupport);
+           support = maxSupport;
+       }
        casa::Vector<casa::Double> result, errors;
        // allow for some retries on the beam fitting
        int retry = 2;
@@ -1482,7 +1523,9 @@ namespace askap
            }
            //
            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           casa::Array<float> floatPSFSlice = scimath::PaddingUtils::centeredSubArray(psfSlice,newShape);
+           // avoid making a reference copy since we rescale in next step
+           casa::Array<float> floatPSFSlice;
+           floatPSFSlice = scimath::PaddingUtils::centeredSubArray(psfSlice,newShape);
            #else
            casa::Array<float> floatPSFSlice(newShape);
            casa::convertArray<float, imtype>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
@@ -1506,22 +1549,19 @@ namespace askap
            //  - use estimate to set the initial guess - this seems the best solution so far
            casa::LogIO os;
            casa::Fit2D fitter(os);
+           // only use pixels above the cutoff for the fit
+           fitter.setIncludeRange(cutoff,1.0);
 	       // Using estimate to set the initial guess seems to make the fit more robust
            casa::Vector<casa::Double> initialEstimate = fitter.estimate(casa::Fit2D::GAUSSIAN,floatPSFSlice);
 	       ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
            initialEstimate[0]=1.; // PSF peak is always 1
            initialEstimate[1]=newShape[0]/2; // centre
            initialEstimate[2]=newShape[1]/2; // centre
-           //initialEstimate[3]=1;  // 1 pixel wide
-           //initialEstimate[4]=0.9;  // 1 pixel wide
-           //initialEstimate[5]=casa::C::pi/4.; // quite arbitrary  pa.
            casa::Vector<casa::Bool> parameterMask(6,casa::False);
            parameterMask[3] = casa::True; // fit maj
            parameterMask[4] = casa::True; // fit min
            parameterMask[5] = casa::True; // fit pa
 
-           // Tried this, but didn't always improve things
-           // fitter.setIncludeRange(cutoff,1.0);
            fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
            casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
            const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
@@ -1539,7 +1579,7 @@ namespace askap
            } else {
                result = fitter.availableSolution();
                errors = fitter.availableErrors();
-               ASKAPLOG_INFO_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors);
+               ASKAPLOG_DEBUG_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors);
                ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
                // Check if fit is reasonable
                if (result[3] > 2.0 * support || result[4] > 2.0 * support) {
@@ -1560,23 +1600,15 @@ namespace askap
                }
            }
        }
-       ASKAPCHECK(axes.hasDirection(), "Direction axes are missing from the PSF parameter, unable to convert pixels to angular units");
-       const casacore::Vector<casacore::Double> increments = axes.directionAxis().increment();
-       ASKAPCHECK(increments.nelements() == 2, "Expect just two elements for increments of the direction axis, you have "<<
-                  increments);
-       ASKAPCHECK(increments[1]>0, "Expect positive increment on the declination axis. increments="<<increments);
-       ASKAPCHECK(fabs(fabs(increments[0])-fabs(increments[1]))<1e-6,
-                  "Different cell sizes mean that the current beam fitting code would give a wrong position angle. increments="
-                  <<increments);
-       casacore::Vector<casacore::Quantum<double> > beam(3);
-       beam[0] = casacore::Quantum<double>(fabs(increments[0])*result[3],"rad");
-       beam[1] = casacore::Quantum<double>(fabs(increments[1])*result[4],"rad");
-       // position angle in radians
-       double pa = increments[0]<0 ? result[5] - casacore::C::pi/2 : casacore::C::pi/2 - result[5];
+       casacore::Vector<double> beam(3);
+       beam[0] = result[3];
+       beam[1] = result[4];
+       // position angle on the pixel grid in radians
+       double pa = result[5] - casacore::C::pi/2;
        if (pa < -casacore::C::pi/2) {
            pa += casacore::C::pi;
        }
-       beam[2] = casacore::Quantum<double>(pa,"rad");
+       beam[2] = pa;
        return beam;
     }
 
