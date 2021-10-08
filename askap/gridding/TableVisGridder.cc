@@ -883,6 +883,177 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
    }
 }
 
+// DAM TRADITIONAL
+void TableVisGridder::setWeights(accessors::IDataAccessor& acc) {
+    ASKAPTRACE("TableVisGridder::setweights");
+
+   initIndices(acc);
+   initConvolutionFunction(acc);
+
+   // Now time the coordinate conversions, etc.
+   // some conversion may have already happened during CF calculation
+   const casa::MVDirection imageCentre = getImageCentre();
+   const casa::MVDirection tangentPoint = getTangentPoint();
+
+   const casa::Vector<casa::RigidVector<double, 3> > &outUVW = acc.rotatedUVW(tangentPoint);
+
+   const uint nSamples = acc.nRow();
+   const uint nChan = acc.nChannel();
+   const uint nPol = acc.nPol();
+   const casa::Vector<casa::Double>& frequencyList = acc.frequency();
+   itsFreqMapper.setupMapping(frequencyList);
+
+   ASKAPDEBUGASSERT(itsShape.nelements()>=2);
+   const casa::IPosition onePlane4D(4, itsShape(0), itsShape(1), 1, 1);
+   const casa::IPosition onePlane(2, itsShape(0), itsShape(1));
+
+   for (uint i=0; i<nSamples; ++i) {
+       for (uint chan=0; chan<nChan; ++chan) {
+           //const double reciprocalToWavelength = frequencyList[chan]/casa::C::c;
+           /// Scale U,V to integer pixels plus fractional terms
+           const double uScaled=frequencyList[chan]*outUVW(i)(0)/(casa::C::c *itsUVCellSize(0));
+           int iu = askap::nint(uScaled);
+           int fracu=askap::nint(itsOverSample*(double(iu)-uScaled));
+           if (fracu<0) {
+               iu+=1;
+               fracu += itsOverSample;
+           } else if (fracu>=itsOverSample) {
+               iu-=1;
+               fracu -= itsOverSample;
+           }
+           iu+=itsShape(0)/2;
+           const double vScaled=frequencyList[chan]*outUVW(i)(1)/(casa::C::c *itsUVCellSize(1));
+           int iv = askap::nint(vScaled);
+           int fracv=askap::nint(itsOverSample*(double(iv)-vScaled));
+           if (fracv<0) {
+               iv+=1;
+               fracv += itsOverSample;
+           } else if (fracv>=itsOverSample) {
+               iv-=1;
+               fracv -= itsOverSample;
+           }
+           iv+=itsShape(1)/2;
+
+           bool allPolGood=true;
+           for (uint pol=0; pol<nPol; ++pol) {
+               if (acc.flag()(i, chan, pol))
+                   allPolGood=false;
+           }
+
+           if (allPolGood && itsFreqMapper.isMapped(chan)) {
+               // obtain which channel of the image this accessor channel is mapped to
+               const int imageChan = itsFreqMapper(chan);
+
+               // number of polarisation planes in the grid
+               const casa::uInt nImagePols = (shape().nelements()<=2) ? 1 : shape()[2];
+
+               // Now loop over all image polarizations
+               //for (uint pol=0; pol<nImagePols; ++pol) {
+               {
+                   // DAM the weighting below is done for all pols at once. Might be a prob if pols have diff flags.
+                   uint pol=0;
+                   // Lookup the portion of grid to be
+                   // used for this row, polarisation and channel
+                   const int gInd=gIndex(i, pol, chan);
+
+                   /// Make a slicer to extract just this plane
+                   const casa::IPosition ipStart(4, 0, 0, pol, imageChan);
+                   const casa::Slicer slicer(ipStart, onePlane4D);
+
+                   const int beforeOversamplePlaneIndex = cIndex(i,pol,chan);
+                   //const int cInd=fracu+itsOverSample*(fracv+itsOverSample*beforeOversamplePlaneIndex);
+
+                   casa::Array<casa::Complex> aGrid(itsGrid[gInd](slicer));
+                   casa::Matrix<casa::Complex> grid(aGrid.nonDegenerate());
+
+                   // the following accounts for a possible offset of the convolution function
+                   const std::pair<int,int> cfOffset = getConvFuncOffset(beforeOversamplePlaneIndex);
+                   const int iuOffset = iu + cfOffset.first;
+                   const int ivOffset = iv + cfOffset.second;
+
+                   if ( real(grid(iuOffset, ivOffset)) > 0.0 ) {
+                       casa::Vector<casa::Complex> thisChanNoise = acc.noise().yzPlane(i).row(chan);
+                       const float rootInvWgt = sqrt(real(grid(iuOffset, ivOffset)));
+                       thisChanNoise *= rootInvWgt;
+                   }
+
+               }
+
+           }
+
+       }
+   }
+
+}
+
+// DAM TRADITIONAL
+void TableVisGridder::addConjugates() {
+    ASKAPTRACE("TableVisGridder::addConjugates");
+
+    uint i=0;
+    uint chan=0;
+    uint pol=0;
+    const int gInd=gIndex(i, pol, chan);
+    const int imageChan = itsFreqMapper(chan);
+    const casa::IPosition onePlane4D(4, itsShape(0), itsShape(1), 1, 1);
+
+    /// Make a slicer to extract just this plane
+    const casa::IPosition ipStart(4, 0, 0, pol, imageChan);
+    const casa::Slicer slicer(ipStart, onePlane4D);
+
+    casa::Array<casa::Complex> aGrid(itsGrid[gInd](slicer).nonDegenerate());
+
+// DAM -- it would be faster to do this all in uv, but testing and don't want to deal with off-by-one issues...
+
+ASKAPLOG_INFO_STR(logger, "DAMDAM before conjugates. sum of grid = " << sum(real(aGrid)) );
+    fft2d(aGrid, false);
+    aGrid += conj(aGrid);
+    fft2d(aGrid, true);
+ASKAPLOG_INFO_STR(logger, "DAMDAM after conjugates. sum of grid = " << sum(real(aGrid)) );
+
+}
+
+// DAM TRADITIONAL
+void TableVisGridder::setRobustness(const float robustness) {
+    ASKAPTRACE("TableVisGridder::setRobustness");
+
+    uint i=0;
+    uint chan=0;
+    uint pol=0;
+    const int gInd=gIndex(i, pol, chan);
+    const int imageChan = itsFreqMapper(chan);
+    const casa::IPosition onePlane4D(4, itsShape(0), itsShape(1), 1, 1);
+
+    /// Make a slicer to extract just this plane
+    const casa::IPosition ipStart(4, 0, 0, pol, imageChan);
+    const casa::Slicer slicer(ipStart, onePlane4D);
+
+    casa::Array<casa::Complex> aGrid(itsGrid[gInd](slicer));
+    casa::Matrix<casa::Complex> grid(aGrid.nonDegenerate());
+ASKAPLOG_INFO_STR(logger, "DAMDAM before robustness. sum of grid = " << sum(real(aGrid)) );
+ASKAPLOG_INFO_STR(logger, "DAMDAM before robustness. robustness = " << robustness );
+
+    ASKAPLOG_DEBUG_STR(logger, "DAM estimating the average wgt sum");
+    casa::Array<double> wgts(aGrid.nonDegenerate().shape());
+    casa::convertArray<double,float>(wgts, real(aGrid.nonDegenerate()));
+    double aveWgtSum = sum(wgts*wgts) / sum(wgts);
+    ASKAPLOG_DEBUG_STR(logger, "DAM average wgt sum estimate: " << aveWgtSum);
+
+    const float noisePower = (1.0/aveWgtSum)*25.0*std::pow(10., -2.0*robustness);
+    ASKAPLOG_DEBUG_STR(logger, "DAM noisePower estimate: " << noisePower);
+
+    for (uint iv=0; iv<itsShape(1); ++iv) {
+        for (uint iu=0; iu<itsShape(0); ++iu) {
+            //grid(iu, iv) = 1.0 / (noisePower*real(grid(iu, iv)) + 1.0);
+            grid(iu, iv) = (noisePower*real(grid(iu, iv)) + 1.0);
+        }
+    }
+
+}
+
+
+
+
 /// @brief correct visibilities, if necessary
 /// @details This method is intended for on-the-fly correction of visibilities (i.e.
 /// facet-based correction needed for LOFAR). This method does nothing in this class, but

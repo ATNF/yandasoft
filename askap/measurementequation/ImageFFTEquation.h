@@ -49,6 +49,7 @@
 #include <map>
 
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -167,8 +168,15 @@ namespace askap
         };
 
         /// DDCALTAG
-        /// Set the number of DD calibration directions
+        /// @brief set the number of DD calibration directions
         void setNDir(casacore::uInt nDir) const { itsNDir = nDir; }
+
+// DAM TRADITIONAL
+        /// @brief set the number of DD calibration directions
+        void setRobustness(float value) const { itsRobustness = value; }
+
+// DAM TRADITIONAL
+        boost::optional<float> getRobustness() const { return itsRobustness; }
 
       private:
 
@@ -196,6 +204,10 @@ namespace askap
         /// DDCALTAG
         /// The number of separate directions (equations)
         mutable casacore::uInt itsNDir;
+
+// DAM TRADITIONAL
+        /// @brief store the desired robustness if given as a parameter
+        mutable boost::optional<float> itsRobustness;
 
         /// @brief change monitors per image parameter
         /// @details This objects are used to determine whether a new

@@ -109,6 +109,11 @@ namespace askap
       /// @note a non-const adapter is created behind the scene. If no on-the-fly visibility
       /// correction is performed, this adapter is equivalent to the original const data accessor
       virtual void grid(accessors::IConstDataAccessor& acc);
+ 
+// DAM TRADITIONAL
+      virtual void setWeights(accessors::IDataAccessor& acc);
+      virtual void addConjugates();
+      virtual void setRobustness(const float robustness);
 
       /// Form the final output image
       /// @param out Output double precision image or PSF

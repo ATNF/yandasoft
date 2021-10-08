@@ -345,7 +345,6 @@ namespace askap
     {
       ASKAPTRACE("ImageFFTEquation::calcImagingEquations");
 
-
       // We will need to loop over all completions i.e. all sources
       const std::vector<std::string> completions(parameters().completions("image"));
 
@@ -431,6 +430,54 @@ namespace askap
       if (itsVisUpdateObject) {
           itsVisUpdateObject->aggregateFlag(somethingHasToBeDegridded);
       }
+
+// DAM TRADITIONAL
+// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+//
+// in the case that different completions are different Taylor terms, really only want the first one.
+//  - so remove the loop and set imageName to "image"+completions.begin()?
+//  - are there other things that this will break? Multiple output images with different dir, cellsize, etc.
+//  - won't work in continuum imaging, unless combo is done with combinechannels on a single worker
+//  - won't work with Taylor terms
+//
+// I think these are regenerated each major cycles. Need to stop that.
+//
+      boost::shared_ptr<BoxVisGridder> uvSamplingGridder(new BoxVisGridder);
+      if (getRobustness()) {
+          // do an initial pass over the entire dataset to generate the uv sampling function
+          ASKAPLOG_INFO_STR(logger, "Traditional Briggs weighting with robustness = "<<*getRobustness());
+
+          // basing the weights on the first image name...
+          string imageName("image"+(*completions.begin()));
+          const Axes axes(parameters().axes(imageName));
+          // does this need to be a copy?
+          casacore::Array<imtype> imagePixels;
+          #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+              imagePixels = parameters().valueF(imageName);
+          #else
+              imagePixels = parameters().value(imageName).copy();
+          #endif
+          const casa::IPosition imageShape(imagePixels.shape());
+          uvSamplingGridder->customiseForContext(*completions.begin());
+          uvSamplingGridder->initialiseGrid(axes, imageShape, true);
+        
+          // Do an initial loop through all the data to set up weights
+          ASKAPLOG_DEBUG_STR(logger, "Initial gridding of uv sampling function" );
+          for (itsIdi.init();itsIdi.hasMore();itsIdi.next()) {
+              MemBufferDataAccessor accBuffer(*itsIdi);
+              uvSamplingGridder->grid(accBuffer);
+          }
+
+          // add conjugate points to ensure weights aren't split between positive and negative frequencies
+          ASKAPLOG_DEBUG_STR(logger, "Adding conjugate visibilties before calculating robust weights" );
+          uvSamplingGridder->addConjugates();
+ 
+          // convert the uv sampling function to robust weights
+          ASKAPLOG_DEBUG_STR(logger, "Convert to robust weights" );
+          uvSamplingGridder->setRobustness(*getRobustness());
+      }
+// <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
       // Now we loop through all the data
       ASKAPLOG_DEBUG_STR(logger, "Starting degridding model and gridding residuals" );
       size_t counterGrid = 0, counterDegrid = 0;
@@ -463,8 +510,18 @@ namespace askap
         }
         accBuffer.rwVisibility() -= itsIdi->visibility();
         accBuffer.rwVisibility() *= float(-1.);
+        ASKAPLOG_DEBUG_STR(logger, "Finished degridding model" );
+
         /// Now we can calculate the residual visibility and image
         size_t tempCounter = 0;
+
+// DAM TRADITIONAL
+// setWeights changes the visibility noise weights (or, rather, those cached in accBuffer),
+// This needs to be redone each major cycle, because accBuffer is reset each time (new residual vis)
+        if (getRobustness()) {
+            uvSamplingGridder->setWeights(accBuffer);
+        }
+
         for (size_t i = 0; i<completions.size(); ++i) {
             const string imageName("image"+completions[i]);
             if (parameters().isFree(imageName)) {
@@ -478,7 +535,7 @@ namespace askap
         }
         counterGrid += tempCounter;
       }
-      ASKAPLOG_DEBUG_STR(logger, "Finished degridding model and gridding residuals" );
+      ASKAPLOG_DEBUG_STR(logger, "Finished gridding residuals" );
       ASKAPLOG_DEBUG_STR(logger, "Number of accessor rows iterated through is "<<counterGrid<<" (gridding) and "<<
                         counterDegrid<<" (degridding)");
 
