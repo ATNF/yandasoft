@@ -666,7 +666,7 @@ int main(int argc, const char** argv)
         // Put everything in scope to ensure that all destructors are called
         // before the final message
         {
-            cmdlineparser::Parser parser; // a command line parser
+            utils::Parser parser; // a command line parser
             testGridder gridder;
 
             const double cellSize=10*casa::C::arcsec;
@@ -686,7 +686,7 @@ int main(int argc, const char** argv)
             casa::Array<imtype> grid;
             gridder.finaliseGrid(grid);
         }
-    } catch (const cmdlineparser::XParser &ex) {
+    } catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         std::cerr << "Usage: " << argv[0] << " [-inputs parsetFile]"
                       << std::endl;

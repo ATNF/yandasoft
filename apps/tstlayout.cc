@@ -431,13 +431,13 @@ void testUVWRotation(const casa::Vector<double> &x, const casa::Vector<double> &
 /// @retirm status
 int main(int argc, char **argv) {
   try {
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      
      // command line parameter
-     cmdlineparser::GenericParameter<std::string> cfgName;
-     parser.add(cfgName, cmdlineparser::Parser::throw_exception);
-     cmdlineparser::GenericParameter<std::string> imgName;
-     parser.add(imgName,cmdlineparser::Parser::return_default);
+     utils::GenericParameter<std::string> cfgName;
+     parser.add(cfgName, utils::Parser::throw_exception);
+     utils::GenericParameter<std::string> imgName;
+     parser.add(imgName,utils::Parser::return_default);
      parser.process(argc, argv);
      
      // Initialize MPI (also succeeds if no MPI available).
@@ -461,7 +461,7 @@ int main(int argc, char **argv) {
          mapResidualWTerm(imgName,centreLong,x,y,z);                           
      }
   }
-  catch(const cmdlineparser::XParser &) {
+  catch(const utils::XParser &) {
      std::cerr<<"Usage "<<argv[0]<<" cfg_name [output_image]"<<std::endl;
 	 return -2;    
   }

@@ -75,10 +75,10 @@ int main(int argc, const char **argv)
       casa::LogSinkInterface* globalSink = new Log4cxxLogSink();
       casa::LogSink::globalSink(globalSink);
         
-      cmdlineparser::Parser parser; // a command line parser
+      utils::Parser parser; // a command line parser
       // command line parameters
-      cmdlineparser::GenericParameter<std::string> gainsFileName1;
-      cmdlineparser::GenericParameter<std::string> gainsFileName2;
+      utils::GenericParameter<std::string> gainsFileName1;
+      utils::GenericParameter<std::string> gainsFileName2;
       
       // required parameters
       parser.add(gainsFileName1);
@@ -113,7 +113,7 @@ int main(int argc, const char **argv)
            os<<*ci<<" "<<abs(g1*conj(g2))<<" "<<arg(g1*conj(g2))<<std::endl;
       }
    }
-   catch (const cmdlineparser::XParser &ex) {
+   catch (const utils::XParser &ex) {
       std::cerr<<"Usage: "<<argv[0]<<" gains1.par gains2.par"<<std::endl;
       std::cerr<<"gains1.par and gains2.par two parset files with gains"<<std::endl;
    }

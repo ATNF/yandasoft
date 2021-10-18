@@ -54,9 +54,9 @@ void printDirection(ostream &os,const casa::MDirection &dir)  {
 // Main function
 int main(int argc, const char** argv) { 
   try {
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      // command line parameter
-	 cmdlineparser::GenericParameter<std::string> imgfile;
+	 utils::GenericParameter<std::string> imgfile;
 	 parser.add(imgfile);
 
 	 // I hope const_cast is temporary here
@@ -82,7 +82,7 @@ int main(int argc, const char** argv) {
          }
   }
   ///==============================================================================
-  catch (const cmdlineparser::XParser &ex) {
+  catch (const utils::XParser &ex) {
 	 std::cerr << "Usage: " << argv[0] << " imagefile"
 			<< std::endl;
   }

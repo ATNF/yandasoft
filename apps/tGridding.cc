@@ -78,12 +78,11 @@ int main(int argc, const char** argv)
         // Put everything in scope to ensure that all destructors are called
         // before the final message
         {
-                    cmdlineparser::Parser parser; // a command line parser
+            utils::Parser parser; // a command line parser
             // command line parameter
-            cmdlineparser::FlaggedParameter<std::string> inputsPar("-inputs",
-                    "tgridding.in");
+            utils::FlaggedParameter<std::string> inputsPar("-inputs", "tgridding.in");
             // this parameter is optional
-            parser.add(inputsPar, cmdlineparser::Parser::return_default);
+            parser.add(inputsPar, utils::Parser::return_default);
 
             parser.process(argc, argv);
 
@@ -164,7 +163,7 @@ int main(int argc, const char** argv)
         }
         stats.logSummary();
         ///==============================================================================
-    } catch (const cmdlineparser::XParser &ex) {
+    } catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         std::cerr << "Usage: " << argv[0] << " [-inputs parsetFile]"
                       << std::endl;
