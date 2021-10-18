@@ -14,11 +14,13 @@ set ( ASKAP_CMAKE_TAG              tags/1.2.0                               CACH
 set ( ASKAP_DEV_TAG                tags/2.3.1                               CACHE  STRING    "askap dev tools"                  FORCE )
 set ( LOFAR_COMMON_TAG             tags/1.1.0                               CACHE  STRING    "lofar-common version"             FORCE )
 set ( LOFAR_BLOB_TAG               tags/1.1.0                               CACHE  STRING    "lofar-blob version"               FORCE )
-set ( BASE_ASKAP_TAG               tags/1.2.0                               CACHE  STRING    "base-askap version"               FORCE )
+# need to release new base-askap, this tag is the state after pull request #37
+set ( BASE_ASKAP_TAG               30088d444dcdacc4d4c896a1cf6ad3cd0b1d6a97   CACHE  STRING    "base-askap version"               FORCE )
 set ( BASE_LOGFILTERS_TAG          tags/1.1.0                               CACHE  STRING    "base-logfilters version"          FORCE )
 # need to release new imagemath, this tag is the state after pull request #38 
 set ( BASE_IMAGEMATH_TAG           483d77c96067f726e7078e7ec6799a39830d269a   CACHE  STRING    "base-imagemath version"           FORCE )
-set ( BASE_ASKAPPARRALLEL_TAG      tags/1.1.0                               CACHE  STRING    "base-askapparrallel version"      FORCE )
+# need to release new base-parallel, this tag is the state after pull request #14
+set ( BASE_ASKAPPARRALLEL_TAG      afd594d5906c24043dd10d4e8472b282fd10e289   CACHE  STRING    "base-askapparrallel version"      FORCE )
 # need to release new scimath, this tag is the state after pull request #49
 set ( BASE_SCIMATH_TAG             96404d4d75d2bc7dcaf7fa8ddf462f64f91e7488   CACHE  STRING    "base-scimath version"             FORCE )
 # need to release new accessors, this tag is the state after pull request #39
@@ -30,8 +32,3 @@ set ( ASKAP_PIPELINETASKS_TAG      tags/1.3.0                               CACH
 set ( ASKAP_INTERFACES_TAG         tags/1.2.0                               CACHE  STRING    "askap-interfaces version"         FORCE )
 set ( ASKAP_SMS_TAG                tags/1.2.0                               CACHE  STRING    "askap-sms version" FORCE )
  
-# TOS related repos are not versioned yet, so pinned this build with commit hash values.
-set ( PYTHON_ASKAP_TAG             3c4871a07d7cdf8a71871074cd90e8b3bf8d16de CACHE  STRING    "python-askap (tos) version"       FORCE )
-set ( PYTHON_ICEUTILS_TAG          8e34898ef30d530648b02cf81ca8e6e3c9d0781e CACHE  STRING    "python-iceutils (tos) version"    FORCE )
-set ( PYTHON_LOGHANDLERS_TAG       e3b682ef6a79ab14943789ad5ef6e5a46c4d7bb7 CACHE  STRING    "python-loghandlers (tos) version" FORCE )
-set ( PYTHON_PARSET_TAG            e6bfeb00e5b3a9e5a8aae20db48a1e6470aa1c35 CACHE  STRING    "python-parset (tos) version"      FORCE )

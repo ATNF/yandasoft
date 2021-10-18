@@ -233,15 +233,7 @@ endif(ENABLE_SHARED)
 
 # Yanda depends
 
-# Yanda Packages
-# YandaSoft dependencies .. in order
-find_package(lofar-common REQUIRED)
-find_package(lofar-blob REQUIRED)
-find_package(askap-askap REQUIRED)
-find_package(askap-imagemath REQUIRED)
-find_package(askap-scimath REQUIRED)
-find_package(askap-parallel REQUIRED)
-find_package(askap-accessors REQUIRED)
+# YandaSoft external dependencies. Note, dependencies provided via MakeAvailable mechanism have been removed
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(GSL REQUIRED)
