@@ -37,6 +37,7 @@ ASKAP_LOGGER(logger, ".gridding.aprojectgridderbase");
 #include <askap/askap/AskapError.h>
 #include <askap/askap/AskapUtil.h>
 #include <askap/gridding/DiskIllumination.h>
+#include <askap/gridding/ASKAPIllumination.h>
 #include <askap/gridding/ATCAIllumination.h>
 #include <askap/gridding/SKA_LOWIllumination.h>
 #include <askap/gridding/TableVisGridder.h>
@@ -290,7 +291,7 @@ boost::shared_ptr<IBasicIllumination>
 AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 {
    const std::string illumType = parset.getString("illumination", "disk");
-
+   ASKAPLOG_DEBUG_STR(logger, "Creating illumination pattern using parset = \n"<<parset);
    if (illumType == "disk") {
 
         const double diameter=SynthesisParamsHelper::convertQuantity(parset.getString("diameter"),"m");
@@ -362,28 +363,36 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 
    } else if (illumType == "SKA_LOW") {
 
-   	    ASKAPLOG_INFO_STR(logger, "Using SKA_LOW illumination model");
+        ASKAPLOG_INFO_STR(logger, "Using SKA_LOW illumination model");
 
-   	    boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination());
+        boost::shared_ptr<SKA_LOWIllumination> illum(new SKA_LOWIllumination());
 
         const double diameter = SynthesisParamsHelper::convertQuantity(
-                                    parset.getString("diameter","35m"), "m" );
+                                 parset.getString("diameter","35m"), "m" );
 
         double ra=std::numeric_limits<float>::quiet_NaN();
         double dec=std::numeric_limits<float>::quiet_NaN();
         if ( parset.isDefined("illumination.pointing.ra") && parset.isDefined("illumination.pointing.dec") ) {
             illum->setPointingToFixed();
             ra  = SynthesisParamsHelper::convertQuantity(
-                      parset.getString("illumination.pointing.ra"), "rad" );
+                parset.getString("illumination.pointing.ra"), "rad" );
             dec = SynthesisParamsHelper::convertQuantity(
-                      parset.getString("illumination.pointing.dec"), "rad" );
+                parset.getString("illumination.pointing.dec"), "rad" );
         }
 
         // was thinking of updating the pointingDir1() data accessor, however this is a temporary beam
         // model so leave it for now. Accessor-based offsets are still available via MS FEED tables.
         illum->setPointing(ra,dec,diameter);
 
-	    return illum;
+        return illum;
+
+   } else if (illumType == "ASKAP") {
+
+        ASKAPLOG_INFO_STR(logger, "Using ASKAP illumination model");
+
+        boost::shared_ptr<ASKAPIllumination> illum(new ASKAPIllumination(parset.makeSubset("illumination.ASKAP.")));
+
+        return illum;
 
    }
 

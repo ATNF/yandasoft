@@ -1,9 +1,9 @@
-/// @file SKA_LOWIllumination.cc
-/// @brief SKA_LOW illumination model
-/// @details This class represents a SKA_LOW illumination model,
-/// represented in the image domain via the SKA_LOW_PB PrimaryBeam model.
+/// @file ASKAPIllumination.cc
+/// @brief ASKAP illumination model
+/// @details This class represents a ASKAP illumination model,
+/// represented in the image domain via the ASKAP_PB PrimaryBeam model.
 ///
-/// @copyright (c) 2020 CSIRO
+/// @copyright (c) 2021 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -25,7 +25,7 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
-/// @author Daniel Mitchell <daniel.mitchell@csiro.au>
+/// @author Mark Wieringa <mark.wieringa@csiro.au>
 
 #include <casacore/casa/BasicSL/Constants.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
@@ -34,13 +34,13 @@
 #include <askap/askap/AskapLogging.h>
 
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/gridding/SKA_LOWIllumination.h>
+#include <askap/gridding/ASKAPIllumination.h>
 #include <askap/imagemath/primarybeam/PrimaryBeam.h>
 #include <askap/imagemath/primarybeam/PrimaryBeamFactory.h>
-#include <askap/imagemath/primarybeam/SKA_LOW_PB.h>
+#include <askap/imagemath/primarybeam/ASKAP_PB.h>
 #include <askap/scimath/fft/FFTWrapper.h>
 
-ASKAP_LOGGER(logger, ".gridding.ska-lowllumination");
+ASKAP_LOGGER(logger, ".gridding.askapillumination");
 
 #include <askap/profile/AskapProfiler.h>
 
@@ -52,34 +52,11 @@ using namespace askap::synthesis;
 using namespace askap::imagemath;
 
 /// @brief construct the model
-SKA_LOWIllumination::SKA_LOWIllumination()
+ASKAPIllumination::ASKAPIllumination(const LOFAR::ParameterSet &parset):
+itsParset(parset)
 {
-}
-
-/// @brief  Set pointing parameters
-/// @details Set pointing parameters
-/// @param[in] ra pointing right ascension in radians
-/// @param[in] dec pointing declination in radians
-void SKA_LOWIllumination::setPointing(double ra, double dec, double diam)
-{
-
-    ASKAPCHECK(diam>0, "aperture diameter much be greater than zero, not "<<diam);
-    itsDiameter = diam;
-
-// when used in csimulator, should the feeds offset be updated? e.g. SimParallel::readFeeds() & Simulator::initFeeds()
-// or should thhat be kept as a separate method of defining a beam offset?
-
-    // if ra and dec are set, check validity
-    if (itsFixedPointing) {
-        ASKAPCHECK((dec>=-casacore::C::pi_2) && (dec<=casacore::C::pi_2),
-            "pointing declination must be in range [-pi/2,pi/2] rad, not "<<dec);
-        itsRA0 = ra;
-        itsDec0 = dec;
-   	    ASKAPLOG_INFO_STR(logger, "PB: aperture diam = "<<diam<<" m, pointing ra,dec = "<<ra<<", "<<dec<<" rad");
-    } else {
-   	    ASKAPLOG_INFO_STR(logger, "PB: aperture diam = "<<diam<<" m, pointing ra,dec to be set from FEED table");
-    }
-
+    ASKAPCHECK(itsParset.getString("primarybeam","") == "ASKAP_PB",
+               "ASKAPIllumination needs a primarybeam.ASKAP_PB specification");
 }
 
 /// @brief obtain illumination pattern
@@ -94,7 +71,7 @@ void SKA_LOWIllumination::setPointing(double ra, double dec, double diam)
 /// @param[in] m angular offset in the v-direction (in radians)
 /// @param[in] pa parallactic angle, or strictly speaking the angle between
 /// uv-coordinate system and the system where the pattern is defined (unused)
-void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern, double l,
+void ASKAPIllumination::getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const
 {
     // zero value of the pattern by default
@@ -108,13 +85,13 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern, double l,
 /// @param[in] pa polarisation position angle (in radians)
 /// @param[in] isPSF bool indicting if this gridder is for a PSF
 /// @param[in] feed  feed number for case where pattern differs between feeds
-void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
+void ASKAPIllumination::getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre,
                           const casacore::MVDirection &beamCentre,
                           const double pa, const bool isPSF, const int feed) const
 {
 
-    ASKAPTRACE("SKA_LOWIllumination::getPattern");
+    ASKAPTRACE("ASKAPIllumination::getPattern");
 
     ASKAPCHECK(std::abs(std::abs(pattern.uCellSize()/pattern.vCellSize())-1.)<1e-7,
                "Rectangular cells are not supported, you have "<<pattern.uCellSize()<<","<<pattern.vCellSize());
@@ -127,23 +104,23 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
    	    ASKAPLOG_INFO_STR(logger, "PB: using centred beam pointing (for PSF):");
         raB = ra0;
         decB = dec0;
-    } else if (itsFixedPointing) {
-   	    ASKAPLOG_INFO_STR(logger, "PB: using user-defined beam pointing:");
-        raB = itsRA0;
-        decB = itsDec0;
     } else {
    	    ASKAPLOG_INFO_STR(logger, "PB: using FEED table for beam pointing:");
         raB = beamCentre.getLong();
         decB = beamCentre.getLat();
     }
-    ASKAPLOG_INFO_STR(logger, "PB:  - RA = " << raB*12./casacore::C::pi << " hours");
-    ASKAPLOG_INFO_STR(logger, "PB:  - Dec = " << decB/casacore::C::degree << " degrees");
+    ASKAPLOG_INFO_STR(logger, "PB: image - RA = " << raB*12./casacore::C::pi << " hours"<<
+        " Dec = " << decB/casacore::C::degree << " degrees");
+    ASKAPLOG_INFO_STR(logger, "PB: beam  - RA = " << raB*12./casacore::C::pi << " hours"<<
+        " Dec = " << decB/casacore::C::degree << " degrees");
 
     // initialise the primary beam
-    LOFAR::ParameterSet PBparset;
-    PBparset.add("primarybeam","SKA_LOW_PB");
-    PBparset.add("primarybeam.SKA_LOW_PB.pointing.ra",std::to_string(raB));
-    PBparset.add("primarybeam.SKA_LOW_PB.pointing.dec",std::to_string(decB));
+    LOFAR::ParameterSet PBparset=itsParset.makeSubset("");
+    PBparset.replace("primarybeam.ASKAP_PB.beam_number",std::to_string(feed));
+    PBparset.replace("primarybeam.ASKAP_PB.alpha",std::to_string(pa));
+    PBparset.replace("primarybeam.ASKAP_PB.pointing.ra",std::to_string(raB));
+    PBparset.replace("primarybeam.ASKAP_PB.pointing.dec",std::to_string(decB));
+
     PrimaryBeam::ShPtr PB = PrimaryBeamFactory::make(PBparset);
 
     // sizes of the grid to fill with pattern values
@@ -162,7 +139,7 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
     pattern.pattern().set(0.);
 
     double ra, dec;
-    // double sum=0.; // normalisation factor
+    //double sum=0.; // normalisation factor
     casacore::Matrix<casacore::Complex> Jones(2,2,0.0);
     for (casacore::uInt iy = 0; iy < nV; ++iy) {
         const double m = (double(iy) - double(nV) / 2) * ccelly;
@@ -172,7 +149,6 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
             const double n = sqrt(1. - l*l - m*m);
             ra  = ra0 + atan2( l, n*cos(dec0) - m*sin(dec0) );
             dec = asin( m*cos(dec0) + n*sin(dec0) );
-
             Jones = PB->getJones(ra,dec,freq);
             // not sure about polarisation. Need to check useage elsewhere (and in AWProjectVisGridder)
             pattern(ix, iy) = Jones(0,0);
@@ -181,6 +157,7 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
         }
     }
 
+    //ASKAPLOG_INFO_STR(logger,"Integral of ASKAP illumination pattern ="<<sum);
     //ASKAPCHECK(sum > 0., "Integral of the aperture should be non-zero");
     //pattern.pattern() *= imtypeComplex(1.0/float(sum),0.);
 
@@ -188,9 +165,8 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
 
 /// @brief check whether the pattern is symmetric
 /// @details Some illumination patterns are known a priori to be symmetric.
-/// Need to check this one
-/// @return false until more is known
-bool SKA_LOWIllumination::isSymmetric() const
+/// @return false
+bool ASKAPIllumination::isSymmetric() const
 {
   return false;
 }
@@ -200,17 +176,16 @@ bool SKA_LOWIllumination::isSymmetric() const
 /// the standard usage (FFT to image-domain for combination with other functions) any image
 /// domain function may as well stay in the image domain. So check the state before doing the FFT.
 /// @return true
-bool SKA_LOWIllumination::isImageBased() const
+bool ASKAPIllumination::isImageBased() const
 {
   return true;
 }
-
 
 /// @brief check whether the output pattern is feed dependent
 /// @details Some illumination patterns vary with feed (number) and no shortcuts can
 /// be taken
 /// @return false
-bool SKA_LOWIllumination::isFeedDependent() const
+bool ASKAPIllumination::isFeedDependent() const
 {
-    return false;
+    return true;
 }
