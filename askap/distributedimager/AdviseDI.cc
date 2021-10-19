@@ -182,10 +182,7 @@ void AdviseDI::prepare() {
     ASKAPCHECK(nwriters <= nWorkers ,"Number of writers must less than or equal to number of workers");
     bool writeGrids = itsParset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     writeGrids = itsParset.getBool("write.grids",writeGrids); // new name
-    if (writeGrids && nwriters > 1) {
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
-      nwriters = 1;
-    } else if (itsParset.getString("imagetype","casa") == "casa" && nwriters > 1){
+    if (itsParset.getString("imagetype","casa") == "casa" && nwriters > 1){
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
       nwriters = 1;
     }

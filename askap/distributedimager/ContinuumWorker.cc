@@ -152,6 +152,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // clean model
     itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
+    itsGridType = parset.getString("imagetype","casa");
 
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
@@ -658,9 +659,18 @@ void ContinuumWorker::processChannels()
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
       }
       if (itsWriteGrids) {
-        itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-        itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
-        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+          if (itsGridType == "casa") {
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+          } else {
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".real"));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real"));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".real"));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".imag"));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag"));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag"));
+          }
       }
       if (itsRestore) {
         // Only create these if we are restoring, as that is when they get made
@@ -690,9 +700,18 @@ void ContinuumWorker::processChannels()
       }
 
       if (itsWriteGrids) {
-        itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset,  visgrid_name));
-        itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
-        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+        if (itsGridType == "casa") {
+            itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, visgrid_name));
+            itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
+            itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+        } else {
+            itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".real"));
+            itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".real"));
+            itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".real"));
+            itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".imag"));
+            itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".imag"));
+            itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".imag"));
+        }
       }
       if (itsRestore) {
         // Only create these if we are restoring, as that is when they get made
@@ -1514,23 +1533,41 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
 
   // Write the grids
-  if (params->has("grid.slice") && itsVisGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
+  if (params->has("grid.slice") && (itsVisGridCube||itsVisGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsVisGridCube->writeRigidSlice(grid,chan);
+    if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
+        itsVisGridCube->writeRigidSlice(grid,chan);
+    } else {
+        ASKAPLOG_INFO_STR(logger, "Writing Vis Grid as real & imag FITS images");
+        itsVisGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsVisGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+    }
   }
-  if (params->has("pcf.slice") && itsPCFGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
+  if (params->has("pcf.slice") && (itsPCFGridCube||itsPCFGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPCFGridCube->writeRigidSlice(grid,chan);
+    if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
+        itsPCFGridCube->writeRigidSlice(grid,chan);
+    } else {
+        ASKAPLOG_INFO_STR(logger, "Writing PCF Grid as real & imag FITS images");
+        itsPCFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsPCFGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+    }
   }
-  if (params->has("psfgrid.slice") && itsPSFGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
+  if (params->has("psfgrid.slice") && (itsPSFGridCube||itsPSFGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPSFGridCube->writeRigidSlice(grid,chan);
+    if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
+        itsPSFGridCube->writeRigidSlice(grid,chan);
+    } else {
+        ASKAPLOG_INFO_STR(logger, "Writing PSF Grid as real & imag FITS images");
+        itsPSFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsPSFGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+    }
   }
   if (params->has("psf.raw.slice") && itsPSFCube) {
     if (itsWriteGrids) {
