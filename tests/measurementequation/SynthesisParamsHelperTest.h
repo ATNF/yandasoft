@@ -64,6 +64,7 @@ namespace askap
       CPPUNIT_TEST(testGaussianPreconditioner);
       //CPPUNIT_TEST(test4Debugging);
       CPPUNIT_TEST(testUpdateLocalModel);
+      CPPUNIT_TEST(testFitBeam);
       CPPUNIT_TEST_SUITE_END();
 
       private:
@@ -271,6 +272,25 @@ namespace askap
            SynthesisParamsHelper::setUpImageHandler(parset);
            SynthesisParamsHelper::saveImageParameter(params,"psf.testsrc","test.img");
            */
+        }
+
+        void testFitBeam() {
+           // test of beam fitting in some degenerate case found in real ops
+           casacore::Matrix<imtype> inArr(5,5,0.);
+           inArr(1,1) = 0.127558;
+           inArr(2,1) = 0.356727;
+           inArr(3,1) = 0.0656468;
+           inArr(1,2) = 0.505858;
+           inArr(2,2) = 1.0;
+           inArr(3,2) = 0.506283;
+           inArr(1,3) = 0.065686;
+           inArr(2,3) = 0.356781;
+           inArr(3,3) = 0.127835;
+           const casacore::Vector<double> result = SynthesisParamsHelper::fitBeam(inArr, 0.5, 101);
+           CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(3u), result.nelements());
+           for (casacore::uInt i = 0; i < result.nelements(); ++i) {
+                CPPUNIT_ASSERT(!isnan(result[i]));
+           }
         }
 
         void testFacetCreationAndMerging()
