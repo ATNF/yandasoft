@@ -291,6 +291,13 @@ namespace askap
            for (casacore::uInt i = 0; i < result.nelements(); ++i) {
                 CPPUNIT_ASSERT(!isnan(result[i]));
            }
+           // test values - 1 pixel offset gives 0.36 on the vertical axis -> about 1.6 pixel FWHM
+           // 1 pixel offset gives 0.506 on the horizontal axis -> about 2.0 pixel FWHM
+           // give a generous tolerance as the actual fit is forced to have zero offset and peak at 1.0, so any
+           // deviation from it would be interpreted as a position angle different from +/-90 deg
+           CPPUNIT_ASSERT_DOUBLES_EQUAL(2.0, result[0], 0.1);
+           CPPUNIT_ASSERT_DOUBLES_EQUAL(1.6, result[1], 0.1);
+           CPPUNIT_ASSERT(fabs(result[2]) / casacore::C::pi * 180. > 80.);
         }
 
         void testFacetCreationAndMerging()
