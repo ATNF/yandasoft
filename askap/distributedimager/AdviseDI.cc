@@ -517,7 +517,7 @@ void AdviseDI::prepare() {
 
             itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
         } else {
-            ASKAPLOG_WARN_STR(logger, "Not enough workers available! Truncating the job. Freqeuency "<<itsRequestedFrequencies[ch].getValue()<<" will be skipped");
+            ASKAPLOG_WARN_STR(logger, "Not enough workers available! Truncating the job. Frequency "<<itsRequestedFrequencies[ch].getValue()<<" will be skipped");
         }
     }
 
