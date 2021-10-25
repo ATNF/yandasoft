@@ -509,12 +509,16 @@ void AdviseDI::prepare() {
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
-        unsigned int allocation_index = floor(ch / nchanpercore);
+        const unsigned int allocation_index = ch / nchanpercore;
 
-        ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() \
-        << " to worker " << allocation_index+1);
+        if (allocation_index < itsAllocatedFrequencies.size()) {
+            ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() <<
+                                      " to worker " << allocation_index+1);
 
-        itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+            itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+        } else {
+            ASKAPLOG_WARN_STR(logger, "Not enough workers available! Truncating the job. Freqeuency "<<itsRequestedFrequencies[ch].getValue()<<" will be skipped");
+        }
     }
 
 
