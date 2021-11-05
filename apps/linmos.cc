@@ -37,6 +37,7 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/imageaccess/WeightsLog.h>
 #include <askap/imagemath/linmos/LinmosAccumulator.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 // 3rd party
 #include <Common/ParameterSet.h>
@@ -294,7 +295,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
                     ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<inStokesIName);
 
                     // iterator over planes (e.g. freq & polarisation)
-                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                    for (imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
                         // set the indices of any higher-order dimensions for this slice
                         curpos = planeIter.position();
                         // removeLeakage works on single frequency planes
@@ -318,7 +319,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
                     inWgtPix.resize(inPix.shape());
                     ASKAPCHECK(inWgtPix.ndim()==4,"Cannot use weightslog for non-standard cubes - need axes ra,dec,pol,freq");
                     // iterator over planes (e.g. freq & polarisation)
-                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                    for (imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
                         // set the indices of any higher-order dimensions for this slice
                         curpos = planeIter.position();
                         // set weight value for this frequency plane
@@ -336,7 +337,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             }
 
             // set up an iterator for all directionCoordinate planes in the input image
-            scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
+            imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
 
             // test whether to simply add weighted pixels, or whether a regrid is required
             bool regridRequired = !accumulator.coordinatesAreEqual();
@@ -413,7 +414,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
         // Need to do this plane by plane, since weight varies by channel
 
-        for (scimath::MultiDimArrayPlaneIter outIter(accumulator.outShape()); outIter.hasMore(); outIter.next()) {
+        for (imagemath::MultiDimArrayPlaneIter outIter(accumulator.outShape()); outIter.hasMore(); outIter.next()) {
 
             float minVal, maxVal;
             IPosition minPos, maxPos;
@@ -439,7 +440,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // deweight the image pixels
         // use another iterator to loop over planes
         ASKAPLOG_INFO_STR(logger, "Deweighting accumulated images");
-        scimath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
+        imagemath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
         for (; deweightIter.hasMore(); deweightIter.next()) {
             curpos = deweightIter.position();
             accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);

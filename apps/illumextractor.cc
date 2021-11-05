@@ -76,12 +76,12 @@ int main(int argc, const char** argv) {
      casa::LogSinkInterface* globalSink = new Log4cxxLogSink();
      casa::LogSink::globalSink(globalSink);
      {
-        cmdlineparser::Parser parser; // a command line parser
+        utils::Parser parser; // a command line parser
         // command line parameter
-        cmdlineparser::FlaggedParameter<std::string> inputsPar("-inputs",
+        utils::FlaggedParameter<std::string> inputsPar("-inputs",
                        "illumextractor.in");
         // this parameter is optional
-        parser.add(inputsPar, cmdlineparser::Parser::return_default);
+        parser.add(inputsPar, utils::Parser::return_default);
 
         parser.process(argc, argv);
 
@@ -124,7 +124,7 @@ int main(int argc, const char** argv) {
                << " system: " << timer.system() << " real:   " << timer.real());
 
  ///==============================================================================
-  } catch (const cmdlineparser::XParser &ex) {
+  } catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         std::cerr << "Usage: " << argv[0] << " [-inputs parsetFile]" << std::endl;
         exit(1);

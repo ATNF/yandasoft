@@ -60,17 +60,17 @@ void printDirection(std::ostream &os,const casa::MDirection &dir)  {
 // Main function
 int main(int argc, const char** argv) {
   try {
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
 	 // command line parameters
-     cmdlineparser::FlagParameter doWtStats("-w");
-     cmdlineparser::FlagParameter doComplexStats("-C");
-	 cmdlineparser::GenericParameter<std::string> imgfile;
-     parser.add(doWtStats,cmdlineparser::Parser::return_default);
-     parser.add(doComplexStats,cmdlineparser::Parser::return_default);
-	 parser.add(imgfile);
+     utils::FlagParameter doWtStats("-w");
+     utils::FlagParameter doComplexStats("-C");
+     utils::GenericParameter<std::string> imgfile;
+     parser.add(doWtStats,utils::Parser::return_default);
+     parser.add(doComplexStats,utils::Parser::return_default);
+     parser.add(imgfile);
 
-	 // I hope const_cast is temporary here
-	 parser.process(argc, const_cast<char**> (argv));
+     // I hope const_cast is temporary here
+     parser.process(argc, const_cast<char**> (argv));
      if (!doComplexStats.defined()) {
          casa::PagedImage<casa::Float> img(imgfile.getValue());
          casa::ImageStatistics<casa::Float> imstat(img, casa::False);
@@ -177,7 +177,7 @@ int main(int argc, const char** argv) {
      }
   }
   ///==============================================================================
-  catch (const cmdlineparser::XParser &ex) {
+  catch (const utils::XParser &ex) {
 	 std::cerr << "Usage: " << argv[0] << " [-w] [-C] imagefile"
 			<< std::endl<<
 			"  -w print min/max of the inner quarter (useful for weights analysis)"<<std::endl<<

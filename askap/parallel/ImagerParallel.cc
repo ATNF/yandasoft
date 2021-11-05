@@ -57,7 +57,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/scimath/fitting/Params.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 #include <askap/measurementequation/ImageSolverFactory.h>
 #include <askap/measurementequation/ImageCleaningSolver.h>
@@ -787,7 +787,7 @@ namespace askap
       casacore::Array<imtype> sensitivityArr(wtArr.shape());
       const double cutoff = casacore::max(wtArr) * itsSensitivityCutoff;
 
-      for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
+      for (imagemath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
            const casacore::Vector<imtype> wtPlane = iter.getPlaneVector(wtArr);
            casacore::Vector<imtype> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
            for (casacore::uInt elem = 0; elem < wtPlane.nelements(); ++elem) {

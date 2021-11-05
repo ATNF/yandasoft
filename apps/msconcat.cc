@@ -130,17 +130,17 @@ int main(int argc, const char** argv)
     try {
         StatReporter stats;
 
-        cmdlineparser::Parser parser; // a command line parser
+        utils::Parser parser; // a command line parser
         // command line parameter
-        cmdlineparser::FlaggedParameter<std::string> outName("-o", "output.ms");
+        utils::FlaggedParameter<std::string> outName("-o", "output.ms");
         // this parameter is required
-        parser.add(outName, cmdlineparser::Parser::throw_exception);
+        parser.add(outName, utils::Parser::throw_exception);
         if (argc < 4) {
-            throw cmdlineparser::XParser();
+            throw utils::XParser();
         }
-        std::vector<cmdlineparser::GenericParameter<std::string> > inNames(argc-3);
+        std::vector<utils::GenericParameter<std::string> > inNames(argc-3);
         {
-            std::vector<cmdlineparser::GenericParameter<std::string> >::iterator it;
+            std::vector<utils::GenericParameter<std::string> >::iterator it;
             for (it = inNames.begin(); it < inNames.end(); ++it) {
                 parser.add(*it);
             }
@@ -149,7 +149,7 @@ int main(int argc, const char** argv)
         // Process command line options
         parser.process(argc, argv);
         if (!inNames.size()) {
-            throw cmdlineparser::XParser();
+            throw utils::XParser();
         } 
         ASKAPLOG_INFO_STR(logger,
                 "This program concatenates given measurement sets into "
@@ -157,7 +157,7 @@ int main(int argc, const char** argv)
 
         // Turns inNames into vector<string>
         std::vector<std::string> inNamesVec;
-        std::vector<cmdlineparser::GenericParameter<std::string> >::iterator it;
+        std::vector<utils::GenericParameter<std::string> >::iterator it;
         for (it = inNames.begin(); it < inNames.end(); ++it) {
             inNamesVec.push_back(it->getValue());
         }
@@ -166,7 +166,7 @@ int main(int argc, const char** argv)
 
         stats.logSummary();
         ///==============================================================================
-    } catch (const cmdlineparser::XParser &ex) {
+    } catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         ASKAPLOG_FATAL_STR(logger, "Usage: " << argv[0] << " -o output.ms inMS1 ... inMSn");
         return 1;

@@ -1,6 +1,8 @@
 # GitLab CI script for yandasoft
 
-image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
+#image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
+image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
+
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
 .common: {tags: [askapsdp]}
@@ -16,16 +18,21 @@ build:
   stage: build
   before_script:
     - apt update && apt install -y g++ git cmake  
+    - ln -s /usr/lib/x86_64-linux-gnu/ /usr/lib64
+    - eval $(ssh-agent -s)
+    - echo "$GITLAB_SSH_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -p 7999 bitbucket.csiro.au >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
-    - mkdir build
-    - cd build
-    - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"
-    - cmake --build . -j $n_cpus
-    - cmake --install .
+    - cmake -C /askap/config/askap.gitlab.cmake.in -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
+    - cmake --build _build --target install -j $n_cpus
   artifacts:
     paths:
-      - build
+      - _build
+      - _install
       - askap-cmake
 
 test:
@@ -35,20 +42,22 @@ test:
     - build
   before_script:
     - apt update && apt install -y cmake xsltproc 
+  variables:
+    CASARCFILES: ${CI_PROJECT_DIR}/_build/base-askap/test_gitlab_casarc.cfg
   script:
-    - cd build
-    - rm CMakeCache.txt
-    - cmake ..  -DBUILD_ANALYSIS=OFF -DBUILD_PIPELINE=OFF -DBUILD_COMPONENTS=OFF -DBUILD_ANALYSIS=OFF -DBUILD_SERVICES=OFF .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"
-    - cmake --build . -j $n_cpus
+    - cd _build
+    - tar -xjf /askap/data/measdata.tar.bz2
+    - "echo 'measures.directory: '${PWD}'/data' > ${CASARCFILES}"
+    - cat $CASARCFILES
     - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
-    - cd build
+    - cd _build
     - ../askap-cmake/ctest2junit > ctest.xml
   artifacts:
     paths:
-      - build
+      - _build
     reports:
-      junit: build/ctest.xml
+      junit: _build/ctest.xml
     when: always
 
 robottests:
@@ -60,14 +69,12 @@ robottests:
      - pip install robotframework
   script:
     - export CDIR=${PWD}
-    - cd build
-    - cmake --install . 
-    - cd ..
     - cd tests/data/simulation/synthregression
     - python -m robot synthregression.robot
   artifacts:
     paths:
       - tests/data/simulation/synthregression    
+      - _build
     when: always
 
 pages:
@@ -82,7 +89,7 @@ pages:
     - mkdir -p public/coverage
     - gcovr -r . -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --html --html-details -o public/coverage/index.html
     - gcovr -r . -e '.*/CompilerIdCXX/.*' -e '.*/test/.*' --xml -o public/build/reports/code-coverage.xml
-    - cp build/ctest.xml public/build/reports/unit-tests.xml
+    - cp _build/ctest.xml public/build/reports/unit-tests.xml
     - doxygen doxy.conf && mv html public/doxygen
     - cd public
   artifacts:

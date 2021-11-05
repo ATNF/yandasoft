@@ -1,5 +1,4 @@
 add_sources_to_yandasoft(
-	CommandLineParser.cc
 	LinmosUtils.cc
     EigenSolve.cc
 	IlluminationUtils.cc
@@ -9,7 +8,6 @@ add_sources_to_yandasoft(
 )
 
 install (FILES
-	CommandLineParser.h
 	LinmosUtils.h
 	EigenSolve.h
 	IlluminationUtils.h
