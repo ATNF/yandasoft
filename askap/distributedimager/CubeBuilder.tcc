@@ -1,4 +1,4 @@
-/// @file CubeBuilder.cc
+/// @file CubeBuilder.tcc
 ///
 /// @copyright (c) 2013 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -70,6 +70,19 @@ namespace cp {
 template <> inline
 casacore::CoordinateSystem
 CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                    const casacore::uInt nx,
+                                    const casacore::uInt ny,
+                                    const casacore::Quantity& f0,
+                                    const casacore::Quantity& inc)
+{
+  // This specialisation will be just for the grid cubes. After all who else wants a complex cube
+  // The coordinates are therefore those of the UV grid.
+  return createUVCoordinateSystem(parset, nx, ny, f0, inc);
+}
+
+template <class T> inline
+casacore::CoordinateSystem
+CubeBuilder<T>::createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::uInt nx,
                                     const casacore::uInt ny,
                                     const casacore::Quantity& f0,
@@ -180,6 +193,7 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
 }
 
 
+
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
@@ -266,6 +280,10 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
 
+    // work out if this is a UV grid
+    bool isUVgrid = (name.rfind(".real") == name.size() - 5) ||
+                    (name.rfind(".imag") == name.size() - 5);
+
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
 #ifdef HAVE_CASACORE3
@@ -309,7 +327,9 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     }
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
-    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+    const casacore::CoordinateSystem csys =
+    (isUVgrid ? createUVCoordinateSystem(parset, nx, ny, f0, inc) :
+                createCoordinateSystem(parset, nx, ny, f0, inc));
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<

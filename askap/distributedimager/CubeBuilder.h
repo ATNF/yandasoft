@@ -74,6 +74,13 @@ class CubeBuilder {
                                const casacore::Quantity& f0,
                                const casacore::Quantity& inc);
 
+        casacore::CoordinateSystem
+        createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                 const casacore::uInt nx,
+                                 const casacore::uInt ny,
+                                 const casacore::Quantity& f0,
+                                 const casacore::Quantity& inc);
+
         void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
         void setUnits(const std::string &units);
         void setDateObs(const casacore::MVEpoch &dateObs);
