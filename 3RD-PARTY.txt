@@ -4,22 +4,9 @@ Third Party Components
 The following third party components may be linked, referenced, imported from the enclosing environment. They are not distributed with this software.
 -------------------------------
 
-Apache Log4J
-https://logging.apache.org/log4j/1.2/
-Copyright © 1999-2012 Apache Software Foundation. Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
-
-Astronomical Plotting Library in Python, APLpy
-https://aplpy.github.io
-Thomas Robitaille and Eli Bressert
-MIT License (https://en.wikipedia.org/wiki/MIT_License)
-
 Apache Portable Runtime
 https://apr.apache.org
 Copyright © 2008-2016, The Apache Software Foundation Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
-
-Berkley DB
-http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/overview/index.html Pre version 6.0.20 only. Later version are not [as] open.
-Open Source License for Oracle Berkeley DB (http://www.oracle.com/technetwork/database/berkeleydb/downloads/oslicense-093458.html)
 
 BLAS (Basic Linear Algebra Subprograms)
 http://www.netlib.org/blas/ No license mentioned
@@ -29,11 +16,6 @@ http://www.boost.org
 Copyright Beman Dawes, David Abrahams, 1998-2005. Copyright Rene Rivera 2004-2007.
 Distributed under the Boost Software License, Version 1.0. (http://www.boost.org/LICENSE_1_0.txt)
 
-bzip2
-http://www.bzip.org
-Copyright © 1996 - 2016 julian@bzip.org
-(Combination http://www.gzip.org/zlib/zlib_license.html, http://directory.fsf.org/wiki/License:BSD_3Clause)
-
 CASA Core
 https://github.com/casacore/casacore
 Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
@@ -41,11 +23,6 @@ Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 CFITSIO
 http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html Copyright NASA
 No specific license mentioned, open source implied
-
-cmdlineparser
-No info available
- 
-DogPile
 
 Duchamp
 http://www.atnf.csiro.au/computing/software/duchamp/index.html Copyright (C) 2006-2014 Matthew Whiting, CSIRO Astronomy & Space Science Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
@@ -66,20 +43,6 @@ GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 GNU Scientific Library
 http://www.gnu.org/software/gsl/ Licensed under GPLv3 (https://www.gnu.org/licenses/gpl.html)
 
-Hibernate
-http://hibernate.org/orm/
-Licensed under LGPLv2.1 (http://www.gnu.org/licenses/old-licenses/lgpl-2.1.html)
-
-HyperSQL
-http://hsqldb.org
-Copyright (c) 2001-2016, The HSQL Development Group. All rights reserved. Copyright (c) 1995-2000 by the Hypersonic SQL Group. All rights reserved. License based on BSD License
-http://hsqldb.org/web/hsqlLicense.html
-
-ICE
-https://zeroc.com/distributions/ice
-Copyright © 2016 ZeroC, Inc.
-Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
-
 LAPACK
 http://www.netlib.org/lapack/
 Copyright (c) 1992-2011 The University of Tennessee and The University
@@ -97,13 +60,6 @@ Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 Log4cxx
 https://logging.apache.org/log4cxx/latest_stable/ Copyright 2004-2007 The Apache Software Foundation Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
 
-matplotlib
-http://matplotlib.org
-Copyright © 2002 - 2012 John Hunter, Darren Dale, Eric Firing, Michael Droettboom
-and the matplotlib development team;
-Copyright © 2012 - 2014 The matplotlib development team.
-License based on Python Software Foundation license (https://docs.python.org/3/license.html) (http://matplotlib.org/users/license.html)
-
 mcpp
 http://mcpp.sourceforge.net
 Licensed under BSD (http://www.linfo.org/bsdlicense.html)
@@ -111,40 +67,11 @@ Licensed under BSD (http://www.linfo.org/bsdlicense.html)
 MPE (Multi-Processing Environment)
 http://www.mcs.anl.gov/research/projects/perfvis/download/index.htm#MPE No copyright or license evident.
 
-MySQL Java Connector
-https://dev.mysql.com/downloads/connector/j/
-Copyright © 1998, 2016, Oracle and/or its affiliates. All rights reserved. Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
-
-NumPy
-http://scipy.org/NumPy
-Copyright (c) 2005-2009, NumPy Developers. All rights reserved. BSD-3 License (http://directory.fsf.org/wiki/License:BSD_3Clause)
-
 OpenSSL
 https://www.openssl.org
 Copyright © 2015, OpenSSL Software Foundation.
 Dual license, OpenSSl License (Apache 1.0 like), SSLeay License (https://www.openssl.org/source/license.html)
 Note: this is not compatible with GPL.
-
-PyFITS
-http://www.stsci.edu/institute/software_hardware/pyfits http://www.stsci.edu/institute/Copyright
-Under BSD License, doesn't say which one
-
-pytz Timezones
-https://pypi.python.org/pypi/pytz/2012j Copyright © 2016, Stuart Bishop.
-MIT license (https://en.wikipedia.org/wiki/MIT_License)
- 
-PyWCS
-http://projects.scipy.org/astropy/astrolib/wiki/WikiStart
-Copyright (C) 2008 Association of Universities for Research in Astronomy (AURA) BSD-3 License
-(http://directory.fsf.org/wiki/License:BSD_3Clause)
-
-SciPy
-https://www.scipy.org/scipylib/index.html
-Copyright © 2001, 2002 Enthought, Inc. All rights reserved. Copyright © 2003-2013 SciPy Developers. All rights reserved. BSD-3 License (http://directory.fsf.org/wiki/License:BSD_3Clause)
-
-Simple Logging Facade for Java
-http://www.slf4j.org
-Copyright (c) 2004-2013 QOS.ch. All rights reserved. MIT license (https://en.wikipedia.org/wiki/MIT_License)
 
 WCS Lib
 http://www.atnf.csiro.au/people/mcalabre/WCS/ Copyright (C) 1995-2013, Mark Calabretta Licensed under GPLv3 (https://www.gnu.org/licenses/gpl.html)
@@ -152,7 +79,3 @@ http://www.atnf.csiro.au/people/mcalabre/WCS/ Copyright (C) 1995-2013, Mark Cala
 Xerces
 https://xerces.apache.org/xerces-c/
 Copyright © 1999-2010 The Apache Software Foundation. All Rights Reserved. Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
-
-Zero MQ
-http://zeromq.org
-Copyright (c) 2007-2014 iMatix Corporation and Contributors. Licensed under the LGPLv3 (http://www.gnu.org/licenses/lgpl.html)
