@@ -1,0 +1,24 @@
+Guzman, Juan; Whiting, Matthew; Voronkov, Max; Mitchell, Daniel; Ord, Stephen; 
+Collins, Daniel; Marquarding, Malte; Lahur, Paulus; Maher, Tony; Van Diepen, Ger; 
+Bannister, Keith; Wu, Xinyu; Lenc, Emil; Khoo, Jonathan; Bastholm, Eric (2019): 
+ASKAP Science Data Processor software - ASKAPsoft Version 0.24.0. v1. 
+CSIRO. Software Collection. https://doi.org/10.25919/5cca37c2a6f9d
+
+Aknowledgement
+--------------
+Please consider acknowledging the authors of Yanda in your research paper if you have benefited
+from the extensive work that has gone into creating this complex radio astronomy software
+package. 
+
+Yanda is a product of Australia's Commonwealth Scientific and Industrial Research Organisation (CSIRO) 
+Space and Astronomy research into highly parallel high performance computing (HPC) radio astronomy 
+data reduction for the Australian Square Kilometre Array (SKA) Pathfinder (ASKAP) project. 
+
+If you are using ASKAP data from the CSIRO Astronomy Science Data Archive (CASDA) or other repositories
+then it is likely to have been produced by Yanda on the HPC facilities of the Pawsey Super Computing
+Centre, Perth Western Australia. Pawsey is a partner with CSIRO in the success of the ASKAP project
+and any resulting science outputs from ASKAP.
+
+https://research.csiro.au/research/category/astronomy-and-space/
+https://research.csiro.au/casda/
+https://pawsey.org.au
