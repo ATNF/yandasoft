@@ -204,7 +204,7 @@ public:
             ASKAPCHECK(shape.size()>2,"imcontsub needs at least 3 dimensions in the image");
 
             // get some header info we need
-            String specsys = accessor.getMetadataKeyword(infile.before("."),"SPECSYS");
+            String specsys = accessor.getMetadataKeyword(infile, "SPECSYS");
 
             // default is TOPO
             if (specsys=="") specsys = "TOPOCENT";
