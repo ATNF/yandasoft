@@ -215,7 +215,8 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
     itsFilename = makeImageName(parset, name);
@@ -274,15 +275,12 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
-
-    // work out if this is a UV grid
-    bool isUVgrid = (name.rfind(".real") == name.size() - 5) ||
-                    (name.rfind(".imag") == name.size() - 5);
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
@@ -328,8 +326,8 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
     const casacore::CoordinateSystem csys =
-    (isUVgrid ? createUVCoordinateSystem(parset, nx, ny, f0, inc) :
-                createCoordinateSystem(parset, nx, ny, f0, inc));
+    (uvcoord ? createUVCoordinateSystem(parset, nx, ny, f0, inc) :
+               createCoordinateSystem(parset, nx, ny, f0, inc));
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<
@@ -487,15 +485,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
         // add rest frequency, but only if requested, and only for
         // image.blah, residual.blah, image.blah.restored
+        // Prefer to have them all consistent and wcs compliant. (MHW)
         if (itsRestFrequency.getValue("Hz") > 0.) {
-            if ((itsFilename.find("image.") != string::npos) ||
-                    (itsFilename.find("residual.") != string::npos)) {
+            //if ((itsFilename.find("image.") != string::npos) ||
+            //        (itsFilename.find("residual.") != string::npos)) {
 
                 if (!sc.setRestFrequency(itsRestFrequency.getValue("Hz"))) {
                     ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not set the rest frequency to " <<
                                        itsRestFrequency.getValue("Hz") << "Hz");
                 }
-            }
+            //}
         }
 
         coordsys.addCoordinate(sc);

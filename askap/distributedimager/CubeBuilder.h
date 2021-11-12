@@ -55,7 +55,8 @@ class CubeBuilder {
                     const casacore::uInt nchan,
                     const casacore::Quantity& f0,
                     const casacore::Quantity& inc,
-                    const std::string& name = "");
+                    const std::string& name = "",
+                    const bool uvcoord = false);
 
         CubeBuilder(const LOFAR::ParameterSet& parset,const std:: string& name);
 

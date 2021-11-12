@@ -201,6 +201,12 @@ class ContinuumWorker
         /// @brief write out the gridded data, pcf and psf
         bool itsWriteGrids;
 
+        /// @brief write out the grids with UV coordinate grid
+        bool itsGridCoordUV;
+
+        /// @brief write out the FFT of the grids
+        bool itsGridFFT;
+
         /// @brief the number of rank that can write to the cube
         int itsNumWriters;
 
