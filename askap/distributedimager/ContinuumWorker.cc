@@ -155,7 +155,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
     itsGridType = parset.getString("imagetype","casa");
     itsGridCoordUV = parset.getBool("write.grids.uvcoord", itsGridType=="casa"); // label grid with UV coordinates
-    itsGridFFT = parset.getBool("write.grids.fft"); // write fft of grid (i.e. dirty image, psf)
+    itsGridFFT = parset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
     if (itsGridType == "casa" && nwriters > 1){
