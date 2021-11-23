@@ -133,11 +133,11 @@ namespace askap {
                 // Check for major cycle divergence
                 // (only need to check this once per major cycle but it fits here)
                 if ( state.previousInitialObjectiveFunction() > 0 &&
-                     state.previousInitialObjectiveFunction() > 2 * state.initialObjectiveFunction() )
+                     state.initialObjectiveFunction() > 1.1 * state.previousInitialObjectiveFunction() )
                 {
                   ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Initial Objective function " <<
-                  state.initialObjectiveFunction() << " > 2 * previous Initial ObjectiveFunction = " <<
-                  2*state.previousInitialObjectiveFunction());
+                  state.initialObjectiveFunction() << " > 1.1 * previous Initial ObjectiveFunction = " <<
+                  1.1*state.previousInitialObjectiveFunction());
                   itsTerminationCause = DIVERGED;
                   return True;
                 }

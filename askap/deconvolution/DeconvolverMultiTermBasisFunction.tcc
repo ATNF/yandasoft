@@ -379,7 +379,7 @@ namespace askap {
             // Force change in basis function
             initialiseForBasisFunction(true);
 
-            this->state()->resetInitialObjectiveFunction();
+            //this->state()->resetInitialObjectiveFunction();
         }
 
         template<class T, class FT>
@@ -705,8 +705,8 @@ namespace askap {
             memset(TimerStop, 0, sizeof(TimerStop));
             memset(Times, 0, sizeof(Times));
 
-			// Termination
-			int converged;
+		      	// Termination
+		      	int converged;
             this->control()->maskNeedsResetting(true);
 
             if (this->control()->targetIter() != 0) {
@@ -1348,7 +1348,8 @@ namespace askap {
             const time_t end_time = time(0);
             this->finalise();
             ASKAPLOG_INFO_STR(decmtbflogger, "Time Required: "<<end_time - start_time);
-            return True;
+            // signal failure and finish the major cycles if we started to diverge
+            return (this->control()->terminationCause() != DeconvolverControl<T>::DIVERGED);
         }
 
         // Helper function to replace minMaxMasked calls when we only need the abs maximum
