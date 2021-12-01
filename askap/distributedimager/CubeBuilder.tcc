@@ -1,4 +1,4 @@
-/// @file CubeBuilder.cc
+/// @file CubeBuilder.tcc
 ///
 /// @copyright (c) 2013 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -70,6 +70,19 @@ namespace cp {
 template <> inline
 casacore::CoordinateSystem
 CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                    const casacore::uInt nx,
+                                    const casacore::uInt ny,
+                                    const casacore::Quantity& f0,
+                                    const casacore::Quantity& inc)
+{
+  // This specialisation will be just for the grid cubes. After all who else wants a complex cube
+  // The coordinates are therefore those of the UV grid.
+  return createUVCoordinateSystem(parset, nx, ny, f0, inc);
+}
+
+template <class T> inline
+casacore::CoordinateSystem
+CubeBuilder<T>::createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::uInt nx,
                                     const casacore::uInt ny,
                                     const casacore::Quantity& f0,
@@ -180,6 +193,7 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
 }
 
 
+
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
@@ -201,7 +215,8 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
     itsFilename = makeImageName(parset, name);
@@ -260,7 +275,8 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
     itsFilename = makeImageName(parset, name);
@@ -309,7 +325,9 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     }
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
-    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+    const casacore::CoordinateSystem csys =
+    (uvcoord ? createUVCoordinateSystem(parset, nx, ny, f0, inc) :
+               createCoordinateSystem(parset, nx, ny, f0, inc));
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<
@@ -467,15 +485,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
         // add rest frequency, but only if requested, and only for
         // image.blah, residual.blah, image.blah.restored
+        // Prefer to have them all consistent and wcs compliant. (MHW)
         if (itsRestFrequency.getValue("Hz") > 0.) {
-            if ((itsFilename.find("image.") != string::npos) ||
-                    (itsFilename.find("residual.") != string::npos)) {
+            //if ((itsFilename.find("image.") != string::npos) ||
+            //        (itsFilename.find("residual.") != string::npos)) {
 
                 if (!sc.setRestFrequency(itsRestFrequency.getValue("Hz"))) {
                     ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not set the rest frequency to " <<
                                        itsRestFrequency.getValue("Hz") << "Hz");
                 }
-            }
+            //}
         }
 
         coordsys.addCoordinate(sc);
