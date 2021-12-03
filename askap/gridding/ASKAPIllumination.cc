@@ -55,7 +55,7 @@ using namespace askap::imagemath;
 ASKAPIllumination::ASKAPIllumination(const LOFAR::ParameterSet &parset):
 itsParset(parset)
 {
-    ASKAPCHECK(itsParset.getString("primarybeam","") == "ASKAP_PB",
+    ASKAPCHECK(itsParset.getString("primarybeam","ASKAP_PB") == "ASKAP_PB",
                "ASKAPIllumination needs a primarybeam.ASKAP_PB specification");
 }
 
@@ -116,8 +116,11 @@ void ASKAPIllumination::getPattern(double freq, UVPattern &pattern,
 
     // initialise the primary beam
     LOFAR::ParameterSet PBparset=itsParset.makeSubset("");
+    PBparset.replace("primarybeam","ASKAP_PB");
     PBparset.replace("primarybeam.ASKAP_PB.beam_number",std::to_string(feed));
-    PBparset.replace("primarybeam.ASKAP_PB.alpha",std::to_string(pa));
+    // Do we need to add the pa to the specified alpha?
+    const double alpha = itsParset.getDouble("primarybeam.ASKAP_PB.alpha",0.0);
+    PBparset.replace("primarybeam.ASKAP_PB.alpha",std::to_string(alpha+pa));
     PBparset.replace("primarybeam.ASKAP_PB.pointing.ra",std::to_string(raB));
     PBparset.replace("primarybeam.ASKAP_PB.pointing.dec",std::to_string(decB));
 

@@ -390,7 +390,7 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
 
         ASKAPLOG_INFO_STR(logger, "Using ASKAP illumination model");
 
-        boost::shared_ptr<ASKAPIllumination> illum(new ASKAPIllumination(parset.makeSubset("illumination.ASKAP.")));
+        boost::shared_ptr<ASKAPIllumination> illum(new ASKAPIllumination(parset.makeSubset("illumination.")));
 
         return illum;
 
