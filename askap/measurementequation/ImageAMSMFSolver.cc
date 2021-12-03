@@ -616,19 +616,25 @@ namespace askap
                 itsCleaners[imageTag]->setModel(cleanVec(order), order);
             } // end of 'order' loop
 
+            Bool stop = false;
             {
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._calldeconvolver");
                 ASKAPLOG_INFO_STR(logger, "Starting Minor Cycles ("<<imageTag<<").");
-                itsCleaners[imageTag]->deconvolve();
+                stop = !itsCleaners[imageTag]->deconvolve();
                 ASKAPLOG_INFO_STR(logger, "Finished Minor Cycles ("<<imageTag<<").");
             }
 
             // Now update the stored peak residual
             const std::string peakResParam = std::string("peak_residual.") + imageTag;
+            double peakRes = itsCleaners[imageTag]->state()->peakResidual();
+            // force a stop of the major cycles - clean diverging
+            if (stop) {
+              peakRes *= -1;
+            }
             if (ip.has(peakResParam)) {
-                ip.update(peakResParam, itsCleaners[imageTag]->state()->peakResidual());
+                ip.update(peakResParam, peakRes);
             } else {
-                ip.add(peakResParam, itsCleaners[imageTag]->state()->peakResidual());
+                ip.add(peakResParam, peakRes);
             }
             ip.fix(peakResParam);
 

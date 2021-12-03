@@ -1117,10 +1117,15 @@ void ContinuumWorker::processChannels()
 
         if (rootImager.params()->has("peak_residual")) {
           const double peak_residual = rootImager.params()->scalarValue("peak_residual");
-          ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << peak_residual);
+          ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << abs(peak_residual));
           if (peak_residual < targetPeakResidual) {
-            ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
-            << targetPeakResidual << " Jy. Stopping.");
+            if (peak_residual < 0) {
+              ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                              << targetPeakResidual << " Jy. Stopping.");              
+            } else {
+              ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+              << targetPeakResidual << " Jy. Stopping.");
+            }
             stopping = true;
           }
           else {
@@ -1697,7 +1702,7 @@ void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
 
 void ContinuumWorker::logBeamInfo()
 {
-    
+
     askap::accessors::BeamLogger beamlog;
     ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
     ASKAPLOG_DEBUG_STR(logger, "About to add beam list of size " << itsBeamList.size() << " to the beam logger");

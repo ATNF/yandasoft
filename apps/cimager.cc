@@ -100,7 +100,7 @@ class CimagerApp : public askap::Application
                         comms.defineGroups(nWorkerGroups);
                     } else {
                         ASKAPLOG_INFO_STR(logger, "All workers are treated as identical");
-                    }   
+                    }
 
                     // Perform %w substitutions for all keys.
                     // NOTE: This MUST happen after AskapParallel::defineGroups() is called
@@ -154,10 +154,15 @@ class CimagerApp : public askap::Application
 
                             if (imager.params()->has("peak_residual")) {
                                 const double peak_residual = imager.params()->scalarValue("peak_residual");
-                                ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << peak_residual);
+                                ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << abs(peak_residual));
                                 if (peak_residual < targetPeakResidual) {
-                                    ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
-                                            << targetPeakResidual << " Jy. Stopping.");
+                                    if (peak_residual < 0) {
+                                        ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                                                << targetPeakResidual << " Jy. Stopping.");
+                                    } else {
+                                        ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+                                                << targetPeakResidual << " Jy. Stopping.");
+                                    }
                                     break;
                                 } else {
                                     if (targetPeakResidual < 0) {
@@ -226,4 +231,3 @@ int main(int argc, char *argv[])
     app.addParameter("profile", "p", "Write profiling output files", false);
     return app.main(argc, argv);
 }
-
