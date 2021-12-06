@@ -1,6 +1,6 @@
 /// @file SKA_LOWIllumination.h
 /// @brief SKA_LOW illumination model
-/// @details This class represents a SKA_LOW illumination model, 
+/// @details This class represents a SKA_LOW illumination model,
 /// represented in the image domain via the SKA_LOW_PB PrimaryBeam model.
 ///
 /// @copyright (c) 2020 CSIRO
@@ -38,7 +38,7 @@ namespace askap {
 namespace synthesis {
 
 /// @brief SKA_LOW illumination model
-/// @details This class represents an SKA_LOW illumination model, 
+/// @details This class represents an SKA_LOW illumination model,
 /// which is the Fourier transform of the SKA_LOW_PB PrimaryBeam model.
 /// Optionally a phase slope can be applied to simulate offset pointing.
 /// @ingroup gridding
@@ -47,39 +47,60 @@ struct SKA_LOWIllumination : virtual public IBasicIllumination {
   /// @brief construct the model
   /// @param[in] diam station diameter in metres
   SKA_LOWIllumination();
-    
+
   /// @brief obtain illumination pattern
-  /// @details This is the main method which populates the 
+  /// @details This is the main method which populates the
   /// supplied uv-pattern with the values corresponding to the model
-  /// represented by this object. It has to be overridden in the 
+  /// represented by this object. It has to be overridden in the
   /// derived classes. An optional phase slope can be applied to
   /// simulate offset pointing.
   /// @param[in] freq frequency in Hz for which an illumination pattern is required
   /// @param[in] pattern a UVPattern object to fill
   /// @param[in] l angular offset in the u-direction (in radians)
   /// @param[in] m angular offset in the v-direction (in radians)
-  /// @param[in] pa parallactic angle, or strictly speaking the angle between 
+  /// @param[in] pa parallactic angle, or strictly speaking the angle between
   /// uv-coordinate system and the system where the pattern is defined (unused)
-  virtual void getPattern(double freq, UVPattern &pattern, double l, 
+  virtual void getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const;
 
+  /// @brief obtain illumination pattern
+  /// @details This is the main method which populates the
+  /// supplied uv-pattern with the values corresponding to the model
+  /// represented by this object. It has to be overridden in the
+  /// derived classes. An optional phase slope can be applied to
+  /// simulate offset pointing.
+  /// @param[in] freq frequency in Hz for which an illumination pattern is required
+  /// @param[in] pattern a UVPattern object to fill
+  /// @param[in] imageCentre direction of image
+  /// @param[in] beamCentre  direction of beam (pointing)
+  /// @param[in] pa parallactic angle, or strictly speaking the angle between
+  /// uv-coordinate system and the system where the pattern is defined (unused)
+  /// @param[in] isPSF specify if we want the pattern for image or psf (no phase slope)
+  /// @param[in] feed feed number for case where beam pattern differs between feeds
   virtual void getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre = {},
                           const casacore::MVDirection &beamCentre = {},
-                          const double pa = 0., const bool isPSF = false) const;
+                          const double pa = 0., const bool isPSF = false,
+                          const int feed = 0) const;
 
   /// @brief check whether the pattern is symmetric
   /// @details Some illumination patterns like this one are trivial and known a priori to
   /// be symmetric. This method always returns true to reflect this
-  /// @return always true 
+  /// @return always true
   virtual bool isSymmetric() const;
 
   /// @brief check whether the output pattern is image-based, rather than an illumination pattern.
   /// @details Some illumination patterns need to be generated in the image domain, and given
   /// the standard usage (FFT to image-domain for combination with other functions) any image
   /// domain function may as well stay in the image domain. So check the state before doing the FFT.
-  /// @return false 
+  /// @return false
   virtual bool isImageBased() const;
+
+  /// @brief check whether the output pattern is feed dependent
+  /// @details Some illumination patterns vary with feed (number) and no shortcuts can
+  /// be taken
+  /// @return false
+  virtual bool isFeedDependent() const;
 
   // class-specific methods
 
@@ -92,7 +113,7 @@ struct SKA_LOWIllumination : virtual public IBasicIllumination {
   void setPointingToFixed() { itsFixedPointing = true; }
 
 private:
-  
+
   // The SKA_LOW_PB PrimaryBeam model is temporarily using a simple Gaussian
   // beam as a placeholder until a new SKA beam library is available. To remain
   // consistent, the following parameters are liable to change without warning.
@@ -119,4 +140,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef SKA_LOW_ILLUMINATION_H
-

@@ -180,10 +180,11 @@ void ATCAIllumination::getPattern(double freq, UVPattern &pattern, double l,
 /// @param[in] beamCentre ra & dec of the beam pointing centre
 /// @param[in] pa polarisation position angle (in radians)
 /// @param[in] isPSF bool indicting if this gridder is for a PSF
+/// @param[in] feed  feed number for case where pattern differs between feeds
 void ATCAIllumination::getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre,
                           const casacore::MVDirection &beamCentre,
-                          const double pa, const bool isPSF) const
+                          const double pa, const bool isPSF, const int feed) const
 {
   ASKAPTRACE("ATCAIllumination::getPattern");
 
@@ -333,4 +334,13 @@ bool ATCAIllumination::isSymmetric() const
 bool ATCAIllumination::isImageBased() const
 {
   return false;
+}
+
+/// @brief check whether the output pattern is feed dependent
+/// @details Some illumination patterns vary with feed (number) and no shortcuts can
+/// be taken
+/// @return false
+bool ATCAIllumination::isFeedDependent() const
+{
+    return false;
 }
