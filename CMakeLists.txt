@@ -1,11 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 set (VERSION "1.4.0")
-if ( "${VERSION}" STREQUAL "")
-    project(yandasoft LANGUAGES C CXX)
-else()
-    project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
-endif()
+project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 # ASKAP Integration (askapsoft)
 #
