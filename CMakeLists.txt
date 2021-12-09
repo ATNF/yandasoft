@@ -1,11 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
 set (VERSION "1.4.0")
-if ( "${VERSION}" STREQUAL "")
-    project(yandasoft LANGUAGES C CXX)
-else()
-    project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
-endif()
+project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 # ASKAP Integration (askapsoft)
 #
@@ -24,10 +20,8 @@ endif()
 
 find_package(Git REQUIRED)
 
-option(IS_DEFAULT_VERSION "Create the .version file to make this build the default module" OFF )
 option(BUILD_DOCKER       "Build for Docker" OFF)
 
-set (MODULE_NAME yandasoft)
 include(CheckCXXCompilerFlag)
 include (GNUInstallDirs)
 # Load the version IDs of all the dependency sub repos
@@ -56,17 +50,7 @@ else()
   message (STATUS "No cmake config overrides file specified, using defaults")
 endif()
 
-if ( "${CMAKE_PROJECT_NAME}" STREQUAL "yandasoft" )
-    # this cmake file is the top level cmakefile, for example it is not part of the askap-askapsoft build
-    message(STATUS "--- yandasoft is a top level project")
-    set (BASE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "The original CMAKE_INSTALL_PREFIX passed in." FORCE)
-    set (CMAKE_INSTALL_PREFIX ${BASE_INSTALL_PREFIX}/${MODULE_NAME}/${BUILD_STR} CACHE PATH "Added module name and version to the install prefix." FORCE)
-else()
-    message(STATUS "--- yandasoft is not a top level project")
-endif()
-
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
 
 
 # Declare all of sub repos and tools
@@ -92,14 +76,6 @@ list(APPEND CMAKE_MODULE_PATH "${askap-cmake_SOURCE_DIR}")
 message(STATUS "askap-cmake path is ${CMAKE_MODULE_PATH}")
 
 include(version_utils)
-
-# -------- askap-dev --------
-# askap-dev/config/modulefiles has our template module definition file
-FetchContent_Declare(askap-dev
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-dev.git
-  GIT_TAG           ${ASKAP_DEV_TAG}
-  SOURCE_DIR        askap-dev
-)
 
 # -------- lofar common --------
 FetchContent_Declare(lofar-common
@@ -158,8 +134,7 @@ FetchContent_Declare(base-accessors
 )
 
 message (STATUS "Fetching sub repos")
-FetchContent_MakeAvailable(askap-dev
-                           lofar-common lofar-blob
+FetchContent_MakeAvailable(lofar-common lofar-blob
                            base-askap base-logfilters base-imagemath base-askapparallel base-scimath
                            base-accessors 
 )
