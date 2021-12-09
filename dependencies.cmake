@@ -25,5 +25,4 @@ set ( BASE_SCIMATH_TAG             96404d4d75d2bc7dcaf7fa8ddf462f64f91e7488   CA
 # need to release new accessors, this tag is the state after pull request #39
 set ( BASE_ACCESSORS_TAG           083682416cf7d1604688fa33f5f19e5ad6e70e98   CACHE  STRING    "base-accessors version"           FORCE )
 set ( BASE_COMPONENTS_TAG          tags/1.1.0                               CACHE  STRING    "base-components version"          FORCE )
-set ( ASKAP_SMS_TAG                tags/1.2.0                               CACHE  STRING    "askap-sms version" FORCE )
  
