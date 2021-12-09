@@ -134,8 +134,7 @@ FetchContent_Declare(base-accessors
 )
 
 message (STATUS "Fetching sub repos")
-FetchContent_MakeAvailable(askap-dev
-                           lofar-common lofar-blob
+FetchContent_MakeAvailable(lofar-common lofar-blob
                            base-askap base-logfilters base-imagemath base-askapparallel base-scimath
                            base-accessors 
 )
