@@ -33,12 +33,12 @@ class SkyCatalogTabWriter {
                      // (to be able to add a correct name)
   casa::Table tab;
 public:
-     SkyCatalogTabWriter(const casa::String &fname) throw(casa::AipsError);
+     SkyCatalogTabWriter(const casa::String &fname);
      // lng, lat - longitude and latitude in degrees,
      // flux - flux density in Jy
      // type - e.g. J2000
      // label - annotation (default is a sequence number)          
      void addComponent(casa::Double lng, casa::Double lat,
                        casa::Double flux = 1., const casa::String &type = "J2000",
-		       const casa::String &label = "") throw(casa::AipsError);
+		       const casa::String &label = "");
 };
