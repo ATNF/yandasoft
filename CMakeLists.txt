@@ -77,14 +77,6 @@ message(STATUS "askap-cmake path is ${CMAKE_MODULE_PATH}")
 
 include(version_utils)
 
-# -------- askap-dev --------
-# askap-dev/config/modulefiles has our template module definition file
-FetchContent_Declare(askap-dev
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-dev.git
-  GIT_TAG           ${ASKAP_DEV_TAG}
-  SOURCE_DIR        askap-dev
-)
-
 # -------- lofar common --------
 FetchContent_Declare(lofar-common
   GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-common.git

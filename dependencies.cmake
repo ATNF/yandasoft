@@ -11,7 +11,6 @@
 
 #     Identifier                   tag/branch       cache  type      description                        force it
 set ( ASKAP_CMAKE_TAG              tags/1.2.0                               CACHE  STRING    "askap.cmake tools"                FORCE )
-set ( ASKAP_DEV_TAG                tags/2.3.1                               CACHE  STRING    "askap dev tools"                  FORCE )
 set ( LOFAR_COMMON_TAG             tags/1.1.0                               CACHE  STRING    "lofar-common version"             FORCE )
 set ( LOFAR_BLOB_TAG               tags/1.1.0                               CACHE  STRING    "lofar-blob version"               FORCE )
 # need to release new base-askap, this tag is the state after pull request #37
