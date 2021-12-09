@@ -1,6 +1,7 @@
 add_sources_to_yandasoft(
 AProjectGridderBase.cc
 AProjectWStackVisGridder.cc
+ASKAPIllumination.cc
 ATCAIllumination.cc
 AWProjectVisGridder.cc
 AltWProjectVisGridder.cc
@@ -32,6 +33,7 @@ install (FILES
 AProjectGridderBase.h
 AProjectGridderBase.tcc
 AProjectWStackVisGridder.h
+ASKAPIllumination.h
 ATCAIllumination.h
 AWProjectVisGridder.h
 AltWProjectVisGridder.h

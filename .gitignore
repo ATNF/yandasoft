@@ -1,5 +1,7 @@
 build/*
-askap-cmake/*
+_build
+_install
+askap-cmake
 base-askap/*
 base-askapparallel/*
 base-accessors/*

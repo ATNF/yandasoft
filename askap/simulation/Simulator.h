@@ -33,7 +33,7 @@
 #ifndef ASKAP_SYNTHESIS_SIMULATOR_H
 #define ASKAP_SYNTHESIS_SIMULATOR_H
 
-//# Includes
+//casacore includes
 #include <casacore/casa/BasicSL/String.h>
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/Quanta/Quantum.h>
@@ -41,6 +41,10 @@
 #include <casacore/measures/Measures/MEpoch.h>
 #include <casacore/measures/Measures/MDirection.h>
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
+
+// boost includes
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace askap
 {
@@ -51,7 +55,7 @@ namespace askap
         /// @details Cloned from casacore::NewMSSimulator to allow substantial changes.
         /// @ingroup simulation
 
-        class Simulator
+        class Simulator : public boost::noncopyable
         {
             public:
 
@@ -72,9 +76,6 @@ namespace askap
                 /// Constructor from existing MS
                 /// @param ms Existing MeasurementSet object
                 explicit Simulator(casacore::MeasurementSet& ms);
-
-                // Destructor
-                ~Simulator();
 
                 /// @brief Set the antenna and array data. 
                 /// @details These are written immediately to the
@@ -130,21 +131,21 @@ namespace askap
                 /// @param fraclimit Maximim tolerable blockage (fraction) e.g. 0.1
                 void setFractionBlockageLimit(const double fraclimit)
                 {
-                    fractionBlockageLimit_p = fraclimit;
+                    itsFractionBlockageLimit = fraclimit;
                 }
 
                 /// @brief Set minimum allowed elevation before flagging
                 /// @param ellimit Minimum allowed elevation e.g. "8deg"
                 void setElevationLimit(const casacore::Quantity& ellimit)
                 {
-                    elevationLimit_p = ellimit;
+                    itsElevationLimit = ellimit;
                 }
 
                 /// @brief Set autocorrelation weight (zero for no auto's)
                 /// @param autocorrwt Weight of autocorrelation data
                 void setAutoCorrelationWt(const float autocorrwt)
                 {
-                    autoCorrelationWt_p = autocorrwt;
+                    itsAutoCorrelationWt = autocorrwt;
                 }
 
                 /// @brief set noise rms (used to scale SIGMA column)
@@ -248,42 +249,38 @@ namespace askap
 
             private:
 
-                /// @brief Copy constructor
-                /// @details made private to avoid it being called inadvertently
-                /// @param mss Simulator to be copied
-                explicit Simulator(const Simulator & mss);
-
-                /// @brief assignment operator
-                /// @details made private to avoid it being called inadvertently
-                /// @param mss Simulator to be assigned from 
-                /// @return reference to itself
-                Simulator & operator=(const Simulator & mss);
-
                 /// Fractional blockage limit
-                double fractionBlockageLimit_p;
+                double itsFractionBlockageLimit;
+
                 /// Elevation limit
-                casacore::Quantity elevationLimit_p;
-                /// Autocorrelation weight
-                float autoCorrelationWt_p;
+                casacore::Quantity itsElevationLimit;
+
+                /// Autocorrelation weight, negative value or zero means no autos are simulated
+                float itsAutoCorrelationWt;
+
                 /// Telescope name
-                casacore::String telescope_p;
-                /// Integration time as a Quantity
-                casacore::Quantity qIntegrationTime_p;
+                casacore::String itsTelescopeName;
+
+                /// Integration time in seconds
+                double itsIntegrationTime;
+
                 /// Use hour angles?
-                bool useHourAngle_p;
+                bool itsUseHourAngle;
+
                 /// Is the hour angle defined?
-                bool hourAngleDefined_p;
+                bool itsHourAngleDefined;
+
                 /// Reference time
-                casacore::MEpoch mRefTime_p;
-                /// Offset time as a double
-                double t_offset_p;
+                casacore::MEpoch itsRefTime;
+
+                /// Offset time as a double in seconds
+                double itsTimeOffset;
 
                 /// Measurement set points
-                casacore::MeasurementSet* ms_p;
+                boost::shared_ptr<casacore::MeasurementSet> itsMS;
 
-
-                /// Restore default values
-                void defaults();
+                /// @return today's epoch 
+                static casacore::MEpoch today();
                 
                 /// @brief dish diameter (to get noise)
                 /// @details We have a simplified noise model at the moment with the constant noise

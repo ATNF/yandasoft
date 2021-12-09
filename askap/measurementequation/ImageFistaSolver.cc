@@ -32,7 +32,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagefistasolver");
 // need it just for null deleter
 #include <askap/askap/AskapUtil.h>
 
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/Arrays/Array.h>
@@ -143,7 +143,7 @@ namespace askap
 	{
 	  // Axes are dof, dof for each parameter
 	  //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
-	  for (scimath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
+	  for (imagemath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
 	       planeIter.hasMore(); planeIter.next()) {
 
 	    ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0,

@@ -60,6 +60,7 @@
 
 // boost includes
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 
 namespace askap
 {
@@ -141,15 +142,17 @@ namespace askap
       /// the parameters of itsModel
       void rotatePhases();
 
-      /// @brief helper method to extract solution time from NE.
+      /// @brief helper method to extract solution time from NE or model
       /// @details To be able to time tag the calibration solutions we add
       /// start and stop times extracted from the dataset as metadata to normal
-      /// equations. It allows us to send these times to the master, which
-      /// ultimately writes the calibration solution. Otherwise, these times
-      /// could only be obtained in workers who deal with the actual data.
+      /// equations. This method extracts start time from NE. Because NEs are not
+      /// shipped to the master for bp-calibrator, if called on master the method looks
+      /// for a different fixed keyword in the model (which should be created on the worker
+      /// before the model is sent to master). 
       /// @return solution time (seconds since 0 MJD)
-      /// @note if no start/stop time metadata are present in the normal equations
-      /// this method returns 0.
+      /// @note if no start/stop time metadata are present in the normal equations or model
+      /// this method returns 0. In addition, if itsSolutionTimeOverride field is defined,
+      /// it will be returned instead.
       double solutionTime() const;
 
   private:
@@ -255,8 +258,10 @@ namespace askap
       /// @details This field should only be used if itsSolutionIDValid is true
       long itsSolutionID;
 
-      /// @brief solution ID validity flag
-      bool itsSolutionIDValid;
+      /// @brief optional solution time (as MJD day)
+      /// @details If defined, it will be returned instead of the actual timestamp in the data
+      /// (handy if one wants to apply calibration solution to some arbitrary time)
+      boost::optional<double> itsSolutionTimeOverride;
 
       /// @brief beam index converter
       /// @details It seems to be handy to be able to run bandpass calibrator for a sparse subset of beams.
@@ -270,6 +275,34 @@ namespace askap
       /// @brief flag switching the bandpass calibration on
       bool itsSolveBandpass;
 
+      /// @brief flag enabling writing leakage solution (otherwise it is only solved for)
+      bool itsStoreLeakage;
+
+      /// @brief flag enabling writing bandpass solution (otherwise it is only solved for)
+      bool itsStoreBandpass;
+
+      /// @brief if true, gain thresholding will be performed 
+      /// @details Solutions will be flagged as invalid for antennas with bandpass gains outside the given tolerance
+      bool itsPerformGainThresholding;
+
+      /// @brief expected bandpass gain amplitude (only used if gain thresholding is enabled)
+      double itsExpectedGainAmplitude;
+
+      /// @brief tolerance for bandpass gain amplitude (only used if gain thresholding is enabled)
+      double itsGainAmplitudeTolerance;
+
+      /// @brief if true, leakage thresholding will be performed 
+      /// @details Solutions will be flagged as invalid for antennas with bandpass leakages outside the given tolerance.
+      bool itsPerformLeakageThresholding;
+
+      /// @brief tolerance for bandpass leakage amplitude (only used if leakage thresholding is enabled)
+      /// @note Expected leakage amplitude is zero
+      double itsLeakageTolerance;
+
+      /// @brief ignore parallel-hand products when making equations
+      /// @details This option can only used for for leakage-only solutions to improve robustness. It forces the code
+      /// to ignore parallel-hand correlations and build equations based only on cross-pols.
+      bool itsUseXPolOnly;
     };
 
   }

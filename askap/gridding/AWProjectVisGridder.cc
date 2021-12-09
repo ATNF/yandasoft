@@ -89,8 +89,7 @@ AWProjectVisGridder::AWProjectVisGridder(const boost::shared_ptr<IBasicIlluminat
         AProjectGridderBase(maxFeeds, maxFields, pointingTol, paTol, freqTol),
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample, maxSupport, limitSupport, name),
         itsReferenceFrequency(0.0), itsIllumination(illum),
-        itsFreqDep(frequencyDependent),
-        itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
+        itsFreqDep(frequencyDependent), itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
 {
     ASKAPDEBUGASSERT(itsIllumination);
     ASKAPCHECK(maxFeeds > 0, "Maximum number of feeds must be one or more");
@@ -312,6 +311,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     // check whether the output pattern is image based. If so, inverse FFT is not needed
     const bool imageBasedPattern = itsIllumination->isImageBased();
 
+    // check whether the pattern depends on the feed number
+    const bool feedDependent = itsIllumination->isFeedDependent();
+
     validateCFCache(acc, hasSymmetricIllumination);
 
     /// Limit the size of the convolution function since
@@ -356,14 +358,14 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             makeCFValid(feed, currentField());
             nDone++;
             casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
-
             const double parallacticAngle = hasSymmetricIllumination ? 0. : acc.feed1PA()(row);
 
             for (int chan = 0; chan < nChan; ++chan) {
 
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(chanFreq[chan], pattern, out, offset,
-                                            parallacticAngle, isPSFGridder() || isPCFGridder());
+                                            parallacticAngle, isPSFGridder() || isPCFGridder(),
+                                            feed);
                 // If the pattern is in the Fourier domain, FFT to the image domain
                 if( !imageBasedPattern ) {
                     scimath::fft2d(pattern.pattern(), false);
@@ -516,11 +518,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                 } // w loop
             } // chan loop
 
-            if (isPSFGridder() && itsShareCF) {
+            if (isPSFGridder() && !feedDependent && itsShareCF) {
                 // All illumination patterns are identical across feeds for the PSF gridder,
                 // so copy CFs across and make valid
-                // If we implement feed specific illumination patterns this will need to be bypassed
-                // but at the moment this class takes a single pattern with variable offset
                 // Use sharecf=false to bypass all CF optimizations
                 ASKAPLOG_INFO_STR(logger,"Using feed "<<feed<<" for all PSF gridding convolution functions");
                 for (int ifeed = 0; ifeed< itsMaxFeeds; ifeed++) {
@@ -816,7 +816,7 @@ AWProjectVisGridder& AWProjectVisGridder::operator=(const AWProjectVisGridder &)
 /// @brief static method to create gridder
 /// @details Each gridder should have a static factory method, which is
 /// able to create a particular type of the gridder and initialise it with
-/// the parameters taken form the given parset. It is assumed that the
+/// the parameters taken from the given parset. It is assumed that the
 /// method receives a subset of parameters where the gridder name is already
 /// taken out.
 /// @param[in] parset input parset file

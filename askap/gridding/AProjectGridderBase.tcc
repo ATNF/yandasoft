@@ -1,11 +1,11 @@
 /// @file
 /// @brief Common functionality for all mosaicing gridders
-/// @details AProjectGridderBase class encapsulates common operations for all mosaicing 
+/// @details AProjectGridderBase class encapsulates common operations for all mosaicing
 /// gridders: CF cache support and recalculation statistics, support for the buffer in the uv-space,
 /// and the factory of illumination pattrns.
 ///
 /// This is a template implementation file. We use templates to avoid duplication of initialisation
-/// code for two mosaicing gridders 
+/// code for two mosaicing gridders
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -59,15 +59,15 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
   const double pointingTol = SynthesisParamsHelper::convertQuantity(
                parset.getString("pointingtolerance", "0.0001rad"),"rad");
   const double paTol = SynthesisParamsHelper::convertQuantity(parset.getString("patolerance", "0.1rad"),"rad");
-		
+
   // load frequency tolerance. It can be a string "infinite", which means to bypass frequency
   // axis checks or a non-negative number. We pass "undefined" by default here as it is not a
-  // recognised value, which will cause a numeric default to be adopted 
+  // recognised value, which will cause a numeric default to be adopted
   double freqTol = -1.;
   const std::string freqTolString = toLower(parset.getString("freqtolerance", "undefined"));
   if (freqTolString != "infinite") {
       freqTol = parset.getDouble("freqtolerance", 1e-6);
-		    ASKAPCHECK(freqTol>=0., 
+		    ASKAPCHECK(freqTol>=0.,
 		        "Frequency tolerance parameter is supposed to be either a non-negative number or a word infinite to by pass checks");
   }
   //
@@ -96,17 +96,17 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
   ASKAPLOG_INFO_STR(logger, "Fields offset by more than "<<pointingTol/casacore::C::pi*180.*3600.<<
                              " arcsec will be considered separate fields");
   if (freqTol<0) {
-	  ASKAPLOG_INFO_STR(logger,"Frequency axis is assumed constant"); 
+	  ASKAPLOG_INFO_STR(logger,"Frequency axis is assumed constant");
   } else {
 	  ASKAPLOG_INFO_STR(logger,"Frequency axis tolerance (relative) is "<<freqTol<<
-	                   " (equivalent to "<<freqTol*3e5<<" km/s)"); 
+	                   " (equivalent to "<<freqTol*3e5<<" km/s)");
   }
 
   boost::shared_ptr<GridderType> gridder(new GridderType(makeIllumination(parset),
                 wmax, nwplanes, cutoff, oversample, maxSupport, limitSupport, maxFeeds, maxFields,
                 pointingTol, paTol, freqTol, freqDep, tablename));
   gridder->configureWSampling(parset);
-  return gridder;              
+  return gridder;
 }
 
 
@@ -115,5 +115,3 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
 } // namespace askap
 
 #endif // #ifndef A_PROJECT_GRIDDER_BASE_TCC
-
-

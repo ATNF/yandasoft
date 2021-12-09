@@ -45,6 +45,8 @@
 #include <askap/askap/Log4cxxLogSink.h>
 #include <askap/gridding/UVPattern.h>
 #include <askap/scimath/utils/ImageUtils.h>
+#include <askap/scimath/fft/FFTWrapper.h>
+
 // just for logging
 #include <askap/askapparallel/AskapParallel.h>
 
@@ -76,12 +78,12 @@ int main(int argc, const char** argv) {
      casa::LogSinkInterface* globalSink = new Log4cxxLogSink();
      casa::LogSink::globalSink(globalSink);
      {
-        cmdlineparser::Parser parser; // a command line parser
+        utils::Parser parser; // a command line parser
         // command line parameter
-        cmdlineparser::FlaggedParameter<std::string> inputsPar("-inputs",
+        utils::FlaggedParameter<std::string> inputsPar("-inputs",
                        "illumextractor.in");
         // this parameter is optional
-        parser.add(inputsPar, cmdlineparser::Parser::return_default);
+        parser.add(inputsPar, utils::Parser::return_default);
 
         parser.process(argc, argv);
 
@@ -107,10 +109,23 @@ int main(int argc, const char** argv) {
         boost::shared_ptr<IBasicIllumination> illum = AProjectGridderBase::makeIllumination(parset);
 
         // hardcoded parameters at the moment
-        UVPattern pattern(1024,1024, 10, 10, 4);
+        UVPattern pattern(1024,1024, 5, 5, 2);
 
         ASKAPCHECK(illum, "No illumination pattern seems to be defined");
-        illum->getPattern(1.4e9, pattern);
+        for (int beam=0; beam<1; beam++) {
+        illum->getPattern(1.e9, pattern,{},{},0.,false,beam);
+
+        if( illum->isImageBased() ) {
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            casa::Array<casa::Float> buffer = casa::amplitude(pattern.pattern());
+            #else
+            casa::Array<casa::Float> buffer(pattern.pattern().shape());
+            casa::convertArray<float,double>(buffer,casa::amplitude(pattern.pattern()));
+            #endif
+            scimath::saveAsCasaImage("primarybeam"+std::to_string(beam)+".img",buffer);
+
+            scimath::fft2d(pattern.pattern(), true);
+        }
 
         #ifdef ASKAP_FLOAT_IMAGE_PARAMS
         casa::Array<casa::Float> buffer = casa::amplitude(pattern.pattern());
@@ -118,13 +133,14 @@ int main(int argc, const char** argv) {
         casa::Array<casa::Float> buffer(pattern.pattern().shape());
         casa::convertArray<float,double>(buffer,casa::amplitude(pattern.pattern()));
         #endif
-        scimath::saveAsCasaImage("illum.img",buffer);
+        scimath::saveAsCasaImage("illum"+std::to_string(beam)+".img",buffer);
+        }
       }
       ASKAPLOG_INFO_STR(logger,  "Total times - user:   " << timer.user()
                << " system: " << timer.system() << " real:   " << timer.real());
 
  ///==============================================================================
-  } catch (const cmdlineparser::XParser &ex) {
+  } catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         std::cerr << "Usage: " << argv[0] << " [-inputs parsetFile]" << std::endl;
         exit(1);

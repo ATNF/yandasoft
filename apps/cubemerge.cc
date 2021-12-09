@@ -50,16 +50,16 @@ using namespace std;
 int main(int argc, const char** argv) { 
     try {
         if (argc < 3) {
-            throw cmdlineparser::XParser();
+            throw utils::XParser();
         }
-        cmdlineparser::Parser parser; // a command line parser
+        utils::Parser parser; // a command line parser
         // command line parameter
-        std::vector<cmdlineparser::GenericParameter<std::string> > inputParameters(argc-2);     
-        for (std::vector<cmdlineparser::GenericParameter<std::string> >::iterator it = inputParameters.begin();
+        std::vector<utils::GenericParameter<std::string> > inputParameters(argc-2);     
+        for (std::vector<utils::GenericParameter<std::string> >::iterator it = inputParameters.begin();
                 it!= inputParameters.end(); ++it) {
             parser.add(*it);
         }
-        cmdlineparser::GenericParameter<std::string> outfile;
+        utils::GenericParameter<std::string> outfile;
         parser.add(outfile);
 
         parser.process(argc, argv);
@@ -116,7 +116,7 @@ int main(int argc, const char** argv) {
         }         
     }
     ///==============================================================================
-    catch (const cmdlineparser::XParser &ex) {
+    catch (const utils::XParser &ex) {
         std::cerr << "Usage: " << argv[0] << " input_cube1 [input_cube2 ... input_cubeLast] output_image"
             << std::endl;
     }

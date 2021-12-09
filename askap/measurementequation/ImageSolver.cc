@@ -39,7 +39,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagesolver");
 
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/lattices/LatticeMath/LatticeFFT.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 using namespace askap;
 using namespace askap::scimath;
@@ -247,7 +247,7 @@ namespace askap
           !=indices.end(); indit++) {
         // Axes are dof, dof for each parameter
         //casacore::IPosition arrShape(itsParams->value(indit->first).shape());
-        for (scimath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
+        for (imagemath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
              planeIter.hasMore(); planeIter.next()) {
 
              ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for solution");
@@ -476,7 +476,7 @@ namespace askap
     casacore::Array<float> ImageSolver::getFirstPlane(const casacore::Array<float> &in)
     {
       casacore::Array<float> nonConstArray(in);
-      return MultiDimArrayPlaneIter::getFirstPlane(nonConstArray);
+      return imagemath::MultiDimArrayPlaneIter::getFirstPlane(nonConstArray);
     }
 
 

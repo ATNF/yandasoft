@@ -144,8 +144,8 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
 /// @return const reference to the object populated with resulted metadata statistics
 const VisMetaDataStats& AdviseDI::computeVisMetaDataStats(const std::string &ms)
 {
-   // a very basic estimator with all defaults - we currently use it only to get tangent point
-   boost::shared_ptr<VisMetaDataStats> stats(new VisMetaDataStats());
+   // a very basic estimator - we currently use it only to get tangent point
+   boost::shared_ptr<VisMetaDataStats> stats(new VisMetaDataStats(true));
    // work with this estimator until the next call to this method or until the proper parallel procedure is performed
    // via estimate() - note, it seems to be tied down to the original design of cimager and doesn't map on what the
    // current imager is doing / its distribution pattern
@@ -182,10 +182,7 @@ void AdviseDI::prepare() {
     ASKAPCHECK(nwriters <= nWorkers ,"Number of writers must less than or equal to number of workers");
     bool writeGrids = itsParset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     writeGrids = itsParset.getBool("write.grids",writeGrids); // new name
-    if (writeGrids && nwriters > 1) {
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
-      nwriters = 1;
-    } else if (itsParset.getString("imagetype","casa") == "casa" && nwriters > 1){
+    if (itsParset.getString("imagetype","casa") == "casa" && nwriters > 1){
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
       nwriters = 1;
     }
@@ -509,12 +506,16 @@ void AdviseDI::prepare() {
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
-        unsigned int allocation_index = floor(ch / nchanpercore);
+        const unsigned int allocation_index = ch / nchanpercore;
 
-        ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() \
-        << " to worker " << allocation_index+1);
+        if (allocation_index < itsAllocatedFrequencies.size()) {
+            ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() <<
+                                      " to worker " << allocation_index+1);
 
-        itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+            itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+        } else {
+            ASKAPLOG_WARN_STR(logger, "Not enough workers available! Truncating the job. Frequency "<<itsRequestedFrequencies[ch].getValue()<<" will be skipped");
+        }
     }
 
 

@@ -104,11 +104,11 @@ int main(int argc, char **argv) {
 
      timer.mark();
      
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      
      // command line parameters
-     cmdlineparser::GenericParameter<std::string> msName;
-     parser.add(msName, cmdlineparser::Parser::throw_exception);
+     utils::GenericParameter<std::string> msName;
+     parser.add(msName, utils::Parser::throw_exception);
      parser.process(argc, argv);
      
      // Initialize MPI (also succeeds if no MPI available).
@@ -129,7 +129,7 @@ int main(int argc, char **argv) {
      std::cerr<<"Job: "<<timer.real()<<std::endl;
      
   }
-  catch(const cmdlineparser::XParser &) {
+  catch(const utils::XParser &) {
      std::cerr<<"Usage "<<argv[0]<<" measurement_set"<<std::endl;
      std::cerr<<"Note, measurement set is replaced in situ!"<<std::endl;
 	 return -2;    

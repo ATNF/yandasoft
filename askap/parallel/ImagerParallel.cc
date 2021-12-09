@@ -57,7 +57,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/measurementequation/NoXPolGain.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
 #include <askap/scimath/fitting/Params.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 #include <askap/measurementequation/ImageSolverFactory.h>
 #include <askap/measurementequation/ImageCleaningSolver.h>
@@ -478,20 +478,20 @@ namespace askap
       // @todo should probably throw an exception if individual cell or image sizes are given
       ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
       if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
-   
+
           ASKAPCHECK(parset.isDefined("Images.cellsize") && parset.isDefined("Images.shape"),
               "The global image cellsize and shape are currently required with Nyquist gridding");
-   
+
           const std::vector<double>
               cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.cellsize"),"arcsec");
           const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
-   
+
           // need to make sure that extraOsFactor results in an integer number of pixels,
           // which could get complicated for rectangular grids and pixels.
           ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
           ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
           ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
-   
+
           std::vector<double> gCellSize(2);
           if (parset.isDefined("Images.griddingcellsize")) {
               const std::vector<string> gParam = parset.getStringVector("Images.griddingcellsize");
@@ -511,7 +511,7 @@ namespace askap
               gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
               gCellSize[1] = gCellSize[0];
           }
-   
+
           // nominal ratio between gridding resolution and cleaning resolution
           ASKAPDEBUGASSERT(cellSize[0] > 0);
           double extraOsFactor = gCellSize[0]/cellSize[0];
@@ -524,16 +524,16 @@ namespace askap
           ASKAPDEBUGASSERT(nPix > 0);
           extraOsFactor = static_cast<double>(imSize[0]) / nPix;
           ASKAPDEBUGASSERT(extraOsFactor >= 1);
-   
+
           gCellSize[0] = cellSize[0] * extraOsFactor;
           gCellSize[1] = gCellSize[0];
-   
+
           ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
           ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
                                     " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
           ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
                                     " to "<<"["<<long(nPix)<<","<<long(nPix)<<"]");
-   
+
           // Only set or reset these parameters if they are needed
           //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
           if (extraOsFactor > 1.) {
@@ -687,12 +687,14 @@ namespace askap
         // let's extract the largest residual
         const std::vector<std::string> peakParams = itsModel->completions("peak_residual.",true);
 
-        double peak = peakParams.size() == 0 ? getPeakResidual() : -1.;
+        double peak = peakParams.size() == 0 ? getPeakResidual() : -1.e-10;
+
+        // note we use a negative peak val to signal deconvolution divergence and pass that on here
         for (std::vector<std::string>::const_iterator peakParIt = peakParams.begin();
              peakParIt != peakParams.end(); ++peakParIt) {
-             const double tempval = std::abs(itsModel->scalarValue("peak_residual."+*peakParIt));
-             ASKAPLOG_INFO_STR(logger, "Peak residual for "<< *peakParIt << " is "<<tempval);
-             if (tempval > peak) {
+             const double tempval = itsModel->scalarValue("peak_residual."+*peakParIt);
+             ASKAPLOG_INFO_STR(logger, "Peak residual for "<< *peakParIt << " is "<<std::abs(tempval));
+             if (std::abs(tempval) > std::abs(peak)) {
                  peak = tempval;
              }
         }
@@ -787,7 +789,7 @@ namespace askap
       casacore::Array<imtype> sensitivityArr(wtArr.shape());
       const double cutoff = casacore::max(wtArr) * itsSensitivityCutoff;
 
-      for (scimath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
+      for (imagemath::MultiDimArrayPlaneIter iter(wtArr.shape()); iter.hasMore(); iter.next()) {
            const casacore::Vector<imtype> wtPlane = iter.getPlaneVector(wtArr);
            casacore::Vector<imtype> sensitivityPlane = iter.getPlaneVector(sensitivityArr);
            for (casacore::uInt elem = 0; elem < wtPlane.nelements(); ++elem) {

@@ -55,7 +55,7 @@
 #include <askap/dataaccess/ParsetInterface.h>
 #include <askap/measurementequation/ImageFFTEquation.h>
 #include <askap/parallel/GroupVisAggregator.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/TableVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -70,6 +70,7 @@ using namespace askap;
 using namespace askap::accessors;
 using namespace askap::cp;
 using namespace askap::scimath;
+using namespace askap::imagemath;
 using namespace askap::synthesis;
 
 ASKAP_LOGGER(logger, ".CalcCore");
@@ -334,11 +335,12 @@ void CalcCore::solveNE()
     // Extract the largest residual
     const std::vector<std::string> peakParams = itsModel->completions("peak_residual.",true);
 
-    double peak = peakParams.size() == 0 ? getPeakResidual() : -1.;
+    // note we use a negative peak val to signal deconvolution divergence and pass that on here
+    double peak = peakParams.size() == 0 ? getPeakResidual() : -1.e-10;
     for (std::vector<std::string>::const_iterator peakParIt = peakParams.begin();
             peakParIt != peakParams.end(); ++peakParIt) {
-        const double tempval = std::abs(itsModel->scalarValue("peak_residual." + *peakParIt));
-        if (tempval > peak) {
+        const double tempval = itsModel->scalarValue("peak_residual." + *peakParIt);
+        if (std::abs(tempval) > std::abs(peak)) {
             peak = tempval;
         }
     }

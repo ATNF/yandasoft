@@ -174,21 +174,21 @@ int main(int argc, char **argv)
    using namespace askap;
 
    try {
-      cmdlineparser::Parser parser; // a command line parser
+      utils::Parser parser; // a command line parser
       // command line parameters
-      cmdlineparser::GenericParameter<std::string> outputName;
-      cmdlineparser::FlaggedParameter<int> nFeedPar("-f",-1);
-      cmdlineparser::FlaggedParameter<size_t> nAntPar("-a",45);
-      cmdlineparser::FlaggedParameter<size_t> nPolPar("-p",2);
-      cmdlineparser::FlaggedParameter<double> minPar("-min",0.7);
-      cmdlineparser::FlaggedParameter<double> maxPar("-max",1.3);
+      utils::GenericParameter<std::string> outputName;
+      utils::FlaggedParameter<int> nFeedPar("-f",-1);
+      utils::FlaggedParameter<size_t> nAntPar("-a",45);
+      utils::FlaggedParameter<size_t> nPolPar("-p",2);
+      utils::FlaggedParameter<double> minPar("-min",0.7);
+      utils::FlaggedParameter<double> maxPar("-max",1.3);
    
       // optional parameters
-      parser.add(nFeedPar,cmdlineparser::Parser::return_default);
-      parser.add(nAntPar,cmdlineparser::Parser::return_default);
-      parser.add(nPolPar,cmdlineparser::Parser::return_default);
-      parser.add(minPar,cmdlineparser::Parser::return_default);
-      parser.add(maxPar,cmdlineparser::Parser::return_default);
+      parser.add(nFeedPar,utils::Parser::return_default);
+      parser.add(nAntPar,utils::Parser::return_default);
+      parser.add(nPolPar,utils::Parser::return_default);
+      parser.add(minPar,utils::Parser::return_default);
+      parser.add(maxPar,utils::Parser::return_default);
       // required parameters
       parser.add(outputName);
       
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
            }
       }
    }
-   catch (const cmdlineparser::XParser &ex) {
+   catch (const utils::XParser &ex) {
       std::cerr<<"Usage: "<<argv[0]<<" [-f nFeed] [-a nAnt] [-p nPol] [-min minAmp] [-max maxAmp] outputName"<<std::endl;
       std::cerr<<"-f nFeed    number of feeds, default is feed independent output"<<std::endl;
       std::cerr<<"-a nAnt     number of antennae, default is 45"<<std::endl;

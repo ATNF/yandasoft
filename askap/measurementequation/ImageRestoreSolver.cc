@@ -30,7 +30,7 @@
 
 // ASKAPsoft includes
 #include <askap/scimath/utils/PaddingUtils.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/askap_synthesis.h>
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
@@ -310,7 +310,7 @@ namespace askap
             //casa::IPosition vecShape(1, out.shape().product());
             bool saveNewPSFRequired = true;
 
-            for (scimath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
+            for (imagemath::MultiDimArrayPlaneIter planeIter(shape); planeIter.hasMore(); planeIter.next()) {
 
                 float itsPSFZeroCentre;
 

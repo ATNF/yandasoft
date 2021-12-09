@@ -49,6 +49,8 @@
 
 #include <askap/askap/AskapError.h>
 
+#include <boost/shared_ptr.hpp>
+
 using namespace casa;
 using namespace std;
 
@@ -56,10 +58,10 @@ using namespace askap;
 
 // ImplCalWeightSolver
 
-ImplCalWeightSolver::ImplCalWeightSolver() throw() :
+ImplCalWeightSolver::ImplCalWeightSolver():
 	 vp_real(NULL),vp_imag(NULL) {}
 
-ImplCalWeightSolver::~ImplCalWeightSolver() throw(casa::AipsError) 
+ImplCalWeightSolver::~ImplCalWeightSolver() 
 {
   if (vp_real!=NULL) delete vp_real;
   if (vp_imag!=NULL) delete vp_imag;
@@ -67,7 +69,7 @@ ImplCalWeightSolver::~ImplCalWeightSolver() throw(casa::AipsError)
 
 // set up calculation for a given pointing centre and sky model
 void ImplCalWeightSolver::setSky(const casa::MDirection &ipc,
-       const casa::String &clname) throw(casa::AipsError)
+       const casa::String &clname)
 {
   cl=ComponentList(Path(clname),True);
   pc=ipc;
@@ -76,7 +78,6 @@ void ImplCalWeightSolver::setSky(const casa::MDirection &ipc,
 // set up the voltage pattern from a disk-based image
 void ImplCalWeightSolver::setVP(const casa::String &namer,
 		                const casa::String &namei) 
-	 throw(casa::AipsError)
 {
   if (vp_real!=NULL) delete vp_real;
   if (vp_imag!=NULL) delete vp_imag;
@@ -106,7 +107,7 @@ void ImplCalWeightSolver::makeSyntheticPB(const std::string &name,
 // calculate visibility matrix for given feed_offsets
 // uvw - a vector with the uvw coordinates (in the units of wavelength)
 void ImplCalWeightSolver::formVisMatrix(const Matrix<Double> &feed_offsets,
-             const Vector<Double> &uvw) const throw(casa::AipsError)
+             const Vector<Double> &uvw) const
 {
   if (uvw.nelements()!=3)
      throw AipsError("uvw should be a vector with 3 elements");
@@ -185,7 +186,7 @@ void ImplCalWeightSolver::formVisMatrix(const Matrix<Double> &feed_offsets,
 // w.r.t. the dish pointing centre
 void ImplCalWeightSolver::formVPMatrix(const casa::Matrix<casa::Double> &feed_offsets,
                     casa::Double pa, const casa::String &skycat)
-                    const throw(casa::AipsError)
+                    const
 {
   if (vp_real==NULL) 
      throw AipsError("A vp image should be set before calling formVPMatrix");
@@ -198,7 +199,7 @@ void ImplCalWeightSolver::formVPMatrix(const casa::Matrix<casa::Double> &feed_of
 
   AlwaysAssert(feed_offsets.ncolumn()==2,AipsError);
   
-  auto_ptr<SkyCatalogTabWriter> psctwr;
+  boost::shared_ptr<SkyCatalogTabWriter> psctwr;
   if (skycat!="")
       psctwr.reset(new SkyCatalogTabWriter(skycat));
   
@@ -248,7 +249,7 @@ void ImplCalWeightSolver::formVPMatrix(const casa::Matrix<casa::Double> &feed_of
        flux.convertUnit("Jy");
        os<<setw(10)<<l0/M_PI*180*3600<<" "<<m0/M_PI*180*3600<<" "<<real(flux.value()[0])<<endl;
 
-       if (psctwr.get()!=NULL && real(flux.value()[0])>0.3)
+       if (psctwr && real(flux.value()[0])>0.3)
            psctwr->addComponent(l0/M_PI*180.,m0/M_PI*180.,
 	                      real(flux.value()[0]),"AzEl");
 			      
@@ -283,7 +284,7 @@ void ImplCalWeightSolver::formVPMatrix(const casa::Matrix<casa::Double> &feed_of
 casa::Matrix<casa::Complex>
 ImplCalWeightSolver::calBasis(const casa::Matrix<casa::Double> &feed_offsets,
                casa::uInt ndim, casa::Double pa, const casa::String &skycat)
-     	                      const throw(casa::AipsError)
+     	                      const 
 {
   if (ndim>feed_offsets.nrow())
       throw AipsError("The dimension of the basis can not be greater than the number of feeds");
@@ -305,7 +306,7 @@ ImplCalWeightSolver::calBasis(const casa::Matrix<casa::Double> &feed_offsets,
 casa::Matrix<casa::Complex>
 ImplCalWeightSolver::eigenWeights(const casa::Matrix<casa::Double>
                     &feed_offsets, casa::Double pa,
-		    const casa::String &skycat)  const throw(casa::AipsError)
+		    const casa::String &skycat)  const 
 {
    formVPMatrix(feed_offsets,pa,skycat);
    /*
@@ -344,7 +345,6 @@ ImplCalWeightSolver::eigenWeights(const casa::Matrix<casa::Double>
 // False if the requested offset lies outside the model
 // The parameter val is multiplied by the VP value
 Bool ImplCalWeightSolver::getVPValue(Complex &val, Double l, Double m) const
-	               throw(AipsError)
 {
   Vector<Double> world(vp_real->shape().nelements()); // world coordinate
   // centre of the vp image in pixels
@@ -371,7 +371,6 @@ Bool ImplCalWeightSolver::getVPValue(Complex &val, Double l, Double m) const
 casa::Matrix<casa::Complex>
     ImplCalWeightSolver::solveWeights(const casa::Matrix<casa::Double> &feed_offsets,
 	     const casa::Vector<casa::Double> &uvw) const
-                                  throw(casa::AipsError)
 {
   if (vp_real==NULL || vp_imag==NULL)
       throw AipsError("VP image must be set before calling solveWeights");

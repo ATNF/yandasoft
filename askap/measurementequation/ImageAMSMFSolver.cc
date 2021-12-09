@@ -37,7 +37,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imageamsmfsolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/measurementequation/ImageParamsHelper.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
@@ -271,7 +271,7 @@ namespace askap
         bool firstcycle;
 
         // Iterate through Polarisations
-        for (scimath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
+        for (imagemath::MultiDimArrayPlaneIter planeIter(imageShape); planeIter.hasMore(); planeIter.next()) {
             const uint plane = planeIter.sequenceNumber();
             std::string tagLogString(planeIter.tag());
             if (tagLogString.size()) {
@@ -279,7 +279,7 @@ namespace askap
             } else {
                 tagLogString = "not tagged";
             }
-           
+
             ASKAPLOG_INFO_STR(logger, "Preparing iteration for plane "<<plane<<
                 " ("<<tagLogString<<") in image "<<tmIt->first);
             // make the helper a 0-order Taylor term
@@ -291,7 +291,7 @@ namespace askap
                 ASKAPLOG_INFO_STR(logger, "No Taylor terms will be solved");
             }
             const std::string zeroOrderParam = iph.paramName();
-           
+
             // Setup the normalization vector
             ASKAPLOG_INFO_STR(logger, "Reading the normalization vector from : " << zeroOrderParam);
             ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(zeroOrderParam)>0,
@@ -301,27 +301,27 @@ namespace askap
             ASKAPCHECK(normalEquations().preconditionerSlice().count(zeroOrderParam)>0,
                 "Preconditioner function Slice not present for " << zeroOrderParam);
             casacore::Vector<imtype> pcf(normalEquations().preconditionerSlice().find(zeroOrderParam)->second);
-           
+
             ASKAPDEBUGASSERT(planeIter.planeShape().nelements()>=2);
-           
+
             const double maxDiag = casacore::max(planeIter.getPlaneVector(normdiag));
             ASKAPLOG_INFO_STR(logger, "Maximum of weights = " << maxDiag );
-           
+
             // a unique string for every Taylor decomposition (unique for every facet for faceting)
             const std::string imageTag = tmIt->first + planeIter.tag();
             firstcycle = !SynthesisParamsHelper::hasValue(itsCleaners,imageTag);
-           
+
             Vector<Array<Float> > cleanVec(itsNumberTaylor);
             Vector<Array<Float> > dirtyVec(itsNumberTaylor);
             Vector<Array<Float> > dirtyLongVec(2*itsNumberTaylor-1);
             Vector<Array<Float> > psfVec(itsNumberTaylor);
             Vector<Array<Float> > psfLongVec(2*itsNumberTaylor-1);
-           
+
             // Setup the PSFs - all ( 2 x ntaylor - 1 ) of them for the first time. We keep a copy of
             // the first since we will need it for preconditioning the others
-           
+
             const uInt limit = firstcycle ? 2*this->itsNumberTaylor-1 : this->itsNumberTaylor;
-           
+
             // Now precondition the residual images using the zeroth order psf. We need to
             // keep a copy of the zeroth PSF to avoid having it overwritten each time.
             Array<float> psfWorkArray;
@@ -338,7 +338,7 @@ namespace askap
             }
             for( uInt order=0; order < limit; ++order) {
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._initcopy");
-           
+
                 // make helper to represent the given order
                 if(this->itsNumberTaylor>1) {
                     ASKAPLOG_INFO_STR(logger, "Solving for Taylor term " << order);
@@ -351,7 +351,7 @@ namespace askap
                 ASKAPLOG_INFO_STR(logger, "AMSMFS solver: processing order "<<order<<
                                   " ("<<itsNumberTaylor<<" Taylor terms + " << itsNumberTaylor-1 <<
                                   " cross-terms), parameter name: " << thisOrderParam);
-               
+
                 // Always need the actual PSFs, and on first cycle we also need the
                 // higher order terms
                 if ((order<this->itsNumberTaylor)||(firstcycle)) {
@@ -371,7 +371,7 @@ namespace askap
                     casacore::convertArray<float, double>(psfLongVec(order), planeIter.getPlane(slice));
                     #endif
                 }
-               
+
                 // For the dirty images, we need all terms
                 ASKAPCHECK(normalEquations().dataVectorT(thisOrderParam).size()>0,
                     "Data vector not present for cube plane="<<plane<<" and order="<<order);
@@ -388,7 +388,7 @@ namespace askap
                 dirtyLongVec(order).resize(planeIter.planeShape());
                 casacore::convertArray<float, double>(dirtyLongVec(order), planeIter.getPlane(dv));
                 #endif
-               
+
                 // For the clean images, we need only the first nTaylor
                 if(importModelFromNE && (order < this->itsNumberTaylor)) {
                     //cleanVec(order).assign(planeIter.getPlane(ip.valueF(thisOrderParam)));
@@ -402,17 +402,17 @@ namespace askap
                     }
                 }
             } // Loop over order
-           
+
             casacore::Array<float> maskArray(planeIter.planeShape());
-           
+
             uInt nx(planeIter.planeShape()(0));
             uInt ny(planeIter.planeShape()(1));
             IPosition centre(2, nx/2, ny/2);
-           
+
             itsPSFZeroArray=psfLongVec(0);
             if (firstcycle) {
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._fc_norm+precnd");
-               
+
                 ASKAPLOG_DEBUG_STR(logger, "Deriving scale from PSF(0) centre value " <<
                     psfLongVec(0).nonDegenerate()(centre));
                 // For the first cycle we need to precondition and normalise all PSFs and all dirty images
@@ -462,7 +462,7 @@ namespace askap
                                 }
                             }
                         }
-                   
+
                     ASKAPLOG_DEBUG_STR(logger, "After  normalisation PSF(" << order <<
                         ") centre value " << psfLongVec(order).nonDegenerate()(centre));
                     if (order<itsNumberTaylor) {
@@ -512,7 +512,7 @@ namespace askap
                             const size_t index = fullResName.find("image");
                             ASKAPCHECK(index == 0, "Swapping to full-resolution param name but something is wrong");
                             fullResName.replace(index,5,"fullres");
-                            scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
+                            imagemath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                             cleanVec(order).reference(
                                 fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
                         }
@@ -524,21 +524,21 @@ namespace askap
             // Now that we have all the required images, we can initialise the deconvolver
             if (firstcycle) {// Initialize everything only once.
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._fc_initdeconvolver");
-          
+
                 ASKAPLOG_INFO_STR(logger, "Creating solver for plane " << plane <<" tag "<<imageTag);
                 itsCleaners[imageTag].reset(
                     new DeconvolverMultiTermBasisFunction<Float, Complex>(dirtyVec, psfVec, psfLongVec));
                 ASKAPDEBUGASSERT(itsCleaners[imageTag]);
-           
+
                 itsCleaners[imageTag]->setMonitor(itsMonitor);
                 itsControl->setTargetObjectiveFunction(threshold().getValue("Jy"));
                 itsControl->setTargetObjectiveFunction2(deepThreshold());
                 itsControl->setFractionalThreshold(fractionalThreshold());
-           
+
                 itsCleaners[imageTag]->setControl(itsControl);
-           
+
                 ASKAPCHECK(itsBasisFunction, "Basis function not initialised");
-           
+
                 ASKAPDEBUGASSERT(dirtyVec.nelements() > 0);
                 itsBasisFunction->initialise(dirtyVec(0).shape());
                 itsCleaners[imageTag]->setBasisFunction(itsBasisFunction);
@@ -556,14 +556,14 @@ namespace askap
                 itsCleaners[imageTag]->updateDirty(dirtyVec);
                 ASKAPLOG_INFO_STR(logger, "Successfully updated dirty images");
             }
-           
+
             // We have to reset the initial objective function
             // so that the fractional threshold mechanism will work.
             itsCleaners[imageTag]->state()->resetInitialObjectiveFunction();
             // By convention, iterations are counted from scratch each
             // major cycle
             itsCleaners[imageTag]->state()->setCurrentIter(0);
-           
+
             for (uInt order=0; order < itsNumberTaylor; ++order) {
                 if (this->itsNumberTaylor>1) {
                     ASKAPLOG_INFO_STR(logger, "Solving for Taylor term " << order);
@@ -573,7 +573,7 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger, "No Taylor terms will be solved");
                 }
                 const std::string thisOrderParam = iph.paramName();
-           
+
                 if(saveIntermediate()) {
                     // Save create/update parameters after preconditioning.
                     // Will need downsampling if params are stored with lower resolution
@@ -615,23 +615,29 @@ namespace askap
                 //itsCleaners[imageTag]->setModel(planeIter.getPlane(ip.valueF(thisOrderParam)), order);
                 itsCleaners[imageTag]->setModel(cleanVec(order), order);
             } // end of 'order' loop
-           
+
+            Bool stop = false;
             {
                 ASKAPTRACE("ImageAMSMFSolver::solveNormalEquations._calldeconvolver");
                 ASKAPLOG_INFO_STR(logger, "Starting Minor Cycles ("<<imageTag<<").");
-                itsCleaners[imageTag]->deconvolve();
+                stop = !itsCleaners[imageTag]->deconvolve();
                 ASKAPLOG_INFO_STR(logger, "Finished Minor Cycles ("<<imageTag<<").");
             }
-           
+
             // Now update the stored peak residual
             const std::string peakResParam = std::string("peak_residual.") + imageTag;
+            double peakRes = itsCleaners[imageTag]->state()->peakResidual();
+            // force a stop of the major cycles - clean diverging
+            if (stop) {
+              peakRes *= -1;
+            }
             if (ip.has(peakResParam)) {
-                ip.update(peakResParam, itsCleaners[imageTag]->state()->peakResidual());
+                ip.update(peakResParam, peakRes);
             } else {
-                ip.add(peakResParam, itsCleaners[imageTag]->state()->peakResidual());
+                ip.add(peakResParam, peakRes);
             }
             ip.fix(peakResParam);
-           
+
             // Write the final vector of clean model images into parameters
             for( uInt order=0; order < itsNumberTaylor; ++order) {
                 // make the helper to correspond to the given order
@@ -717,10 +723,11 @@ namespace askap
 
       // if not using taylor terms we can save memory by throwing away the cleaners here
       // the extra work of recreating them is minimal in that case
-      if (itsNumberTaylor==1) {
-          ASKAPLOG_INFO_STR(logger,"Clearing out the cleaners");
-          itsCleaners.clear();
-      }
+      // Disabled for now - this messes up deep cleaning because scale masks are lost
+      //if (itsNumberTaylor==1) {
+      //    ASKAPLOG_INFO_STR(logger,"Clearing out the cleaners");
+      //    itsCleaners.clear();
+      //}
 
       return true;
     };

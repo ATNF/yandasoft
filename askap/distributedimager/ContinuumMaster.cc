@@ -202,13 +202,18 @@ void ContinuumMaster::run(void)
 
             if (imager.params()->has("peak_residual")) {
                 const double peak_residual = imager.params()->scalarValue("peak_residual");
-                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << peak_residual << " after solve");
+                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << abs(peak_residual) << " after solve");
 
                 if (peak_residual < targetPeakResidual) {
 
-                    ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+                    if (peak_residual < 0) {
+                      ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                                      << targetPeakResidual << " Jy. Stopping.");
+                    } else {
+                      ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
                                       << targetPeakResidual << " Jy. Stopping.");
 
+                    }
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model");
                     imager.broadcastModel();
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model - done");

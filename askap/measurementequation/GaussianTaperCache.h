@@ -47,6 +47,13 @@ namespace synthesis {
 /// @ingroup measurementequation
 class GaussianTaperCache {
 public:
+    /// @brief Enumerate the possible return values of tuneTaper
+    enum TuningStatus {
+        NOTCONVERGED,
+        CONVERGED,
+        NOTPOSSIBLE,
+    };
+
    /// @brief set up the taper handler
    /// @details This constructor just sets the taper size. The size is full width at
    /// half maximum expressed in pixels.
@@ -89,7 +96,6 @@ public:
    /// @return position angle in radians
    inline double posAngle() const {return itsPA;}
 
-
 protected:
    /// @brief build the cache
    /// @details This method populates the cache using the values of
@@ -100,8 +106,9 @@ protected:
    /// @brief tune taper parameters based on achieved resolution
    /// @param[in] beam - fitted beam fwhm major,minor in image pixels and pos angle in radians
    /// @param[in] tolerance - fractional tolerance in fwhm, also tolerance in rad for pa
-   /// @return true if converged within tolerance
-   bool tuneTaper(casacore::Vector<double> beam, double tolerance) const;
+   /// @param[in] iter - iteration number
+   /// @return CONVERGED,  NOTCONVERGED, or NOTPOSSIBLE
+   TuningStatus tuneTaper(casacore::Vector<double> beam, double tolerance, int iter) const;
 
 private:
    /// @brief Major axis (sigma, rather than FWHM) in pixels
