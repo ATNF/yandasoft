@@ -201,6 +201,12 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   
   if (estimateViaLags) {
       ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
+      const double qualityThresholdLag = config().getDouble("qualitythreshold.lag", -1.);
+      if (qualityThresholdLag > 0.) {
+          ASKAPLOG_INFO_STR(logger, "Quality threshold for lag-based method is "<<qualityThresholdLag);
+      }
+      // always set it, although the default behaviour matches that with a non-positive parameter
+      solver.setQualityThreshold(qualityThresholdLag);
 
       // suppress logging warnings at high severity for the time of initial estimate
       // (same warnings will be given during the second solver run)
@@ -222,6 +228,13 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       // re-enable warning logging at high severity
       solver.setVerboseFlag(true);
   }
+
+  const double qualityThresholdPhase = config().getDouble("qualitythreshold.phase", -1.);
+  if (qualityThresholdPhase > 0.) {
+      ASKAPLOG_INFO_STR(logger, "Quality threshold for phase slope based method is "<<qualityThresholdPhase);
+  }
+  // always set it to avoid situations when the threshold for lag-based method remains active
+  solver.setQualityThreshold(qualityThresholdPhase);
       
   for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {
        solver.process(*it);  
@@ -303,8 +316,8 @@ int DelaySolverApp::run(int, char **) {
              int fileIndex = -1;
              if (dirContent.nelements() != 1) {
                  casa::uInt streamIndex = config().getUint("beam",0);
-                 if (config().isDefined("file")) {
-                     streamIndex = config().getUint("file");
+                 if (config().isDefined("stream")) {
+                     streamIndex = config().getUint("stream");
                      ASKAPLOG_DEBUG_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - data stream specified by file parset keyword ("<<
                                      streamIndex<<") will be used");
                  } else {
