@@ -119,6 +119,15 @@ public:
     /// @note It is allowed to have fewer named antennas than ids, if the array is too small antenna will be referred by id only.
     void setAntennaNames(const std::vector<std::string> &names);
 
+    /// @brief set optional quality threshold to fail the run if any unflagged baseline has a bad solution
+    /// @details LSQ fit is not very robust against data which have non-Gaussian errors (e.g. RFI), i.e.
+    /// problems at one baseline may affect the whole solution in a non-trivial way. Although there is no
+    /// good solution to this problem, in general, we have an option to abort the solution if any baseline
+    /// which is considered valid (i.e. is not flagged) returns solution of a bad quality. Negative value
+    /// for this threshold (default) essentially bypasses the check as the quality is from [0,1] range.
+    /// @note The definition of quality is different for FFT and phase slope based algorithms.
+    void setQualityThreshold(double threshold);
+
 protected:
 
     /// @brief helper method to get string referring to antenna
@@ -204,6 +213,15 @@ private:
     /// @details This flag is set to false by default and is turned on when any message about 
     /// unexpected data shape change is published in the log. It allows us to avoid spamming the log.
     bool itsDataShapeWarningGiven;
+
+    /// @brief optional quality threshold to fail the run if any unflagged baseline has a bad solution
+    /// @details LSQ fit is not very robust against data which have non-Gaussian errors (e.g. RFI), i.e.
+    /// problems at one baseline may affect the whole solution in a non-trivial way. Although there is no
+    /// good solution to this problem, in general, we have an option to abort the solution if any baseline
+    /// which is considered valid (i.e. don't have flags) returns solution of bad quality. Negative value
+    /// for this threshold (default) essentially bypasses the check as the quality is from [0,1] range.
+    /// Note, the definition of quality is different for FFT and phase slope based algorithms.
+    double itsQualityThreshold;
 };
 
 } // namespace utils

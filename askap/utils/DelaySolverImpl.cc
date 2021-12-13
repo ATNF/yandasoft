@@ -54,7 +54,7 @@ using namespace askap::utils;
 /// @param[in] refAnt reference antenna index   
 DelaySolverImpl::DelaySolverImpl(double targetRes, casa::Stokes::StokesTypes pol, float ampCutoff, casa::uInt refAnt) :
    itsTargetRes(targetRes), itsPol(pol), itsAmpCutoff(ampCutoff), itsRefAnt(refAnt), itsNAvg(0u), itsDelayEstimator(targetRes),
-   itsChanToAverage(1u), itsVerbose(true), itsDataShapeWarningGiven(false)
+   itsChanToAverage(1u), itsVerbose(true), itsDataShapeWarningGiven(false), itsQualityThreshold(-1.)
 {
   ASKAPCHECK(itsTargetRes > 0, "Target spectral resolution should be positive, you have "<<itsTargetRes<<" Hz");
 } 
@@ -94,7 +94,19 @@ void DelaySolverImpl::setVerboseFlag(bool flag)
    itsVerbose = flag;
 }
 
-
+/// @brief set optional quality threshold to fail the run if any unflagged baseline has a bad solution
+/// @details LSQ fit is not very robust against data which have non-Gaussian errors (e.g. RFI), i.e.
+/// problems at one baseline may affect the whole solution in a non-trivial way. Although there is no
+/// good solution to this problem, in general, we have an option to abort the solution if any baseline
+/// which is considered valid (i.e. is not flagged) returns solution of a bad quality. Negative value
+/// for this threshold (default) essentially bypasses the check as the quality is from [0,1] range.
+/// @param[in] threshold desired quality threshold 
+/// @note The definition of quality is different for FFT and phase slope based algorithms.
+void DelaySolverImpl::setQualityThreshold(double threshold)
+{
+   ASKAPCHECK(threshold <= 1., "Quality threshold greater than 1. will always cause a failure - such a useless setting of the parameter is unexpected");
+   itsQualityThreshold = threshold;
+}
      
 /// @brief process one data accessor
 /// @param[in] acc data accessor to process
@@ -389,6 +401,10 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
            
            delays[bsln] = useFFT ? itsDelayEstimator.getDelayWithFFT(buf) : itsDelayEstimator.getDelay(buf);
            quality[bsln] = itsDelayEstimator.quality();
+           ASKAPCHECK(quality[bsln] >= itsQualityThreshold, "Baseline between antenna "<<antennaNameString(itsAnt1IDs[bsln])<<
+                      " and "<<antennaNameString(itsAnt2IDs[bsln])<<
+                      " has bad solution quality ("<<quality[bsln]<<", threshold is "<<itsQualityThreshold<<
+                      "), but is unflagged. Check that the system is working and not completely dazzled by RFI.");
            
            // now fill the design matrix
            const casa::uInt ant1 = itsAnt1IDs[bsln];
