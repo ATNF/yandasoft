@@ -199,6 +199,11 @@ private:
     /// @brief optional antenna names for reporting in the log
     /// @details If not empty, this vector has antenna names for each id.
     std::vector<std::string> itsAntennaNames;
+
+    /// @brief flag that data shape mismatch warning is given
+    /// @details This flag is set to false by default and is turned on when any message about 
+    /// unexpected data shape change is published in the log. It allows us to avoid spamming the log.
+    bool itsDataShapeWarningGiven;
 };
 
 } // namespace utils
