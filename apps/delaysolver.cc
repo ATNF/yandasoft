@@ -361,21 +361,21 @@ int DelaySolverApp::run(int, char **) {
      ASKAPCHECK(msName != "", "Measurement set should be specified explicitly or the scheduling block should be given");
      ASKAPLOG_DEBUG_STR(logger, "Processing measurement set "<<msName);
      TableDataSource ds(msName,TableDataSource::MEMORY_BUFFERS);     
-     std::cerr<<"Initialization: "<<timer.real()<<std::endl;
+     ASKAPLOG_DEBUG_STR(logger, "Initialization: "<<timer.real());
      timer.mark();
      process(ds, currentDelays);
-     std::cerr<<"Job: "<<timer.real()<<std::endl;
+     ASKAPLOG_DEBUG_STR(logger, "Job: "<<timer.real());
   }
   catch(const AskapError &ce) {
-     std::cerr<<"AskapError has been caught. "<<ce.what()<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "AskapError has been caught. "<<ce.what());
      return -1;
   }
   catch(const std::exception &ex) {
-     std::cerr<<"std::exception has been caught. "<<ex.what()<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "std::exception has been caught. "<<ex.what());
      return -1;
   }
   catch(...) {
-     std::cerr<<"An unexpected exception has been caught"<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "An unexpected exception has been caught");
      return -1;
   }
   return 0;
