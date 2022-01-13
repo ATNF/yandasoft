@@ -330,6 +330,7 @@ namespace askap {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::finalise");
             this->updateResiduals(this->itsModel);
 
+            // debug message
             for (uInt base = 0; base < itsTermBaseFlux.nelements(); base++) {
                 for (uInt term = 0; term < itsTermBaseFlux(base).nelements(); term++) {
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "   Term(" << term << "), Base(" << base
@@ -337,6 +338,10 @@ namespace askap {
                 }
             }
 
+            // info message
+            for (uInt base = 0; base < itsTermBaseFlux.nelements(); base++) {
+              ASKAPLOG_INFO_STR(decmtbflogger,"Total flux for scale "<<base<<" : "<<itsTermBaseFlux(base)(0));
+            }
         }
 
         template<class T, class FT>
