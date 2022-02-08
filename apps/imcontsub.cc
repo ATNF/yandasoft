@@ -389,7 +389,13 @@ public:
             }
         }
 
-    };
+    private:
+        void getVersion() const override
+        {
+            std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+        }
+
+};
 
 // Main function
 int main(int argc, char* argv[])

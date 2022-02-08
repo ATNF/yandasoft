@@ -84,6 +84,11 @@ protected:
        using MultiScaleBasisFunction<float>::spheroidalOld;
    };
 
+private:
+    void getVersion() const override
+    {
+        std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+    }
 };
 
 void MultiScaleBasisFunctionTestApp::doSphFuncTest() {

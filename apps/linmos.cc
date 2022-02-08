@@ -518,6 +518,12 @@ class LinmosApp : public askap::Application
             stats.logSummary();
             return 0;
         }
+
+    private:
+        void getVersion() const override
+        {
+            std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+        }
 };
 
 } // end namespace askap

@@ -158,6 +158,11 @@ class CcalApplyApp : public askap::Application
 
     private:
 
+        void getVersion() const override
+        {
+            std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+        }
+
         /// @brief this flag indicates whether the underlying code needs to update flags or noise
         /// @details For now - quick and dirty fix to allow MRO tests to proceed. The ASKAP model
         /// is to apply calibration on the fly, so table accessor classes are unable to modify noise or flag

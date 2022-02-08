@@ -774,6 +774,13 @@ class linmosMPIApp : public askap::Application
 
     };
 
+    private:
+        void getVersion() const override
+        {
+            std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+        }
+    
+
 };
 
 } // end namespace askap

@@ -223,6 +223,12 @@ class CimagerApp : public askap::Application
 
             return 0;
         }
+
+    private:
+        void getVersion() const override
+        {
+            std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
+        }
 };
 
 int main(int argc, char *argv[])
