@@ -130,7 +130,7 @@ namespace askap {
         {
             this->updateResiduals(this->itsModel);
 
-            const Array<T> ones(this->itsL1image(0).shape(), 1.0);
+            const Array<T> ones(this->itsL1image(0).shape(), static_cast<T>(1.0));
             const T l0Norm(sum(ones(abs(this->itsL1image(0)) > T(0.0))));
             const T l1Norm(sum(abs(this->itsL1image(0))));
             ASKAPLOG_INFO_STR(decbflogger, "L0 norm = " << l0Norm << ", L1 norm   = " << l1Norm
@@ -243,7 +243,7 @@ namespace askap {
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), FT(0.));
             // do explicit loop over basis functions here (the original code relied on iterator in
             // fft2d and, therefore, low level representation of the basis function stack). This way
             // we have more control over the array structure and can transition to the more efficient order
@@ -254,11 +254,12 @@ namespace askap {
                  scimath::fft2d(fftBuffer, true);
             }
 
-            Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), 0.);
+            Array<FT> residualFFT(this->dirty().shape().nonDegenerate(), FT(0.));
             casacore::setReal(residualFFT, this->dirty().nonDegenerate());
             scimath::fft2d(residualFFT, true);
 
-            Array<FT> work(this->model().nonDegenerate().shape(), ArrayInitPolicies::NO_INIT);
+            // there is no bypass of complex initialisation in casacore-3.4
+            Array<FT> work(this->model().nonDegenerate().shape());
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
@@ -319,7 +320,7 @@ namespace askap {
             this->itsScaleFlux.set(T(0));
 
             // Calculate XFR for the subsection only
-            Array<FT> subXFR(subPsfShape, 0.);
+            Array<FT> subXFR(subPsfShape, FT(0.));
 
             const uInt nx(this->psf().shape()(0));
             const uInt ny(this->psf().shape()(1));
@@ -426,7 +427,7 @@ namespace askap {
 
         template<typename T, typename FT>
         void DeconvolverBasisFunction<T, FT>::reportOnCouplingMatrix() const {
-            Matrix<T> identity(this->itsCouplingMatrix.shape(), 0.0);
+            Matrix<T> identity(this->itsCouplingMatrix.shape(), static_cast<T>(0.0));
             const uInt nRows(this->itsCouplingMatrix.nrow());
             const uInt nCols(this->itsCouplingMatrix.ncolumn());
             ASKAPDEBUGASSERT(this->itsCouplingMatrix.shape() == this->itsInverseCouplingMatrix.shape());
@@ -762,7 +763,7 @@ namespace askap {
         Array<T> DeconvolverBasisFunction<T, FT>::applyInverse(const Matrix<Double>& invCoupling,
                 const Array<T>& dataArray)
         {
-            Array<T> invDataArray(dataArray.shape(), 0.0);
+            Array<T> invDataArray(dataArray.shape(), static_cast<T>(0.0));
 
             const uInt nRows(invCoupling.nrow());
             const uInt nCols(invCoupling.ncolumn());
@@ -794,7 +795,7 @@ namespace askap {
         Array<T> DeconvolverBasisFunction<T, FT>::apply(const Matrix<Double>& coupling,
                 const Vector<T> dataVector)
         {
-            Vector<T> vecDataVector(dataVector.shape(), 0.0);
+            Vector<T> vecDataVector(dataVector.shape(), static_cast<T>(0.0));
 
             const uInt nRows(coupling.nrow());
             const uInt nCols(coupling.ncolumn());

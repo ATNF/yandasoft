@@ -922,7 +922,7 @@ namespace askap
             "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
         if (osfactor == 1.) return;
 
-        casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),0.);
+        casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),casacore::Complex(0.));
 
         // this is how it's done in SynthesisParamsHelper::saveImageParameter():
         //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
@@ -1588,7 +1588,7 @@ namespace askap
        parameterMask[5] = casa::True; // fit pa
 
        fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
-       const casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
+       const casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.f);
        const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
        ASKAPCHECK(fitError == casa::Fit2D::OK, "Error fitting the beam. fitError="<<fitError<<
                   " message: "<<fitter.errorMessage());

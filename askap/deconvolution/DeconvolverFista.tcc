@@ -265,7 +265,7 @@ namespace askap {
         void DeconvolverFista<T, FT>::W(Array<T>& out, const Array<T>& in)
         {
             if (itsBasisFunction) {
-                casacore::Array<FT> inTransform(in.nonDegenerate().shape(), 0.);
+                casacore::Array<FT> inTransform(in.nonDegenerate().shape(), FT(0.));
                 casacore::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
                 out.resize(itsBasisFunction->shape());
                 casacore::Cube<T> outCube(out);
@@ -289,7 +289,7 @@ namespace askap {
         {
             if (itsBasisFunction) {
                 const Cube<T> inCube(in);
-                casacore::Array<FT> inPlaneTransform(out.nonDegenerate().shape(),0.);
+                casacore::Array<FT> inPlaneTransform(out.nonDegenerate().shape(),FT(0.));
                 casacore::Array<FT> outTransform(out.nonDegenerate().shape());
                 outTransform.set(FT(0.0));
 

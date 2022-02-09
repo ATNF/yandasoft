@@ -321,13 +321,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       // lets do this one channel at a time
 
 
-      Array<float> outPix(sliceShape,0.);
-      Array<float> outWgtPix(sliceShape,0.);
-      Array<bool> outMask(sliceShape,0.);
+      Array<float> outPix(sliceShape,0.f);
+      Array<float> outWgtPix(sliceShape,0.f);
+      Array<bool> outMask(sliceShape,casacore::False);
       Array<float> outSenPix;
       //
       if (accumulator.doSensitivity()) {
-        outSenPix = Array<float>(sliceShape,0.);
+        outSenPix = Array<float>(sliceShape,0.f);
       }
 
       // set up an indexing vector for the arrays

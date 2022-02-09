@@ -48,6 +48,7 @@ ASKAP_LOGGER(logger, ".delaysolver");
 #include <casacore/casa/Arrays/Vector.h>
 #include <casacore/casa/OS/Timer.h>
 #include <casacore/casa/OS/Directory.h>
+#include <casacore/casa/Utilities/Regex.h>
 
 #include <askap/utils/DelaySolverImpl.h>
 
@@ -311,7 +312,7 @@ int DelaySolverApp::run(int, char **) {
              // scheduling block ID is specified, the file name can be taken from SB
              const casa::Directory sbDir(path2sb);
              // do not follow symlinks, non-recursive
-             const casa::Vector<casa::String> dirContent = sbDir.find(casa::Regex::fromPattern("*.ms"),casa::False, casa::False);
+             const casacore::Vector<casacore::String> dirContent = sbDir.find(casacore::Regex(casacore::Regex::fromPattern("*.ms")),casacore::False, casacore::False);
              ASKAPCHECK(dirContent.nelements() > 0, "Unable to find a measurement set file in "<<sbDir.path().absoluteName());
              int fileIndex = -1;
              if (dirContent.nelements() != 1) {

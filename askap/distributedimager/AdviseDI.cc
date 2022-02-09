@@ -52,7 +52,7 @@ ASKAP_LOGGER(logger, ".adviseDI");
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/ms/MeasurementSets/MSColumns.h>
 #include <casacore/ms/MSOper/MSReader.h>
-#include <casacore/casa/Arrays/ArrayIO.h>
+#include <casacore/casa/IO/ArrayIO.h>
 #include <casacore/casa/iostream.h>
 #include <casacore/casa/namespace.h>
 #include <casacore/casa/Quanta/MVTime.h>

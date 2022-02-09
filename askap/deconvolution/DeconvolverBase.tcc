@@ -338,8 +338,10 @@ namespace askap {
                            << " not same as number of terms specified "
                            << nTerms());
             ASKAPASSERT(nTerms() > 0);
-            Array<FT> xfr(psf(0).shape(), ArrayInitPolicies::NO_INIT);
-            Array<FT> work(model(0).shape(), ArrayInitPolicies::NO_INIT);
+            // uninitialized construction doesn't work for complex type any more in casacore-3.4
+            // default constructor of complex will be called for each element
+            Array<FT> xfr(psf(0).shape());
+            Array<FT> work(model(0).shape());
 
             for (uInt term = 0; term < nTerms(); ++term) {
                  const Array<T>& thisTermPSF = psf(term);

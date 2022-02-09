@@ -135,7 +135,7 @@ class TmergeApp : public askap::Application
             // recover mosaics for output
             casa::Array<imtype> outPix(ne->dataVectorT(paramName).reform(outShape));
             casa::Array<imtype> outWgtPix(ne->normalMatrixDiagonal(paramName).reform(outShape));
-            casa::Array<imtype> outSenPix(outShape,1.);
+            casa::Array<imtype> outSenPix(outShape,static_cast<imtype>(1.));
 
             std::string outName;
             casa::Array<float> scratch(outShape);
