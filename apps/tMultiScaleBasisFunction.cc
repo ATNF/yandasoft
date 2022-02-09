@@ -85,10 +85,10 @@ protected:
    };
 
 private:
-    void getVersion() const override
-    {
-        std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
-    }
+        std::string getVersion() const override {
+            std:: string pkgVersion = "yandasoft:" + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
 
 void MultiScaleBasisFunctionTestApp::doSphFuncTest() {

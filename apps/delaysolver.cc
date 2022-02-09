@@ -87,10 +87,10 @@ protected:
    std::vector<double> getCurrentDelays(const LOFAR::ParameterSet &parset);
 
 private:
-   void getVersion() const override
-   {
-      std::cerr << ASKAP_PACKAGE_VERSION << std::endl;
-   }
+    std::string getVersion() const override {
+       std:: string pkgVersion = "yandasoft:" + ASKAP_PACKAGE_VERSION;
+       return pkgVersion;
+    }
    /// @brief vector with antenna names
    /// @details Note, indices correspond to that internally used by ingest. If empty, the output
    /// parset (in the fcm format) will be in the form of ingest-specific vector (used in some test
