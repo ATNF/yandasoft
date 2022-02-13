@@ -88,7 +88,7 @@ protected:
 
 private:
     std::string getVersion() const override {
-       std:: string pkgVersion = "yandasoft:" + ASKAP_PACKAGE_VERSION;
+       const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
        return pkgVersion;
     }
    /// @brief vector with antenna names
