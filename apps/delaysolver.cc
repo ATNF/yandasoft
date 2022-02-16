@@ -24,6 +24,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
+#include <askap/askap_synthesis.h>
 
 // a bit hacky way to get logs tagged with the cp-prefix
 #define ASKAP_PACKAGE_NAME "cp"
@@ -86,6 +87,10 @@ protected:
    std::vector<double> getCurrentDelays(const LOFAR::ParameterSet &parset);
 
 private:
+    std::string getVersion() const override {
+       const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+       return pkgVersion;
+    }
    /// @brief vector with antenna names
    /// @details Note, indices correspond to that internally used by ingest. If empty, the output
    /// parset (in the fcm format) will be in the form of ingest-specific vector (used in some test

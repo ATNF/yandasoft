@@ -774,6 +774,11 @@ class linmosMPIApp : public askap::Application
 
     };
 
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
 
 } // end namespace askap
