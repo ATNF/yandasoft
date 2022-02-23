@@ -1,7 +1,9 @@
 # GitLab CI script for yandasoft
 
 #image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
-image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
+#image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
+image: csirocass/yandasoft:casacore3.4-mpich
+
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -27,7 +29,7 @@ build:
     - chmod 644 ~/.ssh/known_hosts
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
-    - cmake -C /askap/config/askap.gitlab.cmake.in -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
+    - cmake -C .gitlab-ci.cmake.in -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
     - cmake --build _build --target install -j $n_cpus
   artifacts:
     paths:
@@ -43,16 +45,18 @@ test:
   before_script:
     - apt update && apt install -y cmake xsltproc 
   variables:
-    CASARCFILES: ${CI_PROJECT_DIR}/_build/base-askap/test_gitlab_casarc.cfg
+    CASARCFILES: ${CI_PROJECT_DIR}/_build/test_gitlab_casarc.cfg
+    TEST_DATASET_PATH: ${CI_PROJECT_DIR}/_build/testdataset.ms
   script:
     - cd _build
-    - tar -xjf /askap/data/measdata.tar.bz2
+    - tar -xjf base-dataaccess/measdata.tar.bz2
     - "echo 'measures.directory: '${PWD}'/data' > ${CASARCFILES}"
     - cat $CASARCFILES
+    - tar -xjf base-accessors/testdataset.tar.bz2
     - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
     - cd _build
-    - ../askap-cmake/ctest2junit > ctest.xml
+    - askap-cmake/ctest2junit > ctest.xml
   artifacts:
     paths:
       - _build
