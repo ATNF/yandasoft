@@ -2,7 +2,8 @@
 
 #image: registry.gitlab.com/askapsdp/all_yandasoft:1.1.x-latest
 #image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
-image: csirocass/yandasoft:casacore3.4-mpich
+#image: csirocass/yandasoft:casacore3.4-mpich
+image: csirocass/yandasoft:casacore0572d931d-mpich
 
 
 variables:
