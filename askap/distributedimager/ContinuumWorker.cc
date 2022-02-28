@@ -905,7 +905,7 @@ void ContinuumWorker::processChannels()
         // FIXME
         if (updateDir == true) {
           rootINERef.weightType(FROM_WEIGHT_IMAGES);
-          rootINERef.weightState(CORRECTED);
+          rootINERef.weightState(WEIGHTED);
           rootImager.zero(); // then we delete all our work ....
         }
 
@@ -1040,7 +1040,7 @@ void ContinuumWorker::processChannels()
             dynamic_cast<ImagingNormalEquations&>(*workingImager.getNE());
             if (updateDir) {
               workingINERef.weightType(FROM_WEIGHT_IMAGES);
-              workingINERef.weightState(CORRECTED);
+              workingINERef.weightState(WEIGHTED);
             }
 
             rootImager.getNE()->merge(*workingImager.getNE());
