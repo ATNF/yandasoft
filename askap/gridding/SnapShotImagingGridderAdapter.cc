@@ -550,7 +550,9 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<imtype> &i
    ASKAPCHECK(csSuccess, "Error setting either input or output coordinate frame during image plane regridding");
 
    for (; planeIter.hasMore(); planeIter.next()) {
-        itsTempInImg.put(planeIter.getPlane(inRef));
+        // work around casacore bug/feature with degenerate dimensions, see AXA-689
+        //itsTempInImg.put(planeIter.getPlane(inRef));
+        itsTempInImg.put(planeIter.getPlane(inRef).reform(tempShape));
           if (!isPCFGridder()) {
             regridder.regrid(itsTempOutImg, itsInterpolationMethod,
                     casacore::IPosition(2,0,1), itsTempInImg, false, itsDecimationFactor);
