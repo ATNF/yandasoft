@@ -74,12 +74,11 @@ robottests:
      - pip install robotframework
   script:
     - export CDIR=${PWD}
+# setup path and library path to ensure we're testing the right thing
     - export PATH=${CDIR}/_install/bin:${PATH}
-    - ldd ${CDIR}/_install/bin/cimager
     - export LD_LIBRARY_PATH=${CDIR}/_install/lib:${LD_LIBRARY_PATH}
     - cd tests/data/simulation/synthregression
-#    - python -m robot synthregression.robot
-    - python wtermtest.py
+    - python -m robot synthregression.robot
   artifacts:
     paths:
       - tests/data/simulation/synthregression    
