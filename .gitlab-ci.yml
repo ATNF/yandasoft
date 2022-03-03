@@ -74,6 +74,7 @@ robottests:
      - pip install robotframework
   script:
     - export CDIR=${PWD}
+    - export PATH=${CDIR}/_install/bin:${PATH}
     - cd tests/data/simulation/synthregression
 #    - python -m robot synthregression.robot
     - python wtermtest.py
