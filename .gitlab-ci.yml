@@ -75,6 +75,8 @@ robottests:
   script:
     - export CDIR=${PWD}
     - export PATH=${CDIR}/_install/bin:${PATH}
+    - ldd ${CDIR}/_install/bin/cimager
+    - export LD_LIBRARY_PATH=${CDIR}/_install/lib:${LD_LIBRARY_PATH}
     - cd tests/data/simulation/synthregression
 #    - python -m robot synthregression.robot
     - python wtermtest.py
