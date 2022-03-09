@@ -267,6 +267,9 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
     // later on, can set to Jy/beam
     itsCube->setUnits(itsFilename,"Jy/pixel");
 
+    // set the header keywords
+    itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
+
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
 
@@ -340,6 +343,9 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     // default flux units are Jy/pixel. If we set the restoring beam
     // later on, can set to Jy/beam
     itsCube->setUnits(itsFilename,"Jy/pixel");
+
+    // set the header keywords
+    itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
@@ -506,23 +512,7 @@ template <class T>
 void CubeBuilder<T>::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
 {
         itsCube->setBeamInfo(itsFilename,beam[0].getValue("rad"),beam[1].getValue("rad"),beam[2].getValue("rad"));
-        setUnits("Jy/beam");
-}
-
-template <class T>
-void CubeBuilder<T>::setUnits(const std::string &units)
-{
-    itsCube->setUnits(itsFilename,units);
-}
-
-template <class T>
-void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
-{
-    String date, timesys;
-    casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
-    itsCube->setMetadataKeyword(itsFilename,"DATE-OBS", date, "Date of observation");
-    if (itsCube->getMetadataKeyword(itsFilename,"TIMESYS")=="")
-        itsCube->setMetadataKeyword(itsFilename,"TIMESYS", timesys, "Time system");
+        itsCube->setUnits(itsFilename,"Jy/beam");
 }
 
 template <class T>
