@@ -1702,9 +1702,13 @@ void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
 
 void ContinuumWorker::logBeamInfo()
 {
-
+    bool beamlogAsFile = itsParset.getBool("write.beamlog",true);
     askap::accessors::BeamLogger beamlog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    if (beamlogAsFile) {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    } else {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to image " << itsRestoredCube->filename());
+    }
     ASKAPLOG_DEBUG_STR(logger, "About to add beam list of size " << itsBeamList.size() << " to the beam logger");
     beamlog.beamlist() = itsBeamList;
 
@@ -1712,16 +1716,20 @@ void ContinuumWorker::logBeamInfo()
       std::list<int> creators = itsComms.getCubeCreators();
       ASKAPASSERT(creators.size() == 1);
       int creatorRank = creators.front();
-      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information beam creator is rank " << creatorRank);
+      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information, beam creator is rank " << creatorRank);
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {
 
         if (itsRestoredCube) {
-            ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log "
-                               << beamlog.filename());
-            beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
-            beamlog.write();
+            if (beamlogAsFile) {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log");
+              beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
+              beamlog.write();
+            } else {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to image file");
+              itsRestoredCube->addBeamList(beamlog.beamlist());
+            }
 
             ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
             casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);

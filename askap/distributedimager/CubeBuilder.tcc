@@ -508,6 +508,7 @@ void CubeBuilder<T>::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
         itsCube->setBeamInfo(itsFilename,beam[0].getValue("rad"),beam[1].getValue("rad"),beam[2].getValue("rad"));
         setUnits("Jy/beam");
 }
+
 template <class T>
 void CubeBuilder<T>::setUnits(const std::string &units)
 {
@@ -523,6 +524,13 @@ void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
     if (itsCube->getMetadataKeyword(itsFilename,"TIMESYS")=="")
         itsCube->setMetadataKeyword(itsFilename,"TIMESYS", timesys, "Time system");
 }
+
+template <class T>
+void CubeBuilder<T>::addBeamList(const BeamList & beamList)
+{
+    itsCube->setBeamInfo(itsFilename, beamList);
+}
+
 
 } // namespace cp
 } // namespace askap
