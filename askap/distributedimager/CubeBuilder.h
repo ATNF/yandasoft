@@ -86,7 +86,10 @@ class CubeBuilder {
         void setUnits(const std::string &units);
         void setDateObs(const casacore::MVEpoch &dateObs);
 
+        void addBeamList(const accessors::BeamList & beamList);
+
         std::string filename() const{return itsFilename;};
+
 
     private:
 
