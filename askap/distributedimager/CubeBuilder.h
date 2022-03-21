@@ -83,8 +83,6 @@ class CubeBuilder {
                                  const casacore::Quantity& inc);
 
         void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
-        void setUnits(const std::string &units);
-        void setDateObs(const casacore::MVEpoch &dateObs);
 
         void addBeamList(const accessors::BeamList & beamList);
 

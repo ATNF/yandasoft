@@ -583,6 +583,7 @@ void ContinuumWorker::processChannels()
 
   ASKAPCHECK(!(updateDir && !localSolver), "Cannot <yet> Continuum image in on-the-fly mosaick mode - need to update the image parameter setup");
 
+
   // Define reference channel for giving restoring beam
   std::string reference = itsParset.getString("restore.beamReference", "mid");
   if (reference == "mid") {
@@ -630,28 +631,32 @@ void ContinuumWorker::processChannels()
     ASKAPLOG_DEBUG_STR(logger, "nchan: " << this->nchanCube << " base f0: " << f0.getValue("MHz")
     << " width: " << freqinc.getValue("MHz") << " (" << workUnits[0].get_channelWidth() << ")");
 
-    // We want the start of observations stored in the image keywords
-    // The velocity calculations use the first MS for this, so we'll do that too
-    casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
-
     if (itsWriteWtLog) {
         itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
     }
 
     if ( itsComms.isCubeCreator() ) {
 
+      // Get keywords to write to the image header
+      if (!itsParset.isDefined("header.DATE-OBS")) {
+        // We want the start of observations stored in the image keywords
+        // The velocity calculations use the first MS for this, so we'll do that too
+        casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
+        String date, timesys;
+        casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
+        // replace adds if non-existant
+        itsParset.replace("header.DATE-OBS","["+date+",Start of observation]");
+        itsParset.replace("header.TIMESYS","["+timesys+",Time System]");
+      }
+
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
-        // Fill in the date
-        itsImageCube->setDateObs(dateObs);
       }
       if (itsWritePsfRaw) {
         itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
-        // Fill in the date
-        itsResidualCube->setDateObs(dateObs);
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
@@ -659,8 +664,6 @@ void ContinuumWorker::processChannels()
       if (itsWriteGrids) {
         if (itsGridFFT) {
           itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-          // Fill in the date
-          itsVisGridCubeReal->setDateObs(dateObs);
           itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
           itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
         } else {
@@ -686,8 +689,6 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
-          // Fill in the date
-          itsRestoredCube->setDateObs(dateObs);
       }
 
     } else {
@@ -1121,7 +1122,7 @@ void ContinuumWorker::processChannels()
           if (peak_residual < targetPeakResidual) {
             if (peak_residual < 0) {
               ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
-                              << targetPeakResidual << " Jy. Stopping.");              
+                              << targetPeakResidual << " Jy. Stopping.");
             } else {
               ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
               << targetPeakResidual << " Jy. Stopping.");
