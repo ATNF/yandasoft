@@ -560,7 +560,7 @@ void SnapShotImagingGridderAdapter::imageRegrid(const casacore::Array<imtype> &i
             pcfRegrid(regridder);
           }
         // the next line does not do any copying (reference semantics)
-        casacore::Array<imtype> outRef(planeIter.getPlane(output).nonDegenerate());
+        casacore::Array<imtype> outRef(planeIter.getPlane(output).reform(tempShape));
         // create a lattice to benefit from lattice math operators
         casacore::ArrayLattice<imtype> tempOutputLattice(outRef, casacore::True);
         if (toTarget) {
