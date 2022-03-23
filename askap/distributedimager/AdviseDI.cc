@@ -126,9 +126,8 @@ bool in_range(double end1, double end2, double test) {
 /// @param comms communication object
 /// @param parset ParameterSet for inputs
 AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
-    AdviseParallel(comms,parset),itsParset(parset)
+    AdviseParallel(comms,parset),itsPrepared(false), itsParset(parset)
 {
-    isPrepared = false;
     itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
     itsWorkUnitCount=0;
 }
@@ -198,11 +197,11 @@ void AdviseDI::prepare() {
 
 
     casacore::uInt srow = 0;
-    chanFreq.resize(ms.size());
-    chanWidth.resize(ms.size());
-    effectiveBW.resize(ms.size());
-    resolution.resize(ms.size());
-    centre.resize(ms.size());
+    itsChanFreq.resize(ms.size());
+    itsChanWidth.resize(ms.size());
+    itsEffectiveBW.resize(ms.size());
+    itsResolution.resize(ms.size());
+    itsCentre.resize(ms.size());
 
     // Not really sure what to do for multiple ms or what that means in this
     // context... but i'm doing it any way - probably laying a trap for myself
@@ -245,11 +244,11 @@ void AdviseDI::prepare() {
     }
 
     for (unsigned int n = 0; n < ms.size(); ++n) {
-        chanFreq[n].resize(0);
-        chanWidth[n].resize(0);
-        effectiveBW[n].resize(0);
-        resolution[n].resize(0);
-        centre[n].resize(0);
+        itsChanFreq[n].resize(0);
+        itsChanWidth[n].resize(0);
+        itsEffectiveBW[n].resize(0);
+        itsResolution[n].resize(0);
+        itsCentre[n].resize(0);
 
         // MV: the design of this class is very ugly from the C++ point of view, it needs to be redesigned to get more
         // structure if we want to extend it further (or even debug - I suspect the issues I am working with now is
@@ -293,10 +292,10 @@ void AdviseDI::prepare() {
         thisChanIn = 0;
 
         for (uint i = chanStart; i < chanStop; i = i + chanStep) {
-            chanFreq[n].push_back(sc.chanFreq()(srow)(casacore::IPosition(1, i)));
-            chanWidth[n].push_back(sc.chanWidth()(srow)(casacore::IPosition(1, i)));
-            effectiveBW[n].push_back(sc.effectiveBW()(srow)(casacore::IPosition(1, i)));
-            resolution[n].push_back(sc.resolution()(srow)(casacore::IPosition(1, i)));
+            itsChanFreq[n].push_back(sc.chanFreq()(srow)(casacore::IPosition(1, i)));
+            itsChanWidth[n].push_back(sc.chanWidth()(srow)(casacore::IPosition(1, i)));
+            itsEffectiveBW[n].push_back(sc.effectiveBW()(srow)(casacore::IPosition(1, i)));
+            itsResolution[n].push_back(sc.resolution()(srow)(casacore::IPosition(1, i)));
             thisChanIn++;
         }
 
@@ -396,11 +395,11 @@ void AdviseDI::prepare() {
          const MFrequency::Ref refin(MFrequency::castType(itsRef),frame); // the frame of the input channels
 
          // builds a list of all the channels
-         itsInputFrequencies.reserve(chanFreq[n].size());
+         itsInputFrequencies.reserve(itsChanFreq[n].size());
 
-         for (unsigned int ch = 0; ch < chanFreq[n].size(); ++ch) {
+         for (unsigned int ch = 0; ch < itsChanFreq[n].size(); ++ch) {
 
-              itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
+              itsInputFrequencies.push_back(MFrequency(MVFrequency(itsChanFreq[n][ch]),refin));
 
             /// The original scheme attempted to convert the input into the output frame
             /// and only keep those output (FFRAME) channels that matched.
@@ -567,12 +566,12 @@ void AdviseDI::prepare() {
                     otherEdge = thisAllocation[frequency] + itsFrequencies[2]/2.;
                 }
                 else {
-                    oneEdge = thisAllocation[frequency] - chanWidth[set][0]/2.0;
-                    otherEdge = thisAllocation[frequency] + chanWidth[set][0]/2.0;
+                    oneEdge = thisAllocation[frequency] - itsChanWidth[set][0]/2.0;
+                    otherEdge = thisAllocation[frequency] + itsChanWidth[set][0]/2.0;
                 }
 
                 // try and find the requested channels in the input dataset
-                lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
+                lc = matchAll(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
                 if (lc.size() > 0) {
                     size_t limit = lc.size();
@@ -592,7 +591,7 @@ void AdviseDI::prepare() {
                         if (itsRequestedFrequencies.size() > 1)
                             wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
                         else
-                            wu.set_channelWidth(fabs(chanWidth[0][0]));
+                            wu.set_channelWidth(fabs(itsChanWidth[0][0]));
 
                         wu.set_localChannel(lc[lc_part]);
                         wu.set_globalChannel(globalChannel);
@@ -601,7 +600,7 @@ void AdviseDI::prepare() {
                         itsAllocatedWork[work].push_back(wu);
                         itsWorkUnitCount++;
                         ASKAPLOG_DEBUG_STR(logger,"MATCH Found desired freq " << thisAllocation[frequency] \
-                        << " in local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
+                        << " in local channel number " << lc << " ( " << itsChanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
                         << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
                         << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
                         << " the global channel is " << globalChannel);
@@ -626,7 +625,7 @@ void AdviseDI::prepare() {
                 if (itsRequestedFrequencies.size() > 1)
                     wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
                 else
-                    wu.set_channelWidth(fabs(chanWidth[0][0]));
+                    wu.set_channelWidth(fabs(itsChanWidth[0][0]));
 
                 wu.set_localChannel(-1);
                 wu.set_globalChannel(-1);
@@ -692,7 +691,7 @@ void AdviseDI::prepare() {
         }
     }
 
-    isPrepared = true;
+    itsPrepared = true;
     ASKAPLOG_DEBUG_STR(logger, "Prepared the advice");
 }
 
@@ -717,13 +716,14 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     itsWorkUnitCount = count;
     return rtn;
 }
-vector<int> AdviseDI::matchall(int ms_number,
+
+vector<int> AdviseDI::matchAll(int ms_number,
 casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
     /// return all the input channels in the range
     vector<int> matches;
-    for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
-            ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
-            if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
+    for (int ch=0 ; ch < itsChanFreq[ms_number].size(); ++ch) {
+            ASKAPLOG_DEBUG_STR(logger, "looking for " << itsChanFreq[ms_number][ch] << "Hz");
+            if (in_range(oneEdge.getValue(),otherEdge.getValue(),itsChanFreq[ms_number][ch])) {
                 ASKAPLOG_DEBUG_STR(logger, "Found");
                 matches.push_back(ch);
             }
@@ -768,21 +768,15 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
 
     ASKAPLOG_DEBUG_STR(logger,"Adding missing params ");
 
-    if (isPrepared == true) {
+    if (itsPrepared == true) {
         ASKAPLOG_DEBUG_STR(logger,"Prepared therefore can add frequency label for the output image");
-        std::vector<casacore::MFrequency>::const_iterator begin_it;
-        std::vector<casacore::MFrequency>::const_iterator end_it;
 
         ASKAPCHECK(!itsRequestedFrequencies.empty(),"No frequencies requested for ouput");
-        begin_it = itsRequestedFrequencies.begin();
-        end_it = itsRequestedFrequencies.end()-1;
 
+        itsMinFrequency = itsRequestedFrequencies.front().getValue();
+        itsMaxFrequency = itsRequestedFrequencies.back().getValue();
 
-        this->minFrequency = (*begin_it).getValue();
-        this->maxFrequency = (*end_it).getValue();
-        ASKAPLOG_DEBUG_STR(logger,"Min:Max frequency -- " << this->minFrequency << ":" << this->maxFrequency);
-
-
+        ASKAPLOG_DEBUG_STR(logger,"Min:Max frequency -- " << itsMinFrequency << ":" << itsMaxFrequency);
     }
 
    // test for missing image-specific parameters:
@@ -831,10 +825,10 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
      }
 
      param = "Images."+imageNames[img]+".frequency";
-     if ( !parset.isDefined(param) && isPrepared == true) {
+     if ( !parset.isDefined(param) && itsPrepared == true) {
        const string key="Images."+imageNames[img]+".frequency";
        // changing this to match adviseParallel
-       const double aveFreq = 0.5*(minFrequency+maxFrequency);
+       const double aveFreq = 0.5*(itsMinFrequency+itsMaxFrequency);
        const string val = "["+toString(aveFreq)+","+toString(aveFreq)+"]";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << val);
        parset.add(key,val);
@@ -888,7 +882,7 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
        param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
        if ((parset.getString("visweights")=="MFS")) {
            if (!parset.isDefined(param)) {
-               const double aveFreq = 0.5*(minFrequency+maxFrequency);
+               const double aveFreq = 0.5*(itsMinFrequency+itsMaxFrequency);
                string val = toString(aveFreq);
                ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (using average frequency):  " << val);
                parset.add(param,val);
