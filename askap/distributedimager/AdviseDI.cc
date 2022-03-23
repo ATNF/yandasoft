@@ -547,9 +547,9 @@ void AdviseDI::prepare() {
             for (unsigned int set=0;set < ms.size();++set){
 
 
-                MeasFrame itsFrame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
-                MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
-                MFrequency::Ref refout(itsFreqType,itsFrame); // the frame desired
+                const MeasFrame frame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
+                const MFrequency::Ref refin(MFrequency::castType(itsRef),frame); // the frame of the input channels
+                const MFrequency::Ref refout(itsFreqType,frame); // the frame desired
                 MFrequency::Convert forw(refin,refout); // from input to desired
                 MFrequency::Convert backw(refout,refin); // from desired to input
 
