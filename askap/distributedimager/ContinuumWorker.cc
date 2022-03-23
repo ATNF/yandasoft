@@ -1694,12 +1694,12 @@ void ContinuumWorker::recordWeight(float wt, const unsigned int cubeChannel)
   itsWeightsList[cubeChannel] = wt;
 }
 
-void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
-{
-  if (cubeChannel == itsBeamReferenceChannel) {
-    itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
-  }
-}
+// void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
+// {
+//   if (cubeChannel == itsBeamReferenceChannel) {
+//     itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
+//   }
+// }
 
 void ContinuumWorker::logBeamInfo()
 {
@@ -1707,7 +1707,7 @@ void ContinuumWorker::logBeamInfo()
     askap::accessors::BeamLogger beamlog;
     if (beamlogAsFile) {
       ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
-    } else {
+    } else if (itsRestoredCube) {
       ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to image " << itsRestoredCube->filename());
     }
     ASKAPLOG_DEBUG_STR(logger, "About to add beam list of size " << itsBeamList.size() << " to the beam logger");
@@ -1721,7 +1721,6 @@ void ContinuumWorker::logBeamInfo()
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {
-
         if (itsRestoredCube) {
             if (beamlogAsFile) {
               ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log");
@@ -1732,9 +1731,12 @@ void ContinuumWorker::logBeamInfo()
               itsRestoredCube->addBeamList(beamlog.beamlist());
             }
 
-            ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
-            casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
-            itsRestoredCube->addBeam(refbeam);
+            if (beamlogAsFile || itsParset.getString("imagetype") == "fits") {
+              // can't write ref beam to casa image if per channel beams are stored
+              ASKAPLOG_DEBUG_STR(logger, "Writing reference restoring beam to header of restored cube");
+              casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
+              itsRestoredCube->addBeam(refbeam);
+            }
         }
     }
 
