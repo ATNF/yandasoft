@@ -345,7 +345,6 @@ void AdviseDI::prepare() {
     // ASKAPLOG_INFO_STR(logger, "Assuming tangent point shared: "<<printDirection(itsTangent[0])<<" (J2000)");
 
     // the frequencies
-    itsFFrameFrequencies.resize(0);
     itsInputFrequencies.resize(0);
     itsRequestedFrequencies.resize(0);
     // the work allocations
@@ -427,7 +426,7 @@ void AdviseDI::prepare() {
     std::vector<casacore::MFrequency>::iterator topo_it;
     topo_it = std::unique(itsInputFrequencies.begin(),itsInputFrequencies.end(),custom_compare);
     itsInputFrequencies.resize(std::distance(itsInputFrequencies.begin(),topo_it));
-    ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size() << " Output " << itsFFrameFrequencies.size());
+    ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size());
 
 
     // Now they are unique we need to get a list of desired output freqencies that meet

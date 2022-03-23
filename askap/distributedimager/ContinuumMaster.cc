@@ -119,7 +119,7 @@ void ContinuumMaster::run(void)
         ASKAPLOG_DEBUG_STR(logger,"Parset" << diadvise.getParset());
         ASKAPLOG_DEBUG_STR(logger,"*****");
 
-        totalChannels = diadvise.getBaryFrequencies().size();
+        totalChannels = diadvise.getTopoFrequencies().size();
 
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << totalChannels << " channels to process");
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << diadvise.getWorkUnitCount() << " work units to allocate");
