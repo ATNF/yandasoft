@@ -391,28 +391,23 @@ void AdviseDI::prepare() {
 
 
 
-
     for (unsigned int n = 0; n < ms.size(); ++n) {
+         const MeasFrame frame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
+         const MFrequency::Ref refin(MFrequency::castType(itsRef),frame); // the frame of the input channels
 
+         // builds a list of all the channels
+         itsInputFrequencies.reserve(chanFreq[n].size());
 
+         for (unsigned int ch = 0; ch < chanFreq[n].size(); ++ch) {
 
-        // builds a list of all the channels
-
-        for (unsigned int ch = 0; ch < chanFreq[n].size(); ++ch) {
-
-            MeasFrame itsFrame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
-            MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
-
-
-
-            itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
+              itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
 
             /// The original scheme attempted to convert the input into the output frame
             /// and only keep those output (FFRAME) channels that matched.
             /// This was not deemed useful or helpful enough though. But I need to keep that
             /// mode as a default.
 
-        }
+         }
     }
 
     /// uniquifying the lists
