@@ -98,7 +98,6 @@ void ContinuumMaster::run(void)
     // 2 - they have different epochs but the same TOPO centric frequencies
 
     vector<int> theBeams = getBeams();
-    int totalChannels = 0;
 
     const double targetPeakResidual = synthesis::SynthesisParamsHelper::convertQuantity(
                 itsParset.getString("threshold.majorcycle", "-1Jy"), "Jy");
@@ -119,7 +118,7 @@ void ContinuumMaster::run(void)
         ASKAPLOG_DEBUG_STR(logger,"Parset" << diadvise.getParset());
         ASKAPLOG_DEBUG_STR(logger,"*****");
 
-        totalChannels = diadvise.getBaryFrequencies().size();
+        const int totalChannels = diadvise.getTopoFrequencies().size();
 
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << totalChannels << " channels to process");
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << diadvise.getWorkUnitCount() << " work units to allocate");
