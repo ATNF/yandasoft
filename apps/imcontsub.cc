@@ -103,13 +103,9 @@ public:
                 }
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header "<<infile<<", "<<outfile);
                 // add the image history keyword to the outfile
-                if ( subset.isDefined("imageHistory") ) {
-                    const std::vector<std::string> historyLines = subset.getStringVector("imageHistory");
-                    if ( ! historyLines.empty() ) {
-                        accessor.copyHeaderWithHistoryKW(infile, outfile, historyLines);
-                    } else {
-                        accessor.copyHeader(infile, outfile);
-                    }
+                const std::vector<std::string> historyLines = subset.getStringVector("imageHistory",std::vector<std::string> {});
+                if ( ! historyLines.empty() ) {
+                    accessor.copyHeaderWithHistoryKW(infile, outfile, historyLines);
                 } else {
                     accessor.copyHeader(infile, outfile);
                 }

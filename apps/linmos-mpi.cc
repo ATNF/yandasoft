@@ -300,9 +300,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
         iacc.create(outImgName, outShape, accumulator.outCoordSys());
-        if ( ! historyLines.empty() ) {
-            iacc.addHistory(outImgName, historyLines);
-        }
+        iacc.addHistory(outImgName, historyLines);
 
         iacc.makeDefaultMask(outImgName);
 
@@ -312,9 +310,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outWgtName = accumulator.outWgtNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
           iacc.create(outWgtName, outShape, accumulator.outCoordSys());
-          if ( ! historyLines.empty() ) {
-            iacc.addHistory(outWgtName, historyLines);
-          }
+          iacc.addHistory(outWgtName, historyLines);
           iacc.makeDefaultMask(outWgtName);
 
         }
@@ -322,9 +318,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outSenName = accumulator.outSenNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
           iacc.create(outSenName, outShape, accumulator.outCoordSys());
-          if ( ! historyLines.empty() ) {
-            iacc.addHistory(outSenName, historyLines);
-          }
+          iacc.addHistory(outSenName, historyLines);
           iacc.makeDefaultMask(outSenName);
 
         }

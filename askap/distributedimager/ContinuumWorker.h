@@ -166,7 +166,7 @@ class ContinuumWorker
 
         void initialiseBeamLog(const unsigned int numChannels);
         void recordBeam(const askap::scimath::Axes &axes, const unsigned int globalChannel);
-        void storeBeam(const unsigned int cubeChannel);
+        //void storeBeam(const unsigned int cubeChannel);
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
         unsigned int itsBeamReferenceChannel;
