@@ -67,10 +67,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
     accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
     // get the imageHistory
-    std::vector<std::string> historyLines;
-    if ( parset.isDefined("imageHistory") ) {
-        historyLines = parset.getStringVector("imageHistory");
-    }
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
 
     // loop over the mosaics, reading each in and adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
@@ -479,9 +476,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         iacc.create(outImgName, accumulator.outShape(), accumulator.outCoordSys());
-        if ( ! historyLines.empty() ) {
-            iacc.addHistory(outImgName,historyLines);
-        }
+        iacc.addHistory(outImgName,historyLines);
         iacc.write(outImgName,outPix);
         iacc.writeMask(outImgName,outMask);
         iacc.setUnits(outImgName,units);
@@ -493,9 +488,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
             iacc.create(outWgtName, accumulator.outShape(), accumulator.outCoordSys());
-            if ( ! historyLines.empty() ) {
-                iacc.addHistory(outWgtName,historyLines);
-            }
+            iacc.addHistory(outWgtName,historyLines);
             iacc.write(outWgtName,outWgtPix);
             iacc.writeMask(outWgtName,outMask);
             iacc.setUnits(outWgtName,units);
@@ -512,9 +505,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
 
-            if ( ! historyLines.empty() ) {
-                iacc.addHistory(outImgName,historyLines);
-            }
+            iacc.addHistory(outImgName,historyLines);
         }
 
     } // ii loop (separate mosaics for different image types)
