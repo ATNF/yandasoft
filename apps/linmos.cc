@@ -66,6 +66,12 @@ static void merge(const LOFAR::ParameterSet &parset) {
     // initialise an image accessor
     accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
+    // get the imageHistory
+    std::vector<std::string> historyLines;
+    if ( parset.isDefined("imageHistory") ) {
+        historyLines = parset.getStringVector("imageHistory");
+    }
+
     // loop over the mosaics, reading each in and adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
     string outImgName, outWgtName, outSenName;
@@ -473,6 +479,9 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         iacc.create(outImgName, accumulator.outShape(), accumulator.outCoordSys());
+        if ( ! historyLines.empty() ) {
+            iacc.addHistory(outImgName,historyLines);
+        }
         iacc.write(outImgName,outPix);
         iacc.writeMask(outImgName,outMask);
         iacc.setUnits(outImgName,units);
@@ -484,9 +493,11 @@ static void merge(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
             iacc.create(outWgtName, accumulator.outShape(), accumulator.outCoordSys());
+            if ( ! historyLines.empty() ) {
+                iacc.addHistory(outWgtName,historyLines);
+            }
             iacc.write(outWgtName,outWgtPix);
             iacc.writeMask(outWgtName,outMask);
-
             iacc.setUnits(outWgtName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
@@ -500,6 +511,10 @@ static void merge(const LOFAR::ParameterSet &parset) {
             iacc.setUnits(outSenName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+
+            if ( ! historyLines.empty() ) {
+                iacc.addHistory(outImgName,historyLines);
+            }
         }
 
     } // ii loop (separate mosaics for different image types)

@@ -879,6 +879,14 @@ namespace askap
             }
         }
 
+        // get the imageHistory keyword in the parset
+        std::vector<std::string> historyLines;
+        if ( parset().isDefined("imageHistory") ) {
+            historyLines = parset().getStringVector("imageHistory");
+        } else {
+            ASKAPLOG_INFO_STR(logger, "---> imageHistory is not defined");
+        }
+
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
             const ImageParamsHelper iph(*it);
@@ -892,11 +900,17 @@ namespace askap
                     tmpname.replace(0,7,"image");
                     ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << tmpname+postfix );
                     SynthesisParamsHelper::saveImageParameter(*itsModel, *it, tmpname+postfix);
+                    // write the imageHistory keyword
+                    accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                    imageAccessor.addHistory(tmpname+postfix, historyLines);
                 }
             } else {
                 if ((it->find("image") == 0) && (itsWriteModelImage || postfix!="")) {
                     ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                     SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix);
+                    // write the imageHistory keyword
+                    accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                    imageAccessor.addHistory(*it+postfix, historyLines);
                 }
             }
             if (((it->find("weights") == 0) && itsWriteWtImage) || ((it->find("mask") == 0) && itsWriteMaskImage))  {
@@ -905,18 +919,27 @@ namespace askap
                 if (itsWriteSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
+                // write the imageHistory keyword
+                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                imageAccessor.addHistory(*it+postfix, historyLines);
             }
             if ((it->find("residual") == 0) && itsWriteResidual) {
                 if (!iph.isFacet()) {
                     if (!itsRestore && itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
+                        // write the imageHistory keyword
+                        accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                        imageAccessor.addHistory(*it+postfix, historyLines);
                     }
                 }
                 else {
                     if (itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
+                        // write the imageHistory keyword
+                        accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                        imageAccessor.addHistory(*it+postfix, historyLines);
                     }
                 }
 
@@ -924,6 +947,9 @@ namespace askap
             if ((it->find("psf") == 0) && itsWritePsfRaw) {
                 ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                 SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor);
+                // write the imageHistory keyword
+                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                imageAccessor.addHistory(*it+postfix, historyLines);
             }
         }
 
@@ -1032,6 +1058,9 @@ namespace askap
                                         << tmpname+restore_suffix+".restored" );
                                 SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,
                                     tmpname+restore_suffix+".restored");
+                                // write the imageHistory keyword
+                                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                                imageAccessor.addHistory(tmpname+restore_suffix+".restored", historyLines);
                             }
                         } else {
                             if (!iph.isFacet() && ((ci->find("image") == 0)))  {
@@ -1039,6 +1068,9 @@ namespace askap
                                         << *ci+restore_suffix+".restored" );
                                 SynthesisParamsHelper::saveImageParameter(*itsModel, *ci,
                                     *ci+restore_suffix+".restored");
+                                // write the imageHistory keyword
+                                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                                imageAccessor.addHistory(*ci+restore_suffix+".restored", historyLines);
                             }
                         }
                         if (!iph.isFacet() && ((ci->find("psf.image") == 0) && itsWritePsfImage))  {
@@ -1046,12 +1078,18 @@ namespace askap
                                     << *ci+restore_suffix );
                             SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix,
                                 extraOSfactor);
+                            // write the imageHistory keyword
+                            accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                            imageAccessor.addHistory(*ci+restore_suffix, historyLines);
                         }
                         if (!iph.isFacet() && ((ci->find("residual") == 0) && itsWriteResidual))  {
                             ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
                                     << *ci+restore_suffix );
                             SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix,
                                 extraOSfactor);
+                            // write the imageHistory keyword
+                            accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                            imageAccessor.addHistory(*ci+restore_suffix, historyLines);
                         }
                     }
                 }

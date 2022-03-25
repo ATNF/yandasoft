@@ -524,5 +524,16 @@ void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
         itsCube->setMetadataKeyword(itsFilename,"TIMESYS", timesys, "Time system");
 }
 
+template <class T>
+void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)
+{
+    if ( ! historyLines.empty() ) {
+        if ( itsCube ) {
+            itsCube->addHistory(this->itsFilename,historyLines);
+        }
+    }
+}
+
+
 } // namespace cp
 } // namespace askap

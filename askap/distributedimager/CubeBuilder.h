@@ -85,7 +85,7 @@ class CubeBuilder {
         void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
         void setUnits(const std::string &units);
         void setDateObs(const casacore::MVEpoch &dateObs);
-
+        void writeImageHistory(const std::vector<std::string>& historyLines);
         std::string filename() const{return itsFilename;};
 
     private:
