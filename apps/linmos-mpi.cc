@@ -59,6 +59,12 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
   imagemath::LinmosAccumulator<float> accumulator;
 
+  // get the image history keyword if it is defined
+  std::vector<std::string> historyLines;
+  if ( parset.isDefined("imageHistory") ) {
+    historyLines = parset.getStringVector("imageHistory");
+  }
+
   // Original shape
   int nchanCube = -1;
   // load the parset
@@ -294,6 +300,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
         iacc.create(outImgName, outShape, accumulator.outCoordSys());
+        iacc.addHistory(outImgName, historyLines);
+
         iacc.makeDefaultMask(outImgName);
 
         if (accumulator.outWgtDuplicates()[outImgName]) {
@@ -302,6 +310,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outWgtName = accumulator.outWgtNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
           iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+          iacc.addHistory(outWgtName, historyLines);
           iacc.makeDefaultMask(outWgtName);
 
         }
@@ -309,6 +318,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outSenName = accumulator.outSenNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
           iacc.create(outSenName, outShape, accumulator.outCoordSys());
+          iacc.addHistory(outSenName, historyLines);
           iacc.makeDefaultMask(outSenName);
 
         }

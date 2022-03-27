@@ -101,9 +101,14 @@ public:
                 if (channelShift(0)!=0 or channelShift(nchan-1)!=0) {
                     ASKAPLOG_INFO_STR(logger,"Channel shift at start and end of spectrum: "<<channelShift(0)<<", "<<channelShift(nchan-1));
                 }
-                ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header "<<infile<<", "<<outfile);
-                accessor.copy_header(infile, outfile);
+                // add the image history keyword to the outfile
+                const std::vector<std::string> historyLines = subset.getStringVector("imageHistory",std::vector<std::string> {});
+                if ( ! historyLines.empty() ) {
+                    accessor.copyHeaderWithHistoryKW(infile, outfile, historyLines);
+                } else {
+                    accessor.copyHeader(infile, outfile);
+                }
             }
 
             // All wait for header to be written
@@ -112,7 +117,7 @@ public:
             // Now process the rest of the file in parallel
             // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
             const int iax = 1;
-            Array<Float> arr = accessor.read_all(infile, iax);
+            Array<Float> arr = accessor.readAll(infile, iax);
             // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
             arr.removeDegenerate();
             ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
@@ -181,7 +186,7 @@ public:
 
 
             // Write results to output file - make sure we use the same axis as for reading
-            accessor.write_all(outfile,arr,iax);
+            accessor.writeAll(outfile,arr,iax);
             ASKAPLOG_INFO_STR(logger,"Done");
             // Done
             stats.logSummary();

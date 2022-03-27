@@ -521,6 +521,16 @@ void CubeBuilder<T>::addBeamList(const BeamList & beamList)
     itsCube->setBeamInfo(itsFilename, beamList);
 }
 
+template <class T>
+void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)
+{
+    if ( ! historyLines.empty() ) {
+        if ( itsCube ) {
+            itsCube->addHistory(this->itsFilename,historyLines);
+        }
+    }
+}
+
 
 } // namespace cp
 } // namespace askap

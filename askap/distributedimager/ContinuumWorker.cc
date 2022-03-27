@@ -96,6 +96,8 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
   CubeComms& comms, StatReporter& stats)
   : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList(),itsWeightsList()
 {
+
+
     itsAdvisor = boost::shared_ptr<synthesis::AdviseDI> (new synthesis::AdviseDI(itsComms, itsParset));
     itsAdvisor->prepare();
 
@@ -651,6 +653,9 @@ void ContinuumWorker::processChannels()
 
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
+        // Fill in the history keyword
+        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory");
+        itsImageCube->writeImageHistory(historyLines);
       }
       if (itsWritePsfRaw) {
         itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
@@ -695,6 +700,9 @@ void ContinuumWorker::processChannels()
 
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, img_name));
+        // Fill in the history keyword
+        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory");
+        itsImageCube->writeImageHistory(historyLines);
       }
       if (itsWritePsfRaw) {
         itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, psf_name));
