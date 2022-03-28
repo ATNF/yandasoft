@@ -46,6 +46,7 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
+#include <askap/scimath/utils/OptimizedArrayMathUtils.h>
 #include <omp.h>
 #include <mpi.h>
 
@@ -431,7 +432,8 @@ namespace askap {
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    residualFFT *= conj(basisFunctionFFT);
+                    //residualFFT *= conj(basisFunctionFFT);
+                    utility::multiplyByConjugate(residualFFT, basisFunctionFFT);
                     scimath::fft2d(residualFFT, false);
                     Matrix<T> work(real(residualFFT));
 
