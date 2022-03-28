@@ -147,6 +147,7 @@ public:
                     int ic = 0;
                     int stop = 0;
                     int lastStopsub = 0;
+                    int lastTopostop = 0;
                     while (stop < nz) {
                         int start = -shift + ic * step;
                         stop = min(start + blocksize, nz);
@@ -169,7 +170,12 @@ public:
                             // make sure we don't skip a channel in bary mode
                             startsub = lastStopsub;
                         }
+                        if (lastTopostop > 0) {
+                            // make sure we don't skip a channel in bary mode
+                            topostart = lastTopostop;
+                        }
                         lastStopsub = stopsub;
+                        lastTopostop = topostop;
                         startsub = max(0, startsub);
                         stopsub =  min(stopsub, nz);
                         topostart = max(0, topostart);
