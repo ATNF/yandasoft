@@ -121,6 +121,7 @@ public:
             // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
             arr.removeDegenerate();
             ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
+            ASKAPLOG_DEBUG_STR(logger, "Read cube of shape " << arr.shape());
             Cube<Float> cube(arr);
             int nz = cube.shape()(2);
             // Are we processing in blocks of channels (to match beamforming intervals)?
@@ -136,17 +137,21 @@ public:
             // need to count blocks and channels in topo frame and subtract corresponding bary/lsrk channels
             int step = blocksize;
             if (interleave) step = step / 2;
+            ASKAPLOG_DEBUG_STR(logger, "Making workvec of size " << nz);
             Vector<Float> workvec(nz);
+            ASKAPLOG_DEBUG_STR(logger, "Making spec of size " << step);
             Vector<Float> spec(step);
             for (uint y = 0; y< cube.shape()(1); y++ ) {
                 for (uint x = 0; x < cube.shape()(0); x++ ) {
                     // get a reference to the current spectrum from the cube
+                    ASKAPLOG_DEBUG_STR(logger, "x="<<x<<", y="<<y);
                     Vector<Float> refvec(cube(Slice(x,1),Slice(y,1),Slice()));
                     // make a working copy
                     workvec = refvec;
                     int ic = 0;
                     int stop = 0;
                     int lastStopsub = 0;
+                    int lastTopostop = 0;
                     while (stop < nz) {
                         int start = -shift + ic * step;
                         stop = min(start + blocksize, nz);
@@ -156,6 +161,7 @@ public:
                         // the interval we're going to subtract (smaller when interleaving)
                         int startsub = topostart;
                         int stopsub = topostop;
+                        ASKAPLOG_DEBUG_STR(logger, "startsub="<<startsub<<", stopsub="<<stopsub<<", topostart="<<topostart<<", topostop="<<topostop);
                         if (interleave) {
                             // all but first & last interval - use central 50%
                             if (ic > 0) {
@@ -169,15 +175,23 @@ public:
                             // make sure we don't skip a channel in bary mode
                             startsub = lastStopsub;
                         }
+                        if (lastTopostop > 0) {
+                            // make sure we don't skip a channel in bary mode
+                            topostart = lastTopostop;
+                        }
                         lastStopsub = stopsub;
+                        lastTopostop = topostop;
+                        ASKAPLOG_DEBUG_STR(logger, "startsub="<<startsub<<", stopsub="<<stopsub<<", topostart="<<topostart<<", topostop="<<topostop);
                         startsub = max(0, startsub);
                         stopsub =  min(stopsub, nz);
                         topostart = max(0, topostart);
                         topostop = min(topostop, nz);
+                        ASKAPLOG_DEBUG_STR(logger, "startsub="<<startsub<<", stopsub="<<stopsub<<", topostart="<<topostart<<", topostop="<<topostop);
                         // size can change, spec will resize if needed
                         spec.assign(workvec(Slice(topostart, topostop - topostart)));
                         process_spectrum(spec, threshold, order);
                         const size_t length = stopsub - startsub;
+                        ASKAPLOG_DEBUG_STR(logger, "startsub="<<startsub<<", length="<<length << ", slice1: ("<<startsub<<","<<length<<"), slice2: ("<<startsub-topostart<<","<<length<<")");
                         refvec(Slice(startsub,length)) = spec(Slice(startsub-topostart,length));
                         ic += 1;
                     }
