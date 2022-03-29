@@ -319,7 +319,8 @@ namespace askap
         /// @param extraOversampleFactor factor to oversample image before saving
         static void saveImageParameter(const askap::scimath::Params& ip, const string& name,
           const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none,
-          const LOFAR::ParameterSet& keywords = LOFAR::ParameterSet());
+          const LOFAR::ParameterSet& keywords = LOFAR::ParameterSet(),
+          const std::vector<std::string>& historyLines = std::vector<std::string> {});
 
         /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
         /// @param[in] osfactor extra oversampling factor
