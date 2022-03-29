@@ -654,7 +654,7 @@ void ContinuumWorker::processChannels()
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
         // Fill in the history keyword
-        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory");
+        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory",std::vector<std::string> {});
         itsImageCube->writeImageHistory(historyLines);
       }
       if (itsWritePsfRaw) {
@@ -701,7 +701,7 @@ void ContinuumWorker::processChannels()
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, img_name));
         // Fill in the history keyword
-        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory");
+        const std::vector<std::string> historyLines = itsParset.getStringVector("imageHistory",std::vector<std::string> {});
         itsImageCube->writeImageHistory(historyLines);
       }
       if (itsWritePsfRaw) {
