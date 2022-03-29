@@ -645,7 +645,8 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-					 const string& imagename, const boost::optional<float> extraOversampleFactor, const LOFAR::ParameterSet & keywords)
+					 const string& imagename, const boost::optional<float> extraOversampleFactor, 
+                     const LOFAR::ParameterSet & keywords, const std::vector<std::string>& historyLines)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
 
@@ -710,6 +711,7 @@ namespace askap
           }
       }
       imageHandler().setMetadataKeywords(imagename, keywords);
+      imageHandler().addHistory(imagename, historyLines);
     }
 
     /// @brief obtain image handler

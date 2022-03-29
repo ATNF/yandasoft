@@ -270,6 +270,10 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
     // set the header keywords
     itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
 
+    // set the image HISTORY keywords
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+    itsCube->addHistory(itsFilename,historyLines);
+
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
 
@@ -346,6 +350,11 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
 
     // set the header keywords
     itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
+
+    // set the image HISTORY keywords
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+    itsCube->addHistory(itsFilename,historyLines);
+
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
