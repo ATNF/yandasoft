@@ -50,6 +50,22 @@ using namespace askap::synthesis;
 
 namespace askap {
 
+/// @brief copy selected keywords from the reference image to the output
+static void copyKeywords(const string & outName, const string& inName, const vector<string> & keywords) {
+
+    accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
+
+    for (const string& key : keywords) {
+        if (key.size() > 0) {
+            pair<string,string> valueAndComment = iacc.getMetadataKeyword(inName, key);
+            if (valueAndComment.first.size() > 0) {
+                iacc.setMetadataKeyword(outName, key, valueAndComment.first,valueAndComment.second);
+            }
+        }
+    }
+}
+
+
 /// @brief do the merge
 /// @param[in] parset subset with parameters
 static void merge(const LOFAR::ParameterSet &parset) {
@@ -68,6 +84,11 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
     // get the imageHistory
     const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+
+    // get the list of keywords to copy from the input
+    // Set some defaults for simple beam mosaic, won't be correct for more complex cases
+    const std::vector<std::string> keywordsToCopy = parset.getStringVector("keywordsToCopy",
+        {"TELESCOP","PROJECT","SBID","DATE-OBS","DURATION"});
 
     // loop over the mosaics, reading each in and adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
@@ -476,6 +497,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         iacc.create(outImgName, accumulator.outShape(), accumulator.outCoordSys());
+        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
         iacc.addHistory(outImgName,historyLines);
         iacc.write(outImgName,outPix);
         iacc.writeMask(outImgName,outMask);
@@ -488,6 +510,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         } else {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
             iacc.create(outWgtName, accumulator.outShape(), accumulator.outCoordSys());
+            copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
             iacc.addHistory(outWgtName,historyLines);
             iacc.write(outWgtName,outWgtPix);
             iacc.writeMask(outWgtName,outMask);
@@ -499,13 +522,13 @@ static void merge(const LOFAR::ParameterSet &parset) {
         if (accumulator.doSensitivity()) {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
             iacc.create(outSenName, accumulator.outShape(), accumulator.outCoordSys());
+            copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+            iacc.addHistory(outSenName,historyLines);
             iacc.write(outSenName,outSenPix);
             iacc.writeMask(outSenName,outMask);
             iacc.setUnits(outSenName,units);
             if (psf.nelements()>=3)
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-
-            iacc.addHistory(outImgName,historyLines);
         }
 
     } // ii loop (separate mosaics for different image types)

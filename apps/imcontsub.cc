@@ -215,7 +215,7 @@ public:
             ASKAPCHECK(shape.size()>2,"imcontsub needs at least 3 dimensions in the image");
 
             // get some header info we need
-            String specsys = accessor.getMetadataKeyword(infile, "SPECSYS");
+            String specsys = accessor.getMetadataKeyword(infile, "SPECSYS").first;
 
             // default is TOPO
             if (specsys=="") specsys = "TOPOCENT";
@@ -242,12 +242,12 @@ public:
                 SpectralCoordinate sc = cs.spectralCoordinate();
                 // ASKAP antenna 0
                 MPosition pos(MVPosition(-2556088.476234,  5097405.971301, -2848428.398018),MPosition::ITRF);
-                string dateObs = accessor.getMetadataKeyword(infile,"DATE-OBS");
+                string dateObs = accessor.getMetadataKeyword(infile,"DATE-OBS").first;
                 if (dateObs == "") {
                     dateObs = parset.getString("date-obs","");
                     ASKAPCHECK(dateObs!="","Please specify the observing date (DATE-OBS is missing in FITS)");
                 }
-                string timeSys = accessor.getMetadataKeyword(infile,"TIMESYS");
+                string timeSys = accessor.getMetadataKeyword(infile,"TIMESYS").first;
                 if (timeSys=="") timeSys = "UTC";
                 MVTime mvtime;
                 MEpoch::Types system;
