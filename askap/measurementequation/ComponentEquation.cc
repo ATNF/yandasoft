@@ -60,7 +60,7 @@ namespace askap
 
     ComponentEquation::ComponentEquation(const askap::scimath::Params& ip,
           const accessors::IDataSharedIter& idi) :
-          scimath::Equation(ip), MultiChunkEquation(idi),  
+          scimath::Equation(ip), MultiChunkEquation(idi),
           askap::scimath::GenericEquation(ip), GenericMultiChunkEquation(idi),
           itsAllComponentsUnpolarised(false), itsNDir(1), itsIsDD(false)
     {
@@ -74,7 +74,7 @@ namespace askap
       setParameters(defaultParameters());
       init();
     };
-    
+
     void ComponentEquation::init()
     {
     }
@@ -96,22 +96,22 @@ askap::scimath::Params ComponentEquation::defaultParameters()
 }
 
 /// @brief fill the cache of the components
-/// @details This method converts the parameters into a vector of 
+/// @details This method converts the parameters into a vector of
 /// components. It is called on the first access to itsComponents
 void ComponentEquation::fillComponentCache(
             std::vector<IParameterizedComponentPtr> &in) const
-{ 
+{
   const std::vector<std::string> completions(parameters().completions("flux.i"));
   const std::vector<std::string> calCompletions(parameters().completions("calibrator."));
   in.resize(completions.size() + calCompletions.size());
   if (!in.size()) {
      return;
   }
-  
+
   // we will need to change this variable to false in the loop below, when
   // at least one polarised component is implemented.
   itsAllComponentsUnpolarised = true;
-  
+
   int nSources = 0;
   std::vector<string> sources;
 
@@ -126,17 +126,17 @@ void ComponentEquation::fillComponentCache(
           const double ra=parameters().scalarValue("direction.ra"+cur);
           const double dec=parameters().scalarValue("direction.dec"+cur);
           const double fluxi=parameters().scalarValue("flux.i"+cur);
-          const double spectral_index = parameters().has("flux.spectral_index"+cur) ? 
+          const double spectral_index = parameters().has("flux.spectral_index"+cur) ?
                    parameters().scalarValue("flux.spectral_index"+cur) : 0.;
-          const double ref_freq = parameters().has("flux.ref_freq"+cur) ? 
+          const double ref_freq = parameters().has("flux.ref_freq"+cur) ?
                    parameters().scalarValue("flux.ref_freq"+cur) : 1e9;
-          const double bmaj = parameters().has("shape.bmaj"+cur) ? 
+          const double bmaj = parameters().has("shape.bmaj"+cur) ?
                    parameters().scalarValue("shape.bmaj"+cur) : 0.;
-          const double bmin = parameters().has("shape.bmin"+cur) ? 
+          const double bmin = parameters().has("shape.bmin"+cur) ?
                    parameters().scalarValue("shape.bmin"+cur) : 0.;
-          const double bpa = parameters().has("shape.bpa"+cur) ? 
+          const double bpa = parameters().has("shape.bpa"+cur) ?
                    parameters().scalarValue("shape.bpa"+cur) : 0.;
-          
+
           if((bmaj>0.0)&&(bmin>0.0)) {
              // this is a gaussian
              compIt->reset(new UnpolarizedGaussianSource(cur,fluxi,ra,dec,
@@ -147,14 +147,14 @@ void ComponentEquation::fillComponentCache(
                             spectral_index,ref_freq));
           }
   }
-  
+
   // loop over pre-defined calibrators
   for (std::vector<std::string>::const_iterator it=calCompletions.begin();
         it!=calCompletions.end();++it,++compIt)  {
         ASKAPCHECK(*it == "1934-638", "Only 1934-638 is currently supported, you requested "<<*it);
         compIt->reset(new Calibrator1934());
   }
-}   
+}
 
 /// @brief a helper method to populate a visibility cube
 /// @details This is method computes visibilities for the one given
@@ -166,7 +166,7 @@ void ComponentEquation::fillComponentCache(
 /// @param[in] comp component to generate the visibilities for
 /// @param[in] uvw baseline spacings, one triplet for each data row.
 /// @param[in] freq a vector of frequencies (one for each spectral
-///            channel) 
+///            channel)
 /// @param[in] rwVis a non-const reference to the visibility cube to alter
 /// @param[in] rowOffset offset for the current model if more than one is present
 void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
@@ -181,11 +181,11 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
   ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
   ASKAPDEBUGASSERT(rwVis.nplane() == itsPolConverter.outputPolFrame().nelements());
-  
-  // flattened buffer for visibilities 
-  std::vector<double> vis(2*freq.nelements()); 
- 
-  
+
+  // flattened buffer for visibilities
+  std::vector<double> vis(2*freq.nelements());
+
+
   for (casacore::uInt row=0;row<rwVis.nrow();++row) {
        casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
        for (casacore::Vector<casacore::Stokes::StokesTypes>::const_iterator polIt = itsPolConverter.inputPolFrame().begin();
@@ -195,22 +195,22 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
 
             // for most typically used transforms some elements will be zeros, use sparseTransform
             // instead of the full matrix to avoid heavy calculations in the loop
-            const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform = 
-                   itsPolConverter.getSparseTransform(*polIt); 
+            const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform =
+                   itsPolConverter.getSparseTransform(*polIt);
             for (std::map<casacore::Stokes::StokesTypes, casacore::Complex>::const_iterator ci=sparseTransform.begin();
                  ci!=sparseTransform.end(); ++ci) {
-                 
+
                  const casacore::uInt pol = polIndex(ci->first);
                  ASKAPDEBUGASSERT(pol < thisRow.ncolumn());
-                                    
+
                  /// next command adds model visibilities to the
                  /// appropriate slice of the visibility cube. Conversions
                  /// between complex and two doubles are handled automatically
                  addScaledVector(vis,thisRow.column(pol),ci->second);
             }
-       }          
+       }
   }
-}               
+}
 
 /// @brief a helper method to populate a visibility cube
 /// @details This is method computes visibilities for the one given
@@ -221,7 +221,7 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
 /// @param[in] comp component to generate the visibilities for
 /// @param[in] uvw baseline spacings, one triplet for each data row.
 /// @param[in] freq a vector of frequencies (one for each spectral
-///            channel) 
+///            channel)
 /// @param[in] rwVis a non-const reference to the visibility cube to alter
 /// @param[in] rowOffset offset for the current model if more than one is present
 void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
@@ -237,13 +237,13 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
   ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
   ASKAPDEBUGASSERT(rwVis.nplane() >= 1);
-  
-  // flattened buffer for visibilities 
+
+  // flattened buffer for visibilities
   std::vector<double> vis(2*freq.nelements());
 
   // only Stokes I is of interest for the unpolarised component, use sparse transform
-  const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform = 
-        itsPolConverter.getSparseTransform(casacore::Stokes::I); 
+  const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform =
+        itsPolConverter.getSparseTransform(casacore::Stokes::I);
 
   // DDCALTAG -- changed rwVis.nrow() to uvw.nelements()
   for (casacore::uInt row=0;row<uvw.nelements();++row) {
@@ -251,21 +251,25 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
 
        //
        casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
-       
+
        ASKAPDEBUGASSERT(thisRow.ncolumn() == itsPolConverter.outputPolFrame().nelements());
-       
+
        for (casacore::uInt pol = 0; pol < thisRow.ncolumn(); ++pol) {
-            const std::map<casacore::Stokes::StokesTypes, casacore::Complex>::const_iterator ci = 
+            const std::map<casacore::Stokes::StokesTypes, casacore::Complex>::const_iterator ci =
                  sparseTransform.find(itsPolConverter.outputPolFrame()[pol]);
             if (ci != sparseTransform.end()) {
-                        
+
                 /// next command adds model visibilities to the
                 /// appropriate slice of the visibility cube. Conversions
                 /// between complex and two doubles are handled automatically
-                addScaledVector(vis,thisRow.column(pol), ci->second);       
+                //addScaledVector(vis,thisRow.column(pol), ci->second);
+                // writing it out is >2x faster though
+                for (casacore::uInt chan=0; chan<freq.nelements(); chan++) {
+                  thisRow(chan,pol) += ci->second * casacore::Complex(vis[2*chan],vis[2*chan+1]);
+                }
             }
        }
-  }           
+  }
 }
 
 /// @brief helper method to return polarisation index in the visibility cube
@@ -297,9 +301,9 @@ casacore::uInt ComponentEquation::polIndex(casacore::Stokes::StokesTypes pol) co
 /// @param chunk a read-write accessor to work with
 void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
 {
-  const std::vector<IParameterizedComponentPtr> &compList = 
+  const std::vector<IParameterizedComponentPtr> &compList =
          itsComponents.value(*this,&ComponentEquation::fillComponentCache);
-  
+
   const casacore::Vector<casacore::Double>& freq = chunk.frequency();
   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = chunk.uvw();
 
@@ -314,25 +318,25 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
   }
 
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
-         
+
   // reset all visibility cube to 0
   rwVis.set(0.);
-  
+
   // check whether the polarisation converter is valid
   if (!scimath::PolConverter::equal(itsPolConverter.outputPolFrame(),chunk.stokes())) {
-      // reset pol converter because either polarisation frame has changed or 
-      // this is the first use. The converter will be used inside addModelToCube shortly      
-      itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);    
+      // reset pol converter because either polarisation frame has changed or
+      // this is the first use. The converter will be used inside addModelToCube shortly
+      itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);
   }
 
   // loop over components
   // DDCALTAG COMPTAG -- number of sources must equal Cddcalibrator.nCal parameter.
   // DDCALTAG COMPTAG -- Need to add a check or remove Cddcalibrator.nCal
   casacore::uInt rowOffset = 0;
-  for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
+  for (std::vector<IParameterizedComponentPtr>::const_iterator compIt =
        compList.begin(); compIt!=compList.end();++compIt) {
-       
-       ASKAPDEBUGASSERT(*compIt); 
+
+       ASKAPDEBUGASSERT(*compIt);
        // current component
        const IParameterizedComponent& curComp = *(*compIt);
 
@@ -358,7 +362,7 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
        }
 
        try {
-            const IUnpolarizedComponent &unpolComp = 
+            const IUnpolarizedComponent &unpolComp =
               dynamic_cast<const IUnpolarizedComponent&>(curComp);
             // DDCALTAG
             addModelToCube(unpolComp,uvw,freq,rwVis,rowOffset);
@@ -372,23 +376,23 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
 
 
 /// @brief a helper method to update design matrix and residuals
-/// @details This method iterates over a given number of polarisation 
+/// @details This method iterates over a given number of polarisation
 /// products in the visibility cube. It updates the design matrix with
 /// derivatives and subtracts values from the vector of residuals.
-/// The latter is a flattened vector which should have a size of 
+/// The latter is a flattened vector which should have a size of
 /// 2*nChan*nPol*nRow. Spectral channel is the most frequently varying
 /// index, then follows the polarisation index, and the least frequently
 /// varying index is the row. The number of channels and the number of
 /// rows always corresponds to that of the visibility cube. The number of
 /// polarisations can be less than the number of planes in the cube to
-/// allow processing of incomplete data cubes (or unpolarised components). In contrast to 
-/// 
+/// allow processing of incomplete data cubes (or unpolarised components). In contrast to
+///
 /// @param[in] comp component to generate the visibilities for
 /// @param[in] uvw baseline coorindates for each row
 /// @param[in] freq a vector of frequencies (one frequency for each
 ///            spectral channel)
 /// @param[in] dm design matrix to update (to add derivatives to)
-/// @param[in] residual vector of residuals to update 
+/// @param[in] residual vector of residuals to update
 void ComponentEquation::updateDesignMatrixAndResiduals(
                    const IParameterizedComponent& comp,
                    const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw,
@@ -403,43 +407,43 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
   // number of data points  in the flattened vector
   const casacore::uInt nData = nPol*uvw.nelements()*freq.nelements()*2;
   ASKAPDEBUGASSERT(nData!=0);
-  
+
   // we only process Stokes I contribution if all components are unpolarised
-  const casacore::Vector<casacore::Stokes::StokesTypes> inputPolFrame = 
+  const casacore::Vector<casacore::Stokes::StokesTypes> inputPolFrame =
              itsAllComponentsUnpolarised ? casacore::Vector<casacore::Stokes::StokesTypes>(1, casacore::Stokes::I) :
              itsPolConverter.inputPolFrame();
   ASKAPDEBUGASSERT(residual.nelements() == nData);
-      
-  // Define AutoDiffs to buffer the output of a single call to the calculate 
+
+  // Define AutoDiffs to buffer the output of a single call to the calculate
   // method of the component.
   std::vector<casacore::AutoDiff<double> > visDerivBufferSinglePol(2*freq.nelements(),
                           casacore::AutoDiff<double>(0.,nParameters));
-                          
+
   std::vector<std::vector<casacore::AutoDiff<double> > > visDerivBuffer(nPol);
-                            
+
   casacore::Array<casacore::Double> derivatives(casacore::IPosition(2,nData, nParameters));
 
   for (casacore::uInt row=0,offset=0; row<uvw.nelements(); ++row) {
-       
+
        const casacore::RigidVector<casacore::Double, 3> &thisRowUVW = uvw[row];
-  
+
        // initialise buffers for all polarisations
-       for (casacore::uInt pol = 0; pol<nPol; ++pol) {                
+       for (casacore::uInt pol = 0; pol<nPol; ++pol) {
             visDerivBuffer[pol] = std::vector<casacore::AutoDiff<double> >(2*freq.nelements()*nPol,
                           casacore::AutoDiff<double>(0.,nParameters));
        }
-                          
+
        for (casacore::Vector<casacore::Stokes::StokesTypes>::const_iterator polIt = inputPolFrame.begin();
             polIt != inputPolFrame.end(); ++polIt) {
-            
+
             // these are contribitions to derivatives from polarisation *polInt
             comp.calculate(thisRowUVW,freq,*polIt,visDerivBufferSinglePol);
 
             // for most typically used transforms some elements will be zeros, use sparseTransform
             // instead of the full matrix to avoid heavy calculations in the loop
-            const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform = 
+            const std::map<casacore::Stokes::StokesTypes, casacore::Complex> sparseTransform =
                    itsPolConverter.getSparseTransform(*polIt);
-                    
+
             for (std::map<casacore::Stokes::StokesTypes, casacore::Complex>::const_iterator ci=sparseTransform.begin();
                  ci!=sparseTransform.end(); ++ci) {
                  const casacore::uInt index = polIndex(ci->first);
@@ -449,26 +453,26 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
                  // do it explicitly for now for simplicity
                  const double factorRe = double(real(ci->second));
                  const double factorIm = double(imag(ci->second));
-                                  
+
                  for (casacore::uInt elem = 0; elem < 2*freq.nelements(); elem+=2) {
                       visDerivBuffer[index][elem] += visDerivBufferSinglePol[elem] * factorRe -
-                            visDerivBufferSinglePol[elem+1] * factorIm; 
+                            visDerivBufferSinglePol[elem+1] * factorIm;
                       visDerivBuffer[index][elem + 1] += visDerivBufferSinglePol[elem] * factorIm +
-                            visDerivBufferSinglePol[elem+1] * factorRe; 
+                            visDerivBufferSinglePol[elem+1] * factorRe;
                  }
-            }            
-       }    
+            }
+       }
        // visDerivBuffer is now filled with data for all polarisations
-       
+
        for (casacore::uInt pol=0; pol<nPol; ++pol,offset+=2*freq.nelements()) {
             // copy derivatives from the buffer for each parameter
             for (casacore::uInt par=0; par<nParameters; ++par) {
                  // copy derivatives for each channel from visDerivBuffer
                  // to the appropriate slice of the derivatives Array
                  // template takes care of the actual types
-                 copyDerivativeVector(par,visDerivBuffer[pol],  
-                           derivatives(casacore::IPosition(2,offset,par), 
-                           casacore::IPosition(2,offset+2*freq.nelements()-1,par)));                                 
+                 copyDerivativeVector(par,visDerivBuffer[pol],
+                           derivatives(casacore::IPosition(2,offset,par),
+                           casacore::IPosition(2,offset+2*freq.nelements()-1,par)));
             }
             // subtract contribution from the residuals
             // next command does: residual slice -= visDerivBuffer
@@ -480,10 +484,10 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
 
   // Now we can add the design matrix, residual, and weights
   for (casacore::uInt par=0; par<nParameters; ++par) {
-       dm.addDerivative(comp.parameterName(par), 
+       dm.addDerivative(comp.parameterName(par),
               derivatives(casacore::IPosition(2,0,par),
                           casacore::IPosition(2,nData-1,par)));
-  }                
+  }
 }
 
 /// @brief Calculate the normal equation for one accessor (chunk).
@@ -498,47 +502,47 @@ void ComponentEquation::updateDesignMatrixAndResiduals(
 void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor &chunk,
                    askap::scimath::GenericNormalEquations& ne) const
 {
-  const std::vector<IParameterizedComponentPtr> &compList = 
+  const std::vector<IParameterizedComponentPtr> &compList =
          itsComponents.value(*this,&ComponentEquation::fillComponentCache);
-  
+
   const casacore::Vector<double>& freq=chunk.frequency();
   ASKAPDEBUGASSERT(freq.nelements()!=0);
   const casacore::Vector<casacore::RigidVector<casacore::Double, 3> > &uvw = chunk.uvw();
   const casacore::Cube<casacore::Complex> &visCube = chunk.visibility();
-                 
+
   const casacore::uInt nPol = chunk.nPol();
   ASKAPDEBUGASSERT(nPol <= chunk.visibility().nplane());
-  
+
   // check whether the polarisation converter is valid
   if (!scimath::PolConverter::equal(itsPolConverter.outputPolFrame(),chunk.stokes())) {
-      // reset pol converter because either polarisation frame has changed or 
-      // this is the first use. The converter will be used inside updateDesignMatrix shortly      
-      itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);    
+      // reset pol converter because either polarisation frame has changed or
+      // this is the first use. The converter will be used inside updateDesignMatrix shortly
+      itsPolConverter = scimath::PolConverter(scimath::PolConverter::canonicStokes(), chunk.stokes(), true);
   }
-  
-      
+
+
   // Set up arrays to hold the output values
   // Two values (complex) per row, channel, pol
   const casacore::uInt nData=chunk.nRow()*freq.nelements()*2*nPol;
   ASKAPDEBUGASSERT(nData!=0);
   casacore::Vector<casacore::Double> residual(nData);
-      
-  // initialize residuals with the observed visibilities          
+
+  // initialize residuals with the observed visibilities
   for (casacore::uInt row=0,offset=0; row < chunk.nRow(); ++row) {
        for (casacore::uInt pol=0; pol<nPol; ++pol,offset+=2*freq.nelements()) {
-            // the following command copies visibility slice to the appropriate 
+            // the following command copies visibility slice to the appropriate
             // residual slice converting complex to two doubles automatically
-            // via templates 
+            // via templates
             copyVector(visCube.xyPlane(pol).row(row),
-                  residual(casacore::Slice(offset,2*freq.nelements())));      
-       } 
+                  residual(casacore::Slice(offset,2*freq.nelements())));
+       }
   }
-                
+
   DesignMatrix designmatrix; // old parameters: parameters();
-  for (std::vector<IParameterizedComponentPtr>::const_iterator compIt = 
+  for (std::vector<IParameterizedComponentPtr>::const_iterator compIt =
             compList.begin(); compIt!=compList.end();++compIt) {
-       ASKAPDEBUGASSERT(*compIt); 
-           
+       ASKAPDEBUGASSERT(*compIt);
+
        updateDesignMatrixAndResiduals(*(*compIt),uvw,freq,designmatrix,
                            residual);
   }
@@ -551,7 +555,7 @@ void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor
 /// @details This method is overridden to invalidate component cache.
 /// @return a non-const reference to Param::ShPtr
 const scimath::Params::ShPtr& ComponentEquation::rwParameters() const throw()
-{ 
+{
   itsComponents.invalidate();
   return scimath::Equation::rwParameters();
 }

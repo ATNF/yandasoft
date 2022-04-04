@@ -29,7 +29,7 @@
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
-/// 
+///
 
 #include <askap/measurementequation/UnpolarizedPointSource.h>
 
@@ -59,22 +59,22 @@ void UnpolarizedPointSource::calcPoint(
   const casacore::AutoDiff<double> dec=params(2);
   const casacore::AutoDiff<double> spectral_index=params(3);
   const casacore::AutoDiff<double> ref_freq=params(4);
-  
+
   const casacore::AutoDiff<double> n =  casacore::sqrt(casacore::AutoDiff<double>(1.0) - (ra*ra+dec*dec));
-  const casacore::AutoDiff<double> delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
+  const casacore::AutoDiff<double> delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) +
                                    (n-casacore::AutoDiff<double>(1.0)) * uvw(2))/casacore::C::c;
   typename std::vector<casacore::AutoDiff<double>>::iterator it=result.begin();
-  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin(); 
+  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin();
        ci!=freq.end();++ci,++it)
       {
         const casacore::Double f = *ci;
-        // cannot use the spectral_index==0 conditional because templated type casacore::AutoDiff doesn't like it
-        //const casacore::AutoDiff<double> flux = spectral_index==0 ? flux0 : flux0 * pow(f/ref_freq,spectral_index);
-        //const casacore::AutoDiff<double> flux = flux0 * pow(f/ref_freq,spectral_index);
-        const casacore::AutoDiff<double> flux = flux0;
+        casacore::AutoDiff<double> flux = flux0;
+        if (spectral_index != casacore::AutoDiff<double>(0)) {
+          flux *= pow(f/ref_freq,spectral_index);
+        }
         const casacore::AutoDiff<double> phase = delay * (*ci);
-        *it = flux * cos(phase)/n;
-        *(++it) = flux * sin(phase)/n;
+        *it = flux * cos(phase);
+        *(++it) = flux * sin(phase);
       }
 }
 void UnpolarizedPointSource::calcPoint(
@@ -88,49 +88,50 @@ void UnpolarizedPointSource::calcPoint(
   const double dec=params(2);
   const double spectral_index=params(3);
   const double ref_freq=params(4);
-  
+
   const double n =  casacore::sqrt(double(1.0) - (ra*ra+dec*dec));
-  const double delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) + 
+  const double delay = casacore::C::_2pi * (ra * uvw(0) + dec * uvw(1) +
                                    (n-double(1.0)) * uvw(2))/casacore::C::c;
   typename std::vector<double>::iterator it=result.begin();
-  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin(); 
+  for (casacore::Vector<casacore::Double>::const_iterator ci=freq.begin();
        ci!=freq.end();++ci,++it)
       {
         const casacore::Double f = *ci;
-        // cannot use the spectral_index==0 conditional because templated type casacore::AutoDiff doesn't like it
-        //const double flux = spectral_index==0 ? flux0 : flux0 * pow(f/ref_freq,spectral_index);
-        const double flux = flux0 * pow(f/ref_freq,spectral_index);
+        double flux = flux0;
+        if (spectral_index != 0) {
+          flux *= pow(f/ref_freq,spectral_index);
+        }
         const double phase = delay * (*ci);
-        *it = flux * cos(phase)/n;
-        *(++it) = flux * sin(phase)/n;
+        *it = flux * cos(phase);
+        *(++it) = flux * sin(phase);
       }
 }
 
 /// @brief construct the point source component
-/// @details 
+/// @details
 /// @param[in] name a name of the component. Will be added to all parameter
-///            names (e.g. after direction.ra) 
+///            names (e.g. after direction.ra)
 /// @param[in] flux flux density in Jy at ref_freq
-/// @param[in] ra offset in right ascension w.r.t. the current phase 
+/// @param[in] ra offset in right ascension w.r.t. the current phase
 /// centre (in radians)
 /// @param[in] dec offset in declination w.r.t. the current phase
 /// centre (in radians)
 /// @param[in] spectral_index spectral index in Hz
 /// @param[in] ref_freq referece frequency for parameter "flux"
-UnpolarizedPointSource::UnpolarizedPointSource(const std::string &name, 
-          double flux, double ra, double dec, double spectral_index, double ref_freq) : 
-          UnpolarizedComponent<5>(casacore::RigidVector<double, 5>(flux,ra,dec,spectral_index,ref_freq)) 
+UnpolarizedPointSource::UnpolarizedPointSource(const std::string &name,
+          double flux, double ra, double dec, double spectral_index, double ref_freq) :
+          UnpolarizedComponent<5>(casacore::RigidVector<double, 5>(flux,ra,dec,spectral_index,ref_freq))
 {
   parameterNames() = casacore::RigidVector<std::string, 5>("flux.i"+name,
             "direction.ra"+name, "direction.dec"+name,
             "flux.spectral_index"+name, "flux.ref_freq"+name);
 }
 
-              
+
 /// @brief calculate stokes I visibilities for this component
 /// @details This variant of the method calculates just the visibilities
-/// (without derivatives) for a number of frequencies. This method is 
-/// used to in the implementation of the IComponent interface if 
+/// (without derivatives) for a number of frequencies. This method is
+/// used to in the implementation of the IComponent interface if
 /// stokes I is requested. Otherwise result is filled with 0.
 /// @param[in] uvw  baseline spacings (in metres)
 /// @param[in] freq vector of frequencies to do calculations for
@@ -141,7 +142,7 @@ void UnpolarizedPointSource::calculate(
                     std::vector<double> &result) const
 {
   calcPoint(uvw,freq,parameters(),result);
-}                    
+}
 
 /// @brief calculate stokes I visibilities and derivatives for this component
 /// @details This variant of the method does simultaneous calculations of
@@ -167,4 +168,3 @@ void UnpolarizedPointSource::calculate(
 } // namespace askap
 
 } // namespace synthesis
-              

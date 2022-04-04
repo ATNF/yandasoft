@@ -48,6 +48,22 @@ using namespace askap::synthesis;
 
 namespace askap {
 
+/// @brief copy selected keywords from the reference image to the output
+static void copyKeywords(const string & outName, const string& inName, const vector<string> & keywords) {
+
+    accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
+
+    for (const string& key : keywords) {
+        if (key.size() > 0) {
+            pair<string,string> valueAndComment = iacc.getMetadataKeyword(inName, key);
+            if (valueAndComment.first.size() > 0) {
+                iacc.setMetadataKeyword(outName, key, valueAndComment.first,valueAndComment.second);
+            }
+        }
+    }
+}
+
+
 // @brief do the merge
 /// @param[in] parset subset with parameters
 static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::AskapParallel &comms) {
@@ -58,6 +74,14 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   }
 
   imagemath::LinmosAccumulator<float> accumulator;
+
+  // get the image history keyword if it is defined
+  const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",{},false);
+
+  // get the list of keywords to copy from the input
+  // Set some defaults for simple beam mosaic, won't be correct for more complex cases
+  const std::vector<std::string> keywordsToCopy = parset.getStringVector("keywordsToCopy",
+      {"TELESCOP","PROJECT","SBID","DATE-OBS","DURATION"});
 
   // Original shape
   int nchanCube = -1;
@@ -294,6 +318,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
         iacc.create(outImgName, outShape, accumulator.outCoordSys());
+        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
+        iacc.addHistory(outImgName, historyLines);
         iacc.makeDefaultMask(outImgName);
 
         if (accumulator.outWgtDuplicates()[outImgName]) {
@@ -302,6 +328,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outWgtName = accumulator.outWgtNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
           iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+          copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
+          iacc.addHistory(outWgtName, historyLines);
           iacc.makeDefaultMask(outWgtName);
 
         }
@@ -309,6 +337,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outSenName = accumulator.outSenNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
           iacc.create(outSenName, outShape, accumulator.outCoordSys());
+          copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+          iacc.addHistory(outSenName, historyLines);
           iacc.makeDefaultMask(outSenName);
 
         }
@@ -743,6 +773,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     }
   }
 }
+
 class linmosMPIApp : public askap::Application
 {
     public:
@@ -774,6 +805,11 @@ class linmosMPIApp : public askap::Application
 
     };
 
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
 
 } // end namespace askap

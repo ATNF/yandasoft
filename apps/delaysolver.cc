@@ -24,6 +24,7 @@
 ///
 /// @author Max Voronkov <maxim.voronkov@csiro.au>
 
+#include <askap/askap_synthesis.h>
 
 // a bit hacky way to get logs tagged with the cp-prefix
 #define ASKAP_PACKAGE_NAME "cp"
@@ -86,6 +87,10 @@ protected:
    std::vector<double> getCurrentDelays(const LOFAR::ParameterSet &parset);
 
 private:
+    std::string getVersion() const override {
+       const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+       return pkgVersion;
+    }
    /// @brief vector with antenna names
    /// @details Note, indices correspond to that internally used by ingest. If empty, the output
    /// parset (in the fcm format) will be in the form of ingest-specific vector (used in some test
@@ -137,7 +142,7 @@ std::vector<double> DelaySolverApp::getCurrentDelays(const LOFAR::ParameterSet &
    const std::string ingestSpecificFixedDelayKey = "tasks.FringeRotationTask.params.fixeddelays";
    if (parset.isDefined(ingestSpecificFixedDelayKey)) {
        ASKAPLOG_WARN_STR(logger, "Old-style fixed delay key ("<<ingestSpecificFixedDelayKey<<") is present in the ingest parset - ignoring");
-       // uncomment the following line to use old-style fixed delay key instead of the new way to specify fixed delays
+       // uncomment the following line to use the old-style fixed delay key instead of the new way to specify fixed delays
        // (may be handy for some commissioning experiments)
        //return parset.getDoubleVector("tasks.FringeRotationTask.params.fixeddelays");                                
    } 
@@ -201,6 +206,12 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   
   if (estimateViaLags) {
       ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
+      const double qualityThresholdLag = config().getDouble("qualitythreshold.lag", -1.);
+      if (qualityThresholdLag > 0.) {
+          ASKAPLOG_INFO_STR(logger, "Quality threshold for lag-based method is "<<qualityThresholdLag);
+      }
+      // always set it, although the default behaviour matches that with a non-positive parameter
+      solver.setQualityThreshold(qualityThresholdLag);
 
       // suppress logging warnings at high severity for the time of initial estimate
       // (same warnings will be given during the second solver run)
@@ -222,6 +233,13 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       // re-enable warning logging at high severity
       solver.setVerboseFlag(true);
   }
+
+  const double qualityThresholdPhase = config().getDouble("qualitythreshold.phase", -1.);
+  if (qualityThresholdPhase > 0.) {
+      ASKAPLOG_INFO_STR(logger, "Quality threshold for phase slope based method is "<<qualityThresholdPhase);
+  }
+  // always set it to avoid situations when the threshold for lag-based method remains active
+  solver.setQualityThreshold(qualityThresholdPhase);
       
   for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {
        solver.process(*it);  
@@ -292,37 +310,46 @@ int DelaySolverApp::run(int, char **) {
      }
      
      if (sbID != "") {
-         // scheduling block ID is specified, the file name will be taken from SB
-         ASKAPCHECK(msName == "", "When the scheduling block ID is specified, the file name is taken from that SB. "
-                    "Remove the -f command line parameter or ms keyword in the parset to continue.");
          casa::Path path2sb(parameterExists("sbdir") ? parameter("sbdir") : config().getString("sbpath","./"));
          path2sb.append(sbID);
-         const casa::Directory sbDir(path2sb);
-         // do not follow symlinks, non-recursive
-         const casa::Vector<casa::String> dirContent = sbDir.find(casa::Regex::fromPattern("*.ms"),casa::False, casa::False);
-         ASKAPCHECK(dirContent.nelements() > 0, "Unable to find a measurement set file in "<<sbDir.path().absoluteName());
-         int fileIndex = -1;
-         if (dirContent.nelements() != 1) {
-             ASKAPLOG_DEBUG_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - assume one file per beam and index == beam");
-             casa::uInt beam = config().getUint("beam",0);
-             for (casa::uInt i = 0; i<dirContent.nelements(); ++i) {
-                  const casa::String nameTemplate = "_"+utility::toString<casa::uInt>(beam)+".ms";
-                  const size_t pos = dirContent[i].rfind(nameTemplate);
-                  if ((pos != casa::String::npos) && (pos + nameTemplate.size() == dirContent[i].size())) {
-                      ASKAPCHECK(fileIndex == -1, "Multiple measurement sets matching beam = "<<beam<<" are present in "<<sbDir.path().absoluteName());
-                      ASKAPLOG_DEBUG_STR(logger, "Using "<<dirContent[i]);
-                      fileIndex = static_cast<int>(i);
-                  }
-             }
-             ASKAPCHECK(fileIndex >= 0, "Unable to find MS matching beam = "<<beam<<" selected in "<<sbDir.path().absoluteName());
-         } else {
-           fileIndex = 0;
-         }
+         if (msName == "") {
+             // scheduling block ID is specified, the file name can be taken from SB
+             const casa::Directory sbDir(path2sb);
+             // do not follow symlinks, non-recursive
+             const casa::Vector<casa::String> dirContent = sbDir.find(casa::Regex::fromPattern("*.ms"),casa::False, casa::False);
+             ASKAPCHECK(dirContent.nelements() > 0, "Unable to find a measurement set file in "<<sbDir.path().absoluteName());
+             int fileIndex = -1;
+             if (dirContent.nelements() != 1) {
+                 casa::uInt streamIndex = config().getUint("beam",0);
+                 if (config().isDefined("stream")) {
+                     streamIndex = config().getUint("stream");
+                     ASKAPLOG_DEBUG_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - data stream specified by file parset keyword ("<<
+                                     streamIndex<<") will be used");
+                 } else {
+                     ASKAPLOG_DEBUG_STR(logger, "Multiple MSs are found in "<<sbDir.path().absoluteName()<<" - assume one file per beam and index == beam");
+                 }
+                 for (casa::uInt i = 0; i<dirContent.nelements(); ++i) {
+                      const casa::String nameTemplate = "_"+utility::toString<casa::uInt>(streamIndex)+".ms";
+                      const size_t pos = dirContent[i].rfind(nameTemplate);
+                      if ((pos != casa::String::npos) && (pos + nameTemplate.size() == dirContent[i].size())) {
+                          ASKAPCHECK(fileIndex == -1, "Multiple measurement sets matching data stream = "<<streamIndex<<" are present in "<<sbDir.path().absoluteName());
+                          ASKAPLOG_DEBUG_STR(logger, "Using "<<dirContent[i]);
+                          fileIndex = static_cast<int>(i);
+                      }
+                 }
+                 ASKAPCHECK(fileIndex >= 0, "Unable to find MS matching data stream = "<<streamIndex<<" selected in "<<sbDir.path().absoluteName());
+              } else {
+                fileIndex = 0;
+              }
              
-         ASKAPASSERT((fileIndex >= 0) && (fileIndex < static_cast<int>(dirContent.nelements())));
-         casa::Path path2ms(path2sb);
-         path2ms.append(dirContent[fileIndex]);
-         msName = path2ms.absoluteName();
+              ASKAPASSERT((fileIndex >= 0) && (fileIndex < static_cast<int>(dirContent.nelements())));
+              casa::Path path2ms(path2sb);
+              path2ms.append(dirContent[fileIndex]);
+              msName = path2ms.absoluteName();
+         } else {
+             ASKAPLOG_INFO_STR(logger, "Both scheduling block ("<<sbID<<") and ms file parset or command line override ("<<msName<<
+                        ") are specified. Current fixed delays will be taken from SB, and explicitly given MS will be used for data. Use this mode at your own risk!");
+         }
          // fixed delays will be taken from cpingest.in in the SB directory
          casa::Path path2cpingest(path2sb);
          path2cpingest.append("cpingest.in");
@@ -339,21 +366,21 @@ int DelaySolverApp::run(int, char **) {
      ASKAPCHECK(msName != "", "Measurement set should be specified explicitly or the scheduling block should be given");
      ASKAPLOG_DEBUG_STR(logger, "Processing measurement set "<<msName);
      TableDataSource ds(msName,TableDataSource::MEMORY_BUFFERS);     
-     std::cerr<<"Initialization: "<<timer.real()<<std::endl;
+     ASKAPLOG_DEBUG_STR(logger, "Initialization: "<<timer.real());
      timer.mark();
      process(ds, currentDelays);
-     std::cerr<<"Job: "<<timer.real()<<std::endl;
+     ASKAPLOG_DEBUG_STR(logger, "Job: "<<timer.real());
   }
   catch(const AskapError &ce) {
-     std::cerr<<"AskapError has been caught. "<<ce.what()<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "AskapError has been caught. "<<ce.what());
      return -1;
   }
   catch(const std::exception &ex) {
-     std::cerr<<"std::exception has been caught. "<<ex.what()<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "std::exception has been caught. "<<ex.what());
      return -1;
   }
   catch(...) {
-     std::cerr<<"An unexpected exception has been caught"<<std::endl;
+     ASKAPLOG_FATAL_STR(logger, "An unexpected exception has been caught");
      return -1;
   }
   return 0;

@@ -108,6 +108,7 @@ class ImagerApp : public askap::Application
                 // ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
                 // sleep(20);
                 // end sleep
+
                 ContinuumImager imager(subset, comms_p, stats);
 
                 // runit
@@ -131,6 +132,12 @@ class ImagerApp : public askap::Application
 
 
             return 0;
+        }
+
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
         }
 };
 
