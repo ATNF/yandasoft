@@ -89,6 +89,8 @@ class CubeBuilder {
 
         void addBeamList(const accessors::BeamList & beamList);
 
+        void setInfo(const casacore::Record & info);
+
         std::string filename() const{return itsFilename;};
 
 

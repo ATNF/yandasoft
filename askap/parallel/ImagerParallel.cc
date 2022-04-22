@@ -105,7 +105,7 @@ namespace askap
         itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
         itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
         itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
-        itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
+        itsWriteWtImage = parset.getBool("write.weightsimage", false); // write weights image
         itsWriteMaskImage = parset.getBool("write.maskimage", false); // write mask image
         itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // write clean model
         itsWriteSensitivityImage = parset.getBool("write.sensitivityimage", false);
@@ -852,8 +852,11 @@ namespace askap
             ASKAPDEBUGASSERT(*extraOSfactor > 1.);
         }
 
-        if (itsWriteWtLog) {
-            ASKAPLOG_INFO_STR(logger,"Writing Weightslog");
+        // Get any header keywords to add to the images from the parset
+        LOFAR::ParameterSet keywords = parset().makeSubset("header.");
+
+        if (!itsWriteWtImage) {
+            ASKAPLOG_INFO_STR(logger,"Writing weights "<< (itsWriteWtLog ? "log":"keyword"));
             askap::accessors::WeightsLog weightslog;
             string name;
             // look for name of weights image
@@ -873,9 +876,13 @@ namespace askap
             casacore::Array<float> wts = itsModel->valueF(name);
             float wt = wts.data()[0];
             if (allEQ(wts,wt)) {
-                weightslog.weightslist()[0] = wt;
-                weightslog.setFilename(name + postfix + ".txt");
-                weightslog.write();
+                if (itsWriteWtLog) {
+                    weightslog.weightslist()[0] = wt;
+                    weightslog.setFilename(name + postfix + ".txt");
+                    weightslog.write();
+                }
+                // always write the keyword if possible?
+                keywords.replace("IMWEIGHT","["+std::to_string(wt)+",Imaging Weight]");
             } else {
                 ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
             }
@@ -888,8 +895,6 @@ namespace askap
         } else {
             ASKAPLOG_INFO_STR(logger, "---> imageHistory is not defined");
         }
-        // Get any header keywords to add to the images from the parset
-        const LOFAR::ParameterSet keywords = parset().makeSubset("header.");
 
         for (std::vector<std::string>::const_iterator it=resultimages.begin(); it
             !=resultimages.end(); it++) {
