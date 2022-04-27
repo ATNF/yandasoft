@@ -151,7 +151,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
     itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
     itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
-    itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
+    itsWriteWtImage = parset.getBool("write.weightsimage", false); // write weights image
     itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // clean model
     itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
@@ -1529,25 +1529,21 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
 
   // Write weights
-  if (itsWeightsCube || itsWriteWtLog) {
-      if (!params->has("weights.slice")) {
-          ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-      }
-      else {
-          if (itsWeightsCube) {
-              ASKAPLOG_INFO_STR(logger, "Writing Weights");
-              itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
-          }
-          if (itsWriteWtLog) {
-              ASKAPLOG_INFO_STR(logger,"Writing Weights log");
-              Array<float> wts = params->valueF("weights.slice");
-              float wt = wts.data()[0];
-              if (allEQ(wts,wt)) {
-                recordWeight(wt, chan);
-              } else {
-                ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights log");
-                recordWeight(-1.0, chan);
-              }
+  if (!params->has("weights.slice")) {
+      ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
+  } else {
+      if (itsWeightsCube) {
+          ASKAPLOG_INFO_STR(logger, "Writing Weights");
+          itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
+      } else {
+          Array<float> wts = params->valueF("weights.slice");
+          float wt = wts.data()[0];
+          if (allEQ(wts,wt)) {
+            recordWeight(wt, chan);
+            ASKAPLOG_INFO_STR(logger,"Writing Weights " << (itsWriteWtLog ? "log" : "extension"));
+          } else {
+            ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights "<< (itsWriteWtLog ? "log" : "extension"));
+            recordWeight(-1.0, chan);
           }
       }
   }
@@ -1747,10 +1743,11 @@ void ContinuumWorker::logBeamInfo()
 void ContinuumWorker::logWeightsInfo()
 {
 
-  if (itsWriteWtLog) {
+  if (!itsWriteWtImage) {
+    const string wtLogExt = (itsWriteWtLog ? "log file" : "extension");
     askap::accessors::WeightsLog weightslog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to log file ");
-    ASKAPLOG_INFO_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
+    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to "<<wtLogExt);
+    ASKAPLOG_DEBUG_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
     weightslog.weightslist() = itsWeightsList;
 
     if (itsNumWriters > 1 && itsParset.getBool("singleoutputfile",false)) {
@@ -1763,16 +1760,28 @@ void ContinuumWorker::logWeightsInfo()
     if (itsComms.isCubeCreator()) {
 
         // First check weightslog is valid
-        for(unsigned int i=0;i<itsWeightsList.size();i++) {
-            if (itsWeightsList[i] < 0) {
-                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights log");
+        for(const auto & wt : itsWeightsList) {
+            if (wt.second < 0) {
+                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights "<<wtLogExt);
                 return;
             }
         }
-        weightslog.setFilename(itsWeightsName + ".txt");
-        ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
-            << weightslog.filename());
-        weightslog.write();
+        if (itsWriteWtLog) {
+          weightslog.setFilename(itsWeightsName + ".txt");
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
+              << weightslog.filename());
+          weightslog.write();
+        } else {
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to image extension");
+          casacore::Record wtInfo = weightslog.toRecord();
+          if (itsRestoredCube) {
+            itsRestoredCube->setInfo(wtInfo);
+          }
+          if (itsResidualCube) {
+            itsResidualCube->setInfo(wtInfo);
+          }
+          // TODO: which other images should have the weights?
+        }
     }
   }
 

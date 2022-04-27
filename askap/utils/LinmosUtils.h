@@ -65,6 +65,25 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
                                     const accessors::IImageAccess<casacore::Float> &iacc,
                                     const vector<string> &inImgNames);
 
+/// @brief copy selected keywords from the reference image to the output
+/// @param[in] string outName : output image name
+/// @param[in] string inName : input image name
+/// @param[in] vector<string> keywords : list of keyword names to copy
+void copyKeywords(const string & outName, const string& inName, const vector<string> & keywords);
+
+/// @brief save a table with the image containing the beamcentres and other information
+/// @param[in] string outImgName : output image name, where the table will be saved
+/// @param vector<string> inImgNames : input images
+/// @param Vector<MVDirection> beamCentres : list of beam centres, must be same number as input images
+void saveMosaicTable(const string & outImgName,const vector<string> & inImgNames,
+                     const casacore::Vector<casacore::MVDirection> & beamCentres);
+
+/// @brief read weights table or keyword from image header
+/// @param[in] string inImgName : image name, where the table is read from
+/// @return Vector<Float> : vector with weights, size is 0 if none found,
+///    for continuum case (header keyword) size is 1, for spectral case size is nchan
+casacore::Vector<casacore::Float> readWeightsTable(const string& inImgName);
+
 } // namespace askap
 
 #endif

@@ -531,6 +531,14 @@ void CubeBuilder<T>::addBeamList(const BeamList & beamList)
 }
 
 template <class T>
+void CubeBuilder<T>::setInfo(const casacore::Record & info)
+{
+    itsCube->setInfo(itsFilename, info);
+}
+
+
+
+template <class T>
 void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)
 {
     if ( ! historyLines.empty() ) {
