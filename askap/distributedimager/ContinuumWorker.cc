@@ -160,8 +160,8 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsGridFFT = parset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
-    if (itsGridType == "casa" && nwriters > 1){
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
+    if (itsGridType == "casa" && itsParset.getBool("singleoutputfile",false) && nwriters > 1){
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing a single casa image cube");
       itsNumWriters = 1;
     } else {
       itsNumWriters = nwriters;
@@ -238,8 +238,6 @@ void ContinuumWorker::run(void)
   int nGroups = itsComms.nGroups();
   int nchanTotal = nWorkers * nchanpercore / nGroups;
 
-  initialiseBeamLog(nchanTotal);
-  initialiseWeightsLog(nchanTotal);
 
   if (localSolver) {
     ASKAPLOG_INFO_STR(logger, "In local solver mode - reprocessing allocations)");
@@ -274,17 +272,19 @@ void ContinuumWorker::run(void)
       // 3*4 = 12
       // (6 - 3 + 1) * 4
       if (!itsComms.isSingleSink()) {
+        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
         this->nchanCube = (myMaxClient - myMinClient + 1) * nchanpercore;
         this->baseCubeGlobalChannel = (myMinClient - 1) * nchanpercore;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((myMinClient - 1));
-        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
       } else {
         ASKAPLOG_INFO_STR(logger, "SingleCube with multiple writers");
         this->nchanCube = nchanTotal;
         this->baseCubeGlobalChannel = 0;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((0));
-
       }
+      initialiseBeamLog(this->nchanCube);
+      initialiseWeightsLog(this->nchanCube);
+
       ASKAPLOG_INFO_STR(logger, "Number of channels in cube is: " << this->nchanCube);
       ASKAPLOG_INFO_STR(logger, "Base global channel of cube is " << this->baseCubeGlobalChannel);
     }
@@ -296,6 +296,9 @@ void ContinuumWorker::run(void)
           ASKAPLOG_INFO_STR(logger, "Not in localsolver (spectral line) mode - and combine channels is set so compressing channel allocations)");
           compressWorkUnits();
       }
+      initialiseBeamLog(nchanTotal);
+      initialiseWeightsLog(nchanTotal);
+
   }
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
