@@ -47,7 +47,6 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
 #include <askap/scimath/utils/OptimizedArrayMathUtils.h>
-#include <omp.h>
 #include <mpi.h>
 
 #ifdef USE_OPENACC
