@@ -67,9 +67,7 @@ class StatsAndMask {
     public:
         using Channel = uint;
 
-        StatsAndMask(askapparallel::AskapParallel &comms, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
-            : itsComms(comms), itsImageCube(imageCube)
-        {}
+        StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube);
         void setScaleFactor(float scaleFactor);
         void setUnits(const std::string& unit); 
         void calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc);
@@ -81,11 +79,15 @@ class StatsAndMask {
         {
             return itsMasksPerChannelMap;
         }
+        void writeStatsToImageTable(const std::string& name);
         // @TODO. This method is just a placeholder for now.
         void receiveStats();
         void sendStats(int destRank = 0);
     private:
         boost::weak_ptr<askap::accessors::IImageAccess<>> itsImageCube;
+        std::string itsImageName;
+        std::string itsUnit;
+        float itsScaleFactor;
         askapparallel::AskapParallel& itsComms;
         std::map<Channel,Stats> itsStatsPerChannelMap;
         std::map<Channel,bool>  itsMasksPerChannelMap;
