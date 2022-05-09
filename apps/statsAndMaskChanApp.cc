@@ -58,6 +58,12 @@ ASKAP_LOGGER(logger, ".statsAndMaskChanApp");
 
 using namespace askap;
 
+///
+/// This app does the followings :
+/// (1) calculates the image's statistics
+/// (2) masks the bad channels
+/// (3) records the image statistics
+///
 class StatsAndMaskChanApp : public askap::Application
 {
 public:
@@ -76,6 +82,8 @@ public:
             std::string image = subset.getString("image","");
             bool editImage = subset.getBool("editImage", false);
             bool editStats = subset.getBool("editStats", false);
+            std::string preMaskStats = subset.getString("preMaskStats","/tmp/preMaskStats.txt");
+            std::string outputStats = subset.getString("outputStats","");
             bool useSignificance = subset.getBool("useSignificance", false);
             float threshold = subset.getFloat("significanceLevel", 10.);
             bool useNoise = subset.getBool("useNoise", true);
@@ -109,15 +117,23 @@ public:
                     statisticsAndMask.calculate(image,chan,blc,trc); 
                 }
             }
+            // waits for all ranks to get here
             comms.barrier();
             //ASKAPLOG_INFO_STR(logger,"size of itsStatsPerChannelMap: " << statisticsAndMask.statsPerChannelMap().size());
             if (rank == 0 ) {
                 // master collects the stats from the workers
                 statisticsAndMask.receiveStats();
                 ASKAPLOG_INFO_STR(logger,"size of itsStatsPerChannelMap: " << statisticsAndMask.statsPerChannelMap().size());
+
+                // do the masking
+                statisticsAndMask.maskBadChannels(image,threshold,badMADFM,maskBlank, useSignificance, 
+                                                  useNoise, editStats, editImage, outputStats);
                 // write the stats to image table
                 //statisticsAndMask.writeStatsToImageTable("mycube.fits");
                 statisticsAndMask.writeStatsToImageTable(image);
+                if ( editStats ) {
+                    statisticsAndMask.writeStatsToFile(preMaskStats);
+                }
                 //const auto& statsPerChannelMap = statisticsAndMask.statsPerChannelMap();
                 //for (const auto& kvp : statsPerChannelMap) {
                 //    ASKAPLOG_INFO_STR(logger,"processing channel: " << kvp.second.channel);

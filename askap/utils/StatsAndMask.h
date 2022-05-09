@@ -1,7 +1,4 @@
 /// @file StatsAndMask.h
-/// @brief 
-/// @details 
-///
 ///
 /// @copyright (c) 2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -28,8 +25,8 @@
 /// @author Minh Vuong <minh.vvuong@csiro.au>
 ///
 
-#ifndef ASKAP_ACCESSORS_STATS_AND_MASK_H
-#define ASKAP_ACCESSORS_STATS_AND_MASK_H
+#ifndef ASKAP_YANDASOFT_STATS_AND_MASK_H
+#define ASKAP_YANDASOFTACCESSORS_STATS_AND_MASK_H
 
 #include <askap/imageaccess/IImageAccess.h>
 #include <casacore/images/Images/PagedImage.h>
@@ -52,8 +49,10 @@ namespace askap {
 namespace utils {
 using Channel = uint;
 
+/// @brief a structure to store the statistics 
 struct Stats {
     Channel channel;    
+    double freq;
     float rms;
     float std;
     float mean;
@@ -63,34 +62,105 @@ struct Stats {
     float maxval;
     float minval;
 };
+
+/// @details A class that calculates the image cube's statistics and performs the masking of the
+///          image's channels based on some user defined thresholds. It does similar tasks as the
+///          the current cubestatsHelpers.py in the askap-pipeline package and the maskBadChannels
+///          in this package.
 class StatsAndMask {
     public:
         using Channel = uint;
 
+        /// @brief - constructor
+        /// @param[in] comms - MPI comms
+        /// @param[in] cubeName - name of image cube
+        /// @param[in] imageCube - a boost shared pointer to the image access instance
         StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube);
+
+        /// @brief - disallowed default, copy and move constructors
+        StatsAndMask() = delete;
+        StatsAndMask(const StatsAndMask&) = delete;
+        StatsAndMask(StatsAndMask&&) = delete;
+        StatsAndMask& operator=(const StatsAndMask&) = delete;
+        StatsAndMask& operator=(StatsAndMask&&) = delete;
+        
+
+        /// @brief - set the scaling factor
+        /// @param[in] scaleFactor - factor to be set
         void setScaleFactor(float scaleFactor);
+        /// @brief - set the unit
+        /// @param[in] unit - unit to be set
         void setUnits(const std::string& unit); 
+
+        /// @brief calculates the per plane statistics of the image cube
+        /// @param[in] name - name of image cube
+        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] blc - bottom left corner of the image plane
+        /// @param[in] trc - top right corner of the image plane
         void calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc);
+
+        /// @brief returns the image cube's statistics
+        /// @return A map of the per plane statistics of the image cube.
+        ///         The key of the map is the image channel and the value
+        ///         contains the iimage statistics of the channel.
         const std::map<Channel,Stats>& statsPerChannelMap() const
         {
             return itsStatsPerChannelMap;
         }
-        const std::map<Channel,bool>& masksPerChannelMap() const
-        {
-            return itsMasksPerChannelMap;
-        }
+
+        /// @brief this method masks the channels in the image cube if they dont meet the user
+        ///        defined thresholds. It is based very much on the code in the maskBadChannels.cc
+        /// @param[in] image - name of the image
+        /// @param[in] threshold -
+        /// @param[in] badMADFM -
+        /// @param[in] maskBlank -
+        /// @param[in] useSignificance -
+        /// @param[in] useNoise -
+        /// @param[in] editStats -
+        /// @param[in] editImage -
+        /// @param[in] outputStats -
+        void maskBadChannels(const std::string& image, float threshold, float badMADFM, bool maskBlank,
+                             bool useSignificance, bool useNoise, bool editStats, bool editImage, 
+                             const std::string& outputStats, int master = 0);
+
+        /// @brief This method writes the statistics to the image cube
+        /// @param[in] name - name of the image
         void writeStatsToImageTable(const std::string& name);
-        // @TODO. This method is just a placeholder for now.
+
+        /// @brief This method writes the statistics to the image cube
+        /// @param[in] catalogue - name of the file to be written to
+        void writeStatsToFile(const std::string& catalogue);
+
+        /// @brief This method receives the statistics from the sendStats() method
+        /// @details This method receives the statistics from the sendStats() method
+        ///          and adds them to the itsStatsPerChannelMap. The idea is that the
+        ///          master rank/process calls this method to collect all the statistics
+        ///          from the workers.
         void receiveStats();
+
+        /// @brief This method sends the statistics of the channels that it collects back
+        ///        to the master (i.e destRank)
+        /// @details This method sends the statistics of the channels that it collects back
+        ///        to the master (i.e destRank). The idea is that the worker rank(s) calls
+        ///        this method to send all the statistics it collects back to the master rank.
+        /// @param[in] destRank - process (master rank) that receives the statistics.
         void sendStats(int destRank = 0);
     private:
+        /// A weak pointer to the image access object
         boost::weak_ptr<askap::accessors::IImageAccess<>> itsImageCube;
+        /// Name of the image cube
         std::string itsImageName;
         std::string itsUnit;
+        /// The reference frequency of the image cube
+        double itsRefFrequency;
+        /// The increment frequency of the image cube
+        double itsFreqIncrement;
         float itsScaleFactor;
+        /// MPI comms
         askapparallel::AskapParallel& itsComms;
+        /// A map contains the per plane/chanel image statistics
         std::map<Channel,Stats> itsStatsPerChannelMap;
-        std::map<Channel,bool>  itsMasksPerChannelMap;
+        //std::map<Channel,bool>  itsMasksPerChannelMap;
 };
 }
 }
