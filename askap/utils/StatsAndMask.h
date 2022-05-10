@@ -1,6 +1,6 @@
 /// @file StatsAndMask.h
 ///
-/// @copyright (c) 2016 CSIRO
+/// @copyright (c) 2022 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -111,14 +111,18 @@ class StatsAndMask {
         /// @brief this method masks the channels in the image cube if they dont meet the user
         ///        defined thresholds. It is based very much on the code in the maskBadChannels.cc
         /// @param[in] image - name of the image
-        /// @param[in] threshold -
-        /// @param[in] badMADFM -
-        /// @param[in] maskBlank -
-        /// @param[in] useSignificance -
-        /// @param[in] useNoise -
-        /// @param[in] editStats -
-        /// @param[in] editImage -
-        /// @param[in] outputStats -
+        /// @param[in] threshold - user defined threshold (significanceLevel) in the parset.
+        /// @param[in] badMADFM - user defined  madfm threshold (madfmThreshold) in the parset.
+        /// @param[in] maskBlank - a boolean defined in the parset to indicate (with other flags) 
+        ///                        if the channel is masked.
+        /// @param[in] useSignificance - a boolean defined in the parset
+        /// @param[in] useNoise - a boolean defined in the parset. If set and the channel has considered
+        ///                       to have bad noise then the channel is masked
+        /// @param[in] editStats - a boolean defined in the parset. If set, the statistics are written to
+        ///                        to a file (see outputStats)
+        /// @param[in] editImage - a boolean defined in the parset. If set and the channel is 
+        ///                        considered "bad" then the image plane for that channel is masked.
+        /// @param[in] outputStats - the file name that contains the image cube's  statistics 
         void maskBadChannels(const std::string& image, float threshold, float badMADFM, bool maskBlank,
                              bool useSignificance, bool useNoise, bool editStats, bool editImage, 
                              const std::string& outputStats, int master = 0);
@@ -127,7 +131,7 @@ class StatsAndMask {
         /// @param[in] name - name of the image
         void writeStatsToImageTable(const std::string& name);
 
-        /// @brief This method writes the statistics to the image cube
+        /// @brief This method writes the statistics to a file
         /// @param[in] catalogue - name of the file to be written to
         void writeStatsToFile(const std::string& catalogue);
 

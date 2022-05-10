@@ -110,7 +110,8 @@ public:
                     // ASKAPLOG_INFO_STR(logger,"rank: " << rank << " running on node: " << comms.nodeName());
                     ASKAPLOG_INFO_STR(logger,"rank: " << rank << ", channel: " << chan);
                     casacore::IPosition blc(4,0,0,0,chan);
-                    casacore::IPosition trc = shape - 1; trc(3) = chan;
+                    casacore::IPosition trc = shape - 1; 
+                    trc(3) = chan;
                     //ASKAPLOG_INFO_STR(logger, "shape - 1: " << shape - 1);
                     //ASKAPLOG_INFO_STR(logger, "shape: " << shape);
                     //ASKAPLOG_INFO_STR(logger,"blc: " << blc << "; trc: " << trc); 
