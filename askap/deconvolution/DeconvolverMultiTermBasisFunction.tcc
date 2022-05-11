@@ -1600,7 +1600,7 @@ namespace askap {
                     }
                     // In performing the search for the peak across bases, we want to take into account
                     // the SNR so we normalise out the coupling matrix for term=0 to term=0.
-                    T norm(1 / sqrt(this->itsCouplingMatrix(base)(0, 0)));
+                    const T norm(1 / sqrt(this->itsCouplingMatrix(base)(0, 0)));
                     maxVal *= norm;
                     minVal *= norm;
                 } else {

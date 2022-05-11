@@ -582,7 +582,7 @@ namespace askap {
             const casacore::IPosition residualShape(this->itsResidualBasisFunction.shape());
             const casacore::IPosition psfShape(this->itsPSFBasisFunction.shape());
 
-            const casacore::uInt ndim(this->itsResidualBasisFunction.shape().size());
+            const casacore::uInt ndim(residualShape.size());
             ASKAPDEBUGASSERT(ndim > 2);
 
             casacore::IPosition residualStart(ndim, 0), residualEnd(ndim, 0), residualStride(ndim, 1);
@@ -731,8 +731,12 @@ namespace askap {
 
             // If weighting (presumably with weights) was done we need to
             // look up the original values (without the weights).
-            minVal = data.xyPlane(minPos(2))(minPos);
-            maxVal = data.xyPlane(maxPos(2))(maxPos);
+            // MV: I don't understand the following - it seems like the dimensions mismatch - I'll replace it
+            // (it probably worked fine because the last dimension goes beyond 3 dimensions of a cube and remains unchecked)
+            //minVal = data.xyPlane(minPos(2))(minPos);
+            //maxVal = data.xyPlane(maxPos(2))(maxPos);
+            minVal = data(minPos);
+            maxVal = data(maxPos);
         }
         template<class T, class FT>
         Vector<T> DeconvolverBasisFunction<T, FT>::findCoefficients(const Matrix<Double>& invCoupling,
