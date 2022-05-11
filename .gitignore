@@ -1,5 +1,7 @@
 build/*
-askap-cmake/*
+_build
+_install
+askap-cmake
 base-askap/*
 base-askapparallel/*
 base-accessors/*
@@ -39,4 +41,4 @@ tests/data/simulation/synthregression/synthprogrunner.pyc
 tests/data/simulation/synthregression/temp_parset.in
 tests/data/simulation/synthregression/weights.field1/
 tests/data/simulation/synthregression/wtermtest.pyc
-
+tests/data/simulation/synthregression/__pycache__/

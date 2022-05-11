@@ -35,7 +35,7 @@ ASKAP_LOGGER(logger, ".measurementequation.imagemultiscalesolver");
 #include <askap/askap/AskapUtil.h>
 
 #include <askap/scimath/utils/PaddingUtils.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/profile/AskapProfiler.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 
@@ -169,7 +169,7 @@ namespace askap
         // Iteratate over planes to be preconditioned and cleaned
         // Axes are dof, dof for each parameter
         //const casacore::IPosition vecShape(1, ip.value(indit->first).nelements());
-        for (scimath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
+        for (imagemath::MultiDimArrayPlaneIter planeIter(ip.shape(indit->first));
              planeIter.hasMore(); planeIter.next()) {
 
           ASKAPCHECK(normalEquations().normalMatrixDiagonal().count(indit->first)>0, "Diagonal not present for "<<
@@ -251,7 +251,7 @@ namespace askap
             if (importModelFromNE) {
                 SynthesisParamsHelper::oversample(cleanArray,*itsExtraOversamplingFactor,false);
             } else {
-                scimath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
+                imagemath::MultiDimArrayPlaneIter fullResPlaneIter(ip.shape(fullResName));
                 cleanArray.reference( fullResPlaneIter.getPlane( ip.valueT(fullResName), planeIter.position() ) );
             }
           }

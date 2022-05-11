@@ -94,11 +94,17 @@ namespace askap {
                 }
 
                 void resetInitialObjectiveFunction() {
+                    itsPreviousInitialObjectiveFunction = itsInitialObjectiveFunction;
                     itsInitialObjectiveFunction = T(0.0);
                 }
 
                 T initialObjectiveFunction() const {
                     return itsInitialObjectiveFunction;
+                }
+
+                // The peak residual at the start of the previous major cycle
+                T previousInitialObjectiveFunction() const {
+                    return itsPreviousInitialObjectiveFunction;
                 }
 
                 void setCurrentIter(casacore::Int currentIter) {
@@ -129,6 +135,7 @@ namespace askap {
                 T itsTotalFlux;
                 T itsObjectiveFunction;
                 T itsInitialObjectiveFunction;
+                T itsPreviousInitialObjectiveFunction;
         };
 
     } // namespace synthesis

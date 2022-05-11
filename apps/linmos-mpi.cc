@@ -36,6 +36,7 @@
 #include <askap/askapparallel/AskapParallel.h>
 #include <askap/imageaccess/WeightsLog.h>
 #include <askap/imagemath/linmos/LinmosAccumulator.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 /// 3rd party
 #include <Common/ParameterSet.h>
@@ -58,6 +59,14 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
   imagemath::LinmosAccumulator<float> accumulator;
 
+  // get the image history keyword if it is defined
+  const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",{},false);
+
+  // get the list of keywords to copy from the input
+  // Set some defaults for simple beam mosaic, won't be correct for more complex cases
+  const std::vector<std::string> keywordsToCopy = parset.getStringVector("keywordsToCopy",
+      {"TELESCOP","PROJECT","SBID","DATE-OBS","DURATION"});
+
   // Original shape
   int nchanCube = -1;
   // load the parset
@@ -76,7 +85,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   // index - do it now ...
 
 
-  // loop over the mosaics, reading each in an adding to the output pixel arrays
+  // loop over the mosaics, reading each in and adding to the output pixel arrays
   vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
   string outImgName, outWgtName, outSenName;
   map<string,string> outWgtNames = accumulator.outWgtNames();
@@ -107,7 +116,19 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED ) {
       inWgtNames = accumulator.inWgtNameVecs()[outImgName];
-      if (accumulator.useWeightsLog()) {
+      if (inWgtNames.size()==0) {
+        // want weights, but have not specified any files - try to read from image headers
+        bool useWtFromHdr = true;
+        for (auto i : inImgNames) {
+          useWtFromHdr = readWeightsTable(i).size()>0;
+          if (!useWtFromHdr) {
+            break;
+          }
+        }
+        ASKAPCHECK(useWtFromHdr, "Image weighting requested, but no weights found in headers");
+        ASKAPLOG_INFO_STR(logger,"   (reading weights from input images)");
+        accumulator.setUseWtFromHdr(useWtFromHdr);
+      } else if (accumulator.useWeightsLog()) {
           ASKAPLOG_INFO_STR(logger, " - input weightslog files: " << inWgtNames);
       } else {
           ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
@@ -115,7 +136,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     }
 
     if (accumulator.weightType() == FROM_BP_MODEL|| accumulator.weightType() == COMBINED) {
-      accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
+      accumulator.setBeamCentres(loadBeamCentres(parset,iacc,inImgNames));
     }
 
     if (accumulator.doSensitivity()) {
@@ -293,6 +314,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
         ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
         iacc.create(outImgName, outShape, accumulator.outCoordSys());
+        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
+        iacc.addHistory(outImgName, historyLines);
         iacc.makeDefaultMask(outImgName);
 
         if (accumulator.outWgtDuplicates()[outImgName]) {
@@ -301,6 +324,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outWgtName = accumulator.outWgtNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
           iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+          copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
+          iacc.addHistory(outWgtName, historyLines);
           iacc.makeDefaultMask(outWgtName);
 
         }
@@ -308,6 +333,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           outSenName = accumulator.outSenNames()[outImgName];
           ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
           iacc.create(outSenName, outShape, accumulator.outCoordSys());
+          copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+          iacc.addHistory(outSenName, historyLines);
           iacc.makeDefaultMask(outSenName);
 
         }
@@ -335,7 +362,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
       // iterator over planes (e.g. freq & polarisation), regridding and accumulating weights and weighted images
 
-      scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
+      imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
       // loop over the input images, reading each in and adding to the output pixel arrays
       // remember this is for the current output mosaick
 
@@ -349,11 +376,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
-            inWgtName = inWgtNames[img];
-            if (accumulator.useWeightsLog()) {
-                ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
-            } else {
-                ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+            if (!accumulator.useWtFromHdr()) {
+              inWgtName = inWgtNames[img];
+              if (accumulator.useWeightsLog()) {
+                  ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
+              } else {
+                  ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+              }
             }
           }
           if (accumulator.doSensitivity()) {
@@ -532,7 +561,22 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 inWgtPix.resize(inPix.shape());
                 inWgtPix = wtlog.weight(channel);
 
+            } else if (accumulator.useWtFromHdr()) {
+              ASKAPLOG_INFO_STR(logger,"Reading weights from input image file :"<< inImgName);
+              const casacore::Vector<casacore::Float> wts = readWeightsTable(inImgName);
+              const size_t size = wts.size();
+              if (size > 1) {
+                inWgtPix.resize(inPix.shape());
+                ASKAPCHECK(channel < size,"Not enough channels in weights table");
+                inWgtPix = wts(channel);
+              } else if (size == 1) {
+                inWgtPix.resize(inPix.shape());
+                inWgtPix = wts(0);
+              }
+              ASKAPCHECK(size>0,"No weights found in image header or extension for image: "<<inImgName);
+
             } else {
+                // use weights images
                 const casa::IPosition shape = iacc.shape(inWgtName);
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape-1);
@@ -654,7 +698,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       // deweight the image pixels
       // use another iterator to loop over planes
       ASKAPLOG_INFO_STR(logger, "Deweighting accumulated images");
-      scimath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
+      imagemath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
       for (; deweightIter.hasMore(); deweightIter.next()) {
         curpos = deweightIter.position();
         accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);
@@ -712,25 +756,23 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
-        bool psfValid = false;
-        if (psf.nelements()<3) {
-          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-          ": beamInfo needs at least 3 elements. Not writing PSF");
-        } else if ((psf[0].getValue("rad")==0) || (psf[1].getValue("rad")==0)) {
-          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-            ": beamInfo invalid. Not writing PSF");
-        } else {
-          psfValid = true;
-        }
+        bool psfValid = (psf.nelements()==3) && (psf[0].getValue("rad")>0) && (psf[1].getValue("rad")>0);
+        accessors::BeamList refBeamList = iacc.beamList(inImgNames[psfref]);
 
         iacc.setUnits(outImgName,units);
         if (psfValid) {
             iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
         }
+        if (!refBeamList.empty()) {
+            iacc.setBeamInfo(outImgName,refBeamList);
+        }
         if (!accumulator.outWgtDuplicates()[outImgName]) {
             iacc.setUnits(outWgtName,units);
             if (psfValid) {
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outWgtName,refBeamList);
             }
         }
         if (accumulator.doSensitivity()) {
@@ -738,10 +780,16 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             if (psfValid) {
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
             }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outSenName,refBeamList);
+            }
         }
+        // Save table of mosaic pointing centres & beamsizes?
+        saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
     }
   }
 }
+
 class linmosMPIApp : public askap::Application
 {
     public:
@@ -773,6 +821,11 @@ class linmosMPIApp : public askap::Application
 
     };
 
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
 
 } // end namespace askap

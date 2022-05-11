@@ -39,7 +39,7 @@ using namespace std;
 
 //  An auxiliary class to write annotation table from the supplied data
 SkyCatalogTabWriter::SkyCatalogTabWriter(const casa::String &fname)
-            throw(casa::AipsError) : ncomp(0)
+             : ncomp(0)
 {
   TableDesc td("Skycatalog",TableDesc::Scratch);
   td.addColumn(ScalarColumnDesc<String>("Type"));
@@ -57,7 +57,7 @@ SkyCatalogTabWriter::SkyCatalogTabWriter(const casa::String &fname)
 
 void SkyCatalogTabWriter::addComponent(casa::Double lng, casa::Double lat,
                        casa::Double flux, const casa::String &type,
-		       const casa::String &label) throw(casa::AipsError)
+		       const casa::String &label) 
 {
   tab.addRow();
   ScalarColumn<String>(tab,"Type").put(ncomp,type);

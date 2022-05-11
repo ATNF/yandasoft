@@ -147,10 +147,18 @@ class ContinuumWorker
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPCFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPSFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsVisGridCube;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPCFGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsVisGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPCFGridCubeImag;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFGridCubeImag;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsVisGridCubeImag;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
+        std::string itsWeightsName;
+        std::string itsGridType;
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
 
@@ -158,7 +166,7 @@ class ContinuumWorker
 
         void initialiseBeamLog(const unsigned int numChannels);
         void recordBeam(const askap::scimath::Axes &axes, const unsigned int globalChannel);
-        void storeBeam(const unsigned int cubeChannel);
+        //void storeBeam(const unsigned int cubeChannel);
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
         unsigned int itsBeamReferenceChannel;
@@ -192,6 +200,12 @@ class ContinuumWorker
 
         /// @brief write out the gridded data, pcf and psf
         bool itsWriteGrids;
+
+        /// @brief write out the grids with UV coordinate grid
+        bool itsGridCoordUV;
+
+        /// @brief write out the FFT of the grids
+        bool itsGridFFT;
 
         /// @brief the number of rank that can write to the cube
         int itsNumWriters;

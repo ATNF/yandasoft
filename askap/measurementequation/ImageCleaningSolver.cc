@@ -37,7 +37,6 @@ ASKAP_LOGGER(logger, ".measurementequation.imagecleaningsolver");
 #include <askap/measurementequation/ImageCleaningSolver.h>
 #include <askap/askap/AskapError.h>
 #include <askap/scimath/utils/PaddingUtils.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>

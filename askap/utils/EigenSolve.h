@@ -50,11 +50,11 @@ class EigenSolver {
    casa::Matrix<casa::Complex> vecV; // SVD's vector V. (not V^t)
 public:
    // solve eigenproblem and fill vec and val data members
-   void solveEigen(const casa::Matrix<casa::Complex> &in) throw(casa::AipsError);
+   void solveEigen(const casa::Matrix<casa::Complex> &in);
    // return results
-   const casa::Matrix<casa::Complex>& getEigenVectors() const throw();
-   const casa::Vector<casa::Double>& getEigenValues() const throw();
-   const casa::Matrix<casa::Complex>& getV() const throw();
+   const casa::Matrix<casa::Complex>& getEigenVectors() const;
+   const casa::Vector<casa::Double>& getEigenValues() const;
+   const casa::Matrix<casa::Complex>& getV() const;
 };
 
 #endif // EIGENSOLVE_H

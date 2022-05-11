@@ -48,24 +48,23 @@ using namespace std;
 using namespace askap;
 
 // return results
-const casa::Matrix<casa::Complex>& EigenSolver::getEigenVectors() const throw()
+const casa::Matrix<casa::Complex>& EigenSolver::getEigenVectors() const
 {
  return vec;
 }
 
-const casa::Vector<casa::Double>& EigenSolver::getEigenValues() const throw()
+const casa::Vector<casa::Double>& EigenSolver::getEigenValues() const 
 {
  return val;
 }
 
-const casa::Matrix<casa::Complex>& EigenSolver::getV() const throw()
+const casa::Matrix<casa::Complex>& EigenSolver::getV() const
 {
  return vecV;
 }
 
 // solve eigenproblem and fill vec and val data members
 void EigenSolver::solveEigen(const casa::Matrix<casa::Complex> &in)
-                               throw(casa::AipsError)
 {
   // temporary code which works for real matrices only
   // extra copying is happening here

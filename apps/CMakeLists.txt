@@ -54,6 +54,7 @@ tmerge
 tstlayout
 tstuvw
 tstuvw2
+statsAndMaskChanApp
 )
 
 

@@ -55,7 +55,7 @@
 #include <askap/deconvolution/DeconvolverHogbom.h>
 #include <askap/distributedimager/CubeBuilder.h>
 #include <askap/askapparallel/AskapParallel.h>
-#include <askap/scimath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 #include <askap/scimath/fft/FFTWrapper.h>
 #include <askap/scimath/utils/SpheroidalFunction.h>
 #include <askap/gridding/VisGridderFactory.h>
@@ -82,19 +82,19 @@ using namespace askap::synthesis;
 class CdeconvolverApp : public askap::Application
 {
     public:
-    
+
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsPsfCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsModelCube;
         boost::shared_ptr<askap::cp::CubeBuilder<casacore::Float> > itsRestoredCube;
-    
+
         static void correctConvolution(casacore::Array<casacore::Double>&, int, int, bool);
 
         const bool itsInterp = true;
         static void interpolateEdgeValues(casacore::Vector<casacore::DComplex> &func);
-    
+
         void getPSF(casacore::Array<casacore::Float> &psfArray,casacore::Array<casacore::Complex> &buffer );
-    
+
         void doTheWork(const LOFAR::ParameterSet,
                        casacore::Array<casacore::Complex> &buffer,
                        casacore::Array<casacore::Float> &psfArray,
@@ -144,67 +144,67 @@ class CdeconvolverApp : public askap::Application
             StatReporter stats;
 
             const LOFAR::ParameterSet subset(config().makeSubset("Cdeconvolver."));
-           
+
             ASKAPLOG_INFO_STR(logger, "ASKAP image (MPI) deconvolver " << ASKAP_PACKAGE_VERSION);
-            
+
             // ASKAPCHECK(comms.nProcs() == 1,"Currently only SERIAL mode supported");
-            
+
             // Need some metadata for the output cube constructions
-            
+
             // Lets get the grid,pcf and psf cube names from the parset
-            
+
             const std::string gridCubeName = subset.getString("grid");
             const std::string pcfCubeName = subset.getString("pcf");
             const std::string psfGridCubeName = subset.getString("psfgrid");
-            
+
             // ok lets set up some output cubes
             const std::string outPsfCubeName = subset.getString("psf","psf");
             const std::string outResidCubeName = subset.getString("residual","residual");
             const std::string outModelCubeName = subset.getString("model","model");
             const std::string outRestoredCubeName = subset.getString("restored","restored");
-            
+
             // WorkArrays
             casacore::Array<casacore::Float> psfArray;
             casacore::Array<casacore::Complex> pcfArray;
             casacore::Array<casacore::Complex> psfGridBuffer;
             casacore::Array<casacore::Complex> buffer;
-            
+
             // Lets load in a cube
             casacore::PagedImage<casacore::Complex> grid(gridCubeName);
             casacore::PagedImage<casacore::Complex> pcf(pcfCubeName);
             casacore::PagedImage<casacore::Complex> psfgrid(psfGridCubeName);
-            
+
             const casacore::IPosition shape = grid.shape();
             casacore::IPosition blc(shape.nelements(),0);
             casacore::IPosition trc(shape);
             int nchanCube = trc[3];
-            
+
             if (comms.isMaster()) { // only the master makes the output
                 Int pixelAxis,worldAxis,coordinate;
                 CoordinateUtil::findSpectralAxis(pixelAxis,worldAxis,coordinate,grid.coordinates());
                 const SpectralCoordinate &sc = grid.coordinates().spectralCoordinate(coordinate);
                 casacore::Double baseFreq, nextFreq, freqInc;
                 casacore::Double pixelVal=0;
-                
+
                 sc.toWorld(baseFreq,pixelVal);
                 sc.toWorld(nextFreq,pixelVal+1);
-                
+
                 freqInc = nextFreq-baseFreq;
-                
+
                 Quantity f0(baseFreq, "Hz");
                 Quantity cdelt(freqInc, "Hz");
-                
+
                 ASKAPLOG_INFO_STR(logger,"Base Freq " << f0);
                 ASKAPLOG_INFO_STR(logger,"Freq inc (CDELT) " << cdelt);
-                
+
                 // create the output cubes
                 itsPsfCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,
                     nchanCube, f0, cdelt, outPsfCubeName));
-                itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                itsResidualCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,
                     nchanCube, f0, cdelt, outResidCubeName));
-                itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                itsModelCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,
                     nchanCube, f0, cdelt, outModelCubeName));
-                itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset, 
+                itsRestoredCube.reset(new askap::cp::CubeBuilder<casacore::Float>(subset,
                     nchanCube, f0, cdelt, outRestoredCubeName));
             }
             else {
@@ -226,33 +226,33 @@ class CdeconvolverApp : public askap::Application
             for (int channel = firstChannel; channel < firstChannel + numChannelsLocal; channel++) {
 
                 //FIXME: this is just looping over each channel of the allocation
-                
+
                 ASKAPLOG_INFO_STR(logger,"Input image shape " << shape);
                 ASKAPLOG_INFO_STR(logger,"Processing Channel " << channel);
-                
+
                 casacore::IPosition inblc(shape.nelements(),0); // input bottom left corner of this allocation
                 casacore::IPosition intrc(shape); // get the top right
-                
+
                 inblc[3] = channel;
                 intrc[0] = intrc[0]-1;
                 intrc[1] = intrc[1]-1;
                 intrc[2] = intrc[2]-1;
                 intrc[3] = channel;
-                
+
                 const casacore::Slicer slicer(inblc, intrc, casacore::Slicer::endIsLast);
                 ASKAPLOG_INFO_STR(logger,"Slicer is " << slicer);
-                
+
                 psfgrid.getSlice(psfGridBuffer,slicer);
                 pcf.getSlice(pcfArray,slicer);
                 grid.doGetSlice(buffer, slicer);
-     
+
                 // do the work
-                scimath::MultiDimArrayPlaneIter planeIter(buffer.shape());
-                
+                imagemath::MultiDimArrayPlaneIter planeIter(buffer.shape());
+
                 for ( ; planeIter.hasMore(); planeIter.next()) {
                     /// FIXME: this is supposed to loop over the polarisations as well as channels
                     /// FIXME: but i have not sorted out the output indexes for this to work
-                    
+
                     casacore::IPosition curpos = planeIter.position();
                     ASKAPLOG_INFO_STR(logger, "Processing from position: " << curpos);
                     // the inputs
@@ -260,21 +260,21 @@ class CdeconvolverApp : public askap::Application
                     casacore::Array<casacore::Complex> thisPCFBuffer = planeIter.getPlane(pcfArray, curpos);
                     casacore::Array<casacore::Complex> thisPSFGridBuffer = planeIter.getPlane(psfGridBuffer, curpos);
                     casacore::Array<casacore::Float> thisPSFBuffer(psfGridBuffer.shape());
-                    
+
                     // the outputs
                     casacore::Array<casacore::Float> psfout;
                     casacore::Array<casacore::Float> dirty;
                     casacore::Array<casacore::Float> model;
                     casacore::Array<casacore::Float> restored;
-                    
+
                     getPSF(thisPSFBuffer,thisPSFGridBuffer);
 
                     doTheWork(subset, thisBuffer, thisPSFBuffer, thisPCFBuffer, psfout, dirty, model, restored);
-                    
+
                     if (comms.isMaster() && firstPassForMaster == true) {
 
                       ASKAPLOG_INFO_STR(logger, "Ensuring serial access to cubes");
-                      firstPassForMaster = false; 
+                      firstPassForMaster = false;
 
                     }
                     else { // this is essentially a serializer - it is required for CASA image types
@@ -289,7 +289,7 @@ class CdeconvolverApp : public askap::Application
                     }
                     // write out the slice
                     // FIXME: THis is the issue with npol I need to use some position
-                    
+
                     // FIXME: not yet setup for Nyquist gridding. Will need to hange Psf and Residual to writeFlexibleSlice.
                     itsPsfCube->writeRigidSlice(psfout, channel);
                     itsResidualCube->writeRigidSlice(dirty, channel);
@@ -306,21 +306,27 @@ class CdeconvolverApp : public askap::Application
                       int to = 0;
                       comms.send((void *) &buf,sizeof(int),to);
                     }
-                    
+
                 }
-                
-                
+
+
             }
 
             stats.logSummary();
             comms.barrier();
             return 0;
         }
+
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
-            
+
 void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,
                              casacore::Array<casacore::Complex> &buffer ) {
-   
+
     casacore::Array<double> dBuffer(buffer.shape());
 
     //askap::scimath::fft2d(buffer,false);
@@ -330,10 +336,10 @@ void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,
     casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, buffer);
     askap::scimath::fft2d(scratch, false);
     casacore::convertArray<casacore::Float, casacore::Double>(psfArray,real(scratch));
-    
+
     //psfArray = psfArray * psfArray.nelements();
     ASKAPLOG_INFO_STR(logger,"Max PSF array:" << max(psfArray));
-    
+
 }
 
 void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
@@ -344,11 +350,11 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                                 casacore::Array<casacore::Float> &dirty,
                                 casacore::Array<casacore::Float> &model,
                                 casacore::Array<casacore::Float> &restored) {
-    
+
     ASKAPLOG_INFO_STR(logger,"Array Shape: " << buffer.shape());
     //double norm = buffer.nelements()/max(psfArray);
     double norm = buffer.nelements();
-                
+
     //askap::scimath::fft2d(buffer,false);
     casacore::Array<casacore::DComplex> scratch(buffer.shape());
     casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, buffer);
@@ -357,7 +363,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
 
     //buffer = buffer * norm;
     //ASKAPLOG_INFO_STR(logger,"Normalisation Factor is " << norm);
-    
+
     // Convolution correction probably should pull the support from the PARSET
     // alpha is usually 1
     // support is ususally 3
@@ -375,13 +381,13 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     correctConvolution(dBuffer,support,alpha,true);
     dBuffer = dBuffer * double(norm);
     casacore::convertArray<casacore::Float, casacore::Double>(psfArray,dBuffer);
-    
+
     // *** Preconditioning ***
     if (subset.isDefined("preconditioner.Names")) {
         ASKAPLOG_INFO_STR(logger,"Preparing for preconditioning");
 
         const vector<string> preconditioners=subset.getStringVector("preconditioner.Names",vector<string>());
-       
+
         // could follow ImageSolverFactory and use addPreconditioner to add each to an ImageSolver.
         // but just keep separate for now
 
@@ -405,15 +411,15 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
         }
 
         for (vector<string>::const_iterator pc = preconditioners.begin(); pc != preconditioners.end(); ++pc) {
-                
+
             // The preconditioner assumes that the PCF is accumulated in the image domain so FFT it.
             // I'm not normalising it as I dont think I need to.
-            
+
             //askap::scimath::fft2d(pcfArray,false);
             casacore::convertArray<casacore::DComplex,casacore::Complex>(scratch, pcfArray);
             askap::scimath::fft2d(scratch, false);
             casacore::convertArray<casacore::Complex, casacore::DComplex>(pcfArray,scratch);
-            
+
             casacore::Array<casacore::Float> pcfReal = real(pcfArray) * norm;
 
             if ( (*pc)=="Wiener" ) {
@@ -423,7 +429,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                 boost::shared_ptr<WienerPreconditioner>
                     wp = WienerPreconditioner::createPreconditioner(subset.makeSubset("preconditioner.Wiener."));
                 ASKAPASSERT(wp);
-             
+
                 wp->doPreconditioning(psfArray,fBuffer,pcfReal);
 
             } else if ( (*pc) == "GaussianTaper") {
@@ -453,7 +459,8 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                 double tol = subset.getDouble("preconditioner.GaussianTaper.tolerance",0.005);
                 // Try to use the same cutoff as used by the restore solver so final beams will match
                 double cutoff = subset.getDouble("restore.beam.cutoff",0.5);
-               
+                int maxsupport = subset.getInt("restore.beam.maxsupport",101);
+
                 /*
                  * leave this unless needed
                  *
@@ -463,7 +470,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                 const double paddingFactor = ics ? ics->paddingFactor() : 1.;
                 */
                 const double paddingFactor = 1.;
-               
+
                 // factors which appear in nominator are effectively half sizes in radians
                 const double xFactor = 4. * log(2.) * cellsize[0]*double(shape[0])*paddingFactor / casacore::C::pi;
                 const double yFactor = 4. * log(2.) * cellsize[1]*double(shape[1])*paddingFactor / casacore::C::pi;
@@ -473,7 +480,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                 if (taper.size() == 3) {
                   ASKAPDEBUGASSERT((taper[0]!=0) && (taper[1]!=0));
                   gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[1],taper[2],
-                                                           isPsfSize,cutoff,tol));
+                                                           isPsfSize,cutoff,maxsupport,tol));
                   //solver->addPreconditioner(IImagePreconditioner::ShPtr(
                   //    new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[1],taper[2],
                   //                                    isPsfSize,cutoff,tol)));
@@ -481,7 +488,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                   ASKAPDEBUGASSERT(taper[0]!=0);
                   if (std::abs(xFactor-yFactor)<4e-15) {
                     // the image is square, can use the short cut
-                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,tol));
+                    gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,maxsupport,tol));
                     //solver->addPreconditioner(IImagePreconditioner::ShPtr(
                     //    new GaussianTaperPreconditioner(xFactor/taper[0],isPsfSize,cutoff,tol)));
                   } else {
@@ -489,12 +496,12 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
                     // angular coordinates, it will be elongated along the vertical axis in
                     // the uv-coordinates.
                     gp.reset(new GaussianTaperPreconditioner(xFactor/taper[0], yFactor/taper[0],
-                                                             0., isPsfSize, cutoff, tol));
+                                                             0., isPsfSize, cutoff, maxsupport, tol));
                     //solver->addPreconditioner(IImagePreconditioner::ShPtr(
                     //    new GaussianTaperPreconditioner(xFactor/taper[0],yFactor/taper[0],0.,isPsfSize,cutoff,tol)));
                   } // xFactor!=yFactor
                 } // else: taper.size() == 3
-             
+
                 gp->doPreconditioning(psfArray,fBuffer,pcfReal);
 
             }
@@ -522,7 +529,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     // We have a normalised corrected preconditioned image
     DeconvolverBase<Float, Complex>::ShPtr deconvolver;
     string algorithm = subset.getString("solver.Clean.algorithm", "Basisfunction");
-    
+
     if (algorithm == "Basisfunction") {
         ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver");
         deconvolver.reset(new DeconvolverBasisFunction<Float, Complex>(fBuffer, psfArray));
@@ -538,7 +545,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     } else {
         ASKAPTHROW(AskapError, "Unknown Clean algorithm " << algorithm);
     }
-       
+
     // copy cleaning parameters and add any extra stopping criteria
     LOFAR::ParameterSet cleanset = subset.makeSubset("solver.Clean.");
 
@@ -584,7 +591,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     deconvolver->configure(cleanset);
 
     deconvolver->deconvolve();
-    
+
     dirty = deconvolver->dirty().copy();
     model = deconvolver->model().copy();
 
@@ -593,7 +600,7 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     casacore::Vector< casacore::Array<casacore::Float> > restored_vec(1); // some times there are more that one restore
     if(deconvolver->restore(restored_vec))
         restored = restored_vec(0).copy();
-    
+
 }
 
 void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int support=3, int alpha = 1,
@@ -609,7 +616,7 @@ void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int supp
     ASKAPDEBUGASSERT(itsShape(1)>1);
 
     scimath::SpheroidalFunction itsSphFunc(casacore::C::pi*support, alpha);
-  
+
     // initialise buffers to enable a filtering of the correction
     // function in Fourier space.
     casacore::Vector<casacore::DComplex> bufx(itsShape(0));
@@ -690,7 +697,7 @@ void CdeconvolverApp::correctConvolution(casacore::Array<double>& grid, int supp
         it.next();
     }
 
-    
+
 }
 
 /// @brief estimate the spheroidal function at nu=1

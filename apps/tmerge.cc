@@ -38,6 +38,7 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/scimath/utils/ImageUtils.h>
 #include <linmos/LinmosAccumulator.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 ASKAP_LOGGER(logger, ".tmerge");
 
@@ -193,7 +194,7 @@ class TmergeApp : public askap::Application
                 curpos[dim] = 0;
             }
             ASKAPLOG_INFO_STR(logger, "Deweighting accumulated images");
-            scimath::MultiDimArrayPlaneIter deweightIter(outShape);
+            imagemath::MultiDimArrayPlaneIter deweightIter(outShape);
             for (; deweightIter.hasMore(); deweightIter.next()) {
                 curpos = deweightIter.position();
                 accumulator.doSensitivity(false);
@@ -217,6 +218,11 @@ class TmergeApp : public askap::Application
 
             stats.logSummary();
             return 0;
+        }
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
         }
 };
 

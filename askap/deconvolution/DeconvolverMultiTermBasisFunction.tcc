@@ -46,7 +46,7 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
-#include <omp.h>
+#include <askap/scimath/utils/OptimizedArrayMathUtils.h>
 #include <mpi.h>
 
 #ifdef USE_OPENACC
@@ -330,6 +330,7 @@ namespace askap {
             ASKAPTRACE("DeconvolverMultiTermBasisFunction::finalise");
             this->updateResiduals(this->itsModel);
 
+            // debug message
             for (uInt base = 0; base < itsTermBaseFlux.nelements(); base++) {
                 for (uInt term = 0; term < itsTermBaseFlux(base).nelements(); term++) {
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "   Term(" << term << "), Base(" << base
@@ -337,6 +338,10 @@ namespace askap {
                 }
             }
 
+            // info message
+            for (uInt base = 0; base < itsTermBaseFlux.nelements(); base++) {
+              ASKAPLOG_INFO_STR(decmtbflogger,"Total flux for scale "<<base<<" : "<<itsTermBaseFlux(base)(0));
+            }
         }
 
         template<class T, class FT>
@@ -379,7 +384,7 @@ namespace askap {
             // Force change in basis function
             initialiseForBasisFunction(true);
 
-            this->state()->resetInitialObjectiveFunction();
+            //this->state()->resetInitialObjectiveFunction();
         }
 
         template<class T, class FT>
@@ -426,8 +431,14 @@ namespace askap {
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    residualFFT *= conj(basisFunctionFFT);
+
+                    //the following line is equivalent to the optimised version called below
+                    //residualFFT *= conj(basisFunctionFFT);
+                    utility::multiplyByConjugate(residualFFT, basisFunctionFFT);
+
                     scimath::fft2d(residualFFT, false);
+
+                    // temporary object is ok here because we do an assignment to uninitialised array later on
                     Matrix<T> work(real(residualFFT));
 
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
@@ -584,13 +595,15 @@ namespace askap {
                 subXFRVec(term1).set(0.0);
                 casacore::setReal(subXFRVec(term1), this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
                 scimath::fft2d(subXFRVec(term1), true);
+                // we only need conjugated FT of subXFRVec (or real part of it, which doesn't change with conjugation), 
+                // it is better to compute conjugation in situ now and don't do it on the fly later
+                utility::conjugateComplexArray(subXFRVec(term1));
             }
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
-            // Calculate transform of PSF(0)
 
-            // Removing the extra convolution with PSF0. Leave text here temporarily.
-            //const T normPSF = casacore::sum(casacore::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
-            const T normPSF = casacore::sum(casacore::real(subXFRVec(0))) / subXFRVec(0).nelements();
+            // the following line is the original code which we do now in an optimised way
+            //const T normPSF = casacore::sum(casacore::real(subXFRVec(0))) / subXFRVec(0).nelements();
+            const T normPSF = utility::realPartMean(subXFRVec(0));
             ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
 
             itsPSFCrossTerms.resize(nBases, nBases);
@@ -606,11 +619,15 @@ namespace askap {
                 for (uInt base2 = base1; base2 < nBases; base2++) {
                     for (uInt term1 = 0; term1 < this->nTerms(); ++term1) {
                         for (uInt term2 = term1; term2 < this->nTerms(); ++term2) {
-                            // Removing the extra convolution with PSF0. Leave text here temporarily.
+
+                            // the following expression is what we had here originally. It is replaced by an optimised
+                            // method allowing us to avoid creation of temporary objects (+ it is normally faster if OMP is used)
+                            // note, the procedure doesn't have conj(subXFRVec(term1 + term2)) and for this we conjugated the whole 
+                            // subXFRVec(term1 + term2) above, when it is filled with values
                             //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
-                            //       subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
-                            work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
-                                   conj(subXFRVec(term1 + term2)) / normPSF;
+                            //       conj(subXFRVec(term1 + term2)) / normPSF;
+                            utility::calculateNormalisedProduct(work, basisFunctionFFT.xyPlane(base1), basisFunctionFFT.xyPlane(base2), subXFRVec(term1 + term2), normPSF);
+
                             scimath::fft2d(work, false);
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
                                                    << ")*PSF(" << term1 + term2
@@ -705,8 +722,8 @@ namespace askap {
             memset(TimerStop, 0, sizeof(TimerStop));
             memset(Times, 0, sizeof(Times));
 
-			// Termination
-			int converged;
+		      	// Termination
+		      	int converged;
             this->control()->maskNeedsResetting(true);
 
             if (this->control()->targetIter() != 0) {
@@ -1348,7 +1365,8 @@ namespace askap {
             const time_t end_time = time(0);
             this->finalise();
             ASKAPLOG_INFO_STR(decmtbflogger, "Time Required: "<<end_time - start_time);
-            return True;
+            // signal failure and finish the major cycles if we started to diverge
+            return (this->control()->terminationCause() != DeconvolverControl<T>::DIVERGED);
         }
 
         // Helper function to replace minMaxMasked calls when we only need the abs maximum

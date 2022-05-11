@@ -1,6 +1,6 @@
 /// @file SKA_LOWIllumination.cc
 /// @brief SKA_LOW illumination model
-/// @details This class represents a SKA_LOW illumination model, 
+/// @details This class represents a SKA_LOW illumination model,
 /// represented in the image domain via the SKA_LOW_PB PrimaryBeam model.
 ///
 /// @copyright (c) 2020 CSIRO
@@ -83,18 +83,18 @@ void SKA_LOWIllumination::setPointing(double ra, double dec, double diam)
 }
 
 /// @brief obtain illumination pattern
-/// @details This is the main method which populates the 
+/// @details This is the main method which populates the
 /// supplied uv-pattern with the values corresponding to the model
-/// represented by this object. It has to be overridden in the 
+/// represented by this object. It has to be overridden in the
 /// derived classes. An optional phase slope can be applied to
 /// simulate offset pointing.
 /// @param[in] freq frequency in Hz for which an illumination pattern is required
 /// @param[in] pattern a UVPattern object to fill
 /// @param[in] l angular offset in the u-direction (in radians)
 /// @param[in] m angular offset in the v-direction (in radians)
-/// @param[in] pa parallactic angle, or strictly speaking the angle between 
+/// @param[in] pa parallactic angle, or strictly speaking the angle between
 /// uv-coordinate system and the system where the pattern is defined (unused)
-void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern, double l, 
+void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const
 {
     // zero value of the pattern by default
@@ -107,17 +107,18 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern, double l,
 /// @param[in] beamCentre ra & dec of the beam pointing centre
 /// @param[in] pa polarisation position angle (in radians)
 /// @param[in] isPSF bool indicting if this gridder is for a PSF
+/// @param[in] feed  feed number for case where pattern differs between feeds
 void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre,
                           const casacore::MVDirection &beamCentre,
-                          const double pa, const bool isPSF) const
-{ 
+                          const double pa, const bool isPSF, const int feed) const
+{
 
     ASKAPTRACE("SKA_LOWIllumination::getPattern");
-       
-    ASKAPCHECK(std::abs(std::abs(pattern.uCellSize()/pattern.vCellSize())-1.)<1e-7, 
+
+    ASKAPCHECK(std::abs(std::abs(pattern.uCellSize()/pattern.vCellSize())-1.)<1e-7,
                "Rectangular cells are not supported, you have "<<pattern.uCellSize()<<","<<pattern.vCellSize());
-    
+
     // set image and beam centres
     const double ra0 = imageCentre.getLong();
     const double dec0 = imageCentre.getLat();
@@ -144,7 +145,7 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
     PBparset.add("primarybeam.SKA_LOW_PB.pointing.ra",std::to_string(raB));
     PBparset.add("primarybeam.SKA_LOW_PB.pointing.dec",std::to_string(decB));
     PrimaryBeam::ShPtr PB = PrimaryBeamFactory::make(PBparset);
- 
+
     // sizes of the grid to fill with pattern values
     const casacore::uInt nU = pattern.uSize();
     const casacore::uInt nV = pattern.vSize();
@@ -156,7 +157,7 @@ void SKA_LOWIllumination::getPattern(double freq, UVPattern &pattern,
 
     // zero pad pixels outside 1/(n * cellsize) to avoid aliasing? This isn't right...
     // const double cellmax = double(nU)/2 / (double(nU) * pattern.uCellSize());
- 
+
     // zero value of the pattern by default
     pattern.pattern().set(0.);
 
@@ -198,9 +199,18 @@ bool SKA_LOWIllumination::isSymmetric() const
 /// @details Some illumination patterns need to be generated in the image domain, and given
 /// the standard usage (FFT to image-domain for combination with other functions) any image
 /// domain function may as well stay in the image domain. So check the state before doing the FFT.
-/// @return true 
+/// @return true
 bool SKA_LOWIllumination::isImageBased() const
 {
   return true;
 }
 
+
+/// @brief check whether the output pattern is feed dependent
+/// @details Some illumination patterns vary with feed (number) and no shortcuts can
+/// be taken
+/// @return false
+bool SKA_LOWIllumination::isFeedDependent() const
+{
+    return false;
+}

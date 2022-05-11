@@ -98,7 +98,6 @@ void ContinuumMaster::run(void)
     // 2 - they have different epochs but the same TOPO centric frequencies
 
     vector<int> theBeams = getBeams();
-    int totalChannels = 0;
 
     const double targetPeakResidual = synthesis::SynthesisParamsHelper::convertQuantity(
                 itsParset.getString("threshold.majorcycle", "-1Jy"), "Jy");
@@ -119,7 +118,7 @@ void ContinuumMaster::run(void)
         ASKAPLOG_DEBUG_STR(logger,"Parset" << diadvise.getParset());
         ASKAPLOG_DEBUG_STR(logger,"*****");
 
-        totalChannels = diadvise.getBaryFrequencies().size();
+        const int totalChannels = diadvise.getTopoFrequencies().size();
 
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << totalChannels << " channels to process");
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << diadvise.getWorkUnitCount() << " work units to allocate");
@@ -202,13 +201,18 @@ void ContinuumMaster::run(void)
 
             if (imager.params()->has("peak_residual")) {
                 const double peak_residual = imager.params()->scalarValue("peak_residual");
-                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << peak_residual << " after solve");
+                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << abs(peak_residual) << " after solve");
 
                 if (peak_residual < targetPeakResidual) {
 
-                    ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+                    if (peak_residual < 0) {
+                      ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                                      << targetPeakResidual << " Jy. Stopping.");
+                    } else {
+                      ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
                                       << targetPeakResidual << " Jy. Stopping.");
 
+                    }
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model");
                     imager.broadcastModel();
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model - done");

@@ -50,6 +50,7 @@
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/ImagingNormalEquations.h>
 #include <askap/scimath/fitting/Params.h>
+#include <askap/scimath/fft/FFTWrapper.h>
 #include <askap/gridding/IVisGridder.h>
 #include <askap/gridding/VisGridderFactory.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
@@ -95,6 +96,8 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
   CubeComms& comms, StatReporter& stats)
   : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList(),itsWeightsList()
 {
+
+
     itsAdvisor = boost::shared_ptr<synthesis::AdviseDI> (new synthesis::AdviseDI(itsComms, itsParset));
     itsAdvisor->prepare();
 
@@ -148,23 +151,21 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
     itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
     itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
-    itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
+    itsWriteWtImage = parset.getBool("write.weightsimage", false); // write weights image
     itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // clean model
     itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
-
+    itsGridType = parset.getString("imagetype","casa");
+    itsGridCoordUV = parset.getBool("write.grids.uvcoord", itsGridType=="casa"); // label grid with UV coordinates
+    itsGridFFT = parset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
-    if (itsWriteGrids && nwriters > 1) {
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
-      itsNumWriters = 1;
-    } else if (parset.getString("imagetype") == "fits" && nwriters > 1){
+    if (itsGridType == "casa" && nwriters > 1){
       ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
       itsNumWriters = 1;
     } else {
       itsNumWriters = nwriters;
     }
-
 
 }
 
@@ -584,6 +585,7 @@ void ContinuumWorker::processChannels()
 
   ASKAPCHECK(!(updateDir && !localSolver), "Cannot <yet> Continuum image in on-the-fly mosaick mode - need to update the image parameter setup");
 
+
   // Define reference channel for giving restoring beam
   std::string reference = itsParset.getString("restore.beamReference", "mid");
   if (reference == "mid") {
@@ -619,6 +621,7 @@ void ContinuumWorker::processChannels()
     std::string img_name = "image" + postfix;
     std::string psf_name = "psf" + postfix;
     std::string residual_name = "residual" + postfix;
+    // may need this name for the weightslog
     std::string weights_name = "weights" + postfix;
     std::string visgrid_name = "visgrid" + postfix;
     std::string pcfgrid_name = "pcfgrid" + postfix;
@@ -630,32 +633,55 @@ void ContinuumWorker::processChannels()
     ASKAPLOG_DEBUG_STR(logger, "nchan: " << this->nchanCube << " base f0: " << f0.getValue("MHz")
     << " width: " << freqinc.getValue("MHz") << " (" << workUnits[0].get_channelWidth() << ")");
 
-    // We want the start of observations stored in the image keywords
-    // The velocity calculations use the first MS for this, so we'll do that too
-    casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
+    if (itsWriteWtLog) {
+        itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
+    }
 
     if ( itsComms.isCubeCreator() ) {
 
+      // Get keywords to write to the image header
+      if (!itsParset.isDefined("header.DATE-OBS")) {
+        // We want the start of observations stored in the image keywords
+        // The velocity calculations use the first MS for this, so we'll do that too
+        casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
+        String date, timesys;
+        casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
+        // replace adds if non-existant
+        itsParset.replace("header.DATE-OBS","["+date+",Start of observation]");
+        itsParset.replace("header.TIMESYS","["+timesys+",Time System]");
+      }
+
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
-        // Fill in the date
-        itsImageCube->setDateObs(dateObs);
       }
       if (itsWritePsfRaw) {
         itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
-        // Fill in the date
-        itsResidualCube->setDateObs(dateObs);
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
       }
       if (itsWriteGrids) {
-        itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-        itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
-        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+        if (itsGridFFT) {
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+        } else {
+          if (itsGridType == "casa") {
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name, true));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name, true));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name, true));
+          } else {
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".real", itsGridCoordUV));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real", itsGridCoordUV));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".real", itsGridCoordUV));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".imag", itsGridCoordUV));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag", itsGridCoordUV));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag", itsGridCoordUV));
+          }
+        }
       }
       if (itsRestore) {
         // Only create these if we are restoring, as that is when they get made
@@ -665,8 +691,6 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
-          // Fill in the date
-          itsRestoredCube->setDateObs(dateObs);
       }
 
     } else {
@@ -685,9 +709,24 @@ void ContinuumWorker::processChannels()
       }
 
       if (itsWriteGrids) {
-        itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset,  visgrid_name));
-        itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
-        itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+        if (itsGridFFT) {
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name));
+        } else {
+          if (itsGridType == "casa") {
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, visgrid_name));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+          } else {
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".real"));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".real"));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".real"));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".imag"));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".imag"));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".imag"));
+          }
+        }
       }
       if (itsRestore) {
         // Only create these if we are restoring, as that is when they get made
@@ -869,7 +908,7 @@ void ContinuumWorker::processChannels()
         // FIXME
         if (updateDir == true) {
           rootINERef.weightType(FROM_WEIGHT_IMAGES);
-          rootINERef.weightState(CORRECTED);
+          rootINERef.weightState(WEIGHTED);
           rootImager.zero(); // then we delete all our work ....
         }
 
@@ -1004,7 +1043,7 @@ void ContinuumWorker::processChannels()
             dynamic_cast<ImagingNormalEquations&>(*workingImager.getNE());
             if (updateDir) {
               workingINERef.weightType(FROM_WEIGHT_IMAGES);
-              workingINERef.weightState(CORRECTED);
+              workingINERef.weightState(WEIGHTED);
             }
 
             rootImager.getNE()->merge(*workingImager.getNE());
@@ -1081,10 +1120,15 @@ void ContinuumWorker::processChannels()
 
         if (rootImager.params()->has("peak_residual")) {
           const double peak_residual = rootImager.params()->scalarValue("peak_residual");
-          ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << peak_residual);
+          ASKAPLOG_INFO_STR(logger, "Reached peak residual of " << abs(peak_residual));
           if (peak_residual < targetPeakResidual) {
-            ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
-            << targetPeakResidual << " Jy. Stopping.");
+            if (peak_residual < 0) {
+              ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                              << targetPeakResidual << " Jy. Stopping.");
+            } else {
+              ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+              << targetPeakResidual << " Jy. Stopping.");
+            }
             stopping = true;
           }
           else {
@@ -1443,11 +1487,11 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   // Pre-conditions
 
   // Write image
-  if (!params->has("model.slice")) {
-    ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
-  }
-  else {
-    if (itsImageCube) {
+  if (itsImageCube) {
+      if (!params->has("model.slice")) {
+        ASKAPLOG_WARN_STR(logger, "Params are missing model parameter");
+      }
+      else {
       ASKAPLOG_INFO_STR(logger, "Writing model for (local) channel " << chan);
       if (params->has("fullres.slice")) {
         // model has been set at a higher resolution
@@ -1462,68 +1506,103 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
   }
 
   // Write PSF
-  if (!params->has("psf.slice")) {
-    ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
-  }
-  else {
-    if (itsPSFCube) {
-      if (!itsWriteGrids) {
-        itsPSFCube->writeFlexibleSlice(params->valueF("psf.slice"), chan);
+  if (itsPSFCube) {
+      if (!params->has("psf.slice")) {
+        ASKAPLOG_WARN_STR(logger,  "Params are missing psf parameter");
       }
-    }
+      else {
+          if (!itsWriteGrids) {
+            itsPSFCube->writeFlexibleSlice(params->valueF("psf.slice"), chan);
+          }
+      }
   }
 
   // Write residual
-  if (!params->has("residual.slice")) {
-    ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
-  }
-  else {
-    if (itsResidualCube) {
-      ASKAPLOG_INFO_STR(logger, "Writing Residual");
-      itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
-    }
+  if (itsResidualCube) {
+      if (!params->has("residual.slice")) {
+          ASKAPLOG_WARN_STR(logger,  "Params are missing residual parameter");
+      }
+      else {
+          ASKAPLOG_INFO_STR(logger, "Writing Residual");
+          itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+      }
   }
 
   // Write weights
   if (!params->has("weights.slice")) {
-    ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-  }
-  else {
-    if (itsWeightsCube) {
-      ASKAPLOG_INFO_STR(logger, "Writing Weights");
-      itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
-    }
-    if (itsWriteWtLog) {
-      ASKAPLOG_INFO_STR(logger,"Writing Weights log");
-      Array<float> wts = params->valueF("weights.slice");
-      float wt = wts.data()[0];
-      if (allEQ(wts,wt)) {
-        recordWeight(wt, chan);
+      ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
+  } else {
+      if (itsWeightsCube) {
+          ASKAPLOG_INFO_STR(logger, "Writing Weights");
+          itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
       } else {
-        ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
-        recordWeight(-1.0, chan);
+          Array<float> wts = params->valueF("weights.slice");
+          float wt = wts.data()[0];
+          if (allEQ(wts,wt)) {
+            recordWeight(wt, chan);
+            ASKAPLOG_INFO_STR(logger,"Writing Weights " << (itsWriteWtLog ? "log" : "extension"));
+          } else {
+            ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights "<< (itsWriteWtLog ? "log" : "extension"));
+            recordWeight(-1.0, chan);
+          }
       }
-    }
   }
 
   // Write the grids
-  if (params->has("grid.slice") && itsVisGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
+  if (params->has("grid.slice") && (itsVisGridCube||itsVisGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("grid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsVisGridCube->writeRigidSlice(grid,chan);
+    if (itsGridFFT) {
+      ASKAPLOG_INFO_STR(logger, "FFTing Vis Grid and writing it as a real image");
+      askap::scimath::fft2d(grid,false);
+      itsVisGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+    } else {
+      if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing Vis Grid");
+        itsVisGridCube->writeRigidSlice(grid,chan);
+      } else {
+        ASKAPLOG_INFO_STR(logger, "Writing Vis Grid as real & imag FITS images");
+        itsVisGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsVisGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+      }
+    }
   }
-  if (params->has("pcf.slice") && itsPCFGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
+  if (params->has("pcf.slice") && (itsPCFGridCube||itsPCFGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("pcf.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPCFGridCube->writeRigidSlice(grid,chan);
+    if (itsGridFFT) {
+      ASKAPLOG_INFO_STR(logger, "FFTing PCF Grid and writing it as a real image");
+      askap::scimath::fft2d(grid,false);
+      itsPCFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+
+    } else {
+      if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing PCF Grid");
+        itsPCFGridCube->writeRigidSlice(grid,chan);
+      } else {
+        ASKAPLOG_INFO_STR(logger, "Writing PCF Grid as real & imag FITS images");
+        itsPCFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsPCFGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+      }
+    }
   }
-  if (params->has("psfgrid.slice") && itsPSFGridCube) {
-    ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
+  if (params->has("psfgrid.slice") && (itsPSFGridCube||itsPSFGridCubeReal)) {
     const casacore::Vector<casacore::Complex> gr(params->complexVectorValue("psfgrid.slice"));
     casacore::Array<casacore::Complex> grid(gr.reform(params->shape("psf.slice")));
-    itsPSFGridCube->writeRigidSlice(grid,chan);
+    if (itsGridFFT) {
+      ASKAPLOG_INFO_STR(logger, "FFTing PSF Grid and writing it as a real image");
+      askap::scimath::fft2d(grid,false);
+      itsPSFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+    } else {
+      if (itsGridType == "casa") {
+        ASKAPLOG_INFO_STR(logger, "Writing PSF Grid");
+        itsPSFGridCube->writeRigidSlice(grid,chan);
+      } else {
+        ASKAPLOG_INFO_STR(logger, "Writing PSF Grid as real & imag FITS images");
+        itsPSFGridCubeReal->writeRigidSlice(casacore::real(grid),chan);
+        itsPSFGridCubeImag->writeRigidSlice(casacore::imag(grid),chan);
+      }
+    }
   }
   if (params->has("psf.raw.slice") && itsPSFCube) {
     if (itsWriteGrids) {
@@ -1613,19 +1692,22 @@ void ContinuumWorker::recordWeight(float wt, const unsigned int cubeChannel)
   itsWeightsList[cubeChannel] = wt;
 }
 
-void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
-{
-  if (cubeChannel == itsBeamReferenceChannel) {
-    itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
-  }
-}
+// void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
+// {
+//   if (cubeChannel == itsBeamReferenceChannel) {
+//     itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
+//   }
+// }
 
 void ContinuumWorker::logBeamInfo()
 {
-
-  if (itsRestoredCube) {
+    bool beamlogAsFile = itsParset.getBool("write.beamlog",true);
     askap::accessors::BeamLogger beamlog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    if (beamlogAsFile) {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    } else if (itsRestoredCube) {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to image " << itsRestoredCube->filename());
+    }
     ASKAPLOG_DEBUG_STR(logger, "About to add beam list of size " << itsBeamList.size() << " to the beam logger");
     beamlog.beamlist() = itsBeamList;
 
@@ -1633,32 +1715,39 @@ void ContinuumWorker::logBeamInfo()
       std::list<int> creators = itsComms.getCubeCreators();
       ASKAPASSERT(creators.size() == 1);
       int creatorRank = creators.front();
-      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information beam creator is rank " << creatorRank);
+      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information, beam creator is rank " << creatorRank);
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {
+        if (itsRestoredCube) {
+            if (beamlogAsFile) {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log");
+              beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
+              beamlog.write();
+            } else {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to image file");
+              itsRestoredCube->addBeamList(beamlog.beamlist());
+            }
 
-        ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log "
-                           << beamlog.filename());
-        beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
-        beamlog.write();
-
-        ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
-        casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
-        itsRestoredCube->addBeam(refbeam);
-
+            if (beamlogAsFile || itsParset.getString("imagetype") == "fits") {
+              // can't write ref beam to casa image if per channel beams are stored
+              ASKAPLOG_DEBUG_STR(logger, "Writing reference restoring beam to header of restored cube");
+              casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
+              itsRestoredCube->addBeam(refbeam);
+            }
+        }
     }
-  }
 
 }
 
 void ContinuumWorker::logWeightsInfo()
 {
 
-  if (itsWriteWtLog) {
+  if (!itsWriteWtImage) {
+    const string wtLogExt = (itsWriteWtLog ? "log file" : "extension");
     askap::accessors::WeightsLog weightslog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to log file ");
-    ASKAPLOG_INFO_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
+    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to "<<wtLogExt);
+    ASKAPLOG_DEBUG_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
     weightslog.weightslist() = itsWeightsList;
 
     if (itsNumWriters > 1 && itsParset.getBool("singleoutputfile",false)) {
@@ -1671,23 +1760,27 @@ void ContinuumWorker::logWeightsInfo()
     if (itsComms.isCubeCreator()) {
 
         // First check weightslog is valid
-        for(unsigned int i=0;i<itsWeightsList.size();i++) {
-            if (itsWeightsList[i] < 0) {
-                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights log");
+        for(const auto & wt : itsWeightsList) {
+            if (wt.second < 0) {
+                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights "<<wtLogExt);
                 return;
             }
         }
-        // Need to pick an image we are actually writing, if neither of these is written
-        // we probably don't need the weights
-        if (itsRestoredCube) {
-            weightslog.setFilename("weightslog." + itsRestoredCube->filename() + ".txt");
-        } else if (itsResidualCube) {
-            weightslog.setFilename("weightslog." + itsResidualCube->filename() + ".txt");
-        }
-        if (weightslog.filename()!="") {
-            ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
+        if (itsWriteWtLog) {
+          weightslog.setFilename(itsWeightsName + ".txt");
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
               << weightslog.filename());
-            weightslog.write();
+          weightslog.write();
+        } else {
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to image extension");
+          casacore::Record wtInfo = weightslog.toRecord();
+          if (itsRestoredCube) {
+            itsRestoredCube->setInfo(wtInfo);
+          }
+          if (itsResidualCube) {
+            itsResidualCube->setInfo(wtInfo);
+          }
+          // TODO: which other images should have the weights?
         }
     }
   }

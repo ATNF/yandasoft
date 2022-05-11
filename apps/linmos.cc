@@ -37,6 +37,7 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/imageaccess/WeightsLog.h>
 #include <askap/imagemath/linmos/LinmosAccumulator.h>
+#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 // 3rd party
 #include <Common/ParameterSet.h>
@@ -65,6 +66,14 @@ static void merge(const LOFAR::ParameterSet &parset) {
     // initialise an image accessor
     accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
 
+    // get the imageHistory
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",{},false);
+
+    // get the list of keywords to copy from the input
+    // Set some defaults for simple beam mosaic, won't be correct for more complex cases
+    const std::vector<std::string> keywordsToCopy = parset.getStringVector("keywordsToCopy",
+        {"TELESCOP","PROJECT","SBID","DATE-OBS","DURATION"});
+
     // loop over the mosaics, reading each in and adding to the output pixel arrays
     vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
     string outImgName, outWgtName, outSenName;
@@ -89,9 +98,22 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // get input files for this mosaic
         inImgNames = accumulator.inImgNameVecs()[outImgName];
         ASKAPLOG_INFO_STR(logger, " - input images: "<<inImgNames);
+
         if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
             inWgtNames = accumulator.inWgtNameVecs()[outImgName];
-            if (accumulator.useWeightsLog()) {
+            if (inWgtNames.size()==0) {
+              // want weights, but have not specified any files - try to read from image headers
+              bool useWtFromHdr = true;
+              for (auto i : inImgNames) {
+                useWtFromHdr = readWeightsTable(i).size()>0;
+                if (!useWtFromHdr) {
+                  break;
+                }
+              }
+              ASKAPCHECK(useWtFromHdr, "Image weighting requested, but no weights found in headers or files");
+              ASKAPLOG_INFO_STR(linmoslogger,"Reading weights from input images");
+              accumulator.setUseWtFromHdr(useWtFromHdr);
+            } else if (accumulator.useWeightsLog()) {
                 ASKAPLOG_INFO_STR(logger, " - input weightslog files: " << inWgtNames);
             } else {
                 ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
@@ -99,7 +121,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         }
 
         if (accumulator.weightType() == FROM_BP_MODEL || accumulator.weightType() == COMBINED) {
-            accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
+            accumulator.setBeamCentres(loadBeamCentres(parset,iacc,inImgNames));
         }
         if (accumulator.doSensitivity()) {
             inSenNames = accumulator.inSenNameVecs()[outImgName];
@@ -145,12 +167,14 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
             ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
             if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
+              if (!accumulator.useWtFromHdr()) {
                 inWgtName = inWgtNames[img];
                 if (accumulator.useWeightsLog()) {
                     ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
                 } else {
                     ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
                 }
+              }
             }
             if (accumulator.doSensitivity()) {
                 inSenName = inSenNames[img];
@@ -294,7 +318,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
                     ASKAPLOG_INFO_STR(logger," removing Stokes I leakage using "<<inStokesIName);
 
                     // iterator over planes (e.g. freq & polarisation)
-                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                    for (imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
                         // set the indices of any higher-order dimensions for this slice
                         curpos = planeIter.position();
                         // removeLeakage works on single frequency planes
@@ -318,14 +342,33 @@ static void merge(const LOFAR::ParameterSet &parset) {
                     inWgtPix.resize(inPix.shape());
                     ASKAPCHECK(inWgtPix.ndim()==4,"Cannot use weightslog for non-standard cubes - need axes ra,dec,pol,freq");
                     // iterator over planes (e.g. freq & polarisation)
-                    for (scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                    for (imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
                         // set the indices of any higher-order dimensions for this slice
                         curpos = planeIter.position();
                         // set weight value for this frequency plane
                         planeIter.getPlane(inWgtPix) = wtlog.weight(curpos[3]);
                     }
-
+                } else if (accumulator.useWtFromHdr()) {
+                    ASKAPLOG_INFO_STR(logger,"Reading weights from input image file :"<< inImgName);
+                    const casacore::Vector<casacore::Float> wts = readWeightsTable(inImgName);
+                    const size_t size = wts.size();
+                    if (size > 1) {
+                      inWgtPix.resize(inPix.shape());
+                      ASKAPCHECK(inWgtPix.ndim()==4,"Cannot use weightslog for non-standard cubes - need axes ra,dec,pol,freq");
+                      for (imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape()); planeIter.hasMore(); planeIter.next()) {
+                        // set the indices of any higher-order dimensions for this slice
+                        curpos = planeIter.position();
+                        // set weight value for this frequency plane
+                        ASKAPCHECK(curpos[3] < size,"Not enough channels in weights table");
+                        planeIter.getPlane(inWgtPix) = wts(curpos[3]);
+                      }
+                    } else if (size == 1) {
+                        inWgtPix.resize(inPix.shape());
+                        inWgtPix = wts(0);
+                    }
+                    ASKAPCHECK(inWgtPix.nelements()>0,"No weights found in image header or extension for image: "<<inImgName);
                 } else {
+                    // use weights images
                     inWgtPix = iacc.read(inWgtName);
                     ASKAPASSERT(inPix.shape() == inWgtPix.shape());
                 }
@@ -336,7 +379,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
             }
 
             // set up an iterator for all directionCoordinate planes in the input image
-            scimath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
+            imagemath::MultiDimArrayPlaneIter planeIter(accumulator.inShape());
 
             // test whether to simply add weighted pixels, or whether a regrid is required
             bool regridRequired = !accumulator.coordinatesAreEqual();
@@ -413,7 +456,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 
         // Need to do this plane by plane, since weight varies by channel
 
-        for (scimath::MultiDimArrayPlaneIter outIter(accumulator.outShape()); outIter.hasMore(); outIter.next()) {
+        for (imagemath::MultiDimArrayPlaneIter outIter(accumulator.outShape()); outIter.hasMore(); outIter.next()) {
 
             float minVal, maxVal;
             IPosition minPos, maxPos;
@@ -439,7 +482,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
         // deweight the image pixels
         // use another iterator to loop over planes
         ASKAPLOG_INFO_STR(logger, "Deweighting accumulated images");
-        scimath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
+        imagemath::MultiDimArrayPlaneIter deweightIter(accumulator.outShape());
         for (; deweightIter.hasMore(); deweightIter.next()) {
             curpos = deweightIter.position();
             accumulator.deweightPlane(outPix, outWgtPix, outSenPix, curpos);
@@ -455,51 +498,60 @@ static void merge(const LOFAR::ParameterSet &parset) {
         ASKAPLOG_INFO_STR(logger, "Got units as " << units);
 
         // get psf beam information from the selected reference image
-        Vector<Quantum<double> > psf;
-        Vector<Quantum<double> > psftmp = iacc.beamInfo(inImgNames[psfref]);
-        if (psftmp.nelements()<3) {
-            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-                ": beamInfo needs at least 3 elements. Not writing PSF");
-        }
-        else if ((psftmp[0].getValue("rad")==0) || (psftmp[1].getValue("rad")==0)) {
-            ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-                ": beamInfo invalid. Not writing PSF");
-        }
-        else {
-            psf = psftmp;
-        }
+        Vector<Quantum<double>> psf = iacc.beamInfo(inImgNames[psfref]);
+        bool psfValid = (psf.nelements()==3) && (psf[0].getValue("rad")>0) && (psf[1].getValue("rad")>0);
+        accessors::BeamList refBeamList = iacc.beamList(inImgNames[psfref]);
 
         // write accumulated images and weight images
         ASKAPLOG_INFO_STR(logger, "Writing accumulated image to " << outImgName);
         iacc.create(outImgName, accumulator.outShape(), accumulator.outCoordSys());
+        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
+        iacc.addHistory(outImgName,historyLines);
         iacc.write(outImgName,outPix);
         iacc.writeMask(outImgName,outMask);
         iacc.setUnits(outImgName,units);
-        if (psf.nelements()>=3)
+        if (psfValid) {
             iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+        }
+        if (!refBeamList.empty()) {
+            iacc.setBeamInfo(outImgName,refBeamList);
+        }
 
         if (accumulator.outWgtDuplicates()[outImgName]) {
             ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
         } else {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
             iacc.create(outWgtName, accumulator.outShape(), accumulator.outCoordSys());
+            copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
+            iacc.addHistory(outWgtName,historyLines);
             iacc.write(outWgtName,outWgtPix);
             iacc.writeMask(outWgtName,outMask);
-
             iacc.setUnits(outWgtName,units);
-            if (psf.nelements()>=3)
+            if (psfValid) {
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outWgtName,refBeamList);
+            }
         }
 
         if (accumulator.doSensitivity()) {
             ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
             iacc.create(outSenName, accumulator.outShape(), accumulator.outCoordSys());
+            copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+            iacc.addHistory(outSenName,historyLines);
             iacc.write(outSenName,outSenPix);
             iacc.writeMask(outSenName,outMask);
             iacc.setUnits(outSenName,units);
-            if (psf.nelements()>=3)
+            if (psfValid) {
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outSenName,refBeamList);
+            }
         }
+        // Save table of mosaic pointing centres & beamsizes?
+        saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
 
     } // ii loop (separate mosaics for different image types)
 
@@ -516,6 +568,12 @@ class LinmosApp : public askap::Application
             merge(subset);
             stats.logSummary();
             return 0;
+        }
+
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
         }
 };
 

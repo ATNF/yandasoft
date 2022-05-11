@@ -1,0 +1,448 @@
+/// @file StatsAndMask.cc
+///
+/// @copyright (c) 2016 CSIRO
+/// Australia Telescope National Facility (ATNF)
+/// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
+/// PO Box 76, Epping NSW 1710, Australia
+/// atnf-enquiries@csiro.au
+///
+/// This file is part of the ASKAP software distribution.
+///
+/// The ASKAP software distribution is free software: you can redistribute it
+/// and/or modify it under the terms of the GNU General Public License as
+/// published by the Free Software Foundation; either version 2 of the License,
+/// or (at your option) any later version.
+///
+/// This program is distributed in the hope that it will be useful,
+/// but WITHOUT ANY WARRANTY; without even the implied warranty of
+/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+/// GNU General Public License for more details.
+///
+/// You should have received a copy of the GNU General Public License
+/// along with this program; if not, write to the Free Software
+/// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+///
+/// @author Minh Vuong <minh.vvuong@csiro.au>
+///
+
+#include <askap/utils/StatsAndMask.h>
+
+#include <askap_accessors.h>
+
+#include <askap/askap/AskapLogging.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Arrays/ArrayMath.h>
+#include <casacore/casa/Containers/Record.h>
+#include <casacore/coordinates/Coordinates.h>
+#include <boost/shared_array.hpp>
+
+#include <fstream>
+#include <iomanip>
+
+ASKAP_LOGGER(logger, ".statsAndMask");
+
+using namespace askap;
+using namespace askap::utils;
+using namespace askap::accessors;
+
+/// @brief - constructor
+/// @param[in] comms - MPI comms
+/// @param[in] cubeName - name of image cube
+/// @param[in] imageCube - a boost shared pointer to the image access instance
+StatsAndMask::StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, 
+                           boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
+    : itsComms(comms), itsImageName(cubeName), itsImageCube(imageCube),
+    itsUnit(imageCube->getUnits(cubeName)), itsScaleFactor(1.0)
+{
+    if ( itsUnit == "Jy/beam" ) {
+        itsScaleFactor = 1000.0;
+    }
+    ASKAPLOG_INFO_STR(logger,"unit: " << itsUnit << ", scale: " << itsScaleFactor);
+
+    
+    const casacore::CoordinateSystem coord = imageCube->coordSys(cubeName);
+    const casacore::SpectralCoordinate& spectralCoord = coord.spectralCoordinate();
+    const casacore::Vector<casacore::Double> refFreq = spectralCoord.referenceValue();
+    const casacore::Vector<casacore::Double> increment = spectralCoord.increment();
+    ASKAPCHECK(refFreq.capacity() == 1, "Reference freq vector is NOT 1");
+    ASKAPCHECK(increment.capacity() == 1, "Freq increment vector is NOT 1");
+    itsRefFrequency = refFreq[0];
+    itsFreqIncrement = increment[0];
+    if ( comms.rank() == 0 ) {
+        ASKAPLOG_INFO_STR(logger,"refFreq size: " << refFreq.capacity() << ", value: " << refFreq[0]);
+        ASKAPLOG_INFO_STR(logger,"increment size: " << increment.capacity() << ", value: " << increment[0]);
+    }
+}
+
+/// @brief - set the scaling factor
+/// @param[in] scaleFactor - factor to be set
+void StatsAndMask::setScaleFactor(float scaleFactor)
+{
+    itsScaleFactor = scaleFactor;
+}
+
+/// @brief - set the unit
+/// @param[in] unit - unit to be set
+void StatsAndMask::setUnits(const std::string& unit)
+{
+    itsUnit = unit;
+}
+
+/// @brief calculates the per plane statistics of the image cube
+/// @param[in] name - name of image cube
+/// @param[in] channel - chanel of the image where the statistics are to be calculated
+/// @param[in] blc - bottom left corner of the image plane
+/// @param[in] trc - top right corner of the image plane
+void StatsAndMask::calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc)
+{
+    if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
+        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);
+        
+        if ( itsComms.rank() == 0 ) {
+                
+        }
+        Stats stats;
+        // round the float to 3 decimal points
+        stats.rms = itsScaleFactor * casacore::rms(imgPerPlane);
+        stats.std = itsScaleFactor * casacore::stddev(imgPerPlane);
+        stats.mean = itsScaleFactor * casacore::mean(imgPerPlane);
+        stats.median = itsScaleFactor * casacore::median(imgPerPlane);
+        stats.madfm = itsScaleFactor * casacore::madfm(imgPerPlane);
+        stats.maxval = itsScaleFactor * casacore::max(imgPerPlane);
+        stats.minval = itsScaleFactor * casacore::min(imgPerPlane);
+        stats.onepc =  itsScaleFactor * casacore::fractile(imgPerPlane,0.01);
+        stats.channel = channel;
+        stats.freq = (itsRefFrequency + (channel*itsFreqIncrement))/1.0e6;
+
+        if ( std::isnan(stats.rms) )
+            stats.rms = 0.0;
+
+        if (  std::isnan(stats.std) )
+            stats.std = 0.0;
+
+        if ( std::isnan(stats.mean) )
+            stats.mean = 0.0;
+
+        if ( std::isnan(stats.onepc) )
+            stats.onepc = 0.0;
+
+        if ( std::isnan(stats.median) )
+            stats.median = 0.0;
+
+        if ( std::isnan(stats.madfm) )
+            stats.madfm = 0.0;
+
+        if ( std::isnan(stats.maxval) )
+            stats.maxval = 0.0;
+
+        if ( std::isnan(stats.minval) )
+            stats.minval = 0.0;
+
+        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+    }
+}
+
+/// @brief returns the image cube's statistics
+/// @return A map of the per plane statistics of the image cube.
+///         The key of the map is the image channel and the value
+///         contains the iimage statistics of the channel.
+void StatsAndMask::receiveStats()
+{
+    MPI_Status status;
+    // this method is called by the master i.e rank = 0
+    // number of workers not including the master
+    int numWorkers = itsComms.nProcs() - 1;
+    for ( int workerRank = 1; workerRank <= numWorkers; workerRank++ ) {
+        int source = workerRank;
+        // first read the message size    
+        unsigned char* msgSizebuffer[sizeof(unsigned long)];
+        itsComms.receive(msgSizebuffer,sizeof(unsigned long),source);
+        unsigned long msgSize;
+        std::memcpy(reinterpret_cast<void *>(&msgSize),msgSizebuffer,sizeof(unsigned long));
+        // check that msgSize is a multiple of sizeof(Stats)
+        ASKAPCHECK((msgSize % sizeof(Stats)) == 0, 
+                    "StatsAndMask::receiveStats: msgSize is a multiple of sizeof(Stats)");
+        // ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() << " - number of stats objects received: " << msgSize/sizeof(Stats));
+        // now read the stats
+        boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
+        itsComms.receive(buffer.get(),msgSize,source);
+        // add the stats to the map
+        unsigned long numberOfStatsObjsReceived = (msgSize/sizeof(Stats));
+        //ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
+        //                        << " - msgSize: " << msgSize << "; sizeof(Stats): " << sizeof(Stats)
+        //                  << "; numberOfStatsObjsReceived: " << numberOfStatsObjsReceived);
+        unsigned char* ptr = buffer.get();
+        for (unsigned long i = 0; i < numberOfStatsObjsReceived; i++) {
+            Stats s;
+            //std::memcpy(reinterpret_cast<void *>(&s),buffer.get(),sizeof(Stats));
+            std::memcpy(reinterpret_cast<void *>(&s),ptr,sizeof(Stats));
+            ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
+                                << " - Received stats from channel: " << s.channel);
+
+            itsStatsPerChannelMap.insert(std::make_pair(s.channel,s));
+            ptr = ptr + sizeof(Stats);
+        }
+    }
+
+}
+
+/// @brief This method sends the statistics of the channels that it collects back
+///        to the master (i.e destRank)
+/// @details This method sends the statistics of the channels that it collects back
+///        to the master (i.e destRank). The idea is that the worker rank(s) calls
+///        this method to send all the statistics it collects back to the master rank.
+/// @param[in] destRank - process (master rank) that receives the statistics.
+void StatsAndMask::sendStats(int destRank)
+{
+    auto mapSize = itsStatsPerChannelMap.size();
+    auto msgSize = static_cast<unsigned long> (mapSize * sizeof(Stats)); 
+    
+    // send the message size
+    unsigned char* msgSizebuffer[sizeof(unsigned long)];
+    std::memcpy(msgSizebuffer,reinterpret_cast<void *>(&msgSize),sizeof(unsigned long));
+    itsComms.send(msgSizebuffer,sizeof(unsigned long),destRank);
+
+    // put the stats in the buffer
+    boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
+    unsigned char* ptr = buffer.get();
+    for (auto& kvp : itsStatsPerChannelMap) {
+        auto& stats = kvp.second; // stat's type is Stats
+        std::memcpy(ptr,reinterpret_cast<void *> (&stats),sizeof(Stats));
+        ptr = ptr + sizeof(Stats);
+    }
+
+    // now send the stats back to the destRank
+    itsComms.send(buffer.get(),msgSize,destRank);
+}
+
+/// @brief This method writes the statistics to the image cube
+/// @param[in] catalogue - name of the file to be written to
+void StatsAndMask::writeStatsToImageTable(const std::string& name)
+{
+    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - name: " << name);
+    casacore::Record statsRecord;
+    casacore::Record statsTable;
+    statsRecord.define("IMGSTATS","Image Statistics");
+
+    const auto rows = itsStatsPerChannelMap.size();
+    casacore::IPosition shape(1);
+    shape(0) = rows;
+    casacore::Vector<casacore::uInt> chanVect(rows);
+    casacore::Vector<casacore::Double> freqVect(rows);
+    casacore::Vector<casacore::Float> rmsVect(rows);
+    casacore::Vector<casacore::Float> stdVect(rows);
+    casacore::Vector<casacore::Float> meanVect(rows);
+    casacore::Vector<casacore::Float> onepcVect(rows);
+    casacore::Vector<casacore::Float> medianVect(rows);
+    casacore::Vector<casacore::Float> madfmVect(rows);
+    casacore::Vector<casacore::Float> maxvalVect(rows);
+    casacore::Vector<casacore::Float> minvalVect(rows);
+    auto index = static_cast<unsigned long> (0);
+    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - rows: " << rows);
+    for ( const auto& kvp : itsStatsPerChannelMap ) {
+        const auto& statsPerChan = kvp.second;
+        chanVect[index] = statsPerChan.channel;
+        freqVect[index] = statsPerChan.freq;
+        
+        rmsVect[index] = statsPerChan.rms;
+        stdVect[index] = statsPerChan.std;
+        meanVect[index] = statsPerChan.mean;
+        onepcVect[index] = statsPerChan.onepc;
+        medianVect[index] = statsPerChan.median;
+        madfmVect[index] = statsPerChan.madfm;
+        maxvalVect[index] = statsPerChan.maxval;
+        minvalVect[index] = statsPerChan.minval;
+
+        index += 1;
+    }
+    statsTable.define("#Channel",chanVect);
+    statsTable.define("Frequency",freqVect);
+    statsTable.define("Mean",meanVect);
+    statsTable.define("Std",stdVect);
+    statsTable.define("Median",medianVect);
+    statsTable.define("MADFM",madfmVect);
+    statsTable.define("1%ile",onepcVect);
+    statsTable.define("Min",minvalVect);
+    statsTable.define("Max",maxvalVect);
+    statsTable.define("rms",rmsVect);
+
+    const auto columns = static_cast<unsigned int> (10); // number of columns
+    casacore::Vector<casacore::String> units(columns);
+    units[0] = " ";
+    units[1] = "MHz";
+    units[2] = "mJy/beam";
+    units[3] = "mJy/beam";
+    units[4] = "mJy/beam";
+    units[5] = "mJy/beam";
+    units[6] = "mJy/beam";
+    units[7] = "mJy/beam";
+    units[8] = "mJy/beam";
+    units[9] = "mJy/beam";
+    statsTable.define("Units",units); 
+
+    statsRecord.defineRecord("ImgStats",statsTable);
+
+    if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
+        imageCube->setInfo(name,statsRecord);
+    }
+    
+}
+
+/// @brief This method writes the statistics to the image cube
+/// @param[in] catalogue - name of the file to be written to
+void StatsAndMask::writeStatsToFile(const std::string& catalogue)
+{
+    std::ofstream ofile;
+
+    ofile.setf(std::ios::left);
+    ofile.open(catalogue,std::ios::out|std::ios::trunc);
+    if ( ofile ) {
+        std::ios_base::fmtflags oflags = ofile.flags();
+        ofile.setf(std::ios::right);
+        ofile << std::setw(10) << "#channel";
+        ofile << std::setw(15) << "frequency";
+        ofile << std::setw(10) << "Mean";
+        ofile << std::setw(10) << "Std";
+        ofile << std::setw(10) << "Median";
+        ofile << std::setw(10) << "MADFM";
+        ofile << std::setw(10) << "1%ile";
+        ofile << std::setw(10) << "Min";
+        ofile << std::setw(10)  << "Max";
+        ofile << std::endl;
+        ofile << std::setw(10) << " ";
+        ofile << std::setw(15) << "MHz";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::setw(10) << "mJy/beam";
+        ofile << std::endl;
+
+        ofile.setf(std::ios::right);
+        for ( const auto& kvp : itsStatsPerChannelMap ) {
+            const auto& statsPerChan = kvp.second;
+            ofile << std::setw(10) << statsPerChan.channel;
+            ofile << std::setw(15) << std::fixed <<  std::setprecision(4) << statsPerChan.freq;
+
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.mean;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.std;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.median;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.madfm;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.onepc;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.minval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.maxval;
+            ofile << std::endl;
+        }
+        
+        ofile.close();
+    }    
+}
+
+/// @brief this method masks the channels in the image cube if they dont meet the user
+///        defined thresholds. It is based very much on the code in the maskBadChannels.cc
+void StatsAndMask::maskBadChannels(const std::string& image, float threshold, float badMADFM, 
+                                   bool maskBlank, bool useSignificance, bool useNoise, 
+                                   bool editStats, bool editImage, 
+                                   const std::string& outputStats, int master)
+{
+    // only do the masking on the master rank
+    // this code is more or less copied from the maskBadChannels.cc in yandasoft package
+    if ( itsComms.rank() == master ) {
+        casacore::Vector<double> ratio(itsStatsPerChannelMap.size());
+        unsigned long index = 0;
+        for ( const auto& kvp : itsStatsPerChannelMap ) {
+            const auto& statsPerChan = kvp.second;
+            if ( statsPerChan.madfm > 0.0 ) {
+                ratio[index] = statsPerChan.onepc/statsPerChan.madfm;
+            } else {
+                ratio[index] = 0.0;
+            }
+            index += 1;
+        }
+        double med = casa::median(ratio);
+        double mad = casa::median(abs(ratio-med));
+        casa::Vector<double> significance=(ratio-med)/mad;
+        ASKAPLOG_INFO_STR(logger, "Ratio median = " << med << " and madfm = " << mad);
+        ASKAPLOG_INFO_STR(logger, "Acceptable channels have ratio values between "
+                                  << med - threshold * mad << " and "
+                                  << med + threshold * mad );
+
+        if ( boost::shared_ptr<IImageAccess<>> iacc = itsImageCube.lock() ) {
+            casacore::IPosition shape = iacc->shape(image);
+            ASKAPLOG_INFO_STR(logger, "Shape of input image = " << shape);
+            casa::CoordinateSystem coo = iacc->coordSys(image);
+            int specAxis = coo.spectralAxisNumber();
+            ASKAPLOG_INFO_STR(logger, "Spectral axis = " << specAxis);
+            casa::IPosition chanShape=shape;
+            ASKAPLOG_INFO_STR(logger, "Shape of a single channel = " << chanShape);
+            chanShape[specAxis]=1;
+            casa::Vector<float> datavec(chanShape.product(),0.);
+            for(size_t i=0;i<datavec.size();i++) {
+                casa::setNaN(datavec[i]);
+            }
+            casa::Array<float> data(chanShape,datavec.data());
+            unsigned int numBad = 0;
+            unsigned long i = 0;
+            for ( auto& kvp : itsStatsPerChannelMap ) {
+                auto& statsPerChan = kvp.second;
+                ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values "
+                                      << statsPerChan.onepc << " and "
+                                      << statsPerChan.madfm << " for ratio of "
+                                      << ratio[i] << " and significance of "
+                                      << significance[i]);
+                bool isBlank = !(statsPerChan.madfm > 0.);
+                bool isHighSig = (abs(significance[i]) > threshold);
+                bool isBadNoise = (statsPerChan.madfm > badMADFM);
+
+                bool maskChannel = false;
+                maskChannel = maskChannel || (maskBlank && isBlank);
+                maskChannel = maskChannel || (useSignificance && isHighSig);
+                maskChannel = maskChannel || (useNoise && isBadNoise);
+                
+                if ( maskChannel ) {
+                    if (isBlank) {
+                        ASKAPLOG_INFO_STR(logger, "Blank Channel #" << statsPerChan.channel << ": std = "<<statsPerChan.std);
+                    } else {
+                        ASKAPLOG_INFO_STR(logger, "Bad Channel #" << statsPerChan.channel
+                                              << ": MADFM = "<< statsPerChan.madfm
+                                              << " 1%ile = " << statsPerChan.onepc
+                                              << " 1%ile/MADFM = " << ratio[i]);
+                    }
+
+                    numBad++;
+                    if (editImage) {
+                        casa::IPosition loc(shape.size(), 0);
+                        loc[specAxis] = statsPerChan.channel;
+                        ASKAPLOG_INFO_STR(logger, "Writing data of shape " << data.shape() << " to position " << loc);
+                        iacc->write(image,data,loc);
+                        std::stringstream ss;
+                        if ( statsPerChan.madfm > 0.) {
+                            ss << "Masked blank channel " << statsPerChan.channel;
+                        } else {
+                            ss << "Masked channel " << statsPerChan.channel << " : madfm=" << statsPerChan.madfm
+                               <<", 1%ile/madfm=" << ratio[i];
+                        }
+                    }
+                    if (editStats) {
+                        // mean[i] = std[i] = median[i] = madfm[i] = onepc[i] = minval[i] = maxval[i] = 0.0;
+                        statsPerChan.mean = 0.0;
+                        statsPerChan.std = 0.0;
+                        statsPerChan.median = 0.0;
+                        statsPerChan.madfm = 0.0;
+                        statsPerChan.onepc = 0.0;
+                        statsPerChan.minval = 0.0;
+                        statsPerChan.maxval = 0.0;
+                    }
+                }
+                i += 1;
+            }
+            ASKAPLOG_INFO_STR(logger, "Detected " << numBad << " bad channels to be masked");
+            if (editStats) {
+                ASKAPLOG_INFO_STR(logger, "Writing new stats file to " << outputStats);
+                writeStatsToFile(outputStats);
+            }
+        }
+    }
+}
