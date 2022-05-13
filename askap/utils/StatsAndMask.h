@@ -47,7 +47,7 @@
 
 namespace askap {
 namespace utils {
-using Channel = uint;
+using Channel = unsigned int;
 
 /// @brief a structure to store the statistics 
 struct Stats {
@@ -83,7 +83,7 @@ class StatsAndMask {
         StatsAndMask(StatsAndMask&&) = delete;
         StatsAndMask& operator=(const StatsAndMask&) = delete;
         StatsAndMask& operator=(StatsAndMask&&) = delete;
-        
+        ~StatsAndMask() {}
 
         /// @brief - set the scaling factor
         /// @param[in] scaleFactor - factor to be set
@@ -98,6 +98,11 @@ class StatsAndMask {
         /// @param[in] blc - bottom left corner of the image plane
         /// @param[in] trc - top right corner of the image plane
         void calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc);
+        /// @brief calculates the per plane statistics
+        /// @param[in] name - name of image cube
+        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] arr - the channel image where the statistics are calculated
+        void calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr);
 
         /// @brief returns the image cube's statistics
         /// @return A map of the per plane statistics of the image cube.
@@ -150,6 +155,12 @@ class StatsAndMask {
         /// @param[in] destRank - process (master rank) that receives the statistics.
         void sendStats(int destRank = 0);
     private:
+        /// @brief calculates the per plane statistics
+        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] arr - the channel image where the statistics are calculated
+        /// @return Stats - the statistics of the channel image
+        Stats calculateImpl(Channel channel, const casacore::Array<float>& arr);
+
         /// A weak pointer to the image access object
         boost::weak_ptr<askap::accessors::IImageAccess<>> itsImageCube;
         /// Name of the image cube

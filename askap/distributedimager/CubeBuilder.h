@@ -93,6 +93,10 @@ class CubeBuilder {
 
         std::string filename() const{return itsFilename;};
 
+        boost::shared_ptr<accessors::IImageAccess<T>> imageHandler();
+
+        boost::optional<float> oversamplingFactor();
+        
 
     private:
 

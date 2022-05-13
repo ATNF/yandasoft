@@ -47,6 +47,8 @@
 #include "askap/messages/ContinuumWorkUnit.h"
 #include "askap/distributedimager/CubeBuilder.h"
 #include "askap/distributedimager/CubeComms.h"
+#include <askap/utils/StatsAndMask.h>
+
 namespace askap {
 namespace cp {
 
@@ -157,8 +159,15 @@ class ContinuumWorker
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
+        boost::shared_ptr<askap::utils::StatsAndMask> itsRestoredStatsAndMask;
+        boost::shared_ptr<askap::utils::StatsAndMask> itsResidualStatsAndMask;
         std::string itsWeightsName;
         std::string itsGridType;
+
+        // calculate the statistic of the per plane image
+        void calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                 boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube, 
+                                 int channel, const casacore::Array<float>& arr);
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
 

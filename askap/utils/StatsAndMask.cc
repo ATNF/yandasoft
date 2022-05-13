@@ -96,13 +96,75 @@ void StatsAndMask::setUnits(const std::string& unit)
 void StatsAndMask::calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc)
 {
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
-        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);
-        
-        if ( itsComms.rank() == 0 ) {
-                
+        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);    
+        // remove all the NaN from the imgPerPlane because it messes it the calculation
+        // of the statistics
+        casacore::Vector<float> nonMaskArray(imgPerPlane.size());
+        unsigned long index = 0;
+        for(size_t i=0; i < imgPerPlane.size(); i++) {
+            if ( ! casacore::isNaN(imgPerPlane.data()[i]) ) {
+                nonMaskArray[index] = imgPerPlane.data()[i];
+                index += 1;
+            }
         }
+        nonMaskArray.resize(index,true);
+        ASKAPLOG_INFO_STR(logger,"Channel: " << channel << ", imgPerPlane size: " << imgPerPlane.size() << ", nonMaskArray size: "
+                              << nonMaskArray.size() << ", index: " << index);
+
+        //Stats stats = calculateImpl(channel,imgPerPlane);
         Stats stats;
-        // round the float to 3 decimal points
+        if ( nonMaskArray.size() > 0 ) {
+          stats = calculateImpl(channel,nonMaskArray);
+        } else {
+            // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
+            // in this case, dont use nonMaskArray 
+            stats = calculateImpl(channel,imgPerPlane);
+        }
+        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+    }
+}
+
+/// @brief calculates the per plane statistics
+/// @param[in] name - name of image cube
+/// @param[in] channel - chanel of the image where the statistics are to be calculated
+/// @param[in] arr - the channel image where the statistics are calculated
+void StatsAndMask::calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr)
+{
+    // remove all the NaN from the input arr because it messes it the calculation
+    // of the statistics
+    casacore::Vector<float> nonMaskArray(arr.size());
+    unsigned long index = 0;
+    for(size_t i=0; i < arr.size(); i++) {
+        if ( ! casacore::isNaN(arr.data()[i]) ) {
+            nonMaskArray[index] = arr.data()[i];
+            index += 1;
+        }
+    }
+    nonMaskArray.resize(index);
+
+    Stats stats;
+    if ( nonMaskArray.size() > 0 ) {
+      stats = calculateImpl(channel,nonMaskArray);
+    } else {
+        // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
+        // in this case, dont use nonMaskArray
+        stats = calculateImpl(channel,arr);
+    }
+
+    // check if the channel is in the map
+    auto search = itsStatsPerChannelMap.find(channel);
+    if ( search != itsStatsPerChannelMap.end() ) {
+        // erase it
+        itsStatsPerChannelMap.erase(search);
+    }
+    itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+}
+
+Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>& imgPerPlane)
+{
+    Stats stats;
+
+    if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
         stats.rms = itsScaleFactor * casacore::rms(imgPerPlane);
         stats.std = itsScaleFactor * casacore::stddev(imgPerPlane);
         stats.mean = itsScaleFactor * casacore::mean(imgPerPlane);
@@ -113,6 +175,7 @@ void StatsAndMask::calculate(const std::string& name, Channel channel,const casa
         stats.onepc =  itsScaleFactor * casacore::fractile(imgPerPlane,0.01);
         stats.channel = channel;
         stats.freq = (itsRefFrequency + (channel*itsFreqIncrement))/1.0e6;
+
 
         if ( std::isnan(stats.rms) )
             stats.rms = 0.0;
@@ -138,8 +201,12 @@ void StatsAndMask::calculate(const std::string& name, Channel channel,const casa
         if ( std::isnan(stats.minval) )
             stats.minval = 0.0;
 
-        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+        ASKAPLOG_INFO_STR(logger,"channel: " << stats.channel << ", rms: " << stats.rms << ", std: " << stats.std
+                            << ", mean: " << stats.mean << ", median: " << stats.median << ", madfm: " << stats.madfm
+                            << ", maxval: " << stats.maxval << ", stats.minval: " << stats.minval
+                            << ", onepc: " << stats.onepc);
     }
+    return stats;
 }
 
 /// @brief returns the image cube's statistics
@@ -324,15 +391,15 @@ void StatsAndMask::writeStatsToFile(const std::string& catalogue)
         for ( const auto& kvp : itsStatsPerChannelMap ) {
             const auto& statsPerChan = kvp.second;
             ofile << std::setw(10) << statsPerChan.channel;
-            ofile << std::setw(15) << std::fixed <<  std::setprecision(4) << statsPerChan.freq;
+            ofile << std::setw(15) << std::fixed <<  std::setprecision(5) << statsPerChan.freq;
 
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.mean;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.std;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.median;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.madfm;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.onepc;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.minval;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.maxval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.mean;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.std;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.median;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.madfm;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.onepc;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.minval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.maxval;
             ofile << std::endl;
         }
         

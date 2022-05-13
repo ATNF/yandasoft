@@ -659,6 +659,7 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
@@ -691,6 +692,8 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
       }
 
     } else {
@@ -703,6 +706,7 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset,  weights_name));
@@ -736,6 +740,8 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
       }
     }
   }
@@ -1525,6 +1531,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       else {
           ASKAPLOG_INFO_STR(logger, "Writing Residual");
           itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+          itsResidualStatsAndMask->calculate(itsResidualCube->filename(),chan,params->valueF("residual.slice"));
       }
   }
 
@@ -1632,10 +1639,12 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
         if (params->has("fullres.slice")) {
           // Restored image has been generated at full resolution, so avoid further oversampling
           itsRestoredCube->writeRigidSlice(params->valueF("fullres.slice"), chan);
+          calculateImageStats(itsRestoredStatsAndMask,itsRestoredCube,chan,params->valueF("fullres.slice"));
         }
         else {
           ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
           itsRestoredCube->writeFlexibleSlice(params->valueF("image.slice"), chan);
+          itsRestoredStatsAndMask->calculate(itsRestoredCube->filename(),chan,params->valueF("image.slice"));
         }
     }
 
@@ -1862,3 +1871,19 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     throw AskapError(ex.what());
   }
 }
+
+void ContinuumWorker::calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                          boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
+                                          int channel, const casacore::Array<float>& arr)
+{
+    boost::optional<float> oversamplingFactor = imgCube->oversamplingFactor();
+    if ( oversamplingFactor ) {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*oversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        statsAndMask->calculate(imgCube->filename(),channel,fullresarr);
+    } else {
+        statsAndMask->calculate(imgCube->filename(),channel,arr);
+    }
+}
+

@@ -82,7 +82,6 @@ public:
             std::string image = subset.getString("image","");
             bool editImage = subset.getBool("editImage", false);
             bool editStats = subset.getBool("editStats", false);
-            std::string preMaskStats = subset.getString("preMaskStats","/tmp/preMaskStats.txt");
             std::string outputStats = subset.getString("outputStats","");
             bool useSignificance = subset.getBool("useSignificance", false);
             float threshold = subset.getFloat("significanceLevel", 10.);
@@ -112,9 +111,6 @@ public:
                     casacore::IPosition blc(4,0,0,0,chan);
                     casacore::IPosition trc = shape - 1; 
                     trc(3) = chan;
-                    //ASKAPLOG_INFO_STR(logger, "shape - 1: " << shape - 1);
-                    //ASKAPLOG_INFO_STR(logger, "shape: " << shape);
-                    //ASKAPLOG_INFO_STR(logger,"blc: " << blc << "; trc: " << trc); 
                     statisticsAndMask.calculate(image,chan,blc,trc); 
                 }
             }
@@ -129,16 +125,10 @@ public:
                 // do the masking
                 statisticsAndMask.maskBadChannels(image,threshold,badMADFM,maskBlank, useSignificance, 
                                                   useNoise, editStats, editImage, outputStats);
-                // write the stats to image table
-                //statisticsAndMask.writeStatsToImageTable("mycube.fits");
-                statisticsAndMask.writeStatsToImageTable(image);
-                if ( editStats ) {
-                    statisticsAndMask.writeStatsToFile(preMaskStats);
+                if ( editImage ) {
+                    //write the stats to image table
+                    statisticsAndMask.writeStatsToImageTable(image);
                 }
-                //const auto& statsPerChannelMap = statisticsAndMask.statsPerChannelMap();
-                //for (const auto& kvp : statsPerChannelMap) {
-                //    ASKAPLOG_INFO_STR(logger,"processing channel: " << kvp.second.channel);
-                //}
             } else {
                 // workers send the stats to the master
                 statisticsAndMask.sendStats();

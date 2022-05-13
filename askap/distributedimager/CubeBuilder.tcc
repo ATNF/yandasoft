@@ -548,6 +548,16 @@ void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLi
     }
 }
 
+template <class T>
+boost::shared_ptr<accessors::IImageAccess<T>>  CubeBuilder<T>::imageHandler()
+{
+    return itsCube;
+}
 
+template <class T>
+boost::optional<float> CubeBuilder<T>::oversamplingFactor()
+{
+    return itsExtraOversamplingFactor;
+}
 } // namespace cp
 } // namespace askap
