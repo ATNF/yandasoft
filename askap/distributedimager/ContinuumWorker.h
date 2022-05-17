@@ -62,8 +62,7 @@ class ContinuumWorker
 
         void run(void);
 
-
-
+        void writeCubeStatistics();
 
     private:
 

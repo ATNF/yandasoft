@@ -36,6 +36,7 @@
 #include <casacore/casa/Arrays/Array.h>
 
 #include <string>
+#include <set>
 #include <vector>
 #include <map>
 #include <string>
@@ -76,6 +77,9 @@ class StatsAndMask {
         /// @param[in] cubeName - name of image cube
         /// @param[in] imageCube - a boost shared pointer to the image access instance
         StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube);
+        StatsAndMask(askapparallel::AskapParallel &comms)
+        : itsComms(comms)
+        {}
 
         /// @brief - disallowed default, copy and move constructors
         StatsAndMask() = delete;
@@ -145,7 +149,7 @@ class StatsAndMask {
         ///          and adds them to the itsStatsPerChannelMap. The idea is that the
         ///          master rank/process calls this method to collect all the statistics
         ///          from the workers.
-        void receiveStats();
+        void receiveStats(const std::set<unsigned int>& excludedRanks = std::set<unsigned int> {0});
 
         /// @brief This method sends the statistics of the channels that it collects back
         ///        to the master (i.e destRank)
@@ -154,7 +158,15 @@ class StatsAndMask {
         ///        this method to send all the statistics it collects back to the master rank.
         /// @param[in] destRank - process (master rank) that receives the statistics.
         void sendStats(int destRank = 0);
+        void print() const;
+        void set(const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
+        {
+            itsImageCube = imageCube;
+            itsImageName = cubeName;
+        }
     private:
+        void updateParams();
+
         /// @brief calculates the per plane statistics
         /// @param[in] channel - chanel of the image where the statistics are to be calculated
         /// @param[in] arr - the channel image where the statistics are calculated
