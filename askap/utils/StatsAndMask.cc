@@ -578,21 +578,25 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
         return;
     }
 
-    casa::IPosition cubeShape = iacc.shape(imgName);
-    casa::CoordinateSystem coo = iacc.coordSys(imgName);
-    const int specAxis = coo.spectralAxisNumber();
-    const auto numberOfChansInImage = cubeShape[specAxis];
-    ASKAPLOG_INFO_STR(logger, "numberOfChansInImage: " << numberOfChansInImage);
-    // the iacc is created on the stack so we dont want iaccPtr to delete it when
-    // it goes out of scope and hence contruct it with NullDeleter
-    boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,NullDeleter{});
-    StatsAndMask stats(comms,imgName,iaccPtr);
-    for (unsigned int chan = 0; chan < numberOfChansInImage; chan++) {
-        casacore::IPosition blc(4,0,0,0,chan);
-        casacore::IPosition trc = cubeShape - 1;
-        trc(3) = chan;
-        casacore::Array<float> imagePerPlane = iacc.read(imgName,blc,trc);
-        stats.calculate(imgName,chan,imagePerPlane);
+    if ( (imgName.find("taylor.0") != std::string::npos) || 
+         (imgName.find("taylor") == std::string::npos) ) { 
+        // Stats is only done for taylor.0 image if nterms > 1
+        // the iacc is created on the stack so we dont want iaccPtr to delete it when
+        // it goes out of scope and hence contruct it with NullDeleter
+        boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,NullDeleter{});
+        casa::IPosition cubeShape = iaccPtr->shape(imgName);
+        casa::CoordinateSystem coo = iaccPtr->coordSys(imgName);
+        const int specAxis = coo.spectralAxisNumber();
+        const auto numberOfChansInImage = cubeShape[specAxis];
+        ASKAPLOG_INFO_STR(logger, "numberOfChansInImage: " << numberOfChansInImage);
+        StatsAndMask stats(comms,imgName,iaccPtr);
+        for (unsigned int chan = 0; chan < numberOfChansInImage; chan++) {
+            casacore::IPosition blc(4,0,0,0,chan);
+            casacore::IPosition trc = cubeShape - 1;
+            trc(3) = chan;
+            casacore::Array<float> imagePerPlane = iaccPtr->read(imgName,blc,trc);
+            stats.calculate(imgName,chan,imagePerPlane);
+        }
+        stats.writeStatsToImageTable(imgName);
     }
-    stats.writeStatsToImageTable(imgName);
 }
