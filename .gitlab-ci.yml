@@ -19,15 +19,9 @@ build:
   before_script:
     - apt update && apt install -y g++ git cmake  
     - ln -s /usr/lib/x86_64-linux-gnu/ /usr/lib64
-    - eval $(ssh-agent -s)
-    - echo "$GITLAB_SSH_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - ssh-keyscan -p 7999 bitbucket.csiro.au >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
-    - cmake -C /askap/config/askap.gitlab.cmake.in -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
+    - cmake -C /askap/config/askap.gitlab.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
     - cmake --build _build --target install -j $n_cpus
   artifacts:
     paths:
