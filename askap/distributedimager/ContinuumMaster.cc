@@ -53,7 +53,6 @@
 #include <askap/imageaccess/BeamLogger.h>
 #include <askap/parallel/ImagerParallel.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-#include <askap/utils//StatsAndMask.h>
 
 // Local includes
 #include "askap/distributedimager/AdviseDI.h"

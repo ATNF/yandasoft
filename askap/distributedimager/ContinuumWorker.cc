@@ -146,7 +146,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     }
 
     itsRestore=parset.getBool("restore", false); // do restore and write restored image
-    ASKAPLOG_INFO_STR(logger,"restore: " << itsRestore);
     itsWriteResidual=parset.getBool("residuals",false); // write residual image
     itsWriteResidual=parset.getBool("write.residualimage",itsWriteResidual); // alternative param name
     itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
@@ -312,7 +311,8 @@ void ContinuumWorker::run(void)
 
   itsComms.barrier(itsComms.theWorkers());
   const bool singleoutputfile = itsParset.getBool("singleoutputfile", false);
-  if ( singleoutputfile ) {
+  const bool calcstats = itsParset.getBool("calcstats", false);
+  if ( singleoutputfile && calcstats ) {
     writeCubeStatistics();
     itsComms.barrier(itsComms.theWorkers());
   }
@@ -1911,7 +1911,6 @@ void ContinuumWorker::writeCubeStatistics()
     // unsigned int statsCollectorRank; //  = reinterpret_cast<unsigned int> (creators.front());
     int temp = creators.front();
     unsigned int statsCollectorRank = static_cast<unsigned int> (temp);
-
     ASKAPLOG_INFO_STR(logger, "statsCollectorRank = " << statsCollectorRank);
     if ( itsRestore ) {
       if ( itsComms.rank() == statsCollectorRank ) {
@@ -1978,5 +1977,7 @@ void ContinuumWorker::writeCubeStatistics()
         }
       }
     } 
+  } else {
+    ASKAPLOG_INFO_STR(logger,"creators.size() < 0");
   }
 }

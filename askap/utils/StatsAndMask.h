@@ -164,6 +164,21 @@ class StatsAndMask {
             itsImageCube = imageCube;
             itsImageName = cubeName;
         }
+        /// @brief This static function  writes the statistics to the image cube
+        /// @detail This static function writes the statistics to the image cube.
+        ///         In the imager.cc code, it is called by the ImagerParallel object
+        ///         after the image cube is created/saved i.e ( after SynthesisParamsHelper::saveImageParameter)
+        ///         is invoked. The caller can stop the statistics collection/calculation by 
+        ///         setting the Cimager.calcstats = false
+        /// @param[in] name - name of the image
+        /// @param[in] comms - MPI comms
+        /// @param[in] iacc - image access object
+        /// @param[in] imgName - name of image cube
+        /// @param[in] parset - configuration parameters object
+        static void writeStatsToImageTable(askapparallel::AskapParallel &comms,
+                                           accessors::IImageAccess<float>& iacc,
+                                           const std::string& imgName,
+                                           const LOFAR::ParameterSet& parset);
     private:
         void updateParams();
 
@@ -188,6 +203,12 @@ class StatsAndMask {
         /// A map contains the per plane/chanel image statistics
         std::map<Channel,Stats> itsStatsPerChannelMap;
         //std::map<Channel,bool>  itsMasksPerChannelMap;
+
+        /// Helper class to prevent boost::shared_ptr from deleting the pointer
+        /// it points to.
+        struct NullDeleter {
+            void operator()(askap::accessors::IImageAccess<float>* ptr) {}
+        };
 };
 }
 }

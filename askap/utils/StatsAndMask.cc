@@ -189,9 +189,6 @@ Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>&
                             << ", mean: " << stats.mean << ", median: " << stats.median << ", madfm: " << stats.madfm
                             << ", maxval: " << stats.maxval << ", stats.minval: " << stats.minval
                             << ", onepc: " << stats.onepc);
-        if ( channel == 2 ) {
-            ASKAPLOG_INFO_STR(logger,imgPerPlane);
-        }
     }
     return stats;
 }
@@ -293,6 +290,7 @@ void StatsAndMask::print() const
                                 << ", minval: " << stats.minval);
     }
 }
+
 /// @brief This method writes the statistics to the image cube
 /// @param[in] catalogue - name of the file to be written to
 void StatsAndMask::writeStatsToImageTable(const std::string& name)
@@ -554,4 +552,47 @@ void StatsAndMask::updateParams()
         }
         // END NOTE
     }
+}
+
+/// @brief This static function  writes the statistics to the image cube
+/// @detail This static function writes the statistics to the image cube.
+///         In the imager.cc code, it is called by the ImagerParallel object
+///         after the image cube is created/saved i.e ( after SynthesisParamsHelper::saveImageParameter)
+///         is invoked. The caller can stop the statistics collection/calculation by
+///         setting the Cimager.calcstats = false
+/// @param[in] name - name of the image
+/// @param[in] comms - MPI comms
+/// @param[in] iacc - image access object
+/// @param[in] imgName - name of image cube
+/// @param[in] parset - configuration parameters object
+void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
+                                          accessors::IImageAccess<float>& iacc,
+                                          const std::string& imgName,
+                                          const LOFAR::ParameterSet& parset)
+{
+    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable using static method. imgName: " << imgName);
+    const bool singleoutputfile = parset.getBool("singleoutputfile", false);
+    const bool calcstats = parset.getBool("calcstats", false);
+    if ( !calcstats ) {
+        ASKAPLOG_INFO_STR(logger,"calcstats param is false - StatsAndMask is not used");
+        return;
+    }
+
+    casa::IPosition cubeShape = iacc.shape(imgName);
+    casa::CoordinateSystem coo = iacc.coordSys(imgName);
+    const int specAxis = coo.spectralAxisNumber();
+    const auto numberOfChansInImage = cubeShape[specAxis];
+    ASKAPLOG_INFO_STR(logger, "numberOfChansInImage: " << numberOfChansInImage);
+    // the iacc is created on the stack so we dont want iaccPtr to delete it when
+    // it goes out of scope and hence contruct it with NullDeleter
+    boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,NullDeleter{});
+    StatsAndMask stats(comms,imgName,iaccPtr);
+    for (unsigned int chan = 0; chan < numberOfChansInImage; chan++) {
+        casacore::IPosition blc(4,0,0,0,chan);
+        casacore::IPosition trc = cubeShape - 1;
+        trc(3) = chan;
+        casacore::Array<float> imagePerPlane = iacc.read(imgName,blc,trc);
+        stats.calculate(imgName,chan,imagePerPlane);
+    }
+    stats.writeStatsToImageTable(imgName);
 }
