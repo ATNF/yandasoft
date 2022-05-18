@@ -51,7 +51,7 @@ test:
     - ctest -C DartConfiguration.tcl -T test --verbose --no-compress-output
   after_script:
     - cd _build
-    - ../askap-cmake/ctest2junit > ctest.xml
+    - askap-cmake/ctest2junit > ctest.xml
   artifacts:
     paths:
       - _build
