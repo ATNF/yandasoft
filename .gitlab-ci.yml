@@ -33,7 +33,6 @@ build:
     paths:
       - _build
       - _install
-      - askap-cmake
 
 test:
   extends: .common
