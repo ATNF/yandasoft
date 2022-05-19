@@ -301,3 +301,4 @@ std::vector<int> ContinuumMaster::getBeams()
     }
     return bs;
 }
+

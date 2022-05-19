@@ -51,27 +51,8 @@ using namespace askap::accessors;
 /// @param[in] imageCube - a boost shared pointer to the image access instance
 StatsAndMask::StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, 
                            boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
-    : itsComms(comms), itsImageName(cubeName), itsImageCube(imageCube),
-    itsUnit(imageCube->getUnits(cubeName)), itsScaleFactor(1.0)
+    : itsComms(comms), itsImageName(cubeName), itsImageCube(imageCube)
 {
-    if ( itsUnit == "Jy/beam" ) {
-        itsScaleFactor = 1000.0;
-    }
-    ASKAPLOG_INFO_STR(logger,"unit: " << itsUnit << ", scale: " << itsScaleFactor);
-
-    
-    const casacore::CoordinateSystem coord = imageCube->coordSys(cubeName);
-    const casacore::SpectralCoordinate& spectralCoord = coord.spectralCoordinate();
-    const casacore::Vector<casacore::Double> refFreq = spectralCoord.referenceValue();
-    const casacore::Vector<casacore::Double> increment = spectralCoord.increment();
-    ASKAPCHECK(refFreq.capacity() == 1, "Reference freq vector is NOT 1");
-    ASKAPCHECK(increment.capacity() == 1, "Freq increment vector is NOT 1");
-    itsRefFrequency = refFreq[0];
-    itsFreqIncrement = increment[0];
-    if ( comms.rank() == 0 ) {
-        ASKAPLOG_INFO_STR(logger,"refFreq size: " << refFreq.capacity() << ", value: " << refFreq[0]);
-        ASKAPLOG_INFO_STR(logger,"increment size: " << increment.capacity() << ", value: " << increment[0]);
-    }
 }
 
 /// @brief - set the scaling factor
@@ -96,13 +77,78 @@ void StatsAndMask::setUnits(const std::string& unit)
 void StatsAndMask::calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc)
 {
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
-        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);
-        
-        if ( itsComms.rank() == 0 ) {
-                
+        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);    
+        // remove all the NaN from the imgPerPlane because it messes it the calculation
+        // of the statistics
+        casacore::Vector<float> nonMaskArray(imgPerPlane.size());
+        unsigned long index = 0;
+        for(size_t i=0; i < imgPerPlane.size(); i++) {
+            if ( ! casacore::isNaN(imgPerPlane.data()[i]) ) {
+                nonMaskArray[index] = imgPerPlane.data()[i];
+                index += 1;
+            }
         }
+        nonMaskArray.resize(index,true);
+        ASKAPLOG_INFO_STR(logger,"Channel: " << channel << ", imgPerPlane size: " << imgPerPlane.size() << ", nonMaskArray size: "
+                              << nonMaskArray.size() << ", index: " << index);
+
+        //Stats stats = calculateImpl(channel,imgPerPlane);
         Stats stats;
-        // round the float to 3 decimal points
+        if ( nonMaskArray.size() > 0 ) {
+          stats = calculateImpl(channel,nonMaskArray);
+        } else { 
+            // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
+            // in this case, dont use nonMaskArray 
+            stats = calculateImpl(channel,imgPerPlane);
+        }
+        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+    }
+}
+
+/// @brief calculates the per plane statistics
+/// @param[in] name - name of image cube
+/// @param[in] channel - chanel of the image where the statistics are to be calculated
+/// @param[in] arr - the channel image where the statistics are calculated
+void StatsAndMask::calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr)
+{
+    // remove all the NaN from the input arr because it messes it the calculation
+    // of the statistics
+    casacore::Vector<float> nonMaskArray(arr.size());
+    unsigned long index = 0;
+    for(size_t i=0; i < arr.size(); i++) {
+        if ( ! casacore::isNaN(arr.data()[i]) ) {
+            nonMaskArray[index] = arr.data()[i];
+            index += 1;
+        }
+    }
+    nonMaskArray.resize(index);
+
+    Stats stats;
+    if ( nonMaskArray.size() > 0 ) {
+      stats = calculateImpl(channel,nonMaskArray);
+    } else {
+        // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
+        // in this case, dont use nonMaskArray
+        stats = calculateImpl(channel,arr);
+    }
+
+    // check if the channel is in the map
+    auto search = itsStatsPerChannelMap.find(channel);
+    if ( search != itsStatsPerChannelMap.end() ) {
+        // erase it
+        itsStatsPerChannelMap.erase(search);
+    }
+    itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+}
+
+Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>& imgPerPlane)
+{
+
+    updateParams();
+
+    Stats stats;
+
+    if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
         stats.rms = itsScaleFactor * casacore::rms(imgPerPlane);
         stats.std = itsScaleFactor * casacore::stddev(imgPerPlane);
         stats.mean = itsScaleFactor * casacore::mean(imgPerPlane);
@@ -113,6 +159,7 @@ void StatsAndMask::calculate(const std::string& name, Channel channel,const casa
         stats.onepc =  itsScaleFactor * casacore::fractile(imgPerPlane,0.01);
         stats.channel = channel;
         stats.freq = (itsRefFrequency + (channel*itsFreqIncrement))/1.0e6;
+
 
         if ( std::isnan(stats.rms) )
             stats.rms = 0.0;
@@ -138,22 +185,31 @@ void StatsAndMask::calculate(const std::string& name, Channel channel,const casa
         if ( std::isnan(stats.minval) )
             stats.minval = 0.0;
 
-        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+        ASKAPLOG_INFO_STR(logger,"channel: " << stats.channel << ", rms: " << stats.rms << ", std: " << stats.std
+                            << ", mean: " << stats.mean << ", median: " << stats.median << ", madfm: " << stats.madfm
+                            << ", maxval: " << stats.maxval << ", stats.minval: " << stats.minval
+                            << ", onepc: " << stats.onepc);
     }
+    return stats;
 }
 
 /// @brief returns the image cube's statistics
 /// @return A map of the per plane statistics of the image cube.
 ///         The key of the map is the image channel and the value
 ///         contains the iimage statistics of the channel.
-void StatsAndMask::receiveStats()
+void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
 {
     MPI_Status status;
     // this method is called by the master i.e rank = 0
     // number of workers not including the master
     int numWorkers = itsComms.nProcs() - 1;
-    for ( int workerRank = 1; workerRank <= numWorkers; workerRank++ ) {
-        int source = workerRank;
+    int ranks = itsComms.nProcs();
+    for ( int rank = 0; rank < ranks; rank++ ) {
+        if ( excludedRanks.find(rank) != excludedRanks.end() ) {
+            ASKAPLOG_INFO_STR(logger,"Skipping rank: " << rank);
+            continue;
+        }
+        int source = rank;
         // first read the message size    
         unsigned char* msgSizebuffer[sizeof(unsigned long)];
         itsComms.receive(msgSizebuffer,sizeof(unsigned long),source);
@@ -163,27 +219,25 @@ void StatsAndMask::receiveStats()
         ASKAPCHECK((msgSize % sizeof(Stats)) == 0, 
                     "StatsAndMask::receiveStats: msgSize is a multiple of sizeof(Stats)");
         // ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() << " - number of stats objects received: " << msgSize/sizeof(Stats));
-        // now read the stats
-        boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
-        itsComms.receive(buffer.get(),msgSize,source);
-        // add the stats to the map
-        unsigned long numberOfStatsObjsReceived = (msgSize/sizeof(Stats));
-        //ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
-        //                        << " - msgSize: " << msgSize << "; sizeof(Stats): " << sizeof(Stats)
-        //                  << "; numberOfStatsObjsReceived: " << numberOfStatsObjsReceived);
-        unsigned char* ptr = buffer.get();
-        for (unsigned long i = 0; i < numberOfStatsObjsReceived; i++) {
-            Stats s;
-            //std::memcpy(reinterpret_cast<void *>(&s),buffer.get(),sizeof(Stats));
-            std::memcpy(reinterpret_cast<void *>(&s),ptr,sizeof(Stats));
-            ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
+        // now read the stats but nothing to read if msgSize == 0
+        if ( msgSize > 0 ) {
+            boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
+            itsComms.receive(buffer.get(),msgSize,source);
+            // add the stats to the map
+            unsigned long numberOfStatsObjsReceived = (msgSize/sizeof(Stats));
+            unsigned char* ptr = buffer.get();
+            for (unsigned long i = 0; i < numberOfStatsObjsReceived; i++) {
+                Stats s;
+                //std::memcpy(reinterpret_cast<void *>(&s),buffer.get(),sizeof(Stats));
+                std::memcpy(reinterpret_cast<void *>(&s),ptr,sizeof(Stats));
+                ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
                                 << " - Received stats from channel: " << s.channel);
 
-            itsStatsPerChannelMap.insert(std::make_pair(s.channel,s));
-            ptr = ptr + sizeof(Stats);
+                itsStatsPerChannelMap.insert(std::make_pair(s.channel,s));
+                ptr = ptr + sizeof(Stats);
+            }
         }
     }
-
 }
 
 /// @brief This method sends the statistics of the channels that it collects back
@@ -202,17 +256,39 @@ void StatsAndMask::sendStats(int destRank)
     std::memcpy(msgSizebuffer,reinterpret_cast<void *>(&msgSize),sizeof(unsigned long));
     itsComms.send(msgSizebuffer,sizeof(unsigned long),destRank);
 
-    // put the stats in the buffer
-    boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
-    unsigned char* ptr = buffer.get();
+    ASKAPLOG_INFO_STR(logger,"rank: " << itsComms.rank() << " sends  " 
+                        << msgSize << " bytes to rank " << destRank);
+    // if the map is empty then got nothing to send
+    if ( msgSize > 0 ) {
+        // put the stats in the buffer
+        boost::shared_array<unsigned char> buffer(new unsigned char[msgSize]);
+        unsigned char* ptr = buffer.get();
+        for (auto& kvp : itsStatsPerChannelMap) {
+            auto& stats = kvp.second; // stat's type is Stats
+            std::memcpy(ptr,reinterpret_cast<void *> (&stats),sizeof(Stats));
+            ptr = ptr + sizeof(Stats);
+        }
+        // now send the stats back to the destRank
+        itsComms.send(buffer.get(),msgSize,destRank);
+    }
+}
+
+void StatsAndMask::print() const
+{
     for (auto& kvp : itsStatsPerChannelMap) {
         auto& stats = kvp.second; // stat's type is Stats
-        std::memcpy(ptr,reinterpret_cast<void *> (&stats),sizeof(Stats));
-        ptr = ptr + sizeof(Stats);
+        ASKAPLOG_INFO_STR(logger,"=====================================");
+        ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank()
+                                << "chan: " << stats.channel
+                                << ", rms: " << stats.rms
+                                << ", std: " << stats.std
+                                << ", mean: " << stats.mean
+                                << ", onepc: " << stats.onepc
+                                << ", median: " << stats.median
+                                << ", madfm: " << stats.madfm
+                                << ", maxval: " << stats.maxval
+                                << ", minval: " << stats.minval);
     }
-
-    // now send the stats back to the destRank
-    itsComms.send(buffer.get(),msgSize,destRank);
 }
 
 /// @brief This method writes the statistics to the image cube
@@ -285,7 +361,7 @@ void StatsAndMask::writeStatsToImageTable(const std::string& name)
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
         imageCube->setInfo(name,statsRecord);
     }
-    
+    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - exit: " << rows);
 }
 
 /// @brief This method writes the statistics to the image cube
@@ -324,15 +400,15 @@ void StatsAndMask::writeStatsToFile(const std::string& catalogue)
         for ( const auto& kvp : itsStatsPerChannelMap ) {
             const auto& statsPerChan = kvp.second;
             ofile << std::setw(10) << statsPerChan.channel;
-            ofile << std::setw(15) << std::fixed <<  std::setprecision(4) << statsPerChan.freq;
+            ofile << std::setw(15) << std::fixed <<  std::setprecision(5) << statsPerChan.freq;
 
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.mean;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.std;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.median;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.madfm;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.onepc;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.minval;
-            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.maxval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.mean;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.std;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.median;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.madfm;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.onepc;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.minval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.maxval;
             ofile << std::endl;
         }
         
@@ -444,5 +520,83 @@ void StatsAndMask::maskBadChannels(const std::string& image, float threshold, fl
                 writeStatsToFile(outputStats);
             }
         }
+    }
+}
+
+void StatsAndMask::updateParams()
+{
+    if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
+        // NOTE: dont put these statements in the constructor because in some cases, the imager which
+        // uses this class for statistics collection passes in the IImageAccess to the constructor without calling the create()
+        // method. If this method is called then the create() has been invoked and hence the IImageAccess is valid.
+        itsUnit = imageCube->getUnits(itsImageName);
+        itsScaleFactor = 1.0;
+
+        if ( itsUnit == "Jy/beam" ) {
+            itsScaleFactor = 1000.0;
+        }
+        ASKAPLOG_INFO_STR(logger,"unit: " << itsUnit << ", scale: " << itsScaleFactor);
+
+
+        const casacore::CoordinateSystem coord = imageCube->coordSys(itsImageName);
+        const casacore::SpectralCoordinate& spectralCoord = coord.spectralCoordinate();
+        const casacore::Vector<casacore::Double> refFreq = spectralCoord.referenceValue();
+        const casacore::Vector<casacore::Double> increment = spectralCoord.increment();
+        ASKAPCHECK(refFreq.capacity() == 1, "Reference freq vector is NOT 1");
+        ASKAPCHECK(increment.capacity() == 1, "Freq increment vector is NOT 1");
+        itsRefFrequency = refFreq[0];
+        itsFreqIncrement = increment[0];
+        if ( itsComms.rank() == 0 ) {
+            ASKAPLOG_INFO_STR(logger,"refFreq size: " << refFreq.capacity() << ", value: " << refFreq[0]);
+            ASKAPLOG_INFO_STR(logger,"increment size: " << increment.capacity() << ", value: " << increment[0]);
+        }
+        // END NOTE
+    }
+}
+
+/// @brief This static function  writes the statistics to the image cube
+/// @detail This static function writes the statistics to the image cube.
+///         In the imager.cc code, it is called by the ImagerParallel object
+///         after the image cube is created/saved i.e ( after SynthesisParamsHelper::saveImageParameter)
+///         is invoked. The caller can stop the statistics collection/calculation by
+///         setting the Cimager.calcstats = false
+/// @param[in] name - name of the image
+/// @param[in] comms - MPI comms
+/// @param[in] iacc - image access object
+/// @param[in] imgName - name of image cube
+/// @param[in] parset - configuration parameters object
+void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
+                                          accessors::IImageAccess<float>& iacc,
+                                          const std::string& imgName,
+                                          const LOFAR::ParameterSet& parset)
+{
+    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable using static method. imgName: " << imgName);
+    const bool singleoutputfile = parset.getBool("singleoutputfile", false);
+    const bool calcstats = parset.getBool("calcstats", false);
+    if ( !calcstats ) {
+        ASKAPLOG_INFO_STR(logger,"calcstats param is false - StatsAndMask is not used");
+        return;
+    }
+
+    if ( (imgName.find("taylor.0") != std::string::npos) || 
+         (imgName.find("taylor") == std::string::npos) ) { 
+        // Stats is only done for taylor.0 image if nterms > 1
+        // the iacc is created on the stack so we dont want iaccPtr to delete it when
+        // it goes out of scope and hence contruct it with NullDeleter
+        boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,NullDeleter{});
+        casa::IPosition cubeShape = iaccPtr->shape(imgName);
+        casa::CoordinateSystem coo = iaccPtr->coordSys(imgName);
+        const int specAxis = coo.spectralAxisNumber();
+        const auto numberOfChansInImage = cubeShape[specAxis];
+        ASKAPLOG_INFO_STR(logger, "numberOfChansInImage: " << numberOfChansInImage);
+        StatsAndMask stats(comms,imgName,iaccPtr);
+        for (unsigned int chan = 0; chan < numberOfChansInImage; chan++) {
+            casacore::IPosition blc(4,0,0,0,chan);
+            casacore::IPosition trc = cubeShape - 1;
+            trc(3) = chan;
+            casacore::Array<float> imagePerPlane = iaccPtr->read(imgName,blc,trc);
+            stats.calculate(imgName,chan,imagePerPlane);
+        }
+        stats.writeStatsToImageTable(imgName);
     }
 }

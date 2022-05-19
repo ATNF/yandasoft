@@ -171,9 +171,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
 
 ContinuumWorker::~ContinuumWorker()
 {
-
-
-
 }
 
 void ContinuumWorker::run(void)
@@ -316,8 +313,15 @@ void ContinuumWorker::run(void)
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " finished");
 
   itsComms.barrier(itsComms.theWorkers());
+  const bool singleoutputfile = itsParset.getBool("singleoutputfile", false);
+  const bool calcstats = itsParset.getBool("calcstats", false);
+  if ( singleoutputfile && calcstats ) {
+    writeCubeStatistics();
+    itsComms.barrier(itsComms.theWorkers());
+  }
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed final barrier");
 }
+
 void ContinuumWorker::deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset)
 {
 
@@ -662,6 +666,8 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
+        ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object for residual cube");
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
@@ -694,6 +700,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
 
     } else {
@@ -706,6 +715,7 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset,  weights_name));
@@ -739,6 +749,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
     }
   }
@@ -1528,6 +1541,7 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       else {
           ASKAPLOG_INFO_STR(logger, "Writing Residual");
           itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+          itsResidualStatsAndMask->calculate(itsResidualCube->filename(),chan,params->valueF("residual.slice"));
       }
   }
 
@@ -1634,11 +1648,15 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
         ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
         if (params->has("fullres.slice")) {
           // Restored image has been generated at full resolution, so avoid further oversampling
+          ASKAPLOG_INFO_STR(logger, "Writing fullres.slice");
           itsRestoredCube->writeRigidSlice(params->valueF("fullres.slice"), chan);
+          calculateImageStats(itsRestoredStatsAndMask,itsRestoredCube,chan,params->valueF("fullres.slice"));
         }
         else {
           ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
+          ASKAPLOG_INFO_STR(logger, "Writing image.slice");
           itsRestoredCube->writeFlexibleSlice(params->valueF("image.slice"), chan);
+          itsRestoredStatsAndMask->calculate(itsRestoredCube->filename(),chan,params->valueF("image.slice"));
         }
     }
 
@@ -1863,5 +1881,106 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
 
   } catch (const LOFAR::APSException &ex) {
     throw AskapError(ex.what());
+  }
+}
+
+void ContinuumWorker::calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                          boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
+                                          int channel, const casacore::Array<float>& arr)
+{
+    boost::optional<float> oversamplingFactor = imgCube->oversamplingFactor();
+    if ( oversamplingFactor ) {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*oversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        statsAndMask->calculate(imgCube->filename(),channel,fullresarr);
+    } else {
+        statsAndMask->calculate(imgCube->filename(),channel,arr);
+    }
+}
+
+void ContinuumWorker::writeCubeStatistics()
+{
+  const std::string imageType = itsParset.getString("imagetype","casa");
+
+  // get one of the ranks that create the cube
+  std::list<int> creators = itsComms.getCubeCreators();
+  creators.sort();
+
+  if ( creators.size() > 0 ) {
+    // make the first rank in the cube creator to be the receiver of the cube statistics
+    // and the rest of the workers send stats to it
+    // NOTE: the compiler wont let me do this :
+    // unsigned int statsCollectorRank; //  = reinterpret_cast<unsigned int> (creators.front());
+    int temp = creators.front();
+    unsigned int statsCollectorRank = static_cast<unsigned int> (temp);
+    ASKAPLOG_INFO_STR(logger, "statsCollectorRank = " << statsCollectorRank);
+    if ( itsRestore ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsRestoredStatsAndMask ) {
+          std::string fullFilename = itsRestoredCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsRestoredStatsAndMask->receiveStats(excludedRanks);
+          }
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to restored image: " << fullFilename);
+          itsRestoredStatsAndMask->writeStatsToFile("./imgstats.txt");
+          itsRestoredStatsAndMask->writeStatsToImageTable(fullFilename);
+        } else {
+            ASKAPLOG_INFO_STR(logger, "itsRestoredStatsAndMask of statsCollectorRank: " << statsCollectorRank << " is null");
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsRestoredStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsRestoredStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    }
+    ASKAPLOG_INFO_STR(logger,"Waiting for all ranks to finish");
+    itsComms.barrier(itsComms.theWorkers());
+    // write the stats to the residual cube
+    if ( itsWriteResidual ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsResidualStatsAndMask ) {
+          std::string fullFilename = itsResidualCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsResidualStatsAndMask->receiveStats(excludedRanks);
+          }
+          itsResidualStatsAndMask->writeStatsToFile("./imgstats_residual.txt");
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to residual image: " << fullFilename);
+          itsResidualStatsAndMask->writeStatsToImageTable(fullFilename);
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsResidualStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsResidualStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    } 
+  } else {
+    ASKAPLOG_INFO_STR(logger,"creators.size() < 0");
   }
 }

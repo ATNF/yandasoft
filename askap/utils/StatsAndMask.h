@@ -36,6 +36,7 @@
 #include <casacore/casa/Arrays/Array.h>
 
 #include <string>
+#include <set>
 #include <vector>
 #include <map>
 #include <string>
@@ -47,7 +48,7 @@
 
 namespace askap {
 namespace utils {
-using Channel = uint;
+using Channel = unsigned int;
 
 /// @brief a structure to store the statistics 
 struct Stats {
@@ -76,6 +77,9 @@ class StatsAndMask {
         /// @param[in] cubeName - name of image cube
         /// @param[in] imageCube - a boost shared pointer to the image access instance
         StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube);
+        StatsAndMask(askapparallel::AskapParallel &comms)
+        : itsComms(comms)
+        {}
 
         /// @brief - disallowed default, copy and move constructors
         StatsAndMask() = delete;
@@ -83,7 +87,7 @@ class StatsAndMask {
         StatsAndMask(StatsAndMask&&) = delete;
         StatsAndMask& operator=(const StatsAndMask&) = delete;
         StatsAndMask& operator=(StatsAndMask&&) = delete;
-        
+        ~StatsAndMask() {}
 
         /// @brief - set the scaling factor
         /// @param[in] scaleFactor - factor to be set
@@ -98,6 +102,11 @@ class StatsAndMask {
         /// @param[in] blc - bottom left corner of the image plane
         /// @param[in] trc - top right corner of the image plane
         void calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc);
+        /// @brief calculates the per plane statistics
+        /// @param[in] name - name of image cube
+        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] arr - the channel image where the statistics are calculated
+        void calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr);
 
         /// @brief returns the image cube's statistics
         /// @return A map of the per plane statistics of the image cube.
@@ -140,7 +149,7 @@ class StatsAndMask {
         ///          and adds them to the itsStatsPerChannelMap. The idea is that the
         ///          master rank/process calls this method to collect all the statistics
         ///          from the workers.
-        void receiveStats();
+        void receiveStats(const std::set<unsigned int>& excludedRanks = std::set<unsigned int> {0});
 
         /// @brief This method sends the statistics of the channels that it collects back
         ///        to the master (i.e destRank)
@@ -149,7 +158,36 @@ class StatsAndMask {
         ///        this method to send all the statistics it collects back to the master rank.
         /// @param[in] destRank - process (master rank) that receives the statistics.
         void sendStats(int destRank = 0);
+        void print() const;
+        void set(const std::string& cubeName, boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
+        {
+            itsImageCube = imageCube;
+            itsImageName = cubeName;
+        }
+        /// @brief This static function  writes the statistics to the image cube
+        /// @detail This static function writes the statistics to the image cube.
+        ///         In the imager.cc code, it is called by the ImagerParallel object
+        ///         after the image cube is created/saved i.e ( after SynthesisParamsHelper::saveImageParameter)
+        ///         is invoked. The caller can stop the statistics collection/calculation by 
+        ///         setting the Cimager.calcstats = false
+        /// @param[in] name - name of the image
+        /// @param[in] comms - MPI comms
+        /// @param[in] iacc - image access object
+        /// @param[in] imgName - name of image cube
+        /// @param[in] parset - configuration parameters object
+        static void writeStatsToImageTable(askapparallel::AskapParallel &comms,
+                                           accessors::IImageAccess<float>& iacc,
+                                           const std::string& imgName,
+                                           const LOFAR::ParameterSet& parset);
     private:
+        void updateParams();
+
+        /// @brief calculates the per plane statistics
+        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] arr - the channel image where the statistics are calculated
+        /// @return Stats - the statistics of the channel image
+        Stats calculateImpl(Channel channel, const casacore::Array<float>& arr);
+
         /// A weak pointer to the image access object
         boost::weak_ptr<askap::accessors::IImageAccess<>> itsImageCube;
         /// Name of the image cube
@@ -165,6 +203,12 @@ class StatsAndMask {
         /// A map contains the per plane/chanel image statistics
         std::map<Channel,Stats> itsStatsPerChannelMap;
         //std::map<Channel,bool>  itsMasksPerChannelMap;
+
+        /// Helper class to prevent boost::shared_ptr from deleting the pointer
+        /// it points to.
+        struct NullDeleter {
+            void operator()(askap::accessors::IImageAccess<float>* ptr) {}
+        };
 };
 }
 }

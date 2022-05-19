@@ -66,6 +66,7 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/profile/AskapProfiler.h>
 #include <askap/parallel/GroupVisAggregator.h>
 #include <askap/parallel/AdviseParallel.h>
+#include <askap/utils/StatsAndMask.h>
 
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>
@@ -910,12 +911,16 @@ namespace askap
                     ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << tmpname+postfix );
                     accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
                     SynthesisParamsHelper::saveImageParameter(*itsModel, *it, tmpname+postfix, boost::none, keywords, historyLines);
+                    // write the image stats to the image table
+                    askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,tmpname+postfix,parset());
                 }
             } else {
                 if ((it->find("image") == 0) && (itsWriteModelImage || postfix!="")) {
                     ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                     accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
                     SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, boost::none, keywords, historyLines);
+                    // write the image stats to the image table
+                    askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*it+postfix,parset());
                 }
             }
             if (((it->find("weights") == 0) && itsWriteWtImage) || ((it->find("mask") == 0) && itsWriteMaskImage))  {
@@ -930,12 +935,18 @@ namespace askap
                     if (!itsRestore && itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor, keywords, historyLines);
+                        // write the image stats to the image table
+                        accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                        askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*it+postfix,parset());
                     }
                 }
                 else {
                     if (itsWriteResidual) {
                         ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
                         SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor, keywords, historyLines);
+                        // write the image stats to the image table
+                        accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                        askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*it+postfix,parset());
                     }
                 }
 
@@ -1050,12 +1061,18 @@ namespace askap
                                 ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
                                         << tmpname+restore_suffix+".restored" );
                                 SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, tmpname+restore_suffix+".restored", boost::none, keywords, historyLines);
+                                // write the image stats to the image table
+                                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                                askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*ci+restore_suffix+".restored",parset());
                             }
                         } else {
                             if (!iph.isFacet() && ((ci->find("image") == 0)))  {
                                 ASKAPLOG_INFO_STR(logger, "Saving restored image " << *ci << " with name "
                                         << *ci+restore_suffix+".restored" );
                                 SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix+".restored", boost::none, keywords, historyLines);
+                                // write the image stats to the image table
+                                accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                                askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*ci+restore_suffix+".restored",parset());
                             }
                         }
                         if (!iph.isFacet() && ((ci->find("psf.image") == 0) && itsWritePsfImage))  {
@@ -1067,6 +1084,9 @@ namespace askap
                             ASKAPLOG_INFO_STR(logger, "Saving residual image " << *ci << " with name "
                                     << *ci+restore_suffix );
                             SynthesisParamsHelper::saveImageParameter(*itsModel, *ci, *ci+restore_suffix, extraOSfactor, keywords, historyLines);
+                            // write the image stats to the image table
+                            accessors::IImageAccess<>& imageAccessor = SynthesisParamsHelper::imageHandler();
+                            askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*ci+restore_suffix,parset());
                         }
                     }
                 }
