@@ -1,7 +1,7 @@
 # GitLab CI script for yandasoft
 
-#image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
-image: registry.gitlab.com/askapsdp/yandasoft_image/yandasoft
+image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
+#image: registry.gitlab.com/askapsdp/yandasoft_image/yandasoft
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
