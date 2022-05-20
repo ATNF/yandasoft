@@ -50,6 +50,23 @@ else()
   message (STATUS "No cmake config overrides file specified, using defaults")
 endif()
 
+# Get a remote git repo url, either already set from config, or from current git dir.
+message (STATUS "Determining remote git url prefix ...")
+if (NOT ASKAPSDP_GIT_URL)
+  message (STATUS "Remote git url prefix not specified with ASKAPSDP_GIT_URL value, using current git dir ...")
+  execute_process(
+     COMMAND git config --get remote.origin.url
+     COMMAND xargs dirname
+     OUTPUT_VARIABLE ASKAPSDP_GIT_URL
+     OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (NOT ASKAPSDP_GIT_URL)
+    message(FATAL_ERROR
+      "Could not determine a remote git url to retrieve dependencies. This can be because we are not in a git dir or you need to set ASKAPSDP_GIT_URL var in your dev-overrides or from the cmake command line with '-DASKAPSDP_GIT_URL=<repo-prefix>'.")
+  endif()
+endif()
+message(STATUS "Remote git url prefix is ${ASKAPSDP_GIT_URL}")
+
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
 
 
