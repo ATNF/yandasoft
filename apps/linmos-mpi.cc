@@ -29,6 +29,7 @@
 
 // Package level header file
 #include <askap/askap_synthesis.h>
+#include <askap/utils/StatsAndMask.h>
 
 /// ASKAP includes
 #include <askap/utils/LinmosUtils.h>
@@ -61,6 +62,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
   // get the image history keyword if it is defined
   const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",{},false);
+
+  // get the calcstats flag from the parset. if it is true, then this task also calculates the image statistics
+  const bool calcstats = parset.getBool("calcstats", false);
+  // file to store the statistics
+  const std::string outputStats = parset.getString("outputStats",""); 
 
   // get the list of keywords to copy from the input
   // Set some defaults for simple beam mosaic, won't be correct for more complex cases
@@ -245,6 +251,17 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     // So the plan is to iterate over each channel ...
     // Calculate the inShapes for each channel and file ....
+
+    // create a stats object for this image. It is a bit messy. The StatsAndMask class requires a shared_ptr for the
+    // IImageAccess so we have to create a shared pointer from iacc. Also, we dont want this shared pointer to delete
+    // the object (iacc) when it goes out of scope
+    boost::shared_ptr<askap::accessors::IImageAccess<>> iaccPtr;
+    boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask;
+    if ( calcstats ) {
+      iaccPtr.reset(&iacc,askap::utils::StatsAndMask::NullDeleter{});    
+      statsAndMask.reset(new askap::utils::StatsAndMask{comms,outImgName,iaccPtr});
+    }
+
 
     for (channel = firstChannel; channel <= lastChannel; channel += channelInc) {
 
@@ -586,7 +603,8 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
                 inWgtPix = iacc.read(inWgtName,blc,trc);
             }
-
+            ASKAPLOG_INFO_STR(logger,"inPix.shape() = " << inPix.shape()
+                                     << ", inWgtPix.shape() = " << inWgtPix.shape());
             ASKAPASSERT(inPix.shape() == inWgtPix.shape());
           }
           if (accumulator.doSensitivity()) {
@@ -725,6 +743,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       loc[3] = channel;
       ASKAPLOG_INFO_STR(logger, " - location " << loc);
       iacc.write(outImgName,outPix,outMask,loc);
+      // calculate the statistics for the array slice
+      if ( calcstats ) {
+        statsAndMask->calculate(outImgName,channel,outPix);
+      }
       if (accumulator.outWgtDuplicates()[outImgName]) {
           ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
       } else {
@@ -743,6 +765,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       }
     }
     // Update header when all the writing is done
+    ASKAPLOG_INFO_STR(logger,"rank " << comms.rank() << " got to barrier");
     comms.barrier();
     if (comms.isMaster()) {
         // set one of the input images as a reference for metadata (the first by default)
@@ -786,6 +809,21 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         }
         // Save table of mosaic pointing centres & beamsizes?
         saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
+    }
+    if ( calcstats ) {
+      comms.barrier();
+      // Since the processing of the image channels is distributed among the MPI ranks,
+      // the master has to collect all the stats from the worker ranks prior to writing
+      // the stats to the image table
+      if (comms.isMaster()) {
+        statsAndMask->receiveStats();
+        statsAndMask->writeStatsToImageTable(outImgName);  
+        if ( outputStats != "" ) {
+            statsAndMask->writeStatsToFile(outputStats);
+        }
+      } else {
+        statsAndMask->sendStats();
+      }
     }
   }
 }
