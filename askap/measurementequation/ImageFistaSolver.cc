@@ -96,7 +96,10 @@ namespace askap
 	ASKAPLOG_INFO_STR(decfistalogger, "Constructing Multiscale basis function with scales " << scales);
         Bool orthogonal=parset.getBool("orthogonal", "false");
 
-	itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
+        // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+        // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse 
+	itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<casacore::Float>(scales),
                                                                                           orthogonal));
       }
     }

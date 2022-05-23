@@ -158,13 +158,13 @@ namespace askap {
             itsDM->configure(parset);
 
             // Get the beam information
-            const casacore::Vector<float> beam = parset.getFloatVector("beam");
-            ASKAPCHECK(beam.size() == 3, "Need three elements for beam. You have " << beam);
-            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam(0) <<
-                              " x " << beam(1) << " pixels at position angle " << beam(2) << " degrees");
-            itsBMaj = beam(0);
-            itsBMin = beam(1);
-            itsBPa = beam(2);
+            const std::vector<float> beam = parset.getFloatVector("beam");
+            ASKAPCHECK(beam.size() == 3u, "Need three elements for beam. You have " << beam);
+            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam[0] <<
+                              " x " << beam[1] << " pixels at position angle " << beam[2] << " degrees");
+            itsBMaj = beam[0];
+            itsBMin = beam[1];
+            itsBPa = beam[2];
         }
 
         template<class T, class FT>

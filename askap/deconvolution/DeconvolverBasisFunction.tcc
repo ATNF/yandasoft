@@ -113,7 +113,10 @@ namespace askap {
                     ASKAPLOG_DEBUG_STR(decbflogger, "Multiscale basis functions will be orthogonalised");
                 }
 
-                itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
+                // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+                // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+                // there is no benefit of using casacore::Vector)
+                itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<float>(scales),
                                    orthogonal));
             }
             itsUseCrossTerms = parset.getBool("usecrossterms", true);
