@@ -88,9 +88,9 @@ namespace askap
 	defaultScales[0]=0.0;
 	defaultScales[1]=2.0;
 	defaultScales[2]=4.0;
-	defaultScales[2]=8.0;
-	defaultScales[2]=16.0;
-	defaultScales[2]=32.0;
+	defaultScales[3]=8.0;
+	defaultScales[4]=16.0;
+	defaultScales[5]=32.0;
 	std::vector<float> scales=parset.getFloatVector("scales", defaultScales);
 
 	ASKAPLOG_INFO_STR(decfistalogger, "Constructing Multiscale basis function with scales " << scales);
