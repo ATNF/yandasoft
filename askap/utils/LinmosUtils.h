@@ -53,7 +53,7 @@ namespace askap {
 /// @param[in] centre the pointing centre, which all offsets are relative to
 /// @return a MVDirection for each name in beamNames
 Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
-                                    const std::vctor<std::string> &beamNames,
+                                    const std::vector<std::string> &beamNames,
                                     MVDirection centre);
 
 /// @brief helper method to get beam centres from parset and/or image metadata
