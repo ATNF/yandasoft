@@ -179,11 +179,6 @@ class StatsAndMask {
                                            accessors::IImageAccess<float>& iacc,
                                            const std::string& imgName,
                                            const LOFAR::ParameterSet& parset);
-        /// Helper class to prevent boost::shared_ptr from deleting the pointer
-        /// it points to.
-        struct NullDeleter {
-            void operator()(askap::accessors::IImageAccess<float>* ptr) {}
-        };
     private:
         void updateParams();
 

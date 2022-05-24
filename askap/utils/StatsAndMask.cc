@@ -30,6 +30,7 @@
 #include <askap_accessors.h>
 
 #include <askap/askap/AskapLogging.h>
+#include <askap/askap/AskapUtil.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/Containers/Record.h>
@@ -583,7 +584,7 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
         // Stats is only done for taylor.0 image if nterms > 1
         // the iacc is created on the stack so we dont want iaccPtr to delete it when
         // it goes out of scope and hence contruct it with NullDeleter
-        boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,NullDeleter{});
+        boost::shared_ptr<accessors::IImageAccess<float>> iaccPtr(&iacc,askap::utility::NullDeleter{});
         casa::IPosition cubeShape = iaccPtr->shape(imgName);
         casa::CoordinateSystem coo = iaccPtr->coordSys(imgName);
         const int specAxis = coo.spectralAxisNumber();

@@ -32,6 +32,7 @@
 #include <askap/utils/StatsAndMask.h>
 
 /// ASKAP includes
+#include <askap/askap/AskapUtil.h>
 #include <askap/utils/LinmosUtils.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/askapparallel/AskapParallel.h>
@@ -258,7 +259,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     boost::shared_ptr<askap::accessors::IImageAccess<>> iaccPtr;
     boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask;
     if ( calcstats ) {
-      iaccPtr.reset(&iacc,askap::utils::StatsAndMask::NullDeleter{});    
+      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});    
       statsAndMask.reset(new askap::utils::StatsAndMask{comms,outImgName,iaccPtr});
     }
 
