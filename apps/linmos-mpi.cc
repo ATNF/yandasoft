@@ -603,8 +603,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
                 inWgtPix = iacc.read(inWgtName,blc,trc);
             }
-            ASKAPLOG_INFO_STR(logger,"inPix.shape() = " << inPix.shape()
-                                     << ", inWgtPix.shape() = " << inWgtPix.shape());
             ASKAPASSERT(inPix.shape() == inWgtPix.shape());
           }
           if (accumulator.doSensitivity()) {
