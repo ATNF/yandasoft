@@ -499,7 +499,7 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
   // This also needs to set the frequencies and directions for all the images
   ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit");
-  LOFAR::ParameterSet unitParset = itsParset;
+  LOFAR::ParameterSet unitParset = itsParset.makeSubset(""); // make full copy
   ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In preProcess workunit)" << (itsParset.getStringVector("dataset", true)));
 
   const bool localsolve = unitParset.getBool("solverpercore", false);
@@ -904,7 +904,7 @@ void ContinuumWorker::processChannels()
       }
       else {
         // this assumes no subimage will be formed.
-        setupImage(rootImager.params(), frequency,false);
+        setupImage(rootImager.params(), itsParset, frequency, false);
       }
 
       ImagingNormalEquations &rootINERef =
@@ -999,10 +999,7 @@ void ContinuumWorker::processChannels()
 
             if (updateDir) {
               itsAdvisor->updateDirectionFromWorkUnit(itsParsets[tempWorkUnitCount],workUnits[tempWorkUnitCount]);
-              ///FIXME:
               // in updateDir mode I cannot cache the gridders as they have a tangent point.
-              // So I have turned of caching for all modes. THis is performance hit on everyone for
-              // a corner case .... FIX This!
               // FIXED: by just having 2 possible working imagers depending on the mode. ... easy really
 
               boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[tempWorkUnitCount],itsComms,myDs,localChannel));
@@ -1024,7 +1021,7 @@ void ContinuumWorker::processChannels()
 
               useSubSizedImages = true;
 
-              setupImage(workingImager.params(), frequency, useSubSizedImages);
+              setupImage(workingImager.params(), itsParsets[tempWorkUnitCount], frequency, useSubSizedImages);
 
               if (majorCycleNumber > 0) {
                 copyModel(rootImager.params(),workingImager.params());
@@ -1400,7 +1397,7 @@ void ContinuumWorker::processChannels()
 
         blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
-        setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
+        setupImage(blankParams, itsParset, workUnits[goodUnitCount].get_channelFrequency());
 
 
         ContinuumWorkRequest result;
@@ -1439,7 +1436,7 @@ void ContinuumWorker::processChannels()
         blankParams.reset(new Params(true));
         ASKAPCHECK(blankParams, "blank parameters (images) not initialised");
 
-        setupImage(blankParams, workUnits[goodUnitCount].get_channelFrequency());
+        setupImage(blankParams, itsParset, workUnits[goodUnitCount].get_channelFrequency());
 
 
         ContinuumWorkRequest result;
@@ -1809,38 +1806,49 @@ void ContinuumWorker::logWeightsInfo()
 }
 
 
-void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,double channelFrequency, bool shapeOverride)
+void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet& parset,
+                                 double channelFrequency, bool shapeOverride)
 {
   try {
     ASKAPLOG_DEBUG_STR(logger, "Setting up image");
-    const LOFAR::ParameterSet parset = itsParset.makeSubset("Images.");
+    const LOFAR::ParameterSet imParset = parset.makeSubset("Images.");
 
-    const int nfacets = parset.getInt32("nfacets", 1);
+    const int nfacets = imParset.getInt32("nfacets", 1);
     const string name("image.slice");
-    const vector<string> direction = parset.getStringVector("direction");
-    const vector<string> cellsize = parset.getStringVector("cellsize");
-    vector<int> shape = parset.getInt32Vector("shape");
+    vector<string> direction = imParset.getStringVector("direction");
+
+    const vector<string> cellsize = imParset.getStringVector("cellsize");
+    vector<int> shape = imParset.getInt32Vector("shape");
     //const vector<double> freq = parset.getDoubleVector("frequency");
     const int nchan = 1;
 
     if (shapeOverride == true) {
       string param = "subshape";
-      if (parset.isDefined(param)) {
+      if (imParset.isDefined(param)) {
         ASKAPLOG_INFO_STR(logger,"Over-riding image shape from parset");
-        shape = parset.getInt32Vector("subshape");
+        shape = imParset.getInt32Vector("subshape");
         ASKAPLOG_INFO_STR(logger,"Image shape now " << shape);
       }
       else {
         ASKAPLOG_WARN_STR(logger,"Shape over-ride requested but no subshape parameter in parset");
       }
+    } else if (parset.getBool("updatedirection",false)) {
+          // override with image specific direction if present - for mosaic case - combined image direction
+          vector<string> names = imParset.getStringVector("Names",{},false);
+          if (names.size()>0) {
+              if (imParset.isDefined(names[0]+".direction")) {
+                  ASKAPLOG_INFO_STR(logger,"Using image direction from parset instead of tangent point from advise");
+                  direction = imParset.getStringVector(names[0]+".direction");
+              }
+          }
     }
 
 
-    if (!parset.isDefined("polarisation")) {
+    if (!imParset.isDefined("polarisation")) {
       ASKAPLOG_DEBUG_STR(logger, "Polarisation frame is not defined, "
       << "only stokes I will be generated");
     }
-    const vector<string> stokesVec = parset.getStringVector("polarisation",
+    const vector<string> stokesVec = imParset.getStringVector("polarisation",
     vector<string>(1, "I"));
 
     // there could be many ways to define stokes, e.g. ["XX YY"] or ["XX","YY"] or "XX,YY"
@@ -1853,7 +1861,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     const casacore::Vector<casacore::Stokes::StokesTypes>
     stokes = scimath::PolConverter::fromString(stokesStr);
 
-    const bool ewProj = parset.getBool("ewprojection", false);
+    const bool ewProj = imParset.getBool("ewprojection", false);
     if (ewProj) {
       ASKAPLOG_DEBUG_STR(logger, "Image will have SCP/NCP projection");
     } else {
@@ -1863,6 +1871,8 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     ASKAPCHECK(nfacets > 0, "Number of facets is supposed to be a positive number, you gave " << nfacets);
     ASKAPCHECK(shape.size() >= 2, "Image is supposed to be at least two dimensional. " << "check shape parameter, you gave " << shape);
 
+    ASKAPLOG_DEBUG_STR(logger,"setupImage : direction = "<<direction<< " shape = "<< shape);
+
     if (nfacets == 1) {
       SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,
         channelFrequency, channelFrequency, nchan, stokes);
@@ -1870,7 +1880,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
         //                            freq[0], freq[1], nchan, stokes);
     } else {
         // this is a multi-facet case
-        const int facetstep = parset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
+        const int facetstep = imParset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
         ASKAPCHECK(facetstep > 0,"facetstep parameter is supposed to be positive, you have " << facetstep);
         ASKAPLOG_DEBUG_STR(logger, "Facet centers will be " << facetstep << " pixels apart, each facet size will be " << shape[0] << " x " << shape[1]);
         // SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,

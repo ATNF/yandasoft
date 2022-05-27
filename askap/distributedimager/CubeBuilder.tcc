@@ -428,7 +428,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::Quantity& inc)
 {
     CoordinateSystem coordsys;
-    const vector<string> dirVector = parset.getStringVector("Images.direction");
+    vector<string> dirVector = parset.getStringVector("Images.direction");
+    if (parset.getBool("updatedirection",False)) {
+        // override with image specific direction if present - for mosaic case
+        vector<string> names = parset.getStringVector("Images.Names",{},false);
+        if (names.size()>0) {
+            if (parset.isDefined("Images."+names[0]+".direction")) {
+                dirVector = parset.getStringVector("Images."+names[0]+".direction");
+            }
+        }
+    }
     const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
 
 

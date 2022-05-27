@@ -104,8 +104,8 @@ class ContinuumWorker
         void processSnapshot(LOFAR::ParameterSet& parset);
 
 
-        // Setup the image specified in itsParset and add it to the Params instance.
-        void setupImage(const askap::scimath::Params::ShPtr& params,
+        // Setup the image specified in parset and add it to the Params instance.
+        void setupImage(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet& parset,
                     double channelFrequency, bool shapeOveride = false);
 
         void buildSpectralCube();

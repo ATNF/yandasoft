@@ -752,13 +752,15 @@ void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::c
       // Only J2000 is implemented at the moment.
       ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
       parset.replace(param, pstr);
+      ASKAPLOG_INFO_STR(logger, "AdviseDI::updateDirectionFromWorkUnit  parset = " << parset);
 
-      for (size_t img = 0; img < imageNames.size(); ++img) {
-        param ="Images."+imageNames[img]+".direction";
-        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-        parset.replace(param, pstr);
-
-      }
+      // leave this out - we need two directions when updatedirection is true,
+      //  one for the current subimage and one for the overal image
+      // for (size_t img = 0; img < imageNames.size(); ++img) {
+      //   param ="Images."+imageNames[img]+".direction";
+      //   ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
+      //   parset.replace(param, pstr);
+      // }
     }
   }
 }
