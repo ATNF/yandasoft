@@ -26,7 +26,7 @@
 ///
 
 #ifndef ASKAP_YANDASOFT_STATS_AND_MASK_H
-#define ASKAP_YANDASOFTACCESSORS_STATS_AND_MASK_H
+#define ASKAP_YANDASOFT_STATS_AND_MASK_H
 
 #include <askap/imageaccess/IImageAccess.h>
 #include <casacore/images/Images/PagedImage.h>
