@@ -419,14 +419,14 @@ namespace askap {
             const time_t start_time = time(0);
             // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
-            scimath::FFT2DWrapper<FT> fftWrapper(true);
+            scimath::FFT2DWrapper<FT> fft2d(true);
             for (uInt base = 0; base < nBases; base++) {
                  // Calculate transform of basis function [nx,ny,nbases]
                  const Matrix<T> bfRef(this->itsBasisFunction->basisFunction(base));
                  Matrix<FT> basisFunctionFFT(bfRef.shape().nonDegenerate(2), 0.);
                  casacore::setReal(basisFunctionFFT, bfRef);
                  //scimath::fft2d(basisFunctionFFT, true);
-                 fftWrapper(basisFunctionFFT, true);
+                 fft2d(basisFunctionFFT, true);
 
                  for (uInt term = 0; term < this->nTerms(); term++) {
 
@@ -434,7 +434,7 @@ namespace askap {
                     Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate(), 0.);
                     casacore::setReal(residualFFT, this->dirty(term).nonDegenerate());
                     //scimath::fft2d(residualFFT, true);
-                    fftWrapper(residualFFT, true);
+                    fft2d(residualFFT, true);
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
@@ -444,7 +444,7 @@ namespace askap {
                     utility::multiplyByConjugate(residualFFT, basisFunctionFFT);
 
                     //scimath::fft2d(residualFFT, false);
-                    fftWrapper(residualFFT, false);
+                    fft2d(residualFFT, false);
 
                     // temporary object is ok here because we do an assignment to uninitialised array later on
                     Matrix<T> work(real(residualFFT));
@@ -560,7 +560,7 @@ namespace askap {
 
             // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
-            scimath::FFT2DWrapper<FT> fftWrapper(true);
+            scimath::FFT2DWrapper<FT> fft2d(true);
 
             // do explicit loop over basis functions here (the original code relied on iterator in
             // fft2d and, therefore, low level representation of the basis function stack). This way
@@ -570,7 +570,7 @@ namespace askap {
                  casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
                  //scimath::fft2d(fftBuffer, true);
-                 fftWrapper(fftBuffer, true);
+                 fft2d(fftBuffer, true);
             }
 
             itsTermBaseFlux.resize(nBases);
@@ -613,7 +613,7 @@ namespace askap {
                 subXFRTerm1.set(0.0);
                 casacore::setReal(subXFRTerm1, this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
                 //scimath::fft2d(subXFRVec(term1), true);
-                fftWrapper(subXFRTerm1, true);
+                fft2d(subXFRTerm1, true);
                 // we only need conjugated FT of subXFRVec (or real part of it, which doesn't change with conjugation), 
                 // it is better to compute conjugation in situ now and don't do it on the fly later
                 utility::conjugateComplexArray(subXFRTerm1);
@@ -650,7 +650,7 @@ namespace askap {
                             //scimath::fft2d(work, false);
                             //use reference semantics to get the right interface, we can probably change the interface to matrix to reduce technical debt
                             Matrix<FT> workMtr(work);
-                            fftWrapper(workMtr, false);
+                            fft2d(workMtr, false);
 
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
                                                    << ")*PSF(" << term1 + term2
