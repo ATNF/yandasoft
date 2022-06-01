@@ -856,7 +856,7 @@ namespace askap
         // Get any header keywords to add to the images from the parset
         LOFAR::ParameterSet keywords = parset().makeSubset("header.");
 
-        if (!itsWriteWtImage) {
+        if (hasWeights && !itsWriteWtImage) {
             ASKAPLOG_INFO_STR(logger,"Writing weights "<< (itsWriteWtLog ? "log":"keyword"));
             askap::accessors::WeightsLog weightslog;
             string name;
@@ -886,6 +886,7 @@ namespace askap
                 keywords.replace("IMWEIGHT","["+std::to_string(wt)+",Imaging Weight]");
             } else {
                 ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weight log");
+                itsWriteWtImage = true;
             }
         }
 
@@ -923,12 +924,18 @@ namespace askap
                     askap::utils::StatsAndMask::writeStatsToImageTable(itsComms,imageAccessor,*it+postfix,parset());
                 }
             }
-            if (((it->find("weights") == 0) && itsWriteWtImage) || ((it->find("mask") == 0) && itsWriteMaskImage))  {
-                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
-                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor, keywords, historyLines);
+            if ((it->find("weights") == 0) && (itsWriteWtImage||itsWriteSensitivityImage))  {
+                if (itsWriteWtImage) {
+                    ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                    SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor, keywords, historyLines);
+                }
                 if (itsWriteSensitivityImage && (it->find("weights") == 0) && (postfix == "")) {
                     makeSensitivityImage(*it);
                 }
+            }
+            if ((it->find("mask") == 0) && itsWriteMaskImage)  {
+                ASKAPLOG_INFO_STR(logger, "Saving " << *it << " with name " << *it+postfix );
+                SynthesisParamsHelper::saveImageParameter(*itsModel, *it, *it+postfix, extraOSfactor, keywords, historyLines);
             }
             if ((it->find("residual") == 0) && itsWriteResidual) {
                 if (!iph.isFacet()) {
