@@ -900,9 +900,6 @@ void AdviseDI::addMissingParameters(bool extra)
    missing |= (wMaxGridder!="");
    missing |= (itsParset.getBool("Images.nyquistgridding",false) && !itsParset.isDefined("Images.griddingcellsize"));
 
-   // define a few parameters up-front they may be needed later
-   double maxU=0., maxV=0., maxW=0.;
-
    if (missing) {
        ASKAPLOG_INFO_STR(logger, "Remaining missing parameters require a pass through the data");
 
@@ -986,91 +983,10 @@ void AdviseDI::addMissingParameters(bool extra)
                }
            }
        }
-
-       if (itsParset.getBool("Images.nyquistgridding",false)) {
-           maxU = advice.maxU();
-           maxV = advice.maxV();
-           maxW = advice.maxW();
-       }
-
    }
 
    // add Nyquist gridding parameters if needed. Wait until after doing others requiring VisMetaDataStats.
-   // @todo should probably throw an exception if individual cell or image sizes are given
-   ASKAPCHECK(!itsParset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
-   if (itsParset.getBool("Images.nyquistgridding",false) || itsParset.isDefined("Images.griddingcellsize")) {
-
-       ASKAPCHECK(itsParset.isDefined("Images.cellsize") && itsParset.isDefined("Images.shape"),
-           "The global image cellsize and shape are currently required with Nyquist gridding");
-
-       const std::vector<double>
-           cellSize = SynthesisParamsHelper::convertQuantity(itsParset.getStringVector("Images.cellsize"),"arcsec");
-       const std::vector<int> imSize = itsParset.getInt32Vector("Images.shape");
-
-       // need to make sure that extraOsFactor results in an integer number of pixels,
-       // which could get complicated for rectangular grids and pixels.
-       ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
-       ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
-       ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
-
-       std::vector<double> gCellSize(2);
-       if (itsParset.isDefined("Images.griddingcellsize")) {
-           const std::vector<string> gParam = itsParset.getStringVector("Images.griddingcellsize");
-           ASKAPCHECK(gParam.size() == 2, "nyquistgridding requires a griddingcellsize vector of length 2");
-           gCellSize = SynthesisParamsHelper::convertQuantity(gParam,"arcsec");
-           ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
-           ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
-       }
-       else {
-           const double uv_max = max(maxU, maxV);
-           const double fov = cellSize[0] * imSize[0] * casacore::C::arcsec;
-           const double wk_max = 6/fov + maxW*fov;
-           ASKAPASSERT(uv_max > 0);
-           // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
-           //  - the reciprical of twice the longest baseline plus the largest w support
-           //  - doubled wk_max because it seemed too small
-           gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
-           gCellSize[1] = gCellSize[0];
-       }
-
-       // nominal ratio between gridding resolution and cleaning resolution
-       ASKAPDEBUGASSERT(cellSize[0] > 0);
-       double extraOsFactor = gCellSize[0]/cellSize[0];
-       // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
-       ASKAPDEBUGASSERT(extraOsFactor >= 1);
-       double nPix = ceil(double(imSize[0])/extraOsFactor);
-       // also ensure that it is even
-       nPix += int(nPix) % 2;
-       // reset the extra multiplicative factor
-       ASKAPDEBUGASSERT(nPix > 0);
-       extraOsFactor = static_cast<double>(imSize[0]) / nPix;
-       ASKAPDEBUGASSERT(extraOsFactor >= 1);
-
-       gCellSize[0] = cellSize[0] * extraOsFactor;
-       gCellSize[1] = gCellSize[0];
-
-       ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
-       ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<itsParset.getStringVector("Images.cellsize")<<
-                                 " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
-       ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<itsParset.getInt32Vector("Images.shape")<<
-                                 " to "<<"["<<long(nPix)<<","<<long(nPix)<<"]");
-
-       // Only set or reset these parameters if they are needed
-       //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
-       if (extraOsFactor > 1.) {
-           itsParset.add("Images.extraoversampling", utility::toString(extraOsFactor));
-           itsParset.replace("Images.cellsize", "["+toString(gCellSize[0])+"arcsec,"+toString(gCellSize[1])+"arcsec]");
-           itsParset.replace("Images.shape", "["+toString(long(nPix))+","+toString(long(nPix))+"]");
-           if (itsParset.isDefined("Images.subshape")) {
-             vector<int> subshape = itsParset.getInt32Vector("Images.subshape");
-             int subPix = subshape[0] / extraOsFactor;
-             subPix += subPix % 2;
-             itsParset.replace("Images.subshape","["+toString(long(subPix))+","+toString(long(subPix))+"]");
-             ASKAPLOG_INFO_STR(logger, "  Changing subshape from "<< subshape <<
-                                       " to "<<"["<<long(subPix)<<","<<long(subPix)<<"]");
-           }
-       }
-   }
+   SynthesisParamsHelper::setNyquistSampling(estimator(), itsParset);
 
    ASKAPLOG_DEBUG_STR(logger,"Done adding missing params ");
 
