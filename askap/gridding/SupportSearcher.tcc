@@ -92,7 +92,7 @@ void SupportSearcher::findPeak(const casacore::Matrix<T> &in)
   itsPeakPos.resize(in.shape().nelements(),casacore::False);
   itsPeakPos = 0;
   itsPeakVal = -1;
-  #ifdef _OPENMP
+  #ifdef _OPENMP_WORKING
   #pragma omp parallel default(shared)
   {
   #pragma omp for
@@ -108,7 +108,7 @@ void SupportSearcher::findPeak(const casacore::Matrix<T> &in)
                tempPeakNorm = curNorm;
             }
        }
-       #ifdef _OPENMP
+       #ifdef _OPENMP_WORKING
        #pragma omp critical
        {
        #endif
@@ -117,11 +117,11 @@ void SupportSearcher::findPeak(const casacore::Matrix<T> &in)
            itsPeakPos(1) = tempPeakY;
            itsPeakVal = sqrt(tempPeakNorm);
        }
-       #ifdef _OPENMP
+       #ifdef _OPENMP_WORKING
        }
        #endif
   }
-  #ifdef _OPENMP
+  #ifdef _OPENMP_WORKING
   }
   #endif
 #ifdef ASKAP_DEBUG
@@ -195,7 +195,7 @@ void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
 
   const double absCutoff = processAmplitudeThreshold(in, itsCutoff*itsPeakVal);
 
-  #ifdef _OPENMP_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING
+  #ifdef _OPENMP_WORKING
   #pragma omp parallel sections
   {
   #pragma omp section
@@ -208,7 +208,7 @@ void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
        }
   }
 
-  #ifdef _OPENMP_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING
+  #ifdef _OPENMP_WORKING
   }
   #pragma omp section
   {
@@ -221,7 +221,7 @@ void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
        }
   }
 
-  #ifdef _OPENMP_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING
+  #ifdef _OPENMP_WORKING
   }
   #pragma omp section
   {
@@ -234,7 +234,7 @@ void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
        }
   }
 
-  #ifdef _OPENMP_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING
+  #ifdef _OPENMP_WORKING
   }
   #pragma omp section
   {
@@ -247,7 +247,7 @@ void SupportSearcher::doSupportSearch(const casacore::Matrix<T> &in)
        }
   }
 
-  #ifdef _OPENMP_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING_WORKING
+  #ifdef _OPENMP_WORKING
   }
   }
   #endif
