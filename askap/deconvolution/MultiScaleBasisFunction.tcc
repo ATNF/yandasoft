@@ -78,6 +78,7 @@ namespace askap {
             BasisFunction<T>::initialise(shape);
 
             ASKAPLOG_INFO_STR(decmsbaselogger, "Calculating multiscale basis functions");
+            // MV: technical debt - broken encapsulation/protected data member
             // Make a cube and use referencing in Array
             casacore::Cube<T> scaleCube(this->itsBasisFunction);
 
@@ -95,23 +96,20 @@ namespace askap {
                     const Int minj = max(0, (Int)(ny / 2 - scaleSize));
                     const Int maxj = min(ny - 1, (Int)(ny / 2 + scaleSize));
 
-                    Float ypart = 0.0;
-                    Float volume = 0.0;
-                    Float rad2 = 0.0;
+                    T volume = 0.0;
                     Float rad = 0.0;
 
                     for (Int j = minj; j <= maxj; j++) {
-                        ypart = square((ny / 2 - (Double)(j)) / scaleSize);
+                        const Float ypart = square((ny / 2 - (Double)(j)) / scaleSize);
                         for (Int i = mini; i <= maxi; i++) {
-                            rad2 =  ypart + square((nx / 2 - (Double)(i)) / scaleSize);
+                            const Float rad2 =  ypart + square((nx / 2 - (Double)(i)) / scaleSize);
                             if (rad2 < 1.0) {
                                 if (rad2 <= 0.0) {
                                     rad = 0.0;
                                 } else {
                                     rad = sqrt(rad2);
                                 }
-                                T value;
-                                value = (1.0 - rad2) * spheroidal(rad);
+                                const T value = (1.0 - rad2) * spheroidal(rad);
                                 scaleCube(i, j, scale) = value;
                                 volume += value;
                             }

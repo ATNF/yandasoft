@@ -46,8 +46,10 @@ ASKAP_LOGGER(decmtbflogger, ".deconvolution.multitermbasisfunction");
 
 #include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
 #include <askap/deconvolution/MultiScaleBasisFunction.h>
-#include <omp.h>
+#include <askap/scimath/utils/OptimizedArrayMathUtils.h>
 #include <mpi.h>
+
+#include <askap/scimath/fft/FFT2DWrapper.h>
 
 #ifdef USE_OPENACC
 template<class T>
@@ -419,24 +421,36 @@ namespace askap {
                               "Calculating convolutions of residual images with basis functions");
             //const double start_time = MPI_Wtime();
             const time_t start_time = time(0);
+            // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
+            // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+            scimath::FFT2DWrapper<FT> fft2d(true);
             for (uInt base = 0; base < nBases; base++) {
                  // Calculate transform of basis function [nx,ny,nbases]
                  const Matrix<T> bfRef(this->itsBasisFunction->basisFunction(base));
                  Matrix<FT> basisFunctionFFT(bfRef.shape().nonDegenerate(2), 0.);
                  casacore::setReal(basisFunctionFFT, bfRef);
-                 scimath::fft2d(basisFunctionFFT, true);
+                 //scimath::fft2d(basisFunctionFFT, true);
+                 fft2d(basisFunctionFFT, true);
 
                  for (uInt term = 0; term < this->nTerms(); term++) {
 
                     // Calculate transform of residual image
                     Matrix<FT> residualFFT(this->dirty(term).shape().nonDegenerate(), 0.);
                     casacore::setReal(residualFFT, this->dirty(term).nonDegenerate());
-                    scimath::fft2d(residualFFT, true);
+                    //scimath::fft2d(residualFFT, true);
+                    fft2d(residualFFT, true);
 
                     // Calculate product and transform back
                     ASKAPASSERT(basisFunctionFFT.shape().conform(residualFFT.shape()));
-                    residualFFT *= conj(basisFunctionFFT);
-                    scimath::fft2d(residualFFT, false);
+
+                    //the following line is equivalent to the optimised version called below
+                    //residualFFT *= conj(basisFunctionFFT);
+                    utility::multiplyByConjugate(residualFFT, basisFunctionFFT);
+
+                    //scimath::fft2d(residualFFT, false);
+                    fft2d(residualFFT, false);
+
+                    // temporary object is ok here because we do an assignment to uninitialised array later on
                     Matrix<T> work(real(residualFFT));
 
                     ASKAPLOG_DEBUG_STR(decmtbflogger, "Basis(" << base
@@ -547,13 +561,20 @@ namespace askap {
             // Now transform the basis functions. These may be a different size from
             // those in initialiseResidual so we don't keep either
             Cube<FT> basisFunctionFFT(stackShape,FT(0.));
+
+            // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
+            // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+            scimath::FFT2DWrapper<FT> fft2d(true);
+
             // do explicit loop over basis functions here (the original code relied on iterator in
             // fft2d and, therefore, low level representation of the basis function stack). This way
             // we have more control over the array structure and can transition to the more efficient order
             for (uInt base = 0; base < nBases; ++base) {
+                 // casacore arrays have reference semantics, no copying occurs in the following
                  casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
-                 scimath::fft2d(fftBuffer, true);
+                 //scimath::fft2d(fftBuffer, true);
+                 fft2d(fftBuffer, true);
             }
 
             itsTermBaseFlux.resize(nBases);
@@ -590,16 +611,22 @@ namespace askap {
             Vector<Array<FT> > subXFRVec(2*this->nTerms() - 1);
             for (uInt term1 = 0; term1 < subXFRVec.nelements(); ++term1) {
                 subXFRVec(term1).resize(subPsfShape);
-                subXFRVec(term1).set(0.0);
-                casacore::setReal(subXFRVec(term1), this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
-                scimath::fft2d(subXFRVec(term1), true);
+                // rely on reference semantics of casa arrays 
+                // MV: we can probably change subXFRVec to be a vector of matrices to reduce technical debt
+                Matrix<FT> subXFRTerm1(subXFRVec(term1));
+                subXFRTerm1.set(0.0);
+                casacore::setReal(subXFRTerm1, this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
+                //scimath::fft2d(subXFRVec(term1), true);
+                fft2d(subXFRTerm1, true);
+                // we only need conjugated FT of subXFRVec (or real part of it, which doesn't change with conjugation), 
+                // it is better to compute conjugation in situ now and don't do it on the fly later
+                utility::conjugateComplexArray(subXFRTerm1);
             }
             // Calculate residuals convolved with bases [nx,ny][nterms][nbases]
-            // Calculate transform of PSF(0)
-            T normPSF;
-            // Removing the extra convolution with PSF0. Leave text here temporarily.
-            //normPSF = casacore::sum(casacore::real(subXFRVec(0) * conj(subXFRVec(0)))) / subXFRVec(0).nelements();
-            normPSF = casacore::sum(casacore::real(subXFRVec(0))) / subXFRVec(0).nelements();
+
+            // the following line is the original code which we do now in an optimised way
+            //const T normPSF = casacore::sum(casacore::real(subXFRVec(0))) / subXFRVec(0).nelements();
+            const T normPSF = utility::realPartMean(subXFRVec(0));
             ASKAPLOG_DEBUG_STR(decmtbflogger, "PSF effective volume = " << normPSF);
 
             itsPSFCrossTerms.resize(nBases, nBases);
@@ -615,12 +642,20 @@ namespace askap {
                 for (uInt base2 = base1; base2 < nBases; base2++) {
                     for (uInt term1 = 0; term1 < this->nTerms(); ++term1) {
                         for (uInt term2 = term1; term2 < this->nTerms(); ++term2) {
-                            // Removing the extra convolution with PSF0. Leave text here temporarily.
+
+                            // the following expression is what we had here originally. It is replaced by an optimised
+                            // method allowing us to avoid creation of temporary objects (+ it is normally faster if OMP is used)
+                            // note, the procedure doesn't have conj(subXFRVec(term1 + term2)) and for this we conjugated the whole 
+                            // subXFRVec(term1 + term2) above, when it is filled with values
                             //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
-                            //       subXFRVec(0) * conj(subXFRVec(term1 + term2)) / normPSF;
-                            work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
-                                   conj(subXFRVec(term1 + term2)) / normPSF;
-                            scimath::fft2d(work, false);
+                            //       conj(subXFRVec(term1 + term2)) / normPSF;
+                            utility::calculateNormalisedProduct(work, basisFunctionFFT.xyPlane(base1), basisFunctionFFT.xyPlane(base2), subXFRVec(term1 + term2), normPSF);
+
+                            //scimath::fft2d(work, false);
+                            //use reference semantics to get the right interface, we can probably change the interface to matrix to reduce technical debt
+                            Matrix<FT> workMtr(work);
+                            fft2d(workMtr, false);
+
                             ASKAPLOG_DEBUG_STR(decmtbflogger, "Base(" << base1 << ")*Base(" << base2
                                                    << ")*PSF(" << term1 + term2
                                                    << "): max = " << max(real(work))
@@ -1592,7 +1627,7 @@ namespace askap {
                     }
                     // In performing the search for the peak across bases, we want to take into account
                     // the SNR so we normalise out the coupling matrix for term=0 to term=0.
-                    T norm(1 / sqrt(this->itsCouplingMatrix(base)(0, 0)));
+                    const T norm(1 / sqrt(this->itsCouplingMatrix(base)(0, 0)));
                     maxVal *= norm;
                     minVal *= norm;
                 } else {

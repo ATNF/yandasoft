@@ -96,6 +96,8 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
   CubeComms& comms, StatReporter& stats)
   : itsParset(parset), itsComms(comms), itsStats(stats), itsBeamList(),itsWeightsList()
 {
+
+
     itsAdvisor = boost::shared_ptr<synthesis::AdviseDI> (new synthesis::AdviseDI(itsComms, itsParset));
     itsAdvisor->prepare();
 
@@ -149,7 +151,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
     itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
     itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
-    itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
+    itsWriteWtImage = parset.getBool("write.weightsimage", false); // write weights image
     itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // clean model
     itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
@@ -158,8 +160,8 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     itsGridFFT = parset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
-    if (itsGridType == "casa" && nwriters > 1){
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
+    if (itsGridType == "casa" && itsParset.getBool("singleoutputfile",false) && nwriters > 1){
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing a single casa image cube");
       itsNumWriters = 1;
     } else {
       itsNumWriters = nwriters;
@@ -169,9 +171,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
 
 ContinuumWorker::~ContinuumWorker()
 {
-
-
-
 }
 
 void ContinuumWorker::run(void)
@@ -236,8 +235,6 @@ void ContinuumWorker::run(void)
   int nGroups = itsComms.nGroups();
   int nchanTotal = nWorkers * nchanpercore / nGroups;
 
-  initialiseBeamLog(nchanTotal);
-  initialiseWeightsLog(nchanTotal);
 
   if (localSolver) {
     ASKAPLOG_INFO_STR(logger, "In local solver mode - reprocessing allocations)");
@@ -272,17 +269,19 @@ void ContinuumWorker::run(void)
       // 3*4 = 12
       // (6 - 3 + 1) * 4
       if (!itsComms.isSingleSink()) {
+        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
         this->nchanCube = (myMaxClient - myMinClient + 1) * nchanpercore;
         this->baseCubeGlobalChannel = (myMinClient - 1) * nchanpercore;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((myMinClient - 1));
-        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
       } else {
         ASKAPLOG_INFO_STR(logger, "SingleCube with multiple writers");
         this->nchanCube = nchanTotal;
         this->baseCubeGlobalChannel = 0;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((0));
-
       }
+      initialiseBeamLog(this->nchanCube);
+      initialiseWeightsLog(this->nchanCube);
+
       ASKAPLOG_INFO_STR(logger, "Number of channels in cube is: " << this->nchanCube);
       ASKAPLOG_INFO_STR(logger, "Base global channel of cube is " << this->baseCubeGlobalChannel);
     }
@@ -294,6 +293,9 @@ void ContinuumWorker::run(void)
           ASKAPLOG_INFO_STR(logger, "Not in localsolver (spectral line) mode - and combine channels is set so compressing channel allocations)");
           compressWorkUnits();
       }
+      initialiseBeamLog(nchanTotal);
+      initialiseWeightsLog(nchanTotal);
+
   }
   ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
 
@@ -311,8 +313,15 @@ void ContinuumWorker::run(void)
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " finished");
 
   itsComms.barrier(itsComms.theWorkers());
+  const bool singleoutputfile = itsParset.getBool("singleoutputfile", false);
+  const bool calcstats = itsParset.getBool("calcstats", false);
+  if ( singleoutputfile && calcstats ) {
+    writeCubeStatistics();
+    itsComms.barrier(itsComms.theWorkers());
+  }
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed final barrier");
 }
+
 void ContinuumWorker::deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset)
 {
 
@@ -583,6 +592,7 @@ void ContinuumWorker::processChannels()
 
   ASKAPCHECK(!(updateDir && !localSolver), "Cannot <yet> Continuum image in on-the-fly mosaick mode - need to update the image parameter setup");
 
+
   // Define reference channel for giving restoring beam
   std::string reference = itsParset.getString("restore.beamReference", "mid");
   if (reference == "mid") {
@@ -630,28 +640,34 @@ void ContinuumWorker::processChannels()
     ASKAPLOG_DEBUG_STR(logger, "nchan: " << this->nchanCube << " base f0: " << f0.getValue("MHz")
     << " width: " << freqinc.getValue("MHz") << " (" << workUnits[0].get_channelWidth() << ")");
 
-    // We want the start of observations stored in the image keywords
-    // The velocity calculations use the first MS for this, so we'll do that too
-    casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
-
     if (itsWriteWtLog) {
         itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
     }
 
     if ( itsComms.isCubeCreator() ) {
 
+      // Get keywords to write to the image header
+      if (!itsParset.isDefined("header.DATE-OBS")) {
+        // We want the start of observations stored in the image keywords
+        // The velocity calculations use the first MS for this, so we'll do that too
+        casacore::MVEpoch dateObs = itsAdvisor->getEpoch(0);
+        String date, timesys;
+        casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
+        // replace adds if non-existant
+        itsParset.replace("header.DATE-OBS","["+date+",Start of observation]");
+        itsParset.replace("header.TIMESYS","["+timesys+",Time System]");
+      }
+
       if (itsWriteModelImage) {
         itsImageCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, img_name));
-        // Fill in the date
-        itsImageCube->setDateObs(dateObs);
       }
       if (itsWritePsfRaw) {
         itsPSFCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psf_name));
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
-        // Fill in the date
-        itsResidualCube->setDateObs(dateObs);
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
+        ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object for residual cube");
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
@@ -659,8 +675,6 @@ void ContinuumWorker::processChannels()
       if (itsWriteGrids) {
         if (itsGridFFT) {
           itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-          // Fill in the date
-          itsVisGridCubeReal->setDateObs(dateObs);
           itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
           itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
         } else {
@@ -686,8 +700,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
-          // Fill in the date
-          itsRestoredCube->setDateObs(dateObs);
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
 
     } else {
@@ -700,6 +715,7 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset,  weights_name));
@@ -733,6 +749,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
     }
   }
@@ -905,7 +924,7 @@ void ContinuumWorker::processChannels()
         // FIXME
         if (updateDir == true) {
           rootINERef.weightType(FROM_WEIGHT_IMAGES);
-          rootINERef.weightState(CORRECTED);
+          rootINERef.weightState(WEIGHTED);
           rootImager.zero(); // then we delete all our work ....
         }
 
@@ -1040,7 +1059,7 @@ void ContinuumWorker::processChannels()
             dynamic_cast<ImagingNormalEquations&>(*workingImager.getNE());
             if (updateDir) {
               workingINERef.weightType(FROM_WEIGHT_IMAGES);
-              workingINERef.weightState(CORRECTED);
+              workingINERef.weightState(WEIGHTED);
             }
 
             rootImager.getNE()->merge(*workingImager.getNE());
@@ -1121,7 +1140,7 @@ void ContinuumWorker::processChannels()
           if (peak_residual < targetPeakResidual) {
             if (peak_residual < 0) {
               ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
-                              << targetPeakResidual << " Jy. Stopping.");              
+                              << targetPeakResidual << " Jy. Stopping.");
             } else {
               ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
               << targetPeakResidual << " Jy. Stopping.");
@@ -1522,29 +1541,26 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       else {
           ASKAPLOG_INFO_STR(logger, "Writing Residual");
           itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+          itsResidualStatsAndMask->calculate(itsResidualCube->filename(),chan,params->valueF("residual.slice"));
       }
   }
 
   // Write weights
-  if (itsWeightsCube || itsWriteWtLog) {
-      if (!params->has("weights.slice")) {
-          ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-      }
-      else {
-          if (itsWeightsCube) {
-              ASKAPLOG_INFO_STR(logger, "Writing Weights");
-              itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
-          }
-          if (itsWriteWtLog) {
-              ASKAPLOG_INFO_STR(logger,"Writing Weights log");
-              Array<float> wts = params->valueF("weights.slice");
-              float wt = wts.data()[0];
-              if (allEQ(wts,wt)) {
-                recordWeight(wt, chan);
-              } else {
-                ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights log");
-                recordWeight(-1.0, chan);
-              }
+  if (!params->has("weights.slice")) {
+      ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
+  } else {
+      if (itsWeightsCube) {
+          ASKAPLOG_INFO_STR(logger, "Writing Weights");
+          itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
+      } else {
+          Array<float> wts = params->valueF("weights.slice");
+          float wt = wts.data()[0];
+          if (allEQ(wts,wt)) {
+            recordWeight(wt, chan);
+            ASKAPLOG_INFO_STR(logger,"Writing Weights " << (itsWriteWtLog ? "log" : "extension"));
+          } else {
+            ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights "<< (itsWriteWtLog ? "log" : "extension"));
+            recordWeight(-1.0, chan);
           }
       }
   }
@@ -1632,11 +1648,15 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
         ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
         if (params->has("fullres.slice")) {
           // Restored image has been generated at full resolution, so avoid further oversampling
+          ASKAPLOG_INFO_STR(logger, "Writing fullres.slice");
           itsRestoredCube->writeRigidSlice(params->valueF("fullres.slice"), chan);
+          calculateImageStats(itsRestoredStatsAndMask,itsRestoredCube,chan,params->valueF("fullres.slice"));
         }
         else {
           ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
+          ASKAPLOG_INFO_STR(logger, "Writing image.slice");
           itsRestoredCube->writeFlexibleSlice(params->valueF("image.slice"), chan);
+          itsRestoredStatsAndMask->calculate(itsRestoredCube->filename(),chan,params->valueF("image.slice"));
         }
     }
 
@@ -1693,18 +1713,22 @@ void ContinuumWorker::recordWeight(float wt, const unsigned int cubeChannel)
   itsWeightsList[cubeChannel] = wt;
 }
 
-void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
-{
-  if (cubeChannel == itsBeamReferenceChannel) {
-    itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
-  }
-}
+// void ContinuumWorker::storeBeam(const unsigned int cubeChannel)
+// {
+//   if (cubeChannel == itsBeamReferenceChannel) {
+//     itsRestoredCube->addBeam(itsBeamList[cubeChannel]);
+//   }
+// }
 
 void ContinuumWorker::logBeamInfo()
 {
-
+    bool beamlogAsFile = itsParset.getBool("write.beamlog",true);
     askap::accessors::BeamLogger beamlog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    if (beamlogAsFile) {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to log file " << beamlog.filename());
+    } else if (itsRestoredCube) {
+      ASKAPLOG_INFO_STR(logger, "Channel-dependent restoring beams will be written to image " << itsRestoredCube->filename());
+    }
     ASKAPLOG_DEBUG_STR(logger, "About to add beam list of size " << itsBeamList.size() << " to the beam logger");
     beamlog.beamlist() = itsBeamList;
 
@@ -1712,20 +1736,26 @@ void ContinuumWorker::logBeamInfo()
       std::list<int> creators = itsComms.getCubeCreators();
       ASKAPASSERT(creators.size() == 1);
       int creatorRank = creators.front();
-      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information beam creator is rank " << creatorRank);
+      ASKAPLOG_DEBUG_STR(logger, "Gathering all beam information, beam creator is rank " << creatorRank);
       beamlog.gather(itsComms, creatorRank,false);
     }
     if (itsComms.isCubeCreator()) {
-
         if (itsRestoredCube) {
-            ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log "
-                               << beamlog.filename());
-            beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
-            beamlog.write();
+            if (beamlogAsFile) {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to beam log");
+              beamlog.setFilename("beamlog." + itsRestoredCube->filename() + ".txt");
+              beamlog.write();
+            } else {
+              ASKAPLOG_DEBUG_STR(logger, "Writing list of individual channel beams to image file");
+              itsRestoredCube->addBeamList(beamlog.beamlist());
+            }
 
-            ASKAPLOG_DEBUG_STR(logger, "Writing restoring beam to header of restored cube");
-            casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
-            itsRestoredCube->addBeam(refbeam);
+            if (beamlogAsFile || itsParset.getString("imagetype") == "fits") {
+              // can't write ref beam to casa image if per channel beams are stored
+              ASKAPLOG_DEBUG_STR(logger, "Writing reference restoring beam to header of restored cube");
+              casa::Vector<casa::Quantum<double> > refbeam = beamlog.beam(itsBeamReferenceChannel);
+              itsRestoredCube->addBeam(refbeam);
+            }
         }
     }
 
@@ -1734,10 +1764,11 @@ void ContinuumWorker::logBeamInfo()
 void ContinuumWorker::logWeightsInfo()
 {
 
-  if (itsWriteWtLog) {
+  if (!itsWriteWtImage) {
+    const string wtLogExt = (itsWriteWtLog ? "log file" : "extension");
     askap::accessors::WeightsLog weightslog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to log file ");
-    ASKAPLOG_INFO_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
+    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to "<<wtLogExt);
+    ASKAPLOG_DEBUG_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
     weightslog.weightslist() = itsWeightsList;
 
     if (itsNumWriters > 1 && itsParset.getBool("singleoutputfile",false)) {
@@ -1750,16 +1781,28 @@ void ContinuumWorker::logWeightsInfo()
     if (itsComms.isCubeCreator()) {
 
         // First check weightslog is valid
-        for(unsigned int i=0;i<itsWeightsList.size();i++) {
-            if (itsWeightsList[i] < 0) {
-                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights log");
+        for(const auto & wt : itsWeightsList) {
+            if (wt.second < 0) {
+                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights "<<wtLogExt);
                 return;
             }
         }
-        weightslog.setFilename(itsWeightsName + ".txt");
-        ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
-            << weightslog.filename());
-        weightslog.write();
+        if (itsWriteWtLog) {
+          weightslog.setFilename(itsWeightsName + ".txt");
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
+              << weightslog.filename());
+          weightslog.write();
+        } else {
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to image extension");
+          casacore::Record wtInfo = weightslog.toRecord();
+          if (itsRestoredCube) {
+            itsRestoredCube->setInfo(wtInfo);
+          }
+          if (itsResidualCube) {
+            itsResidualCube->setInfo(wtInfo);
+          }
+          // TODO: which other images should have the weights?
+        }
     }
   }
 
@@ -1838,5 +1881,106 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
 
   } catch (const LOFAR::APSException &ex) {
     throw AskapError(ex.what());
+  }
+}
+
+void ContinuumWorker::calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                          boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
+                                          int channel, const casacore::Array<float>& arr)
+{
+    boost::optional<float> oversamplingFactor = imgCube->oversamplingFactor();
+    if ( oversamplingFactor ) {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*oversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        statsAndMask->calculate(imgCube->filename(),channel,fullresarr);
+    } else {
+        statsAndMask->calculate(imgCube->filename(),channel,arr);
+    }
+}
+
+void ContinuumWorker::writeCubeStatistics()
+{
+  const std::string imageType = itsParset.getString("imagetype","casa");
+
+  // get one of the ranks that create the cube
+  std::list<int> creators = itsComms.getCubeCreators();
+  creators.sort();
+
+  if ( creators.size() > 0 ) {
+    // make the first rank in the cube creator to be the receiver of the cube statistics
+    // and the rest of the workers send stats to it
+    // NOTE: the compiler wont let me do this :
+    // unsigned int statsCollectorRank; //  = reinterpret_cast<unsigned int> (creators.front());
+    int temp = creators.front();
+    unsigned int statsCollectorRank = static_cast<unsigned int> (temp);
+    ASKAPLOG_INFO_STR(logger, "statsCollectorRank = " << statsCollectorRank);
+    if ( itsRestore ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsRestoredStatsAndMask ) {
+          std::string fullFilename = itsRestoredCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsRestoredStatsAndMask->receiveStats(excludedRanks);
+          }
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to restored image: " << fullFilename);
+          itsRestoredStatsAndMask->writeStatsToFile("./imgstats.txt");
+          itsRestoredStatsAndMask->writeStatsToImageTable(fullFilename);
+        } else {
+            ASKAPLOG_INFO_STR(logger, "itsRestoredStatsAndMask of statsCollectorRank: " << statsCollectorRank << " is null");
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsRestoredStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsRestoredStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    }
+    ASKAPLOG_INFO_STR(logger,"Waiting for all ranks to finish");
+    itsComms.barrier(itsComms.theWorkers());
+    // write the stats to the residual cube
+    if ( itsWriteResidual ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsResidualStatsAndMask ) {
+          std::string fullFilename = itsResidualCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsResidualStatsAndMask->receiveStats(excludedRanks);
+          }
+          itsResidualStatsAndMask->writeStatsToFile("./imgstats_residual.txt");
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to residual image: " << fullFilename);
+          itsResidualStatsAndMask->writeStatsToImageTable(fullFilename);
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsResidualStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsResidualStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    } 
+  } else {
+    ASKAPLOG_INFO_STR(logger,"creators.size() < 0");
   }
 }

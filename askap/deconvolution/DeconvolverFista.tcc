@@ -37,7 +37,7 @@
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/STLIO.h>
 
-#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(decfistalogger, ".deconvolution.fista");
 
@@ -114,14 +114,21 @@ namespace askap {
                 itsBasisFunctionTransform.resize(itsBasisFunction->shape());
                 itsBasisFunctionTransform.set(0.);
 
-                // do explicit loop over basis functions here (the original code relied on iterator in
+                // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
+                // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+                // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
+                scimath::FFT2DWrapper<FT> fft2d(true);
+
+                // do explicit loop over basis functions here (the original code relied on iterator in old
                 // fft2d and, therefore, low level representation of the basis function stack). This way
                 // we have more control over the array structure and can transition to the more efficient order
                 const casacore::uInt nBases = itsBasisFunction->numberBases();
                 for (uInt base = 0; base < nBases; ++base) {
                      casacore::Matrix<FT> fftBuffer = itsBasisFunctionTransform.xyPlane(base);
                      casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
-                     scimath::fft2d(fftBuffer, true);
+                     // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                     //scimath::fft2d(fftBuffer, true);
+                     fft2d(fftBuffer, true);
                 }
             }
 
@@ -268,16 +275,30 @@ namespace askap {
         void DeconvolverFista<T, FT>::W(Array<T>& out, const Array<T>& in)
         {
             if (itsBasisFunction) {
-                casacore::Array<FT> inTransform(in.nonDegenerate().shape(), FT(0.));
-                casacore::Array<FT> outPlaneTransform(in.nonDegenerate().shape());
+                // MV: the original code was quite untidy and with technical debt regarding degenerate dimensions and
+                // taking shape. I have to change this as the new FFT wrapper interface gets the Matrix for 2D FFT rather than
+                // an array with built in iteration over the third or any further dimensions. As we don't use this deconvolver now,
+                // the change won't be well tested (+ I'm not sure it ever worked satisfactory, this is largely an experimental code).
+                // See change sets associated with AXA-1031 for further details.
+                casacore::Matrix<FT> inTransform(in.shape().nonDegenerate(2), static_cast<FT>(0.));
+                casacore::Matrix<FT> outPlaneTransform(inTransform.shape());
                 out.resize(itsBasisFunction->shape());
                 casacore::Cube<T> outCube(out);
-                casacore::setReal(inTransform, in.nonDegenerate());
-                scimath::fft2d(inTransform, true);
+                casacore::setReal(inTransform, in.nonDegenerate(2));
+                // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
+                // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+                // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
+                scimath::FFT2DWrapper<FT> fft2d(true);
+
+                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                //scimath::fft2d(inTransform, true);
+                fft2d(inTransform, true);
                 const uInt nPlanes(itsBasisFunction->shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
-                    outPlaneTransform = inTransform.nonDegenerate() * itsBasisFunctionTransform.xyPlane(plane);
-                    scimath::fft2d(outPlaneTransform, false);
+                    outPlaneTransform = inTransform * itsBasisFunctionTransform.xyPlane(plane);
+                    // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                    //scimath::fft2d(outPlaneTransform, false);
+                    fft2d(outPlaneTransform, false);
                     outCube.xyPlane(plane) = real(outPlaneTransform);
                 }
             } else {
@@ -292,8 +313,13 @@ namespace askap {
         {
             if (itsBasisFunction) {
                 const Cube<T> inCube(in);
-                casacore::Array<FT> inPlaneTransform(out.nonDegenerate().shape(),FT(0.));
-                casacore::Array<FT> outTransform(out.nonDegenerate().shape());
+                // MV: the original code was quite untidy and with technical debt regarding degenerate dimensions and
+                // taking shape. I have to change this as the new FFT wrapper interface gets the Matrix for 2D FFT rather than
+                // an array with built in iteration over the third or any further dimensions. As we don't use this deconvolver now,
+                // the change won't be well tested (+ I'm not sure it ever worked satisfactory, this is largely an experimental code).
+                // See change sets associated with AXA-1031 for further details.
+                casacore::Matrix<FT> inPlaneTransform(out.shape().nonDegenerate(2),static_cast<FT>(0.));
+                casacore::Matrix<FT> outTransform(inPlaneTransform.shape());
                 outTransform.set(FT(0.0));
 
                 // To reconstruct, we filter out each basis from the cumulative sum
@@ -301,18 +327,29 @@ namespace askap {
                 const uInt nPlanes(itsBasisFunction->shape()(2));
 
                 casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1));
-                scimath::fft2d(inPlaneTransform, true);
+                // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
+                // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+                // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
+                scimath::FFT2DWrapper<FT> fft2d(true);
+
+                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                //scimath::fft2d(inPlaneTransform, true);
+                fft2d(inPlaneTransform, true);
                 outTransform = itsBasisFunctionTransform.xyPlane(nPlanes - 1) * (inPlaneTransform);
 
                 for (uInt plane = 1; plane < nPlanes; plane++) {
                     inPlaneTransform.set(0.);
                     casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
-                    scimath::fft2d(inPlaneTransform, true);
+                    // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                    //scimath::fft2d(inPlaneTransform, true);
+                    fft2d(inPlaneTransform, true);
                     outTransform = outTransform
                                    + itsBasisFunctionTransform.xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
                 }
-                scimath::fft2d(outTransform, false);
-                out.nonDegenerate() = real(outTransform);
+                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                //scimath::fft2d(outTransform, false);
+                fft2d(outTransform, false);
+                out.nonDegenerate(2) = real(outTransform);
             } else {
                 out = in.copy();
             }

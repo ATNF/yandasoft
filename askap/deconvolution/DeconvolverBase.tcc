@@ -36,7 +36,7 @@
 #include <boost/shared_ptr.hpp>
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
-#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(decbaselogger, ".deconvolution.base");
 
@@ -338,25 +338,41 @@ namespace askap {
                            << " not same as number of terms specified "
                            << nTerms());
             ASKAPASSERT(nTerms() > 0);
+            // MV: there is some technical debt here in handling arrays/matrices/degenerate dimenions
+            // I don't think this code would've worked correctly anyway if we had extra dimensions
+            // (support of which has been removed from the FFT wrapper a while back, but is only apparent now
+            // when we need a more rigid interface with the new wrapper). So I am changing Array to Matrix and
+            // it will throw exception if we ever encounter extra dimensions
+            //
             // uninitialized construction doesn't work for complex type any more in casacore-3.4
             // default constructor of complex will be called for each element
-            Array<FT> xfr(psf(0).shape());
-            Array<FT> work(model(0).shape());
+            Matrix<FT> xfr(psf(0).shape());
+            Matrix<FT> work(model(0).shape());
+
+            // Don't reorder harmonics as with the original wrapper (hence, pass false to the wrapper), it seems possible to
+            // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+            scimath::FFT2DWrapper<FT> fft2d(false);
 
             for (uInt term = 0; term < nTerms(); ++term) {
                  const Array<T>& thisTermPSF = psf(term);
                  xfr.resize(thisTermPSF.shape());
                  xfr.set(0.);
                  casacore::setReal(xfr, thisTermPSF);
-                 scimath::fft2d(xfr, true);
+                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                 //scimath::fft2d(xfr, true);
+                 fft2d(xfr, true);
                  // Find residuals for current model model
                  const Array<T>& thisTermModel = model(term);
                  work.resize(thisTermModel.shape());
                  work.set(0.);
                  casacore::setReal(work, thisTermModel);
-                 scimath::fft2d(work, true);
+                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                 //scimath::fft2d(work, true);
+                 fft2d(work, true);
                  work *= xfr;
-                 scimath::fft2d(work, false);
+                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                 //scimath::fft2d(work, false);
+                 fft2d(work, false);
                  dirty(term) -= real(work);
             }
         }
@@ -406,17 +422,27 @@ namespace askap {
             }
             const float volume(sum(real(gaussian)));
 
-            scimath::fft2d(gaussian, true);
+            // Don't reorder harmonics as with the original wrapper (hence, pass false to the wrapper), it seems possible to
+            // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
+            scimath::FFT2DWrapper<FT> fft2d(false);
+
+            // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+            //scimath::fft2d(gaussian, true);
+            fft2d(gaussian, true);
 
             ASKAPLOG_INFO_STR(decbaselogger, "Volume of PSF = " << volume << " pixels");
 
             for (uInt term = 0; term < nTerms(); ++term) {
-                Array<FT> vis(model(term).shape());
+                Matrix<FT> vis(model(term).shape());
                 vis.set(FT(0.0));
                 casacore::setReal(vis, model(term));
-                scimath::fft2d(vis, true);
-                vis = vis * gaussian;
-                scimath::fft2d(vis, false);
+                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                //scimath::fft2d(vis, true);
+                fft2d(vis, true);
+                vis *= gaussian;
+                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
+                //scimath::fft2d(vis, false);
+                fft2d(vis, false);
                 restored(term).resize(model(term).shape());
                 restored(term) = dirty(term) + real(vis);
             }

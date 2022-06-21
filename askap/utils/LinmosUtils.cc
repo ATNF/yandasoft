@@ -85,9 +85,9 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
          ASKAPCHECK(xy.size() >= 2, "Expect two elements for each offset");
          // the shift appears to be positive in HA, so multiply by -1. Simulator.cc states:
          // "x direction is flipped to convert az-el type frame to ra-dec"
-         //centres[beam].shift(-xy[0]*spacing, xy[1]*spacing, casacore::True);
+         //centres[beam].shift(-xy[0]*spacing, xy[1]*spacing, True);
          // Note: with ASKAP-36 the x shift as taken from the footprint file doesn't need this flip
-         centres[beam].shift(xy[0]*spacing, xy[1]*spacing, casacore::True);
+         centres[beam].shift(xy[0]*spacing, xy[1]*spacing, True);
          ASKAPLOG_INFO_STR(linmoslogger, " -> " << parName << " centre: " << centres[beam] );
     }
     return centres;
@@ -100,7 +100,7 @@ Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
 /// @param[in] outImgName current mosaic name
 /// @return bool true=success, false=fail
 Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
-                                    const accessors::IImageAccess<casacore::Float> &iacc,
+                                    const accessors::IImageAccess<Float> &iacc,
                                     const vector<string> &inImgNames) {
 
     // if setting weights using beam models, check the input for extra information
@@ -159,9 +159,9 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
 
             return loadBeamOffsets(feed_parset, beamNames, centre);
 
-            if (parset.isDefined("feeds.spacing")) {
-                ASKAPLOG_WARN_STR(linmoslogger, "Feed info specified in parset but ignored. Using offset file");
-            }
+            //if (parset.isDefined("feeds.spacing")) {
+            //    ASKAPLOG_WARN_STR(linmoslogger, "Feed info specified in parset but ignored. Using offset file");
+            //}
 
         } else {
 
@@ -172,10 +172,123 @@ Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
 
     } else {
         ASKAPLOG_WARN_STR(linmoslogger, "Centre of the feeds not found. Setting beam centres to input ref. pixels");
+        // no other information, so set the centre of the beam to be the reference pixel
+        Vector<MVDirection> centres(inImgNames.size());
+        for (int i = 0; i < centres.size(); i++) {
+            const CoordinateSystem coordSys = iacc.coordSys(inImgNames[i]);
+            const int dcPos = coordSys.findCoordinate(Coordinate::DIRECTION,-1);
+            const DirectionCoordinate inDC = coordSys.directionCoordinate(dcPos);
+            inDC.toWorld(centres[i],inDC.referencePixel());
+        }
+        return centres;
     }
 
     return Vector<MVDirection>();
 
 }
+
+/// @brief copy selected keywords from the reference image to the output
+/// @param[in] string outName : output image name
+/// @param[in] string inName : input image name
+/// @param[in] vector<string> keywords : list of keyword names to copy
+void copyKeywords(const string & outName, const string& inName, const vector<string> & keywords) {
+
+    accessors::IImageAccess<Float>& iacc = SynthesisParamsHelper::imageHandler();
+
+    for (const string& key : keywords) {
+        if (key.size() > 0) {
+            pair<string,string> valueAndComment = iacc.getMetadataKeyword(inName, key);
+            if (valueAndComment.first.size() > 0) {
+                iacc.setMetadataKeyword(outName, key, valueAndComment.first,valueAndComment.second);
+            }
+        }
+    }
+}
+
+
+/// @brief save a table with the image containing the beamcentres and other information
+/// @param[in] string outImgName : output image name, where the table will be saved
+/// @param vector<string> inImgNames : input images
+/// @param Vector<MVDirection> beamCentres : list of beam centres, must be same number as input images
+void saveMosaicTable(const string & outImgName,const vector<string> & inImgNames,
+                     const Vector<MVDirection> & beamCentres)
+{
+    ASKAPCHECK(inImgNames.size()==beamCentres.size(),"inImgNames and beamCentres must be the same length");
+    int n = inImgNames.size();
+    ASKAPLOG_INFO_STR(linmoslogger,"Saving the mosaic table");
+    accessors::IImageAccess<Float>& iacc = SynthesisParamsHelper::imageHandler();
+    Record record;
+    // We want columns for beam number, inImgName, beamCentre (RA/Dec/J2000?)
+    Record subRecord;
+    Vector<Int> colBeamNumber(n);
+    Vector<String> colImgName(n);
+    Vector<Double> colRA(n);
+    Vector<Double> colDEC(n);
+    Vector<Double> colBMaj(n,0.);
+    Vector<Double> colBMin(n,0.);
+    Vector<Double> colBPA(n,0.);
+    for (int i=0; i<n; i++) {
+        colBeamNumber(i) = imagemath::LinmosAccumulator<Float>::getBeamFromImageName(inImgNames[i]);
+        colImgName(i) = inImgNames[i];
+        colRA(i) = beamCentres[i].getLong("deg").getValue();
+        colDEC(i) = beamCentres[i].getLat("deg").getValue();
+        Vector<Quantity> beam = iacc.beamInfo(inImgNames[i]);
+        if (beam.nelements()==3) {
+          colBMaj(i) = beam[0].getValue("arcsec");
+          colBMin(i) = beam[1].getValue("arcsec");
+          colBPA(i) = beam[2].getValue("deg");
+        }
+    }
+
+    subRecord.define("BEAM",colBeamNumber);
+    subRecord.define("NAME",colImgName);
+    subRecord.define("RA",colRA);
+    subRecord.define("DEC",colDEC);
+    // Add the reference psf parameters
+    subRecord.define("BMAJ",colBMaj);
+    subRecord.define("BMIN",colBMin);
+    subRecord.define("BPA",colBPA);
+    Vector<String> units(7);
+    units(0) = "";
+    units(1) = "";
+    units(2) = "deg"; //? FITS unit?
+    units(3) = "deg";
+    units(4) = "arcsec";
+    units(5) = "arcsec";
+    units(6) = "deg";
+    subRecord.define("Units",units);
+    record.defineRecord("MOSAIC",subRecord);
+    // write it out
+    iacc.setInfo(outImgName,record);
+}
+
+Vector<Float> readWeightsTable(const string& inImgName) {
+    Vector<Float> wtVec;
+    accessors::IImageAccess<Float>& iacc = SynthesisParamsHelper::imageHandler();
+    const std::pair<std::string,std::string> imWtKw = iacc.getMetadataKeyword(inImgName,"IMWEIGHT");
+    if (imWtKw.first!="") {
+      try {
+        float wt = std::stod(imWtKw.first);
+        wtVec.resize(1);
+        wtVec(0) = wt;
+      } catch (const std::invalid_argument&) {
+        ASKAPLOG_WARN_STR(logger, "Invalid float value for header keyword IMWEIGHT : "<<imWtKw.first);
+      } catch (const std::out_of_range&) {
+        ASKAPLOG_WARN_STR(logger, "Out of range double value for header keyword IMWEIGHT : "<<imWtKw.first);
+      }
+    } else {
+      Record info;
+      iacc.getInfo(inImgName,"WEIGHTS",info);
+      if (!info.empty()) {
+        Record wtsRec = info.asRecord("WEIGHTS");
+        // get subrecord with arrays
+        wtsRec = wtsRec.asRecord("WEIGHTS");
+        ASKAPCHECK(wtsRec.isDefined("WEIGHT"),"WEIGHTS table does not have WEIGHT column");
+        wtVec.assign(wtsRec.asArrayFloat("WEIGHT"));
+      }
+    }
+    return wtVec;
+}
+
 
 } // namespace askap

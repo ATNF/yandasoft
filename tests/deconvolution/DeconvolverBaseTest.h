@@ -44,6 +44,7 @@ class DeconvolverBaseTest : public CppUnit::TestFixture
 {
   CPPUNIT_TEST_SUITE(DeconvolverBaseTest);
   CPPUNIT_TEST(testCasacoreAssumptions);
+  CPPUNIT_TEST(testCasacoreAssumptions2);
   CPPUNIT_TEST(testCreate);
   CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
   CPPUNIT_TEST_SUITE_END();
@@ -124,6 +125,33 @@ public:
           CPPUNIT_ASSERT_DOUBLES_EQUAL(5., imag(*ci), 1e-10);
      }
      
+  }
+
+  void testCasacoreAssumptions2() {
+     // MV: this test is not about DeconvolverBase, but rather about assumptions
+     // about casacore methods used throughout the deconvolve package, in particular
+     // about underlying memory layout
+     const uInt nplanes = 13;
+     const uInt size = 100;
+     Cube<Float> tmp(size,size,nplanes,-1.);
+     for (uInt plane=0; plane < nplanes; ++plane) {
+          CPPUNIT_ASSERT(tmp.xyPlane(plane).contiguousStorage());
+          // slice is the reference to a particular zplane
+          Matrix<Float> slice = tmp.xyPlane(plane);
+          CPPUNIT_ASSERT(slice.contiguousStorage());
+          CPPUNIT_ASSERT(slice.column(0).contiguousStorage());
+          CPPUNIT_ASSERT(!slice.row(0).contiguousStorage());
+          slice.set(static_cast<Float>(plane));
+          slice.column(0).set(static_cast<Float>(plane)*plane);
+     }
+     for (uInt row=0; row < size; ++row) {
+          for (uInt column=0; column < size; ++column) {
+               for (uInt plane=0; plane < nplanes; ++plane) {
+                    const Float expected = column == 0 ? static_cast<Float>(plane) * plane : static_cast<Float>(plane); 
+                    CPPUNIT_ASSERT_DOUBLES_EQUAL(expected, tmp(row, column, plane), 1e-6);
+               }
+          }
+     }
   }
 
   void testCreate() {

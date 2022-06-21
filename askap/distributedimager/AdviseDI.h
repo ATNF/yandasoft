@@ -94,11 +94,10 @@ namespace askap {
 
             /// @brief Access to the parset
             /// @details Returns the current parset after advice
-            LOFAR::ParameterSet getParset() const { return itsParset; };
+            inline const LOFAR::ParameterSet& getParset() const { return itsParset; };
 
             /// @brief the datasets
             std::vector<std::string> getDatasets() const;
-
 
             /// @brief get the channels
             std::vector<int> getChannels() const;
@@ -106,15 +105,13 @@ namespace askap {
             /// @brief get the frequencies
             std::vector<double> getFrequencies() const;
 
-            casacore::MVDirection getTangent(int ms=0) const {return itsTangent[ms];};
+            inline const casacore::MVDirection& getTangent(int ms=0) const {return itsTangent[ms];};
 
-            casacore::MVEpoch getEpoch(int ms=0) const {return itsEpoch[ms]; };
+            inline const casacore::MVEpoch& getEpoch(int ms=0) const {return itsEpoch[ms]; };
 
-            casacore::MPosition getPosition(int ms=0) const {return itsPosition[ms]; };
+            inline const casacore::MPosition& getPosition(int ms=0) const {return itsPosition[ms]; };
 
-            vector<casacore::MFrequency> getBaryFrequencies() const {return itsFFrameFrequencies;};
-
-            vector<casacore::MFrequency> getTopoFrequencies() const {return itsInputFrequencies;};
+            inline const vector<casacore::MFrequency>& getTopoFrequencies() const {return itsInputFrequencies;};
 
             cp::ContinuumWorkUnit getAllocation(int id);
 
@@ -122,12 +119,12 @@ namespace askap {
 
             void updateComms();
 
-            int getWorkUnitCount() const { return itsWorkUnitCount;};
+            inline int getWorkUnitCount() const { return itsWorkUnitCount;};
 
             void prepare();
 
             /// obtain frequency reference frame
-            inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
+            inline const casacore::MFrequency::Ref& getFreqRefFrame() const { return itsFreqRefFrame;}
 
         protected:
 
@@ -144,15 +141,13 @@ namespace askap {
 
         private:
 
-            bool isPrepared;
+            bool itsPrepared;
 
             int itsWorkUnitCount;
 
             LOFAR::ParameterSet& itsParset;
 
             casacore::uInt itsRef;
-
-            vector<casacore::MFrequency> itsFFrameFrequencies;
 
             vector<casacore::MFrequency> itsInputFrequencies;
 
@@ -165,11 +160,9 @@ namespace askap {
 
             casacore::MFrequency::Types itsFreqType;
 
-            double minFrequency;
+            double itsMinFrequency;
 
-            double maxFrequency;
-
-
+            double itsMaxFrequency;
 
             std::vector<casacore::MVDirection> itsTangent;
 
@@ -179,16 +172,16 @@ namespace askap {
 
             std::vector<casacore::MPosition> itsPosition;
 
-            std::vector< std::vector<double> > chanFreq;
-            std::vector< std::vector<double> > chanWidth;
-            std::vector< std::vector<double> > effectiveBW;
-            std::vector< std::vector<double> > resolution;
-            std::vector< std::vector<double> > centre;
+            std::vector< std::vector<double> > itsChanFreq;
+            std::vector< std::vector<double> > itsChanWidth;
+            std::vector< std::vector<double> > itsEffectiveBW;
+            std::vector< std::vector<double> > itsResolution;
+            std::vector< std::vector<double> > itsCentre;
 
             std::vector< std::vector<double> > itsAllocatedFrequencies;
             std::vector< std::vector<cp::ContinuumWorkUnit> > itsAllocatedWork;
 
-            vector<int> matchall(int,  casacore::MVFrequency, casacore::MVFrequency) const;
+            vector<int> matchAll(int,  casacore::MVFrequency, casacore::MVFrequency) const;
 
             std::vector<int> getBeams() const;
 
