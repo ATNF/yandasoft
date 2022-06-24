@@ -18,7 +18,7 @@ build:
   extends: .common
   stage: build
   before_script:
-    - sudo apt update && apt install -y g++ git cmake  
+    - sudo apt update && sudo apt install -y g++ git cmake  
     - sudo ln -s /usr/lib/x86_64-linux-gnu/ /usr/lib64
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
@@ -35,7 +35,7 @@ test:
   dependencies:
     - build
   before_script:
-    - sudo apt update && apt install -y cmake xsltproc 
+    - sudo apt update && sudo apt install -y cmake xsltproc 
   variables:
     CASARCFILES: ${CI_PROJECT_DIR}/_build/test_gitlab_casarc.cfg
     TEST_DATASET_PATH: ${CI_PROJECT_DIR}/_build/testdataset.ms
@@ -82,7 +82,7 @@ pages:
   dependencies:
     - test
   before_script:
-    - sudo apt update && apt install -y gcovr curl doxygen graphviz
+    - sudo apt update && sudo apt install -y gcovr curl doxygen graphviz
   script:
     - mkdir -p public/build/reports
     - mkdir -p public/coverage
@@ -98,7 +98,7 @@ pages:
 success:
   stage: ci_status
   before_script:
-    - sudo apt update && apt install -y curl
+    - sudo apt update && sudo apt install -y curl
   after_script:
     - ""
   script:
@@ -113,7 +113,7 @@ success:
 failure:
   stage: ci_status
   before_script:
-    - sudo apt update && apt install -y curl
+    - sudo apt update && sudo apt install -y curl
   after_script:
     - ""
   script:
