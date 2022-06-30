@@ -79,9 +79,8 @@ class ContinuumMaster {
         /// <and so on>
         /// @endcode
         ///
-        /// @param[in] parset   the parameterset to use as input.
         /// @return a vector containing in each element one dataset.
-        std::vector<std::string> getDatasets(const LOFAR::ParameterSet& itsParset);
+        std::vector<std::string> getDatasets();
 
         std::vector<int> getBeams(void);
 

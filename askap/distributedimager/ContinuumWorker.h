@@ -80,20 +80,16 @@ class ContinuumWorker
         bool itsGridderCanMosaick;
 
         // Cache a workunit to a different location
-        void cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
+        void cacheWorkUnit(ContinuumWorkUnit& wu);
         // Process a workunit
         void preProcessWorkUnit(ContinuumWorkUnit& wu);
         // Compress all continuous channel allocations into individual workunits
         void compressWorkUnits();
 
         // Delete a workunit from the cache
-        void deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
+        void deleteWorkUnitFromCache(ContinuumWorkUnit& wu);
         // clear the current cached files
         void clearWorkUnitCache();
-
-        // Vector of the stored parsets of the work allocations
-        vector<LOFAR::ParameterSet> itsParsets;
-
 
         //For all workunits .... process
 
@@ -101,10 +97,10 @@ class ContinuumWorker
 
         // For a given workunit, just process a single snapshot - the channel is specified
         // in the parset ...
-        void processSnapshot(LOFAR::ParameterSet& parset);
+        void processSnapshot();
 
 
-        // Setup the image specified in itsParset and add it to the Params instance.
+        // Setup the image specified in parset and add it to the Params instance.
         void setupImage(const askap::scimath::Params::ShPtr& params,
                     double channelFrequency, bool shapeOveride = false);
 
@@ -165,7 +161,7 @@ class ContinuumWorker
 
         // calculate the statistic of the per plane image
         void calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
-                                 boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube, 
+                                 boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
                                  int channel, const casacore::Array<float>& arr);
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
