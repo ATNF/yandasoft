@@ -201,7 +201,13 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
-
+    // Check whether image param is stored at a lower resolution
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
+    }
 }
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
@@ -311,6 +317,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
         itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
         // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
         ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
     }
 
     // Get the image shape
