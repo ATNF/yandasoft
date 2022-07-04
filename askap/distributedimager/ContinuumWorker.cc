@@ -623,6 +623,9 @@ void ContinuumWorker::processChannels()
         itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
     }
 
+    LOFAR::ParameterSet gridParset = itsParset.makeSubset("");
+    gridParset.remove("Images.extraoversampling");
+
     if ( itsComms.isCubeCreator() ) {
 
       // Get keywords to write to the image header
@@ -653,21 +656,21 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteGrids) {
         if (itsGridFFT) {
-          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
-          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name));
         } else {
           if (itsGridType == "casa") {
-              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name, true));
-              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name, true));
-              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name, true));
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, visgrid_name, true));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name, true));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name, true));
           } else {
-              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".real", itsGridCoordUV));
-              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real", itsGridCoordUV));
-              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".real", itsGridCoordUV));
-              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".imag", itsGridCoordUV));
-              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag", itsGridCoordUV));
-              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag", itsGridCoordUV));
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name+".real", itsGridCoordUV));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real", itsGridCoordUV));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name+".real", itsGridCoordUV));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name+".imag", itsGridCoordUV));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag", itsGridCoordUV));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag", itsGridCoordUV));
           }
         }
       }
@@ -702,21 +705,21 @@ void ContinuumWorker::processChannels()
 
       if (itsWriteGrids) {
         if (itsGridFFT) {
-          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name));
-          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name));
-          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name));
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name));
         } else {
           if (itsGridType == "casa") {
-              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, visgrid_name));
-              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
-              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, visgrid_name));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, pcfgrid_name));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, psfgrid_name));
           } else {
-              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".real"));
-              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".real"));
-              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".real"));
-              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".imag"));
-              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".imag"));
-              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".imag"));
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name+".real"));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name+".real"));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name+".real"));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name+".imag"));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name+".imag"));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name+".imag"));
           }
         }
       }
@@ -1040,8 +1043,6 @@ void ContinuumWorker::processChannels()
 
             rootImager.getNE()->merge(*workingImager.getNE());
             ASKAPLOG_INFO_STR(logger,"Merged");
-
-
           }
           catch( const askap::AskapError& e) {
             ASKAPLOG_WARN_STR(logger, "Askap error in imaging - skipping accumulation: carrying on - this will result in a blank channel" << e.what());
