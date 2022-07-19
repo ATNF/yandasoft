@@ -37,9 +37,9 @@
 using namespace casa;
 
 namespace askap {
-  
+
   namespace synthesis {
-    
+
     class EntropyTest : public CppUnit::TestFixture
     {
       CPPUNIT_TEST_SUITE(EntropyTest);
@@ -47,7 +47,7 @@ namespace askap {
       CPPUNIT_TEST(testEmptiness);
       CPPUNIT_TEST_SUITE_END();
     public:
-      
+
       void setUp() {
         itsModelShape=IPosition(3,3,3,1);
         itsModel.reset(new Array<Float>(itsModelShape));
@@ -82,7 +82,7 @@ namespace askap {
         CPPUNIT_ASSERT(abs(itsEntropy->entropy(*itsModel)-3.90403)<1e-3);
         CPPUNIT_ASSERT(abs(itsEntropy->formGDGStep(*itsModel, *itsResidual, *itsStep)(IPosition(3,1,1,0))-8571.95)<1e-1);
         CPPUNIT_ASSERT(abs((*itsStep)(IPosition(3,1,1,0))+1.81343)<1e-4);
-        CPPUNIT_ASSERT(abs(itsEntropy->formGDS(*itsModel, *itsResidual, *itsStep)+12.4299<1e-3));
+        CPPUNIT_ASSERT(abs(itsEntropy->formGDS(*itsModel, *itsResidual, *itsStep)+12.4299)<1e-3);
       }
       void tearDown() {
         itsEntropy.reset();
@@ -92,7 +92,7 @@ namespace askap {
 	itsResidual.reset();
 	itsStep.reset();
       }
-      
+
     private:
 
       boost::shared_ptr<EntropyBase<Float> > itsEntropy;
@@ -110,8 +110,7 @@ namespace askap {
       boost::shared_ptr<Array<Float> > itsStep;
 
     };
-    
-  } // namespace synthesis
-  
-} // namespace askap
 
+  } // namespace synthesis
+
+} // namespace askap
