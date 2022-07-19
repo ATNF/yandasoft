@@ -90,7 +90,7 @@ namespace askap {
             this->itsBasisFunction = mDataArray.copy();
             Cube<T> BF(this->itsBasisFunction);
             for (uInt i = 0; i < this->itsNumberBases; i++) {
-                T sumBF(sum(BF.xyPlane(i)));
+                const T sumBF(sum(BF.xyPlane(i)));
                 if (abs(sumBF) > 0.0) {
                     BF.xyPlane(i) = BF.xyPlane(i) / sumBF;
                 }

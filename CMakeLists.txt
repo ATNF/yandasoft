@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-set (VERSION "1.5.0")
+set (VERSION "1.6.0")
 project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 # ASKAP Integration (askapsoft)
@@ -50,6 +50,23 @@ else()
   message (STATUS "No cmake config overrides file specified, using defaults")
 endif()
 
+# Get a remote git repo url, either already set from config, or from current git dir.
+message (STATUS "Determining remote git url prefix ...")
+if (NOT ASKAPSDP_GIT_URL)
+  message (STATUS "Remote git url prefix not specified with ASKAPSDP_GIT_URL value, using current git dir ...")
+  execute_process(
+     COMMAND git config --get remote.origin.url
+     COMMAND xargs dirname
+     OUTPUT_VARIABLE ASKAPSDP_GIT_URL
+     OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (NOT ASKAPSDP_GIT_URL)
+    message(FATAL_ERROR
+      "Could not determine a remote git url to retrieve dependencies. This can be because we are not in a git dir or you need to set ASKAPSDP_GIT_URL var in your dev-overrides or from the cmake command line with '-DASKAPSDP_GIT_URL=<repo-prefix>'.")
+  endif()
+endif()
+message(STATUS "Remote git url prefix is ${ASKAPSDP_GIT_URL}")
+
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
 
 
@@ -60,7 +77,7 @@ include(FetchContent)
 # We need this before any other Fetch calls so we have the find_package routines available
 # -------- askap cmake modules --------
 FetchContent_Declare(askap-cmake
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-cmake.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/askap-cmake.git
   GIT_TAG           ${ASKAP_CMAKE_TAG}
   SOURCE_DIR        askap-cmake
 )
@@ -79,56 +96,56 @@ include(version_utils)
 
 # -------- lofar common --------
 FetchContent_Declare(lofar-common
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-common.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/lofar-common.git
   GIT_TAG           ${LOFAR_COMMON_TAG}
   SOURCE_DIR        lofar-common
 )
 
 # -------- lofar blob --------
 FetchContent_Declare(lofar-blob
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-blob.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/lofar-blob.git
   GIT_TAG           ${LOFAR_BLOB_TAG}
   SOURCE_DIR        lofar-blob
 )
 
 # -------- base-askap --------
 FetchContent_Declare(base-askap
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askap.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-askap.git
   GIT_TAG           ${BASE_ASKAP_TAG}
   SOURCE_DIR        base-askap
 )
 
 # -------- base-logfilters --------
 FetchContent_Declare(base-logfilters
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-logfilters.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-logfilters.git
   GIT_TAG           ${BASE_LOGFILTERS_TAG}
   SOURCE_DIR        base-logfilters
 )
 
 # -------- base-imagemath --------
 FetchContent_Declare(base-imagemath
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-imagemath.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-imagemath.git
   GIT_TAG           ${BASE_IMAGEMATH_TAG}
   SOURCE_DIR        base-imagemath
 )
 
 # -------- base-askapparallel --------
 FetchContent_Declare(base-askapparallel
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askapparallel.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-askapparallel.git
   GIT_TAG           ${BASE_ASKAPPARRALLEL_TAG}
   SOURCE_DIR        base-askapparallel
 )
 
 # -------- base-scimath --------
 FetchContent_Declare(base-scimath
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-scimath.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-scimath.git
   GIT_TAG           ${BASE_SCIMATH_TAG}
   SOURCE_DIR        base-scimath
 )
 
 # -------- base-accessors --------
 FetchContent_Declare(base-accessors
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-accessors.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-accessors.git
   GIT_TAG           ${BASE_ACCESSORS_TAG}
   SOURCE_DIR        base-accessors
 )

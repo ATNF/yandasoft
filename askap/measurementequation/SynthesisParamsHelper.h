@@ -46,6 +46,7 @@
 
 #include <askap/imageaccess/IImageAccess.h>
 #include <askap/askapparallel/AskapParallel.h>
+#include <askap/measurementequation/VisMetaDataStats.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
 
@@ -332,6 +333,11 @@ namespace askap
         /// @param[in] osfactor extra oversampling factor
         /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
         static void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.);
+
+        /// @brief determine sampling to use for nyquistgridding
+        /// @param[in] advice VisMetaDataStats object used to get max U, V, W
+        /// @param[in/out] parset to read and modify (setting extraoversampling and changing cellsize and shape/subshape)
+        static void setNyquistSampling(const VisMetaDataStats& advice, LOFAR::ParameterSet& parset);
 
         /// @brief Copy a parameter to a CASA TempImage
         /// Note that this will be a reference if possible

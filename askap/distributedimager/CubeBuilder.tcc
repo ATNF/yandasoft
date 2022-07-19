@@ -208,7 +208,13 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
-
+    // Check whether image param is stored at a lower resolution
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
+    }
 }
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
@@ -318,6 +324,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
         itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
         // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
         ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
     }
 
     // Get the image shape
@@ -428,7 +435,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::Quantity& inc)
 {
     CoordinateSystem coordsys;
-    const vector<string> dirVector = parset.getStringVector("Images.direction");
+    vector<string> dirVector = parset.getStringVector("Images.direction");
+    if (parset.getBool("updatedirection",False)) {
+        // override with image specific direction if present - for mosaic case
+        vector<string> names = parset.getStringVector("Images.Names",{},false);
+        if (names.size()>0) {
+            if (parset.isDefined("Images."+names[0]+".direction")) {
+                dirVector = parset.getStringVector("Images."+names[0]+".direction");
+            }
+        }
+    }
     const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
 
 
@@ -531,6 +547,14 @@ void CubeBuilder<T>::addBeamList(const BeamList & beamList)
 }
 
 template <class T>
+void CubeBuilder<T>::setInfo(const casacore::Record & info)
+{
+    itsCube->setInfo(itsFilename, info);
+}
+
+
+
+template <class T>
 void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)
 {
     if ( ! historyLines.empty() ) {
@@ -540,6 +564,16 @@ void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLi
     }
 }
 
+template <class T>
+boost::shared_ptr<accessors::IImageAccess<T>>  CubeBuilder<T>::imageHandler()
+{
+    return itsCube;
+}
 
+template <class T>
+boost::optional<float> CubeBuilder<T>::oversamplingFactor()
+{
+    return itsExtraOversamplingFactor;
+}
 } // namespace cp
 } // namespace askap

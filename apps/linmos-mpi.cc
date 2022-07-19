@@ -29,8 +29,10 @@
 
 // Package level header file
 #include <askap/askap_synthesis.h>
+#include <askap/utils/StatsAndMask.h>
 
 /// ASKAP includes
+#include <askap/askap/AskapUtil.h>
 #include <askap/utils/LinmosUtils.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <askap/askapparallel/AskapParallel.h>
@@ -48,22 +50,6 @@ using namespace askap::synthesis;
 
 namespace askap {
 
-/// @brief copy selected keywords from the reference image to the output
-static void copyKeywords(const string & outName, const string& inName, const vector<string> & keywords) {
-
-    accessors::IImageAccess<casacore::Float>& iacc = SynthesisParamsHelper::imageHandler();
-
-    for (const string& key : keywords) {
-        if (key.size() > 0) {
-            pair<string,string> valueAndComment = iacc.getMetadataKeyword(inName, key);
-            if (valueAndComment.first.size() > 0) {
-                iacc.setMetadataKeyword(outName, key, valueAndComment.first,valueAndComment.second);
-            }
-        }
-    }
-}
-
-
 // @brief do the merge
 /// @param[in] parset subset with parameters
 static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::AskapParallel &comms) {
@@ -77,6 +63,11 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
   // get the image history keyword if it is defined
   const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",{},false);
+
+  // get the calcstats flag from the parset. if it is true, then this task also calculates the image statistics
+  const bool calcstats = parset.getBool("calcstats", false);
+  // file to store the statistics
+  const std::string outputStats = parset.getString("outputStats",""); 
 
   // get the list of keywords to copy from the input
   // Set some defaults for simple beam mosaic, won't be correct for more complex cases
@@ -101,7 +92,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   // index - do it now ...
 
 
-  // loop over the mosaics, reading each in an adding to the output pixel arrays
+  // loop over the mosaics, reading each in and adding to the output pixel arrays
   vector<string> inImgNames, inWgtNames, inSenNames, inStokesINames;
   string outImgName, outWgtName, outSenName;
   map<string,string> outWgtNames = accumulator.outWgtNames();
@@ -132,7 +123,19 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED ) {
       inWgtNames = accumulator.inWgtNameVecs()[outImgName];
-      if (accumulator.useWeightsLog()) {
+      if (inWgtNames.size()==0) {
+        // want weights, but have not specified any files - try to read from image headers
+        bool useWtFromHdr = true;
+        for (auto i : inImgNames) {
+          useWtFromHdr = readWeightsTable(i).size()>0;
+          if (!useWtFromHdr) {
+            break;
+          }
+        }
+        ASKAPCHECK(useWtFromHdr, "Image weighting requested, but no weights found in headers");
+        ASKAPLOG_INFO_STR(logger,"   (reading weights from input images)");
+        accumulator.setUseWtFromHdr(useWtFromHdr);
+      } else if (accumulator.useWeightsLog()) {
           ASKAPLOG_INFO_STR(logger, " - input weightslog files: " << inWgtNames);
       } else {
           ASKAPLOG_INFO_STR(logger, " - input weights images: " << inWgtNames);
@@ -140,7 +143,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     }
 
     if (accumulator.weightType() == FROM_BP_MODEL|| accumulator.weightType() == COMBINED) {
-      accumulator.beamCentres(loadBeamCentres(parset,iacc,inImgNames));
+      accumulator.setBeamCentres(loadBeamCentres(parset,iacc,inImgNames));
     }
 
     if (accumulator.doSensitivity()) {
@@ -249,6 +252,17 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
     // So the plan is to iterate over each channel ...
     // Calculate the inShapes for each channel and file ....
+
+    // create a stats object for this image. It is a bit messy. The StatsAndMask class requires a shared_ptr for the
+    // IImageAccess so we have to create a shared pointer from iacc. Also, we dont want this shared pointer to delete
+    // the object (iacc) when it goes out of scope
+    boost::shared_ptr<askap::accessors::IImageAccess<>> iaccPtr;
+    boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask;
+    if ( calcstats ) {
+      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});    
+      statsAndMask.reset(new askap::utils::StatsAndMask{comms,outImgName,iaccPtr});
+    }
+
 
     for (channel = firstChannel; channel <= lastChannel; channel += channelInc) {
 
@@ -380,11 +394,13 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
           ASKAPLOG_INFO_STR(logger, "Processing input image " << inImgName);
           if (accumulator.weightType() == FROM_WEIGHT_IMAGES || accumulator.weightType() == COMBINED) {
-            inWgtName = inWgtNames[img];
-            if (accumulator.useWeightsLog()) {
-                ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
-            } else {
-                ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+            if (!accumulator.useWtFromHdr()) {
+              inWgtName = inWgtNames[img];
+              if (accumulator.useWeightsLog()) {
+                  ASKAPLOG_INFO_STR(logger, " - and input weightslog " << inWgtName);
+              } else {
+                  ASKAPLOG_INFO_STR(logger, " - and input weight image " << inWgtName);
+              }
             }
           }
           if (accumulator.doSensitivity()) {
@@ -563,7 +579,22 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
                 inWgtPix.resize(inPix.shape());
                 inWgtPix = wtlog.weight(channel);
 
+            } else if (accumulator.useWtFromHdr()) {
+              ASKAPLOG_INFO_STR(logger,"Reading weights from input image file :"<< inImgName);
+              const casacore::Vector<casacore::Float> wts = readWeightsTable(inImgName);
+              const size_t size = wts.size();
+              if (size > 1) {
+                inWgtPix.resize(inPix.shape());
+                ASKAPCHECK(channel < size,"Not enough channels in weights table");
+                inWgtPix = wts(channel);
+              } else if (size == 1) {
+                inWgtPix.resize(inPix.shape());
+                inWgtPix = wts(0);
+              }
+              ASKAPCHECK(size>0,"No weights found in image header or extension for image: "<<inImgName);
+
             } else {
+                // use weights images
                 const casa::IPosition shape = iacc.shape(inWgtName);
                 casa::IPosition blc(shape.nelements(),0);
                 casa::IPosition trc(shape-1);
@@ -573,7 +604,6 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
 
                 inWgtPix = iacc.read(inWgtName,blc,trc);
             }
-
             ASKAPASSERT(inPix.shape() == inWgtPix.shape());
           }
           if (accumulator.doSensitivity()) {
@@ -712,6 +742,10 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       loc[3] = channel;
       ASKAPLOG_INFO_STR(logger, " - location " << loc);
       iacc.write(outImgName,outPix,outMask,loc);
+      // calculate the statistics for the array slice
+      if ( calcstats ) {
+        statsAndMask->calculate(outImgName,channel,outPix);
+      }
       if (accumulator.outWgtDuplicates()[outImgName]) {
           ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
       } else {
@@ -730,6 +764,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       }
     }
     // Update header when all the writing is done
+    ASKAPLOG_INFO_STR(logger,"rank " << comms.rank() << " got to barrier");
     comms.barrier();
     if (comms.isMaster()) {
         // set one of the input images as a reference for metadata (the first by default)
@@ -743,25 +778,23 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
         ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
         // get psf beam information from the selected reference image
         Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
-        bool psfValid = false;
-        if (psf.nelements()<3) {
-          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-          ": beamInfo needs at least 3 elements. Not writing PSF");
-        } else if ((psf[0].getValue("rad")==0) || (psf[1].getValue("rad")==0)) {
-          ASKAPLOG_WARN_STR(logger, inImgNames[psfref] <<
-            ": beamInfo invalid. Not writing PSF");
-        } else {
-          psfValid = true;
-        }
+        bool psfValid = (psf.nelements()==3) && (psf[0].getValue("rad")>0) && (psf[1].getValue("rad")>0);
+        accessors::BeamList refBeamList = iacc.beamList(inImgNames[psfref]);
 
         iacc.setUnits(outImgName,units);
         if (psfValid) {
             iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
         }
+        if (!refBeamList.empty()) {
+            iacc.setBeamInfo(outImgName,refBeamList);
+        }
         if (!accumulator.outWgtDuplicates()[outImgName]) {
             iacc.setUnits(outWgtName,units);
             if (psfValid) {
                 iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outWgtName,refBeamList);
             }
         }
         if (accumulator.doSensitivity()) {
@@ -769,7 +802,27 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
             if (psfValid) {
                 iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
             }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outSenName,refBeamList);
+            }
         }
+        // Save table of mosaic pointing centres & beamsizes?
+        saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
+    }
+    if ( calcstats ) {
+      comms.barrier();
+      // Since the processing of the image channels is distributed among the MPI ranks,
+      // the master has to collect all the stats from the worker ranks prior to writing
+      // the stats to the image table
+      if (comms.isMaster()) {
+        statsAndMask->receiveStats();
+        statsAndMask->writeStatsToImageTable(outImgName);  
+        if ( outputStats != "" ) {
+            statsAndMask->writeStatsToFile(outputStats);
+        }
+      } else {
+        statsAndMask->sendStats();
+      }
     }
   }
 }

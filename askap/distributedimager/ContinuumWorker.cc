@@ -104,7 +104,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     // lets properly size the storage
     const int nchanpercore = itsParset.getInt32("nchanpercore", 1);
     workUnits.resize(0);
-    itsParsets.resize(0);
 
     // lets calculate a base
     unsigned int nWorkers = itsComms.nProcs() - 1;
@@ -145,23 +144,23 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
       ASKAPLOG_INFO_STR(logger,"Gridder <CANNOT> mosaick");
     }
 
-    itsRestore=parset.getBool("restore", false); // do restore and write restored image
-    itsWriteResidual=parset.getBool("residuals",false); // write residual image
-    itsWriteResidual=parset.getBool("write.residualimage",itsWriteResidual); // alternative param name
-    itsWritePsfRaw = parset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
-    itsWritePsfImage = parset.getBool("write.psfimage", true); // write normalised, preconditioned psf
-    itsWriteWtLog = parset.getBool("write.weightslog", false); // write weights log file
-    itsWriteWtImage = parset.getBool("write.weightsimage", itsRestore && !itsWriteWtLog); // write weights image
-    itsWriteModelImage = parset.getBool("write.modelimage", !itsRestore); // clean model
-    itsWriteGrids = parset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
-    itsWriteGrids = parset.getBool("write.grids",itsWriteGrids); // new name
-    itsGridType = parset.getString("imagetype","casa");
-    itsGridCoordUV = parset.getBool("write.grids.uvcoord", itsGridType=="casa"); // label grid with UV coordinates
-    itsGridFFT = parset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
+    itsRestore = itsParset.getBool("restore", false); // do restore and write restored image
+    itsWriteResidual = itsParset.getBool("residuals",false); // write residual image
+    itsWriteResidual = itsParset.getBool("write.residualimage",itsWriteResidual); // alternative param name
+    itsWritePsfRaw = itsParset.getBool("write.psfrawimage", false); // write unnormalised, natural wt psf
+    itsWritePsfImage = itsParset.getBool("write.psfimage", true); // write normalised, preconditioned psf
+    itsWriteWtLog = itsParset.getBool("write.weightslog", false); // write weights log file
+    itsWriteWtImage = itsParset.getBool("write.weightsimage", false); // write weights image
+    itsWriteModelImage = itsParset.getBool("write.modelimage", !itsRestore); // clean model
+    itsWriteGrids = itsParset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
+    itsWriteGrids = itsParset.getBool("write.grids",itsWriteGrids); // new name
+    itsGridType = itsParset.getString("imagetype","casa");
+    itsGridCoordUV = itsParset.getBool("write.grids.uvcoord", itsGridType=="casa"); // label grid with UV coordinates
+    itsGridFFT = itsParset.getBool("write.grids.fft",false); // write fft of grid (i.e. dirty image, psf)
     const int nwriters = itsParset.getInt32("nwriters",1);
     ASKAPCHECK(nwriters>0,"Number of writers must be greater than 0");
-    if (itsGridType == "casa" && nwriters > 1){
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
+    if (itsGridType == "casa" && itsParset.getBool("singleoutputfile",false) && nwriters > 1){
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing a single casa image cube");
       itsNumWriters = 1;
     } else {
       itsNumWriters = nwriters;
@@ -171,9 +170,6 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
 
 ContinuumWorker::~ContinuumWorker()
 {
-
-
-
 }
 
 void ContinuumWorker::run(void)
@@ -238,8 +234,6 @@ void ContinuumWorker::run(void)
   int nGroups = itsComms.nGroups();
   int nchanTotal = nWorkers * nchanpercore / nGroups;
 
-  initialiseBeamLog(nchanTotal);
-  initialiseWeightsLog(nchanTotal);
 
   if (localSolver) {
     ASKAPLOG_INFO_STR(logger, "In local solver mode - reprocessing allocations)");
@@ -274,17 +268,19 @@ void ContinuumWorker::run(void)
       // 3*4 = 12
       // (6 - 3 + 1) * 4
       if (!itsComms.isSingleSink()) {
+        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
         this->nchanCube = (myMaxClient - myMinClient + 1) * nchanpercore;
         this->baseCubeGlobalChannel = (myMinClient - 1) * nchanpercore;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((myMinClient - 1));
-        ASKAPLOG_INFO_STR(logger, "MultiCube with multiple writers");
       } else {
         ASKAPLOG_INFO_STR(logger, "SingleCube with multiple writers");
         this->nchanCube = nchanTotal;
         this->baseCubeGlobalChannel = 0;
         this->baseCubeFrequency = itsAdvisor->getBaseFrequencyAllocation((0));
-
       }
+      initialiseBeamLog(this->nchanCube);
+      initialiseWeightsLog(this->nchanCube);
+
       ASKAPLOG_INFO_STR(logger, "Number of channels in cube is: " << this->nchanCube);
       ASKAPLOG_INFO_STR(logger, "Base global channel of cube is " << this->baseCubeGlobalChannel);
     }
@@ -296,10 +292,13 @@ void ContinuumWorker::run(void)
           ASKAPLOG_INFO_STR(logger, "Not in localsolver (spectral line) mode - and combine channels is set so compressing channel allocations)");
           compressWorkUnits();
       }
-  }
-  ASKAPLOG_INFO_STR(logger, "Adding missing parameters");
+      initialiseBeamLog(nchanTotal);
+      initialiseWeightsLog(nchanTotal);
 
-  itsAdvisor->addMissingParameters();
+  }
+  ASKAPLOG_INFO_STR(logger, "Adding all missing parameters");
+
+  itsAdvisor->addMissingParameters(true);
 
   try {
     processChannels();
@@ -313,9 +312,16 @@ void ContinuumWorker::run(void)
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " finished");
 
   itsComms.barrier(itsComms.theWorkers());
+  const bool singleoutputfile = itsParset.getBool("singleoutputfile", false);
+  const bool calcstats = itsParset.getBool("calcstats", false);
+  if ( singleoutputfile && calcstats ) {
+    writeCubeStatistics();
+    itsComms.barrier(itsComms.theWorkers());
+  }
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed final barrier");
 }
-void ContinuumWorker::deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset)
+
+void ContinuumWorker::deleteWorkUnitFromCache(ContinuumWorkUnit& wu)
 {
 
   const string ms = wu.get_dataset();
@@ -347,7 +353,7 @@ void ContinuumWorker::clearWorkUnitCache()
   }
 }
 
-void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset)
+void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu)
 {
 
 
@@ -355,7 +361,7 @@ void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& 
   boost::filesystem::path mspath = boost::filesystem::path(wu.get_dataset());
   const string ms = mspath.filename().string();
 
-  const string shm_root = unitParset.getString("tmpfs", "/dev/shm");
+  const string shm_root = itsParset.getString("tmpfs", "/dev/shm");
 
   std::ostringstream pstr;
 
@@ -386,9 +392,9 @@ void ContinuumWorker::cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& 
       ofstream trigger;
       trigger.open(outms_flag.c_str());
       trigger.close();
-      MSSplitter mySplitter(unitParset);
+      MSSplitter mySplitter(itsParset);
 
-      mySplitter.split(wu.get_dataset(), outms, wu.get_localChannel() + 1, wu.get_localChannel() + 1, 1, unitParset);
+      mySplitter.split(wu.get_dataset(), outms, wu.get_localChannel() + 1, wu.get_localChannel() + 1, 1, itsParset);
       unlink(outms_flag.c_str());
       this->cached_files.push_back(outms);
 
@@ -430,10 +436,8 @@ void ContinuumWorker::compressWorkUnits() {
     // First lets loop through our workunits
 
     vector<ContinuumWorkUnit> compressedList; // probably easier to generate a new list
-    vector<LOFAR::ParameterSet> compressedParsets;
 
     ContinuumWorkUnit startUnit = workUnits[0];
-    LOFAR::ParameterSet startParset = itsParsets[0];
 
     unsigned int contiguousCount = 1;
     if (workUnits.size() == 1) {
@@ -442,7 +446,6 @@ void ContinuumWorker::compressWorkUnits() {
     for ( int count = 1; count < workUnits.size(); count++) {
 
         ContinuumWorkUnit nextUnit = workUnits[count];
-        LOFAR::ParameterSet nextParset = itsParsets[count];
 
         std::string startDataset = startUnit.get_dataset();
         int startChannel = startUnit.get_localChannel();
@@ -457,7 +460,7 @@ void ContinuumWorker::compressWorkUnits() {
                 // Now need to update the parset details
                 string ChannelParam = "["+toString(contiguousCount)+","+toString(startUnit.get_localChannel())+"]";
                 ASKAPLOG_DEBUG_STR(logger, "compressWorkUnit: ChannelParam = "<<ChannelParam);
-                startParset.replace("Channels",ChannelParam);
+                itsParset.replace("Channels",ChannelParam);
             }
             else { // no longer contiguous channels reset the count
                 contiguousCount = 0;
@@ -470,32 +473,27 @@ void ContinuumWorker::compressWorkUnits() {
         if (count == (workUnits.size()-1) || contiguousCount == 0) { // last unit
             ASKAPLOG_DEBUG_STR(logger, "Adding unit to compressed list");
             compressedList.insert(compressedList.end(),startUnit);
-            ASKAPLOG_DEBUG_STR(logger, "Adding parset to the list");
-            compressedParsets.insert(compressedParsets.end(),startParset);
             startUnit = nextUnit;
-            startParset = nextParset;
         }
 
     }
     if (compressedList.size() > 0) {
         ASKAPLOG_INFO_STR(logger, "Replacing workUnit list of size " << workUnits.size() << " with compressed list of size " << compressedList.size());
-        ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset list");
+        ASKAPLOG_INFO_STR(logger,"A corresponding change has been made to the parset");
         workUnits = compressedList;
-        itsParsets = compressedParsets;
     }
     else {
         ASKAPLOG_WARN_STR(logger,"No compression performed");
     }
-    ASKAPCHECK(compressedList.size() < 2, "The number of assumed unique parsets is greater than one. Due to a pass by reference these parsets will not be unique - see AXA-1004 and associated technical debt tickets");
+    ASKAPCHECK(compressedList.size() < 2, "The number of compressed workunits is greater than one. Channel parameters may be incorrect - see AXA-1004 and associated technical debt tickets");
 }
 void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 {
   // This also needs to set the frequencies and directions for all the images
   ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit");
-  LOFAR::ParameterSet unitParset = itsParset;
   ASKAPLOG_DEBUG_STR(logger, "Parset Reports: (In preProcess workunit)" << (itsParset.getStringVector("dataset", true)));
 
-  const bool localsolve = unitParset.getBool("solverpercore", false);
+  const bool localsolve = itsParset.getBool("solverpercore", false);
 
   // We're processing spectral data one channel at a time, but needs the stats for all, try setting this here
   // For continuum this is done in compressWorkUnits (if combinechannels is set, which it should be)
@@ -508,22 +506,21 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // if we are expecting multiple beams in the work units then these will be clobbered
   // unless the accessor gets the beam information some other way
 
-  const bool perbeam = unitParset.getBool("perbeam", true);
+  const bool perbeam = itsParset.getBool("perbeam", true);
   if (!perbeam) {
     string param = "beams";
     string bstr = "[" + toString(wu.get_beam()) + "]";
     if (last_beam != -1) {
       ASKAPCHECK(last_beam == wu.get_beam(), "beam index changed in perbeam processing parset - clearly in the expectation that this will do something but the parset is stored by reference AXA-1004");
     }
-    unitParset.replace(param, bstr);
+    itsParset.replace(param, bstr);
   }
 
-  const bool usetmpfs = unitParset.getBool("usetmpfs", false);
+  const bool usetmpfs = itsParset.getBool("usetmpfs", false);
 
-  if (usetmpfs && !localsolve) // only do this here if in continuum mode
-
-  {
-    cacheWorkUnit(wu, unitParset);
+  if (usetmpfs && !localsolve) {
+    // only do this here if in continuum mode
+    cacheWorkUnit(wu);
     ChannelPar="[1,0]";
   }
 
@@ -533,7 +530,7 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
   // Ord AXA-1004 removing this as it is not used by subsequent code and can break advise
   // in some corner cases.
   // ASKAPLOG_DEBUG_STR(logger, "In preProcessWorkUnit - replacing Channels parameter "<<
-  // unitParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
+  // itsParset.getString("Channels","none")<<" with "<<ChannelPar<<" if topo="<<
   // unitParset.getString("freqframe","topo")<< " and "<< (wu.get_dataset()!=""));
   // if (wu.get_dataset()!="" && unitParset.getString("freqframe","topo")=="topo") {
   //     unitParset.replace("Channels", ChannelPar);
@@ -541,38 +538,27 @@ void ContinuumWorker::preProcessWorkUnit(ContinuumWorkUnit& wu)
 
   ASKAPLOG_DEBUG_STR(logger, "Getting advice on missing parameters");
 
-  itsAdvisor->addMissingParameters(unitParset);
+  itsAdvisor->addMissingParameters();
 
   ASKAPLOG_DEBUG_STR(logger, "Storing workUnit");
   workUnits.insert(workUnits.begin(),wu); //
   //workUnits.push_back(wu);
-  ASKAPLOG_DEBUG_STR(logger, "Storing parset");
-  itsParsets.insert(itsParsets.begin(),unitParset);
-  // itsParsets.push_back(unitParset);
   ASKAPLOG_DEBUG_STR(logger, "Finished preProcessWorkUnit");
   ASKAPLOG_DEBUG_STR(logger, "Parset Reports (leaving preProcessWorkUnit): " << (itsParset.getStringVector("dataset", true)));
-
 }
 
-
-void ContinuumWorker::processSnapshot(LOFAR::ParameterSet& unitParset)
+void ContinuumWorker::processSnapshot()
 {
 }
 void ContinuumWorker::processChannels()
 {
   ASKAPLOG_INFO_STR(logger, "Processing Channel Allocation");
 
-  LOFAR::ParameterSet& unitParset = itsParset;
-
-  if (workUnits.size() > 0) {
-    unitParset = itsParsets[0];
-  }
-
   if (itsWriteGrids) {
     ASKAPLOG_INFO_STR(logger,"Will output gridded visibilities");
   }
 
-  const bool localSolver = unitParset.getBool("solverpercore", false);
+  const bool localSolver = itsParset.getBool("solverpercore", false);
 
   if (localSolver) {
     ASKAPLOG_INFO_STR(logger, "Processing multiple channels local solver mode");
@@ -637,6 +623,9 @@ void ContinuumWorker::processChannels()
         itsWeightsName = CubeBuilder<casacore::Float>::makeImageName(itsParset,weights_name);
     }
 
+    LOFAR::ParameterSet gridParset = itsParset.makeSubset("");
+    gridParset.remove("Images.extraoversampling");
+
     if ( itsComms.isCubeCreator() ) {
 
       // Get keywords to write to the image header
@@ -659,27 +648,29 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
+        ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object for residual cube");
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, weights_name));
       }
       if (itsWriteGrids) {
         if (itsGridFFT) {
-          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name));
-          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name));
-          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name));
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name));
         } else {
           if (itsGridType == "casa") {
-              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, visgrid_name, true));
-              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name, true));
-              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name, true));
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, visgrid_name, true));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name, true));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name, true));
           } else {
-              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".real", itsGridCoordUV));
-              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real", itsGridCoordUV));
-              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".real", itsGridCoordUV));
-              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, visgrid_name+".imag", itsGridCoordUV));
-              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag", itsGridCoordUV));
-              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag", itsGridCoordUV));
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name+".real", itsGridCoordUV));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name+".real", itsGridCoordUV));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name+".real", itsGridCoordUV));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, visgrid_name+".imag", itsGridCoordUV));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, pcfgrid_name+".imag", itsGridCoordUV));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, this->nchanCube, f0, freqinc, psfgrid_name+".imag", itsGridCoordUV));
           }
         }
       }
@@ -691,6 +682,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, this->nchanCube, f0, freqinc, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
 
     } else {
@@ -703,6 +697,7 @@ void ContinuumWorker::processChannels()
       }
       if (itsWriteResidual) {
         itsResidualCube.reset(new CubeBuilder<casacore::Float>(itsParset,  residual_name));
+        itsResidualStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsResidualCube->filename(),itsResidualCube->imageHandler()));
       }
       if (itsWriteWtImage) {
         itsWeightsCube.reset(new CubeBuilder<casacore::Float>(itsParset,  weights_name));
@@ -710,21 +705,21 @@ void ContinuumWorker::processChannels()
 
       if (itsWriteGrids) {
         if (itsGridFFT) {
-          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name));
-          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name));
-          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name));
+          itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name));
+          itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name));
+          itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name));
         } else {
           if (itsGridType == "casa") {
-              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, visgrid_name));
-              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, pcfgrid_name));
-              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(itsParset, psfgrid_name));
+              itsVisGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, visgrid_name));
+              itsPCFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, pcfgrid_name));
+              itsPSFGridCube.reset(new CubeBuilder<casacore::Complex>(gridParset, psfgrid_name));
           } else {
-              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".real"));
-              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".real"));
-              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".real"));
-              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, visgrid_name+".imag"));
-              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, pcfgrid_name+".imag"));
-              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(itsParset, psfgrid_name+".imag"));
+              itsVisGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name+".real"));
+              itsPCFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name+".real"));
+              itsPSFGridCubeReal.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name+".real"));
+              itsVisGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, visgrid_name+".imag"));
+              itsPCFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, pcfgrid_name+".imag"));
+              itsPSFGridCubeImag.reset(new CubeBuilder<casacore::Float>(gridParset, psfgrid_name+".imag"));
           }
         }
       }
@@ -736,6 +731,9 @@ void ContinuumWorker::processChannels()
             }
           }
           itsRestoredCube.reset(new CubeBuilder<casacore::Float>(itsParset, restored_image_name));
+          // we are only interested to collect statistics for the restored image cube
+          itsRestoredStatsAndMask.reset(new askap::utils::StatsAndMask(itsComms,itsRestoredCube->filename(),itsRestoredCube->imageHandler()));
+          ASKAPLOG_INFO_STR(logger,"Created StatsAndMask object");
       }
     }
   }
@@ -757,7 +755,7 @@ void ContinuumWorker::processChannels()
 
   /// What are the plans for the deconvolution?
   ASKAPLOG_DEBUG_STR(logger, "Ascertaining Cleaning Plan");
-  const bool writeAtMajorCycle = itsParsets[0].getBool("Images.writeAtMajorCycle", false);
+  const bool writeAtMajorCycle = itsParset.getBool("Images.writeAtMajorCycle", false);
   const int nCycles = itsParset.getInt32("ncycles", 0);
   std::string majorcycle = itsParset.getString("threshold.majorcycle", "-1Jy");
   const double targetPeakResidual = SynthesisParamsHelper::convertQuantity(majorcycle, "Jy");
@@ -827,17 +825,17 @@ void ContinuumWorker::processChannels()
       }
 
       double frequency=workUnits[workUnitCount].get_channelFrequency();
-      const string colName = itsParsets[workUnitCount].getString("datacolumn", "DATA");
+      const string colName = itsParset.getString("datacolumn", "DATA");
 
 
       int localChannel;
       int globalChannel;
 
-      bool usetmpfs = itsParsets[workUnitCount].getBool("usetmpfs", false);
+      bool usetmpfs = itsParset.getBool("usetmpfs", false);
       if (usetmpfs) {
         // probably in spectral line mode
         // copy the caching here ...
-        cacheWorkUnit(workUnits[workUnitCount], itsParsets[workUnitCount]);
+        cacheWorkUnit(workUnits[workUnitCount]);
 
         localChannel = 0;
 
@@ -853,16 +851,16 @@ void ContinuumWorker::processChannels()
 
       /// Need to set up the rootImager here
       if (updateDir == true) {
-        itsAdvisor->updateDirectionFromWorkUnit(itsParsets[workUnitCount],workUnits[workUnitCount]);
+        itsAdvisor->updateDirectionFromWorkUnit(workUnits[workUnitCount]);
       }
       if (updateDir || !gridder_initialized) {
 
-        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,localChannel));
+        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,localChannel));
         rootImagerPtr = tempIm;
         gridder_initialized = true;
       }
       else if (gridder_initialized){
-        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[workUnitCount],itsComms,ds,rootImagerPtr->gridder(),localChannel));
+        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,rootImagerPtr->gridder(),localChannel));
         rootImagerPtr = tempIm;
       }
 
@@ -888,7 +886,7 @@ void ContinuumWorker::processChannels()
       }
       else {
         // this assumes no subimage will be formed.
-        setupImage(rootImager.params(), frequency,false);
+        setupImage(rootImager.params(), frequency, false);
       }
 
       ImagingNormalEquations &rootINERef =
@@ -965,7 +963,7 @@ void ContinuumWorker::processChannels()
 
           if (usetmpfs) {
             // probably in spectral line mode
-            cacheWorkUnit(workUnits[tempWorkUnitCount], itsParsets[tempWorkUnitCount]);
+            cacheWorkUnit(workUnits[tempWorkUnitCount]);
 
             localChannel = 0;
 
@@ -982,18 +980,15 @@ void ContinuumWorker::processChannels()
             boost::shared_ptr<CalcCore> workingImagerPtr;
 
             if (updateDir) {
-              itsAdvisor->updateDirectionFromWorkUnit(itsParsets[tempWorkUnitCount],workUnits[tempWorkUnitCount]);
-              ///FIXME:
+              itsAdvisor->updateDirectionFromWorkUnit(workUnits[tempWorkUnitCount]);
               // in updateDir mode I cannot cache the gridders as they have a tangent point.
-              // So I have turned of caching for all modes. THis is performance hit on everyone for
-              // a corner case .... FIX This!
               // FIXED: by just having 2 possible working imagers depending on the mode. ... easy really
 
-              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[tempWorkUnitCount],itsComms,myDs,localChannel));
+              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,localChannel));
               workingImagerPtr = tempIm;
             }
             else {
-              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParsets[tempWorkUnitCount],itsComms,myDs,rootImager.gridder(),localChannel));
+              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,rootImager.gridder(),localChannel));
               workingImagerPtr = tempIm;
             }
 
@@ -1048,8 +1043,6 @@ void ContinuumWorker::processChannels()
 
             rootImager.getNE()->merge(*workingImager.getNE());
             ASKAPLOG_INFO_STR(logger,"Merged");
-
-
           }
           catch( const askap::AskapError& e) {
             ASKAPLOG_WARN_STR(logger, "Askap error in imaging - skipping accumulation: carrying on - this will result in a blank channel" << e.what());
@@ -1525,29 +1518,26 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
       else {
           ASKAPLOG_INFO_STR(logger, "Writing Residual");
           itsResidualCube->writeFlexibleSlice(params->valueF("residual.slice"), chan);
+          itsResidualStatsAndMask->calculate(itsResidualCube->filename(),chan,params->valueF("residual.slice"));
       }
   }
 
   // Write weights
-  if (itsWeightsCube || itsWriteWtLog) {
-      if (!params->has("weights.slice")) {
-          ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
-      }
-      else {
-          if (itsWeightsCube) {
-              ASKAPLOG_INFO_STR(logger, "Writing Weights");
-              itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
-          }
-          if (itsWriteWtLog) {
-              ASKAPLOG_INFO_STR(logger,"Writing Weights log");
-              Array<float> wts = params->valueF("weights.slice");
-              float wt = wts.data()[0];
-              if (allEQ(wts,wt)) {
-                recordWeight(wt, chan);
-              } else {
-                ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights log");
-                recordWeight(-1.0, chan);
-              }
+  if (!params->has("weights.slice")) {
+      ASKAPLOG_WARN_STR(logger, "Params are missing weights parameter");
+  } else {
+      if (itsWeightsCube) {
+          ASKAPLOG_INFO_STR(logger, "Writing Weights");
+          itsWeightsCube->writeFlexibleSlice(params->valueF("weights.slice"), chan);
+      } else {
+          Array<float> wts = params->valueF("weights.slice");
+          float wt = wts.data()[0];
+          if (allEQ(wts,wt)) {
+            recordWeight(wt, chan);
+            ASKAPLOG_INFO_STR(logger,"Writing Weights " << (itsWriteWtLog ? "log" : "extension"));
+          } else {
+            ASKAPLOG_WARN_STR(logger,"Weights are not identical across image, disabling weights "<< (itsWriteWtLog ? "log" : "extension"));
+            recordWeight(-1.0, chan);
           }
       }
   }
@@ -1635,11 +1625,15 @@ void ContinuumWorker::handleImageParams(askap::scimath::Params::ShPtr params, un
         ASKAPLOG_INFO_STR(logger, "Writing Restored Image");
         if (params->has("fullres.slice")) {
           // Restored image has been generated at full resolution, so avoid further oversampling
+          ASKAPLOG_INFO_STR(logger, "Writing fullres.slice");
           itsRestoredCube->writeRigidSlice(params->valueF("fullres.slice"), chan);
+          calculateImageStats(itsRestoredStatsAndMask,itsRestoredCube,chan,params->valueF("fullres.slice"));
         }
         else {
           ASKAPCHECK(params->has("image.slice"), "Params are missing image parameter");
+          ASKAPLOG_INFO_STR(logger, "Writing image.slice");
           itsRestoredCube->writeFlexibleSlice(params->valueF("image.slice"), chan);
+          itsRestoredStatsAndMask->calculate(itsRestoredCube->filename(),chan,params->valueF("image.slice"));
         }
     }
 
@@ -1747,10 +1741,11 @@ void ContinuumWorker::logBeamInfo()
 void ContinuumWorker::logWeightsInfo()
 {
 
-  if (itsWriteWtLog) {
+  if (!itsWriteWtImage) {
+    const string wtLogExt = (itsWriteWtLog ? "log file" : "extension");
     askap::accessors::WeightsLog weightslog;
-    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to log file ");
-    ASKAPLOG_INFO_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
+    ASKAPLOG_INFO_STR(logger, "Channel-dependent weights will be written to "<<wtLogExt);
+    ASKAPLOG_DEBUG_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
     weightslog.weightslist() = itsWeightsList;
 
     if (itsNumWriters > 1 && itsParset.getBool("singleoutputfile",false)) {
@@ -1763,54 +1758,76 @@ void ContinuumWorker::logWeightsInfo()
     if (itsComms.isCubeCreator()) {
 
         // First check weightslog is valid
-        for(unsigned int i=0;i<itsWeightsList.size();i++) {
-            if (itsWeightsList[i] < 0) {
-                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights log");
+        for(const auto & wt : itsWeightsList) {
+            if (wt.second < 0) {
+                ASKAPLOG_WARN_STR(logger, "Weights log invalid - not writing out the channel weights "<<wtLogExt);
                 return;
             }
         }
-        weightslog.setFilename(itsWeightsName + ".txt");
-        ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
-            << weightslog.filename());
-        weightslog.write();
+        if (itsWriteWtLog) {
+          weightslog.setFilename(itsWeightsName + ".txt");
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to weights log "
+              << weightslog.filename());
+          weightslog.write();
+        } else {
+          ASKAPLOG_INFO_STR(logger, "Writing list of individual channel weights to image extension");
+          casacore::Record wtInfo = weightslog.toRecord();
+          if (itsRestoredCube) {
+            itsRestoredCube->setInfo(wtInfo);
+          }
+          if (itsResidualCube) {
+            itsResidualCube->setInfo(wtInfo);
+          }
+          // TODO: which other images should have the weights?
+        }
     }
   }
 
 }
 
 
-void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,double channelFrequency, bool shapeOverride)
+void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,
+                                 double channelFrequency, bool shapeOverride)
 {
   try {
+    const LOFAR::ParameterSet imParset = itsParset.makeSubset("Images.");
     ASKAPLOG_DEBUG_STR(logger, "Setting up image");
-    const LOFAR::ParameterSet parset = itsParset.makeSubset("Images.");
 
-    const int nfacets = parset.getInt32("nfacets", 1);
+    const int nfacets = imParset.getInt32("nfacets", 1);
     const string name("image.slice");
-    const vector<string> direction = parset.getStringVector("direction");
-    const vector<string> cellsize = parset.getStringVector("cellsize");
-    vector<int> shape = parset.getInt32Vector("shape");
-    //const vector<double> freq = parset.getDoubleVector("frequency");
+    vector<string> direction = imParset.getStringVector("direction");
+
+    const vector<string> cellsize = imParset.getStringVector("cellsize");
+    vector<int> shape = imParset.getInt32Vector("shape");
     const int nchan = 1;
 
     if (shapeOverride == true) {
       string param = "subshape";
-      if (parset.isDefined(param)) {
+      if (imParset.isDefined(param)) {
         ASKAPLOG_INFO_STR(logger,"Over-riding image shape from parset");
-        shape = parset.getInt32Vector("subshape");
+        shape = imParset.getInt32Vector("subshape");
         ASKAPLOG_INFO_STR(logger,"Image shape now " << shape);
       }
       else {
         ASKAPLOG_WARN_STR(logger,"Shape over-ride requested but no subshape parameter in parset");
       }
+    } else if (itsParset.getBool("updatedirection",false)) {
+          // override with image specific direction if present - for mosaic case - combined image direction
+          vector<string> names = imParset.getStringVector("Names",{},false);
+          if (names.size()>0) {
+              if (imParset.isDefined(names[0]+".direction")) {
+                  ASKAPLOG_INFO_STR(logger,"Using image direction from parset instead of tangent point from advise");
+                  direction = imParset.getStringVector(names[0]+".direction");
+              }
+          }
     }
 
 
-    if (!parset.isDefined("polarisation")) {
+    if (!imParset.isDefined("polarisation")) {
       ASKAPLOG_DEBUG_STR(logger, "Polarisation frame is not defined, "
       << "only stokes I will be generated");
     }
-    const vector<string> stokesVec = parset.getStringVector("polarisation",
+    const vector<string> stokesVec = imParset.getStringVector("polarisation",
     vector<string>(1, "I"));
 
     // there could be many ways to define stokes, e.g. ["XX YY"] or ["XX","YY"] or "XX,YY"
@@ -1823,7 +1840,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     const casacore::Vector<casacore::Stokes::StokesTypes>
     stokes = scimath::PolConverter::fromString(stokesStr);
 
-    const bool ewProj = parset.getBool("ewprojection", false);
+    const bool ewProj = imParset.getBool("ewprojection", false);
     if (ewProj) {
       ASKAPLOG_DEBUG_STR(logger, "Image will have SCP/NCP projection");
     } else {
@@ -1833,6 +1850,8 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
     ASKAPCHECK(nfacets > 0, "Number of facets is supposed to be a positive number, you gave " << nfacets);
     ASKAPCHECK(shape.size() >= 2, "Image is supposed to be at least two dimensional. " << "check shape parameter, you gave " << shape);
 
+    ASKAPLOG_DEBUG_STR(logger,"setupImage : direction = "<<direction<< " shape = "<< shape);
+
     if (nfacets == 1) {
       SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,
         channelFrequency, channelFrequency, nchan, stokes);
@@ -1840,7 +1859,7 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
         //                            freq[0], freq[1], nchan, stokes);
     } else {
         // this is a multi-facet case
-        const int facetstep = parset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
+        const int facetstep = imParset.getInt32("facetstep", casacore::min(shape[0], shape[1]));
         ASKAPCHECK(facetstep > 0,"facetstep parameter is supposed to be positive, you have " << facetstep);
         ASKAPLOG_DEBUG_STR(logger, "Facet centers will be " << facetstep << " pixels apart, each facet size will be " << shape[0] << " x " << shape[1]);
         // SynthesisParamsHelper::add(*params, name, direction, cellsize, shape, ewProj,
@@ -1851,5 +1870,106 @@ void ContinuumWorker::setupImage(const askap::scimath::Params::ShPtr& params,dou
 
   } catch (const LOFAR::APSException &ex) {
     throw AskapError(ex.what());
+  }
+}
+
+void ContinuumWorker::calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                          boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
+                                          int channel, const casacore::Array<float>& arr)
+{
+    boost::optional<float> oversamplingFactor = imgCube->oversamplingFactor();
+    if ( oversamplingFactor ) {
+        // Image param is stored at a lower resolution, so increase to desired resolution before writing
+        casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*oversamplingFactor));
+        scimath::PaddingUtils::fftPad(arr,fullresarr);
+        statsAndMask->calculate(imgCube->filename(),channel,fullresarr);
+    } else {
+        statsAndMask->calculate(imgCube->filename(),channel,arr);
+    }
+}
+
+void ContinuumWorker::writeCubeStatistics()
+{
+  const std::string imageType = itsParset.getString("imagetype","casa");
+
+  // get one of the ranks that create the cube
+  std::list<int> creators = itsComms.getCubeCreators();
+  creators.sort();
+
+  if ( creators.size() > 0 ) {
+    // make the first rank in the cube creator to be the receiver of the cube statistics
+    // and the rest of the workers send stats to it
+    // NOTE: the compiler wont let me do this :
+    // unsigned int statsCollectorRank; //  = reinterpret_cast<unsigned int> (creators.front());
+    int temp = creators.front();
+    unsigned int statsCollectorRank = static_cast<unsigned int> (temp);
+    ASKAPLOG_INFO_STR(logger, "statsCollectorRank = " << statsCollectorRank);
+    if ( itsRestore ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsRestoredStatsAndMask ) {
+          std::string fullFilename = itsRestoredCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsRestoredStatsAndMask->receiveStats(excludedRanks);
+          }
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to restored image: " << fullFilename);
+          itsRestoredStatsAndMask->writeStatsToFile("./imgstats.txt");
+          itsRestoredStatsAndMask->writeStatsToImageTable(fullFilename);
+        } else {
+            ASKAPLOG_INFO_STR(logger, "itsRestoredStatsAndMask of statsCollectorRank: " << statsCollectorRank << " is null");
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsRestoredStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsRestoredStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    }
+    ASKAPLOG_INFO_STR(logger,"Waiting for all ranks to finish");
+    itsComms.barrier(itsComms.theWorkers());
+    // write the stats to the residual cube
+    if ( itsWriteResidual ) {
+      if ( itsComms.rank() == statsCollectorRank ) {
+        if ( itsResidualStatsAndMask ) {
+          std::string fullFilename = itsResidualCube->filename();
+          if ( itsNumWriters > 1 ) {
+            // if there are more than one writers, then the statistics is distributed over more than one
+            // ranks so we designate one of the ranks (statsCollectorRank) to be the collector of the
+            // stats and the other ranks send their stats to it
+            ASKAPLOG_INFO_STR(logger, "Collecting cube statistics with itsNumWriters = " << itsNumWriters);
+            std::set<unsigned int> excludedRanks {0,statsCollectorRank};
+            itsResidualStatsAndMask->receiveStats(excludedRanks);
+          }
+          itsResidualStatsAndMask->writeStatsToFile("./imgstats_residual.txt");
+          ASKAPLOG_INFO_STR(logger,"Writing statistic to residual image: " << fullFilename);
+          itsResidualStatsAndMask->writeStatsToImageTable(fullFilename);
+        }
+      } else {
+        // not all the ranks that send the stats to the receiver rank have stats to send (i.e
+        // their StatsAndMask is null) so we create a dummy stats for them and force them to send
+        // null (0) stats to the receiver.
+        if ( itsResidualStatsAndMask ) {
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends stats to rank " << statsCollectorRank);
+          itsResidualStatsAndMask->sendStats(statsCollectorRank);
+        } else {
+          askap::utils::StatsAndMask dummy {itsComms};
+          ASKAPLOG_INFO_STR(logger, "Rank: " << itsComms.rank() << " sends dummy stats to rank " << statsCollectorRank);
+          dummy.sendStats(statsCollectorRank);
+        }
+      }
+    }
+  } else {
+    ASKAPLOG_INFO_STR(logger,"creators.size() < 0");
   }
 }

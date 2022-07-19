@@ -399,10 +399,10 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
         const int cSize = 2 * support + 1;
 
         // work out range of kx, ky and see if they will overflow the array
-        int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
-        int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
-        int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
-        int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
+        const int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
+        const int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
+        const int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
+        const int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
         int overflow = 0;
         if (kxmin<0) {
             overflow = -kxmin;
@@ -432,19 +432,9 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
                     for (int ix = -support; ix <= support; ++ix) {
                         const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
                         const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
-                        // these are not needed as they can never fail
-                        //ASKAPDEBUGASSERT((ix + support >= 0) && (iy + support >= 0));
-                        //ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
-                        //ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                        // Can we move these outside the loop? Yes.
-                        //ASKAPDEBUGASSERT(kx >= 0);
-                        //ASKAPDEBUGASSERT(ky >= 0);
-                        //ASKAPDEBUGASSERT(kx < nx);
-                        //ASKAPDEBUGASSERT(ky < ny);
                         //if (w < 0) {
                         //    itsConvFunc[plane](ix + support, iy + support) =
-                        //        conj(thisPlane((ix + cfSupport.itsOffsetU) * itsOverSample + fracu + nx / 2,
-                        //              (iy + cfSupport.itsOffsetV) * itsOverSample + fracv + ny / 2));
+                        //        conj(thisPlane(kx, ky);
                         //} else {
                         itsConvFunc[plane](ix + support, iy + support) =thisPlane(kx, ky);
                         //}

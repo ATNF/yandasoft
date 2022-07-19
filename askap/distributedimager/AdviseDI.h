@@ -81,21 +81,11 @@ namespace askap {
             /// @brief Add the missing parameters
             /// @details Add whatever details we require for both master and
             /// worker implementations
-            /// @param[in/out] parset ParameterSet to add missing parameters to
             /// @param[in] extra - if true check for additional parameters besides frequencies and directions
-            void addMissingParameters(LOFAR::ParameterSet& parset, bool extra=false);
-
-            /// @brief Add the missing parameters
-            /// @details Add whatever details we require for both master and
-            /// worker implementations
-            void addMissingParameters();
+            void addMissingParameters(bool extra=false);
 
             /// @brief Use workunit to set Image direction parameters in parset
-            void updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::cp::ContinuumWorkUnit& wu);
-
-            /// @brief Access to the parset
-            /// @details Returns the current parset after advice
-            inline const LOFAR::ParameterSet& getParset() const { return itsParset; };
+            void updateDirectionFromWorkUnit(askap::cp::ContinuumWorkUnit& wu);
 
             /// @brief the datasets
             std::vector<std::string> getDatasets() const;
@@ -134,8 +124,8 @@ namespace askap {
             /// redesigned, at least to avoid accessing measurement set from first principles. Currently, this
             /// method adds to uglyness of the code - it uses the functionality of the base class (i.e. the originally
             /// written estimator) to get the basic info for a single measurement set without relying on the correct
-            /// parallel distribution. The returned statistics is valid until the next call to this method or until 
-            /// the full parallel advise is done. 
+            /// parallel distribution. The returned statistics is valid until the next call to this method or until
+            /// the full parallel advise is done.
             /// @param[in] ms measurement set to work with
             /// @return const reference to the object populated with resulted metadata statistics
             const VisMetaDataStats& computeVisMetaDataStats(const std::string &ms);

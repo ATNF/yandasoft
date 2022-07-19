@@ -817,7 +817,6 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                 }
 
                                 GridKernel::grid(its2dGrid, convFunc, uVis, iuOffset, ivOffset, support);
-
                                 itsSamplesGridded+=1.0;
                                 itsNumberGridded+=double((2*support+1)*(2*support+1));
 
@@ -1131,8 +1130,44 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
         #endif
 
         /*
+
         // for debugging
         if (isPSFGridder()) {
+            #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+            scimath::saveAsCasaImage("uvcoverage.imag",imag(scratch));
+            casacore::Array<float> buf(real(scratch));
+            scimath::saveAsCasaImage("uvcoverage.real",buf);
+            // adjust values to extract part which gives a real symmetric FT and the remainder
+            casacore::Matrix<float> bufM(buf.nonDegenerate());
+            for (int x=0; x<int(bufM.nrow()); ++x) {
+                 for (int y=0; y<int(bufM.ncolumn())/2; ++y) {
+                      const float val = 0.5*(bufM(x,y)+bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1));
+                      bufM(x,y) = val;
+                      bufM(bufM.nrow() - x -1, bufM.ncolumn() - y -1) = val;
+                 }
+            }
+            scimath::saveAsCasaImage("uvcoverage.sympart",buf);
+            casacore::Matrix<imtypeComplex> scratchM(scratch.nonDegenerate());
+            for (int x=0; x<int(scratchM.nrow()); ++x) {
+                 for (int y=0; y<int(scratchM.ncolumn()); ++y) {
+                      scratchM(x,y) -= imtype(bufM(x,y));
+                  }
+            }
+            // as we ignore imaginary part after FT, make scratch hermitian to be fair
+            for (int x=0; x<int(scratchM.nrow()); ++x) {
+                 for (int y=0; y<int(scratchM.ncolumn())/2; ++y) {
+                      const imtypeComplex val = 0.5f*(scratchM(x,y)+
+                            conj(scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1)));
+                      scratchM(x,y) = val;
+                      scratchM(scratchM.nrow() - x -1, scratchM.ncolumn() - y -1) = conj(val);
+                 }
+            }
+            scimath::saveAsCasaImage("uvcoverage.asympart.imag",imag(scratch));
+            scimath::saveAsCasaImage("uvcoverage.asympart.real",real(scratch));
+            fft2d(scratch, false);
+            scimath::saveAsCasaImage("psf.asympart.real",real(scratch));
+
+            #else
             casacore::Array<float> buf(scratch.shape());
             casacore::convertArray<float,double>(buf,imag(scratch));
             scimath::saveAsCasaImage("uvcoverage.imag",buf);
@@ -1170,10 +1205,10 @@ void TableVisGridder::finaliseGrid(casacore::Array<imtype>& out) {
             fft2d(scratch, false);
             casacore::convertArray<float,double>(buf,real(scratch));
             scimath::saveAsCasaImage("psf.asympart.real",buf);
-
+            #endif
             ASKAPCHECK(false, "Debug termination");
         }
-        //
+        // end of debugging code
         */
 
         fft2d(scratch, false);
