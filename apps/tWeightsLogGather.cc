@@ -3,11 +3,15 @@
 ///          but in isolation. A number of parset parameters understood by imager are also understood by this tool
 ///          to setup communication classes the same way (whether it has any effect on it or not)
 ///
-///    Parameters of the parset file:
+///    Example of the parset file:
+///
 ///    # standard options which affect general setup of the distribution (as with imager)
-///    nwriters = 1
+///    # note, gathering is only done in the case of multiple writers and singleoutputfile=true, so
+///    # the test becomes useless otherwise
+///    nwriters = 2
 ///    nchanpercore = 1
-///    singleoutputfile = false
+///    singleoutputfile = true
+///    nworkergroups = 1
 ///    # default delay before gather operation is called in seconds (set to 0 for no delay)
 ///    delay.default = 10
 ///    # delay for rank XX in seconds, overrides delay.default (set to 0 for no delay, omit the parameter to use the default one)
@@ -75,6 +79,9 @@ class WeightsLogGatherTestApp : public askap::Application
              ASKAPLOG_INFO_STR(logger, "About to add weights list of size " << itsWeightsList.size() << " to the weights logger");
              weightslog.weightslist() = itsWeightsList;
 
+             // MV: note, the code was essentially taken from imager to emulate the same distribution/same communication pattern
+             // However, the gathering operation doesn't happen if nwriters == 1 or singleoutputfile is false in the parset rendering the whole
+             // test useless. 
              if (nwriters > 1 && config().getBool("singleoutputfile",false)) {
                  std::list<int> creators = comms.getCubeCreators();
                  ASKAPASSERT(creators.size() == 1);
@@ -132,6 +139,8 @@ class WeightsLogGatherTestApp : public askap::Application
             try {
                 ASKAPCHECK(comms.isParallel(), "This test is only intended to be run as a parallel MPI job");
                 // imager-specific configuration of the master/worker to allow groups of workers
+                // MV: this is copied as is from the imager application, although I think it is a legacy of the old imager
+                // and things are no longer rely on groups set up this way
                 const int nWorkerGroups = config().getInt32("nworkergroups", 1);
                 ASKAPCHECK(nWorkerGroups > 0, "nworkergroups is supposed to be greater than 0");
                 if (nWorkerGroups > 1) {
@@ -146,7 +155,8 @@ class WeightsLogGatherTestApp : public askap::Application
 
                 const unsigned int nwriters = config().getUint32("nwriters",1);
                 const unsigned int nchanpercore = config().getUint32("nchanpercore", 1);
-                // not sure where this is done in imager and whether this is necessary
+                // not sure where this is done in imager and whether this is necessary, but writers / cube creators are not
+                // initialised and an exception is thrown if the following is not done
                 comms.initWriters(nwriters,nchanpercore);
                 comms.setSingleSink();
 
