@@ -144,6 +144,12 @@ class WeightsLogGatherTestApp : public askap::Application
                 // this happens inside the ContinuumImager class
                 comms.buildCommIndex();
 
+                const unsigned int nwriters = config().getUint32("nwriters",1);
+                const unsigned int nchanpercore = config().getUint32("nchanpercore", 1);
+                // not sure where this is done in imager and whether this is necessary
+                comms.initWriters(nwriters,nchanpercore);
+                comms.setSingleSink();
+
                 // setup and run the pattern in workers
                 const unsigned int ncycles = config().getUint32("ncycles",1);
                 ASKAPCHECK(ncycles > 0, "Number of cycles should be at least one");
