@@ -82,7 +82,7 @@ class WeightsLogGatherTestApp : public askap::Application
                  ASKAPLOG_INFO_STR(logger, "Gathering all weights information, creator is rank " << creatorRank);
                  weightslog.gather(comms, creatorRank, false);
              }
-             ASKAPLOG_INFO_STR(logger, "Finished the test, weights list has "<<itsWeightsList.size()<<" elements");
+             ASKAPLOG_INFO_STR(logger, "Finished the test, weights list has "<<weightslog.weightslist().size()<<" elements");
         }
 
         void prepareSomeWeightsList(askap::cp::CubeComms &comms) {
