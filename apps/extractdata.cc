@@ -347,17 +347,16 @@ int main(int argc, char **argv) {
 
      timer.mark();
      
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      
      // command line parameter
-     cmdlineparser::FlaggedParameter<std::string> parsetPar("-c",
-                    "");
+     utils::FlaggedParameter<std::string> parsetPar("-c", "");
      // this parameter is optional
-     parser.add(parsetPar, cmdlineparser::Parser::return_default);
+     parser.add(parsetPar, utils::Parser::return_default);
      
-     cmdlineparser::GenericParameter<std::string> msNamePar("");
+     utils::GenericParameter<std::string> msNamePar("");
      
-     parser.add(msNamePar, cmdlineparser::Parser::return_default);
+     parser.add(msNamePar, utils::Parser::return_default);
      
      parser.process(argc, argv);
 
@@ -382,7 +381,7 @@ int main(int argc, char **argv) {
      process(ds, parset);
      
      std::cerr<<"Job: "<<timer.real()<<std::endl;     
-  }  catch (const cmdlineparser::XParser &ex) {
+  }  catch (const utils::XParser &ex) {
         ASKAPLOG_FATAL_STR(logger, "Command line parser error, wrong arguments " << argv[0]);
         ASKAPLOG_FATAL_STR(logger, "Usage: " << argv[0] << " [-c parsetFile] [msName]");
         return 1;

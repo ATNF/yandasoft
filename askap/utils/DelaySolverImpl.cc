@@ -54,7 +54,7 @@ using namespace askap::utils;
 /// @param[in] refAnt reference antenna index   
 DelaySolverImpl::DelaySolverImpl(double targetRes, casa::Stokes::StokesTypes pol, float ampCutoff, casa::uInt refAnt) :
    itsTargetRes(targetRes), itsPol(pol), itsAmpCutoff(ampCutoff), itsRefAnt(refAnt), itsNAvg(0u), itsDelayEstimator(targetRes),
-   itsChanToAverage(1u), itsVerbose(true)
+   itsChanToAverage(1u), itsVerbose(true), itsDataShapeWarningGiven(false), itsQualityThreshold(-1.)
 {
   ASKAPCHECK(itsTargetRes > 0, "Target spectral resolution should be positive, you have "<<itsTargetRes<<" Hz");
 } 
@@ -94,7 +94,19 @@ void DelaySolverImpl::setVerboseFlag(bool flag)
    itsVerbose = flag;
 }
 
-
+/// @brief set optional quality threshold to fail the run if any unflagged baseline has a bad solution
+/// @details LSQ fit is not very robust against data which have non-Gaussian errors (e.g. RFI), i.e.
+/// problems at one baseline may affect the whole solution in a non-trivial way. Although there is no
+/// good solution to this problem, in general, we have an option to abort the solution if any baseline
+/// which is considered valid (i.e. is not flagged) returns solution of a bad quality. Negative value
+/// for this threshold (default) essentially bypasses the check as the quality is from [0,1] range.
+/// @param[in] threshold desired quality threshold 
+/// @note The definition of quality is different for FFT and phase slope based algorithms.
+void DelaySolverImpl::setQualityThreshold(double threshold)
+{
+   ASKAPCHECK(threshold <= 1., "Quality threshold greater than 1. will always cause a failure - such a useless setting of the parameter is unexpected");
+   itsQualityThreshold = threshold;
+}
      
 /// @brief process one data accessor
 /// @param[in] acc data accessor to process
@@ -138,50 +150,62 @@ void DelaySolverImpl::process(const accessors::IConstDataAccessor &acc)
        itsAvgCounts.set(0u);
    } else {
        if (itsFreqAxis.nelements() != acc.nChannel()) {
-           if (itsVerbose) {
-               ASKAPLOG_WARN_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
-                                 << acc.nChannel()<<", ignoring");
-           } else {
-               ASKAPLOG_DEBUG_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
-                                 << acc.nChannel()<<", ignoring");
+           if (!itsDataShapeWarningGiven) {
+               if (itsVerbose) {
+                    ASKAPLOG_WARN_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
+                                      << acc.nChannel()<<", ignoring");
+               } else {
+                    ASKAPLOG_DEBUG_STR(logger, "The number of frequency channels has been changed, was "<<itsFreqAxis.nelements()<<" now "
+                                      << acc.nChannel()<<", ignoring");
+               }
            }
+           itsDataShapeWarningGiven = true;
            return;
        }
        if (itsAnt1IDs.nelements() != acc.nRow()) {
-           if (itsVerbose) {
-               ASKAPLOG_WARN_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
-                                 << acc.nRow()<<", ignoring");
-           } else {
-               ASKAPLOG_DEBUG_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
-                                 << acc.nRow()<<", ignoring");
+           if (!itsDataShapeWarningGiven) {
+               if (itsVerbose) {
+                    ASKAPLOG_WARN_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
+                                      << acc.nRow()<<", ignoring");
+               } else {
+                    ASKAPLOG_DEBUG_STR(logger, "The number of rows has been changed, was "<<itsAnt1IDs.nelements()<<" now "
+                                      << acc.nRow()<<", ignoring");
+               }
+               itsDataShapeWarningGiven = true;
            }
            return;
        }
        for (casa::uInt row = 0; row < acc.nRow(); ++row) {
             if (itsAnt1IDs[row] != acc.antenna1()[row]) {
-                if (itsVerbose) {
-                    ASKAPLOG_WARN_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
-                                      " now "<<acc.antenna1()[row]<<", ignoring");
-                } else {
-                    ASKAPLOG_DEBUG_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
-                                      " now "<<acc.antenna1()[row]<<", ignoring");
+                if (!itsDataShapeWarningGiven) {
+                     if (itsVerbose) {
+                         ASKAPLOG_WARN_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
+                                           " now "<<acc.antenna1()[row]<<", ignoring");
+                     } else {
+                         ASKAPLOG_DEBUG_STR(logger, "Antenna 1 index has been changed for row ="<<row<<", was "<<itsAnt1IDs[row]<<
+                                           " now "<<acc.antenna1()[row]<<", ignoring");
+                     }
+                     itsDataShapeWarningGiven = true;
                 }
                 return;                  
             }                     
             if (itsAnt2IDs[row] != acc.antenna2()[row]) {
-                if (itsVerbose) {
-                    ASKAPLOG_WARN_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
-                                      " now "<<acc.antenna2()[row]<<", ignoring");
-                } else {
-                    ASKAPLOG_DEBUG_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
-                                      " now "<<acc.antenna2()[row]<<", ignoring");
+                if (!itsDataShapeWarningGiven) {
+                    if (itsVerbose) {
+                        ASKAPLOG_WARN_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
+                                          " now "<<acc.antenna2()[row]<<", ignoring");
+                    } else {
+                        ASKAPLOG_DEBUG_STR(logger, "Antenna 2 index has been changed for row ="<<row<<", was "<<itsAnt2IDs[row]<<
+                                          " now "<<acc.antenna2()[row]<<", ignoring");
+                    }
+                    itsDataShapeWarningGiven = true;
                 }
                 return;                  
             }                     
        }
    }
    
-   const casa::Matrix<casa::Complex> vis = acc.visibility().xyPlane(pol2use);   
+   const casa::Matrix<casa::Complex> vis = acc.visibility().xyPlane(pol2use);
    for (casa::uInt row = 0; row < acc.nRow(); ++row) {
         const casa::Vector<casa::Complex> thisRowVis = vis.row(row);
         const casa::Vector<bool> thisRowFlags = flags.row(row);
@@ -367,6 +391,9 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
                         // We could've interpolate, but unwrapping phase may be difficult, especially if
                         // more than one channel is flagged
                         buf[chan] = buf[chan - 1];
+                    } else {
+                        // can't really guess the first channel either
+                        buf[chan] = 0;
                     }
                 }
                 os<<itsAnt1IDs[bsln]<<" "<<itsAnt2IDs[bsln]<<" "<<chan<<" "<<arg(buf[chan])/casa::C::pi*180.<<std::endl;
@@ -374,6 +401,10 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
            
            delays[bsln] = useFFT ? itsDelayEstimator.getDelayWithFFT(buf) : itsDelayEstimator.getDelay(buf);
            quality[bsln] = itsDelayEstimator.quality();
+           ASKAPCHECK(quality[bsln] >= itsQualityThreshold, "Baseline between antenna "<<antennaNameString(itsAnt1IDs[bsln])<<
+                      " and "<<antennaNameString(itsAnt2IDs[bsln])<<
+                      " has bad solution quality ("<<quality[bsln]<<", threshold is "<<itsQualityThreshold<<
+                      "), but is unflagged. Check that the system is working and not completely dazzled by RFI.");
            
            // now fill the design matrix
            const casa::uInt ant1 = itsAnt1IDs[bsln];
@@ -404,6 +435,9 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
                  ") is less than the number of flagged antennas ("<<
                  excludedAntennas.size()<<") - this shouldn't happen");
 
+      // excluded antennas are treated through additional equations in the design matrix. The required number of such eqautions is definitely less than or 
+      // equal to the number of excluded baselines. So use the space available by excluded rows for these additional condition equations (the alternative would be
+      // to append them and then either try to select the appropriate rows to avoid degeneracy or use SVD-based LSQ fit
       for (std::set<casa::uInt>::const_iterator rowIt = rows2exclude.begin(), antIt = excludedAntennas.begin(); antIt != excludedAntennas.end(); ++antIt) {
            if (itsVerbose) {
                ASKAPLOG_WARN_STR(logger, "Antenna "<<antennaNameString(*antIt)<<" has no valid data - result will have zero delay update");
@@ -417,7 +451,7 @@ casa::Vector<double> DelaySolverImpl::solve(bool useFFT) const
            dm(*rowIt, *antIt) = 1.; 
            delays[*rowIt] = 0.;
            ++rowIt;
-      }   
+      }
   }
 
   // condition for the reference antenna (zero ref. delay is set in the last element of delays)
@@ -462,5 +496,6 @@ void DelaySolverImpl::init()
   itsAnt1IDs.resize(0);
   itsAnt2IDs.resize(0);
   itsNAvg = 0;  
+  itsDataShapeWarningGiven = false;
 }
 

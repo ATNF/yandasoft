@@ -118,7 +118,7 @@ bool in_range(double end1, double end2, double test) {
 /// @brief Constructor from ParameterSet
 /// @details The parset is used to construct the internal state. We could
 /// also support construction from a python dictionary (for example).
-/// This is needed becuase the default AdviseParallel assumes a master/worker
+/// This is needed because the default AdviseParallel assumes a master/worker
 /// distribution that may not be the case.
 
 /// The command line inputs are needed solely for MPI - currently no
@@ -126,9 +126,8 @@ bool in_range(double end1, double end2, double test) {
 /// @param comms communication object
 /// @param parset ParameterSet for inputs
 AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
-    AdviseParallel(comms,parset),itsParset(parset)
+    AdviseParallel(comms,parset),itsPrepared(false), itsParset(parset)
 {
-    isPrepared = false;
     itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
     itsWorkUnitCount=0;
 }
@@ -182,11 +181,9 @@ void AdviseDI::prepare() {
     ASKAPCHECK(nwriters <= nWorkers ,"Number of writers must less than or equal to number of workers");
     bool writeGrids = itsParset.getBool("dumpgrids", false); // write (dump) the gridded data, psf and pcf
     writeGrids = itsParset.getBool("write.grids",writeGrids); // new name
-    if (writeGrids && nwriters > 1) {
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing the grids as casa images");
-      nwriters = 1;
-    } else if (itsParset.getString("imagetype","casa") == "casa" && nwriters > 1){
-      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing casa images");
+    if (itsParset.getString("imagetype","casa") == "casa" &&
+        itsParset.getBool("singleoutputfile",false) && nwriters > 1){
+      ASKAPLOG_WARN_STR(logger,"Reducing number of writers to 1 because we are writing a single casa image cube");
       nwriters = 1;
     }
 
@@ -201,11 +198,11 @@ void AdviseDI::prepare() {
 
 
     casacore::uInt srow = 0;
-    chanFreq.resize(ms.size());
-    chanWidth.resize(ms.size());
-    effectiveBW.resize(ms.size());
-    resolution.resize(ms.size());
-    centre.resize(ms.size());
+    itsChanFreq.resize(ms.size());
+    itsChanWidth.resize(ms.size());
+    itsEffectiveBW.resize(ms.size());
+    itsResolution.resize(ms.size());
+    itsCentre.resize(ms.size());
 
     // Not really sure what to do for multiple ms or what that means in this
     // context... but i'm doing it any way - probably laying a trap for myself
@@ -248,11 +245,11 @@ void AdviseDI::prepare() {
     }
 
     for (unsigned int n = 0; n < ms.size(); ++n) {
-        chanFreq[n].resize(0);
-        chanWidth[n].resize(0);
-        effectiveBW[n].resize(0);
-        resolution[n].resize(0);
-        centre[n].resize(0);
+        itsChanFreq[n].resize(0);
+        itsChanWidth[n].resize(0);
+        itsEffectiveBW[n].resize(0);
+        itsResolution[n].resize(0);
+        itsCentre[n].resize(0);
 
         // MV: the design of this class is very ugly from the C++ point of view, it needs to be redesigned to get more
         // structure if we want to extend it further (or even debug - I suspect the issues I am working with now is
@@ -296,10 +293,10 @@ void AdviseDI::prepare() {
         thisChanIn = 0;
 
         for (uint i = chanStart; i < chanStop; i = i + chanStep) {
-            chanFreq[n].push_back(sc.chanFreq()(srow)(casacore::IPosition(1, i)));
-            chanWidth[n].push_back(sc.chanWidth()(srow)(casacore::IPosition(1, i)));
-            effectiveBW[n].push_back(sc.effectiveBW()(srow)(casacore::IPosition(1, i)));
-            resolution[n].push_back(sc.resolution()(srow)(casacore::IPosition(1, i)));
+            itsChanFreq[n].push_back(sc.chanFreq()(srow)(casacore::IPosition(1, i)));
+            itsChanWidth[n].push_back(sc.chanWidth()(srow)(casacore::IPosition(1, i)));
+            itsEffectiveBW[n].push_back(sc.effectiveBW()(srow)(casacore::IPosition(1, i)));
+            itsResolution[n].push_back(sc.resolution()(srow)(casacore::IPosition(1, i)));
             thisChanIn++;
         }
 
@@ -349,7 +346,6 @@ void AdviseDI::prepare() {
     // ASKAPLOG_INFO_STR(logger, "Assuming tangent point shared: "<<printDirection(itsTangent[0])<<" (J2000)");
 
     // the frequencies
-    itsFFrameFrequencies.resize(0);
     itsInputFrequencies.resize(0);
     itsRequestedFrequencies.resize(0);
     // the work allocations
@@ -394,28 +390,23 @@ void AdviseDI::prepare() {
 
 
 
-
     for (unsigned int n = 0; n < ms.size(); ++n) {
+         const MeasFrame frame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
+         const MFrequency::Ref refin(MFrequency::castType(itsRef),frame); // the frame of the input channels
 
+         // builds a list of all the channels
+         itsInputFrequencies.reserve(itsChanFreq[n].size());
 
+         for (unsigned int ch = 0; ch < itsChanFreq[n].size(); ++ch) {
 
-        // builds a list of all the channels
-
-        for (unsigned int ch = 0; ch < chanFreq[n].size(); ++ch) {
-
-            MeasFrame itsFrame(MEpoch(itsEpoch[n]),itsPosition[n],itsDirVec[n][0]);
-            MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
-
-
-
-            itsInputFrequencies.push_back(MFrequency(MVFrequency(chanFreq[n][ch]),refin));
+              itsInputFrequencies.push_back(MFrequency(MVFrequency(itsChanFreq[n][ch]),refin));
 
             /// The original scheme attempted to convert the input into the output frame
             /// and only keep those output (FFRAME) channels that matched.
             /// This was not deemed useful or helpful enough though. But I need to keep that
             /// mode as a default.
 
-        }
+         }
     }
 
     /// uniquifying the lists
@@ -436,7 +427,7 @@ void AdviseDI::prepare() {
     std::vector<casacore::MFrequency>::iterator topo_it;
     topo_it = std::unique(itsInputFrequencies.begin(),itsInputFrequencies.end(),custom_compare);
     itsInputFrequencies.resize(std::distance(itsInputFrequencies.begin(),topo_it));
-    ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size() << " Output " << itsFFrameFrequencies.size());
+    ASKAPLOG_DEBUG_STR(logger," Unique sizes Input " << itsInputFrequencies.size());
 
 
     // Now they are unique we need to get a list of desired output freqencies that meet
@@ -509,12 +500,16 @@ void AdviseDI::prepare() {
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
         ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
-        unsigned int allocation_index = floor(ch / nchanpercore);
+        const unsigned int allocation_index = ch / nchanpercore;
 
-        ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() \
-        << " to worker " << allocation_index+1);
+        if (allocation_index < itsAllocatedFrequencies.size()) {
+            ASKAPLOG_DEBUG_STR(logger,"Allocating frequency "<< itsRequestedFrequencies[ch].getValue() <<
+                                      " to worker " << allocation_index+1);
 
-        itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+            itsAllocatedFrequencies[allocation_index].push_back(itsRequestedFrequencies[ch].getValue());
+        } else {
+            ASKAPLOG_WARN_STR(logger, "Not enough workers available! Truncating the job. Frequency "<<itsRequestedFrequencies[ch].getValue()<<" will be skipped");
+        }
     }
 
 
@@ -551,9 +546,9 @@ void AdviseDI::prepare() {
             for (unsigned int set=0;set < ms.size();++set){
 
 
-                MeasFrame itsFrame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
-                MFrequency::Ref refin(MFrequency::castType(itsRef),itsFrame); // the frame of the input channels
-                MFrequency::Ref refout(itsFreqType,itsFrame); // the frame desired
+                const MeasFrame frame(MEpoch(itsEpoch[set]),itsPosition[set],itsDirVec[set][0]);
+                const MFrequency::Ref refin(MFrequency::castType(itsRef),frame); // the frame of the input channels
+                const MFrequency::Ref refout(itsFreqType,frame); // the frame desired
                 MFrequency::Convert forw(refin,refout); // from input to desired
                 MFrequency::Convert backw(refout,refin); // from desired to input
 
@@ -571,12 +566,12 @@ void AdviseDI::prepare() {
                     otherEdge = thisAllocation[frequency] + itsFrequencies[2]/2.;
                 }
                 else {
-                    oneEdge = thisAllocation[frequency] - chanWidth[set][0]/2.0;
-                    otherEdge = thisAllocation[frequency] + chanWidth[set][0]/2.0;
+                    oneEdge = thisAllocation[frequency] - itsChanWidth[set][0]/2.0;
+                    otherEdge = thisAllocation[frequency] + itsChanWidth[set][0]/2.0;
                 }
 
                 // try and find the requested channels in the input dataset
-                lc = matchall(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
+                lc = matchAll(set,backw(oneEdge).getValue(),backw(otherEdge).getValue());
 
                 if (lc.size() > 0) {
                     size_t limit = lc.size();
@@ -596,7 +591,7 @@ void AdviseDI::prepare() {
                         if (itsRequestedFrequencies.size() > 1)
                             wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
                         else
-                            wu.set_channelWidth(fabs(chanWidth[0][0]));
+                            wu.set_channelWidth(fabs(itsChanWidth[0][0]));
 
                         wu.set_localChannel(lc[lc_part]);
                         wu.set_globalChannel(globalChannel);
@@ -605,7 +600,7 @@ void AdviseDI::prepare() {
                         itsAllocatedWork[work].push_back(wu);
                         itsWorkUnitCount++;
                         ASKAPLOG_DEBUG_STR(logger,"MATCH Found desired freq " << thisAllocation[frequency] \
-                        << " in local channel number " << lc << " ( " << chanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
+                        << " in local channel number " << lc << " ( " << itsChanFreq[set][lc[lc_part]] << " ) of width " << wu.get_channelWidth()  \
                         << " in set: " << ms[set] <<  " to rank " << work+1 << " this rank has " \
                         << itsAllocatedWork[work].size() << " of a total count " << itsWorkUnitCount \
                         << " the global channel is " << globalChannel);
@@ -630,7 +625,7 @@ void AdviseDI::prepare() {
                 if (itsRequestedFrequencies.size() > 1)
                     wu.set_channelWidth(fabs(itsInputFrequencies[1].getValue() - itsInputFrequencies[0].getValue()));
                 else
-                    wu.set_channelWidth(fabs(chanWidth[0][0]));
+                    wu.set_channelWidth(fabs(itsChanWidth[0][0]));
 
                 wu.set_localChannel(-1);
                 wu.set_globalChannel(-1);
@@ -696,7 +691,7 @@ void AdviseDI::prepare() {
         }
     }
 
-    isPrepared = true;
+    itsPrepared = true;
     ASKAPLOG_DEBUG_STR(logger, "Prepared the advice");
 }
 
@@ -721,13 +716,14 @@ cp::ContinuumWorkUnit AdviseDI::getAllocation(int id) {
     itsWorkUnitCount = count;
     return rtn;
 }
-vector<int> AdviseDI::matchall(int ms_number,
+
+vector<int> AdviseDI::matchAll(int ms_number,
 casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
     /// return all the input channels in the range
     vector<int> matches;
-    for (int ch=0 ; ch < chanFreq[ms_number].size(); ++ch) {
-            ASKAPLOG_DEBUG_STR(logger, "looking for " << chanFreq[ms_number][ch] << "Hz");
-            if (in_range(oneEdge.getValue(),otherEdge.getValue(),chanFreq[ms_number][ch])) {
+    for (int ch=0 ; ch < itsChanFreq[ms_number].size(); ++ch) {
+            ASKAPLOG_DEBUG_STR(logger, "looking for " << itsChanFreq[ms_number][ch] << "Hz");
+            if (in_range(oneEdge.getValue(),otherEdge.getValue(),itsChanFreq[ms_number][ch])) {
                 ASKAPLOG_DEBUG_STR(logger, "Found");
                 matches.push_back(ch);
             }
@@ -736,15 +732,11 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
     return matches;
 }
 
-void AdviseDI::addMissingParameters() {
-    this->addMissingParameters(this->itsParset,True);
-}
-
-void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::cp::ContinuumWorkUnit& wu) {
+void AdviseDI::updateDirectionFromWorkUnit(askap::cp::ContinuumWorkUnit& wu) {
 
   string wu_dataset = wu.get_dataset();
   std::vector<std::string> ms = getDatasets();
-  const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+  const vector<string> imageNames = itsParset.getStringVector("Images.Names", false);
   ASKAPLOG_DEBUG_STR(logger,"Image names " << imageNames);
 
   for (unsigned int n = 0; n < ms.size(); ++n) {
@@ -755,38 +747,33 @@ void AdviseDI::updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::c
       string pstr = "["+printLon(itsTangent[n])+","+printLat(itsTangent[n])+", J2000]";
       // Only J2000 is implemented at the moment.
       ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-      parset.replace(param, pstr);
+      itsParset.replace(param, pstr);
 
-      for (size_t img = 0; img < imageNames.size(); ++img) {
-        param ="Images."+imageNames[img]+".direction";
-        ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
-        parset.replace(param, pstr);
-
-      }
+      // leave this out - we need two directions when updatedirection is true,
+      //  one for the current subimage and one for the overal image
+      // for (size_t img = 0; img < imageNames.size(); ++img) {
+      //   param ="Images."+imageNames[img]+".direction";
+      //   ASKAPLOG_INFO_STR(logger, "  updating parameter " << param << ": " << pstr);
+      //   parset.replace(param, pstr);
+      // }
     }
   }
 }
 
-void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
+void AdviseDI::addMissingParameters(bool extra)
 {
 
     ASKAPLOG_DEBUG_STR(logger,"Adding missing params ");
 
-    if (isPrepared == true) {
+    if (itsPrepared == true) {
         ASKAPLOG_DEBUG_STR(logger,"Prepared therefore can add frequency label for the output image");
-        std::vector<casacore::MFrequency>::const_iterator begin_it;
-        std::vector<casacore::MFrequency>::const_iterator end_it;
 
         ASKAPCHECK(!itsRequestedFrequencies.empty(),"No frequencies requested for ouput");
-        begin_it = itsRequestedFrequencies.begin();
-        end_it = itsRequestedFrequencies.end()-1;
 
+        itsMinFrequency = itsRequestedFrequencies.front().getValue();
+        itsMaxFrequency = itsRequestedFrequencies.back().getValue();
 
-        this->minFrequency = (*begin_it).getValue();
-        this->maxFrequency = (*end_it).getValue();
-        ASKAPLOG_DEBUG_STR(logger,"Min:Max frequency -- " << this->minFrequency << ":" << this->maxFrequency);
-
-
+        ASKAPLOG_DEBUG_STR(logger,"Min:Max frequency -- " << itsMinFrequency << ":" << itsMaxFrequency);
     }
 
    // test for missing image-specific parameters:
@@ -799,11 +786,11 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    string param;
 
 
-   const vector<string> imageNames = parset.getStringVector("Images.Names", false);
+   const vector<string> imageNames = itsParset.getStringVector("Images.Names", false);
 
    param = "Images.direction";
 
-   if ( !parset.isDefined(param) ) {
+   if ( !itsParset.isDefined(param) ) {
        // Only J2000 is implemented at the moment.
        string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter (getting from the tangent point on the first measurement set) " << param << ": " << pstr);
@@ -811,44 +798,44 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    }
    param = "Images.restFrequency";
 
-   if ( !parset.isDefined(param) ) {
+   if ( !itsParset.isDefined(param) ) {
        string pstr = "HI";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << ": " << pstr);
-       parset.add(param, pstr);
+       itsParset.add(param, pstr);
    }
 
    for (size_t img = 0; img < imageNames.size(); ++img) {
 
-     if (!parset.isDefined("Images."+imageNames[img]+".cellsize")) {
+     if (!itsParset.isDefined("Images."+imageNames[img]+".cellsize")) {
          cellsizeNeeded = true;
      }
      else {
-         ASKAPCHECK(!parset.getBool("Images.nyquistgridding",false) && !parset.isDefined("Images.griddingcellsize"),
+         ASKAPCHECK(!itsParset.getBool("Images.nyquistgridding",false) && !itsParset.isDefined("Images.griddingcellsize"),
              "Individual image cellsizes are not currently allowed with Nyquist gridding");
      }
-     if (!parset.isDefined("Images."+imageNames[img]+".shape")) {
+     if (!itsParset.isDefined("Images."+imageNames[img]+".shape")) {
          shapeNeeded = true;
      }
      else {
-         ASKAPCHECK(!parset.getBool("Images.nyquistgridding",false) && !parset.isDefined("Images.griddingcellsize"),
+         ASKAPCHECK(!itsParset.getBool("Images.nyquistgridding",false) && !itsParset.isDefined("Images.griddingcellsize"),
              "Individual image shapes are not currently allowed with Nyquist gridding");
      }
 
      param = "Images."+imageNames[img]+".frequency";
-     if ( !parset.isDefined(param) && isPrepared == true) {
+     if ( !itsParset.isDefined(param) && itsPrepared == true) {
        const string key="Images."+imageNames[img]+".frequency";
        // changing this to match adviseParallel
-       const double aveFreq = 0.5*(minFrequency+maxFrequency);
+       const double aveFreq = 0.5*(itsMinFrequency+itsMaxFrequency);
        const string val = "["+toString(aveFreq)+","+toString(aveFreq)+"]";
        ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << val);
-       parset.add(key,val);
+       itsParset.add(key,val);
      }
 
      param ="Images."+imageNames[img]+".direction";
-     if ( !parset.isDefined(param) ) {
+     if ( !itsParset.isDefined(param) ) {
 
-       if (parset.isDefined("Images.direction") ) {
-         const std::vector<std::string> direction = parset.getStringVector("Images.direction");
+       if (itsParset.isDefined("Images.direction") ) {
+         const std::vector<std::string> direction = itsParset.getStringVector("Images.direction");
          const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
          const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
          const casacore::MVDirection itsDirection = casacore::MVDirection(ra,dec);
@@ -861,11 +848,11 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
          // Only J2000 is implemented at the moment.
          string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
          ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param << "(obtained from tangent point of first MS): " << pstr);
-         parset.add(param, pstr);
+         itsParset.add(param, pstr);
        }
      }
      param = "Images."+imageNames[img]+".nterms"; // if nterms is set, store it for later
-     if (parset.isDefined(param)) {
+     if (itsParset.isDefined(param)) {
        if ((nTerms>1) && (nTerms!=itsParset.getInt(param))) {
          ASKAPLOG_WARN_STR(logger, "  Imaging with different nterms may not work");
        }
@@ -873,29 +860,29 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
      }
 
      param = "Images."+imageNames[img]+".nchan";
-     if ( !parset.isDefined("Images."+imageNames[img]+".nchan") ) {
+     if ( !itsParset.isDefined("Images."+imageNames[img]+".nchan") ) {
          string pstr = "1";  // Default nchan is 1
          ASKAPLOG_INFO_STR(logger, "  Advising on parameter nchan : " << pstr);
-         parset.add(param, pstr);
+         itsParset.add(param, pstr);
 
      }
    }
 
    if (nTerms > 1) { // check required MFS parameters
        param = "visweights"; // set to "MFS" if unset and nTerms > 1
-       if (!parset.isDefined(param)) {
+       if (!itsParset.isDefined(param)) {
            string pstr="MFS";
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (obtained by default - we know no other weighting) : " << pstr);
-           parset.add(param, pstr);
+           itsParset.add(param, pstr);
        }
 
        param = "visweights.MFS.reffreq"; // set to average frequency if unset and nTerms > 1
-       if ((parset.getString("visweights")=="MFS")) {
-           if (!parset.isDefined(param)) {
-               const double aveFreq = 0.5*(minFrequency+maxFrequency);
+       if ((itsParset.getString("visweights")=="MFS")) {
+           if (!itsParset.isDefined(param)) {
+               const double aveFreq = 0.5*(itsMinFrequency+itsMaxFrequency);
                string val = toString(aveFreq);
                ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<" (using average frequency):  " << val);
-               parset.add(param,val);
+               itsParset.add(param,val);
            }
 
        }
@@ -906,192 +893,116 @@ void AdviseDI::addMissingParameters(LOFAR::ParameterSet& parset, bool extra)
    }
    // test for general missing parameters:
    // if any of these is missing we run the stats
-   const string wMaxGridder = ImagerParallel::wMaxAdviceNeeded(parset);
-   bool missing = !parset.isDefined("nUVWMachines");
-   missing |= (cellsizeNeeded && !parset.isDefined("Images.cellsize"));
-   missing |= (shapeNeeded && !parset.isDefined("Images.shape"));
+   const string wMaxGridder = ImagerParallel::wMaxAdviceNeeded(itsParset);
+   bool missing = !itsParset.isDefined("nUVWMachines");
+   missing |= (cellsizeNeeded && !itsParset.isDefined("Images.cellsize"));
+   missing |= (shapeNeeded && !itsParset.isDefined("Images.shape"));
    missing |= (wMaxGridder!="");
-   missing |= (parset.getBool("Images.nyquistgridding",false) && !parset.isDefined("Images.griddingcellsize"));
-
-   // define a few parameters up-front they may be needed later
-   double maxU=0., maxV=0., maxW=0.;
+   missing |= (itsParset.getBool("Images.nyquistgridding",false) && !itsParset.isDefined("Images.griddingcellsize"));
 
    if (missing) {
        ASKAPLOG_INFO_STR(logger, "Remaining missing parameters require a pass through the data");
 
-       if (!parset.isDefined("tangent")) {
+       if (!itsParset.isDefined("tangent")) {
            string pstr = "["+printLon(itsTangent[0])+","+printLat(itsTangent[0])+", J2000]";
            ASKAPLOG_INFO_STR(logger, "  Adding tangent for advise: " << pstr);
-           parset.add("tangent", pstr);
-           parset.add("tangent.advised", pstr);
+           itsParset.add("tangent", pstr);
+           itsParset.add("tangent.advised", pstr);
        }
 
        // Use the snapshotimaging wtolerance as the advise wtolerance. But only if wmax is needed.
-       bool snapShot = parset.getBool("gridder.snapshotimaging",false);
+       bool snapShot = itsParset.getBool("gridder.snapshotimaging",false);
        param = "gridder.snapshotimaging.wtolerance";
-       if (snapShot && parset.isDefined(param) && !parset.isDefined("wtolerance") && (wMaxGridder!="")) {
-           string wtolerance = parset.getString(param);
+       if (snapShot && itsParset.isDefined(param) && !itsParset.isDefined("wtolerance") && (wMaxGridder!="")) {
+           string wtolerance = itsParset.getString(param);
            ASKAPLOG_INFO_STR(logger, "  Adding wtolerance for advise: " << wtolerance);
-           parset.add("wtolerance", wtolerance);
-           parset.add("wtolerance.advised", wtolerance);
+           itsParset.add("wtolerance", wtolerance);
+           itsParset.add("wtolerance.advised", wtolerance);
        }
        if (wMaxGridder!="") {
            param = "gridder."+wMaxGridder+".wpercentile";
-           if (parset.isDefined(param)) {
-               string wpercentile = parset.get(param);
-               parset.add("wpercentile", wpercentile);
-               parset.add("wpercentile.advised", wpercentile);
+           if (itsParset.isDefined(param)) {
+               string wpercentile = itsParset.get(param);
+               itsParset.add("wpercentile", wpercentile);
+               itsParset.add("wpercentile.advised", wpercentile);
            }
        }
 
-       estimate(parset);
+       estimate(itsParset);
        const VisMetaDataStats &advice = estimator();
 
        param = "nUVWMachines"; // if the number of uvw machines is undefined, set it to the number of beams.
-       if (!parset.isDefined(param)) {
+       if (!itsParset.isDefined(param)) {
            const string pstr = toString(advice.nBeams());
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
-           parset.add(param, pstr);
+           itsParset.add(param, pstr);
        }
 
        param = "Images.cellsize";
        std::vector<double> cellSize(2, advice.squareCellSize());
-       if (parset.isDefined(param)) {
-           cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector(param),"arcsec");
+       if (itsParset.isDefined(param)) {
+           cellSize = SynthesisParamsHelper::convertQuantity(itsParset.getStringVector(param),"arcsec");
        } else if (cellsizeNeeded) {
            string pstr = "["+toString(cellSize[0])+"arcsec,"+toString(cellSize[1])+"arcsec]";
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
-           parset.add(param, pstr);
+           itsParset.add(param, pstr);
        }
 
        param = "Images.shape"; // if image shape is undefined, use the advice.
-       if (shapeNeeded && !parset.isDefined(param)) {
+       if (shapeNeeded && !itsParset.isDefined(param)) {
            const double fieldSize = advice.squareFieldSize(1); // in deg
            const long lSize = long(fieldSize * 3600 / cellSize[0]) + 1;
            const long mSize = long(fieldSize * 3600 / cellSize[1]) + 1;
            string pstr = "["+toString(lSize)+","+toString(mSize)+"]";
            ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
-           parset.add(param, pstr);
+           itsParset.add(param, pstr);
        }
 
-       const string gridder = ImagerParallel::wMaxAdviceNeeded(parset); // returns empty string if wmax is not required.
+       const string gridder = ImagerParallel::wMaxAdviceNeeded(itsParset); // returns empty string if wmax is not required.
        if (gridder!="") {
            param = "gridder."+gridder+".wmax"; // if wmax is undefined but needed, use the advice.
-           if (!parset.isDefined(param)) {
+           if (!itsParset.isDefined(param)) {
                // both should be set if either is, but include the latter to ensure that maxResidualW is generated.
-               if (parset.isDefined("gridder.snapshotimaging.wtolerance") && parset.isDefined("wtolerance") ) {
-                   const string pstr = toString(advice.maxResidualW()); // could use parset.getString("gridder.snapshotimaging.wtolerance");
+               if (itsParset.isDefined("gridder.snapshotimaging.wtolerance") && itsParset.isDefined("wtolerance") ) {
+                   const string pstr = toString(advice.maxResidualW()); // could use itsParset.getString("gridder.snapshotimaging.wtolerance");
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
-                   parset.add(param, pstr);
-               } else if (parset.isDefined("gridder."+gridder+".wpercentile")){
+                   itsParset.add(param, pstr);
+               } else if (itsParset.isDefined("gridder."+gridder+".wpercentile")){
                    const string pstr = toString(advice.wPercentile());
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr << " with specified percentile value");
-                   parset.add(param, pstr);
+                   itsParset.add(param, pstr);
                    // if we're setting from percentile, turn on clipping
                    param = "gridder."+gridder+".wmaxclip";
-                   if (!parset.isDefined(param)) {
-                       parset.add(param, "true");
+                   if (!itsParset.isDefined(param)) {
+                       itsParset.add(param, "true");
                    }
                } else {
                    const string pstr = toString(advice.maxW());
                    ASKAPLOG_INFO_STR(logger, "  Advising on parameter " << param <<": " << pstr);
-                   parset.add(param, pstr);
+                   itsParset.add(param, pstr);
                }
            }
        }
-
-       if (parset.getBool("Images.nyquistgridding",false)) {
-           maxU = advice.maxU();
-           maxV = advice.maxV();
-           maxW = advice.maxW();
-       }
-
    }
 
    // add Nyquist gridding parameters if needed. Wait until after doing others requiring VisMetaDataStats.
-   // @todo should probably throw an exception if individual cell or image sizes are given
-   ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
-   if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
-
-       ASKAPCHECK(parset.isDefined("Images.cellsize") && parset.isDefined("Images.shape"),
-           "The global image cellsize and shape are currently required with Nyquist gridding");
-
-       const std::vector<double>
-           cellSize = SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.cellsize"),"arcsec");
-       const std::vector<int> imSize = parset.getInt32Vector("Images.shape");
-
-       // need to make sure that extraOsFactor results in an integer number of pixels,
-       // which could get complicated for rectangular grids and pixels.
-       ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
-       ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
-       ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
-
-       std::vector<double> gCellSize(2);
-       if (parset.isDefined("Images.griddingcellsize")) {
-           const std::vector<string> gParam = parset.getStringVector("Images.griddingcellsize");
-           ASKAPCHECK(gParam.size() == 2, "nyquistgridding requires a griddingcellsize vector of length 2");
-           gCellSize = SynthesisParamsHelper::convertQuantity(gParam,"arcsec");
-           ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
-           ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
-       }
-       else {
-           const double uv_max = max(maxU, maxV);
-           const double fov = cellSize[0] * imSize[0] * casacore::C::arcsec;
-           const double wk_max = 6/fov + maxW*fov;
-           ASKAPASSERT(uv_max > 0);
-           // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
-           //  - the reciprical of twice the longest baseline plus the largest w support
-           //  - doubled wk_max because it seemed too small
-           gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
-           gCellSize[1] = gCellSize[0];
-       }
-
-       // nominal ratio between gridding resolution and cleaning resolution
-       ASKAPDEBUGASSERT(cellSize[0] > 0);
-       double extraOsFactor = gCellSize[0]/cellSize[0];
-       // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
-       ASKAPDEBUGASSERT(extraOsFactor >= 1);
-       double nPix = ceil(double(imSize[0])/extraOsFactor);
-       // also ensure that it is even
-       nPix += int(nPix) % 2;
-       // reset the extra multiplicative factor
-       ASKAPDEBUGASSERT(nPix > 0);
-       extraOsFactor = static_cast<double>(imSize[0]) / nPix;
-       ASKAPDEBUGASSERT(extraOsFactor >= 1);
-
-       gCellSize[0] = cellSize[0] * extraOsFactor;
-       gCellSize[1] = gCellSize[0];
-
-       ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
-       ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
-                                 " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
-       ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
-                                 " to "<<"["<<long(nPix)<<","<<long(nPix)<<"]");
-
-       // Only set or reset these parameters if they are needed
-       //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
-       if (extraOsFactor > 1.) {
-           parset.add("Images.extraoversampling", utility::toString(extraOsFactor));
-           parset.replace("Images.cellsize", "["+toString(gCellSize[0])+"arcsec,"+toString(gCellSize[1])+"arcsec]");
-           parset.replace("Images.shape", "["+toString(long(nPix))+","+toString(long(nPix))+"]");
-       }
-   }
+   SynthesisParamsHelper::setNyquistSampling(estimator(), itsParset);
 
    ASKAPLOG_DEBUG_STR(logger,"Done adding missing params ");
 
-   if (parset.isDefined("tangent.advised")) {
-       parset.remove("tangent");
-       parset.remove("tangent.advised");
+   if (itsParset.isDefined("tangent.advised")) {
+       itsParset.remove("tangent");
+       itsParset.remove("tangent.advised");
    }
 
-   if (parset.isDefined("wtolerance.advised")) {
-       parset.remove("wtolerance");
-       parset.remove("wtolerance.advised");
+   if (itsParset.isDefined("wtolerance.advised")) {
+       itsParset.remove("wtolerance");
+       itsParset.remove("wtolerance.advised");
    }
 
-   if (parset.isDefined("wpercentile.advised")) {
-       parset.remove("wpercentile");
-       parset.remove("wpercentile.advised");
+   if (itsParset.isDefined("wpercentile.advised")) {
+       itsParset.remove("wpercentile");
+       itsParset.remove("wpercentile.advised");
    }
 }
 

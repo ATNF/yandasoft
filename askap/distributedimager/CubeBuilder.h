@@ -55,7 +55,8 @@ class CubeBuilder {
                     const casacore::uInt nchan,
                     const casacore::Quantity& f0,
                     const casacore::Quantity& inc,
-                    const std::string& name = "");
+                    const std::string& name = "",
+                    const bool uvcoord = false);
 
         CubeBuilder(const LOFAR::ParameterSet& parset,const std:: string& name);
 
@@ -74,11 +75,28 @@ class CubeBuilder {
                                const casacore::Quantity& f0,
                                const casacore::Quantity& inc);
 
+        casacore::CoordinateSystem
+        createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                 const casacore::uInt nx,
+                                 const casacore::uInt ny,
+                                 const casacore::Quantity& f0,
+                                 const casacore::Quantity& inc);
+
         void addBeam(casacore::Vector<casacore::Quantum<double> > &beam);
         void setUnits(const std::string &units);
         void setDateObs(const casacore::MVEpoch &dateObs);
+        void writeImageHistory(const std::vector<std::string>& historyLines);
+
+        void addBeamList(const accessors::BeamList & beamList);
+
+        void setInfo(const casacore::Record & info);
 
         std::string filename() const{return itsFilename;};
+
+        boost::shared_ptr<accessors::IImageAccess<T>> imageHandler();
+
+        boost::optional<float> oversamplingFactor();
+        
 
     private:
 

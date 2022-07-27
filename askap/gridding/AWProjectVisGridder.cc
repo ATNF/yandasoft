@@ -89,8 +89,7 @@ AWProjectVisGridder::AWProjectVisGridder(const boost::shared_ptr<IBasicIlluminat
         AProjectGridderBase(maxFeeds, maxFields, pointingTol, paTol, freqTol),
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample, maxSupport, limitSupport, name),
         itsReferenceFrequency(0.0), itsIllumination(illum),
-        itsFreqDep(frequencyDependent),
-        itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
+        itsFreqDep(frequencyDependent), itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
 {
     ASKAPDEBUGASSERT(itsIllumination);
     ASKAPCHECK(maxFeeds > 0, "Maximum number of feeds must be one or more");
@@ -201,8 +200,8 @@ void AWProjectVisGridder::initialiseGrid(const scimath::Axes& axes,  const casac
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const casacore::uInt nx = maxSupport();
+    const casacore::uInt ny = maxSupport();
 
     ASKAPLOG_DEBUG_STR(logger, "Shape for calculating gridding convolution function = "
                            << nx << " by " << ny << " pixels");
@@ -231,8 +230,8 @@ void AWProjectVisGridder::initialiseDegrid(const scimath::Axes& axes,
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const casacore::uInt nx = maxSupport();
+    const casacore::uInt ny = maxSupport();
 
     ASKAPLOG_DEBUG_STR(logger, "Shape for calculating degridding convolution function = "
                            << nx << " by " << ny << " pixels");
@@ -312,13 +311,16 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     // check whether the output pattern is image based. If so, inverse FFT is not needed
     const bool imageBasedPattern = itsIllumination->isImageBased();
 
+    // check whether the pattern depends on the feed number
+    const bool feedDependent = itsIllumination->isFeedDependent();
+
     validateCFCache(acc, hasSymmetricIllumination);
 
     /// Limit the size of the convolution function since
     /// we don't need it finely sampled in image space. This
     /// will reduce the time taken to calculate it.
-    const casacore::uInt nx = std::min(maxSupport(), int(itsShape(0)));
-    const casacore::uInt ny = std::min(maxSupport(), int(itsShape(1)));
+    const int nx = maxSupport();
+    const int ny = maxSupport();
 
     const casacore::uInt qnx = nx / itsOverSample;
     const casacore::uInt qny = ny / itsOverSample;
@@ -356,14 +358,14 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             makeCFValid(feed, currentField());
             nDone++;
             casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
-
             const double parallacticAngle = hasSymmetricIllumination ? 0. : acc.feed1PA()(row);
 
             for (int chan = 0; chan < nChan; ++chan) {
 
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(chanFreq[chan], pattern, out, offset,
-                                            parallacticAngle, isPSFGridder() || isPCFGridder());
+                                            parallacticAngle, isPSFGridder() || isPCFGridder(),
+                                            feed);
                 // If the pattern is in the Fourier domain, FFT to the image domain
                 if( !imageBasedPattern ) {
                     scimath::fft2d(pattern.pattern(), false);
@@ -426,12 +428,11 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                     CFSupport cfSupport(itsSupport);
 
                     if (isSupportPlaneDependent() || (itsSupport == 0)) {
-                        //  SynthesisParamsHelper::saveAsCasaImage("dbg.img", amplitude(thisPlane));
                         cfSupport = extractSupport(thisPlane);
                         const int support = cfSupport.itsSize;
 
-                        ASKAPCHECK(support*itsOverSample < int(nx) / 2,
-                                   "Overflowing convolution function - increase maxSupport or decrease overSample. " <<
+                        ASKAPCHECK((support+1)*itsOverSample < int(nx) / 2,
+                                   "Overflowing convolution function - increase maxSupport or cutoff or decrease overSample. " <<
                                    "Current support size = " << support << " oversampling factor=" << itsOverSample <<
                                    " image size nx=" << nx)
 
@@ -467,6 +468,28 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                     const double rescale = double(itsOverSample * itsOverSample);
                     const int cSize = 2 * support + 1;
 
+                    // work out range of kx, ky and see if they will overflow the array
+                    const int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
+                    const int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
+                    const int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
+                    const int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
+                    int overflow = 0;
+                    if (kxmin<0) {
+                        overflow = -kxmin;
+                    }
+                    if (kxmax>=nx) {
+                        overflow = std::max(overflow, kxmax-(nx-1));
+                    }
+                    if (kymin<0) {
+                        overflow = std::max(overflow, -kymin);
+                    }
+                    if (kymax>=ny) {
+                        overflow = std::max(overflow, kymax-(ny-1));
+                    }
+
+                    ASKAPCHECK(overflow==0,"Convolution function overflowing - increase maxsupport or cutoff or decrease oversample, overflow="<<overflow);
+
+
                     for (int fracu = 0; fracu < itsOverSample; fracu++) {
                         for (int fracv = 0; fracv < itsOverSample; fracv++) {
                             const int plane = fracu + itsOverSample * (fracv + itsOverSample
@@ -484,18 +507,10 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                             // Now cut out the inner part of the convolution function and
                             // insert it into the convolution function
                             for (int iy = -support; iy < support+1; iy++) {
-                                const int oy = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2;
-                                ASKAPDEBUGASSERT(iy + support >= 0);
-                                ASKAPDEBUGASSERT(iy + support < int(itsConvFunc[plane].ncolumn()));
-                                ASKAPDEBUGASSERT(oy >= 0);
-                                ASKAPDEBUGASSERT(oy < int(thisPlane.ncolumn()));
+                                const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2;
                                 for (int ix = -support; ix < support+1; ix++) {
-                                    const int ox = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2;
-                                    ASKAPDEBUGASSERT(ix + support >= 0);
-                                    ASKAPDEBUGASSERT(ix + support < int(itsConvFunc[plane].nrow()));
-                                    ASKAPDEBUGASSERT(ox >= 0);
-                                    ASKAPDEBUGASSERT(ox < int(thisPlane.nrow()));
-                                    itsConvFunc[plane](ix + support, iy + support) = imtype(rescale) * thisPlane(ox,oy);
+                                    const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2;
+                                    itsConvFunc[plane](ix + support, iy + support) = imtype(rescale) * thisPlane(kx, ky);
                                 }
                             }
 
@@ -512,15 +527,12 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                         } // for fracv
                     } // for fracu
-
                 } // w loop
             } // chan loop
 
-            if (isPSFGridder() && itsShareCF) {
+            if (isPSFGridder() && !feedDependent && itsShareCF) {
                 // All illumination patterns are identical across feeds for the PSF gridder,
                 // so copy CFs across and make valid
-                // If we implement feed specific illumination patterns this will need to be bypassed
-                // but at the moment this class takes a single pattern with variable offset
                 // Use sharecf=false to bypass all CF optimizations
                 ASKAPLOG_INFO_STR(logger,"Using feed "<<feed<<" for all PSF gridding convolution functions");
                 for (int ifeed = 0; ifeed< itsMaxFeeds; ifeed++) {
@@ -816,7 +828,7 @@ AWProjectVisGridder& AWProjectVisGridder::operator=(const AWProjectVisGridder &)
 /// @brief static method to create gridder
 /// @details Each gridder should have a static factory method, which is
 /// able to create a particular type of the gridder and initialise it with
-/// the parameters taken form the given parset. It is assumed that the
+/// the parameters taken from the given parset. It is assumed that the
 /// method receives a subset of parameters where the gridder name is already
 /// taken out.
 /// @param[in] parset input parset file

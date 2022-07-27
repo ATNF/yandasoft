@@ -10,28 +10,25 @@
 # repo.
 
 #     Identifier                   tag/branch       cache  type      description                        force it
-set ( ASKAP_CMAKE_TAG              tags/1.2.0                               CACHE  STRING    "askap.cmake tools"                FORCE )
-set ( ASKAP_DEV_TAG                tags/2.3.1                               CACHE  STRING    "askap dev tools"                  FORCE )
-set ( LOFAR_COMMON_TAG             tags/1.1.0                               CACHE  STRING    "lofar-common version"             FORCE )
-set ( LOFAR_BLOB_TAG               tags/1.1.0                               CACHE  STRING    "lofar-blob version"               FORCE )
-set ( BASE_ASKAP_TAG               tags/1.2.0                               CACHE  STRING    "base-askap version"               FORCE )
-set ( BASE_LOGFILTERS_TAG          tags/1.1.0                               CACHE  STRING    "base-logfilters version"          FORCE )
-# need to release new imagemath, this tag is the state after pull request #38 
-set ( BASE_IMAGEMATH_TAG           483d77c96067f726e7078e7ec6799a39830d269a   CACHE  STRING    "base-imagemath version"           FORCE )
-set ( BASE_ASKAPPARRALLEL_TAG      tags/1.1.0                               CACHE  STRING    "base-askapparrallel version"      FORCE )
-# need to release new scimath, this tag is the state after pull request #49
-set ( BASE_SCIMATH_TAG             96404d4d75d2bc7dcaf7fa8ddf462f64f91e7488   CACHE  STRING    "base-scimath version"             FORCE )
-# need to release new accessors, this tag is the state after pull request #39
-set ( BASE_ACCESSORS_TAG           083682416cf7d1604688fa33f5f19e5ad6e70e98   CACHE  STRING    "base-accessors version"           FORCE )
-set ( BASE_COMPONENTS_TAG          tags/1.1.0                               CACHE  STRING    "base-components version"          FORCE )
-set ( ASKAP_ANALYSIS_TAG           tags/1.2.1                               CACHE  STRING    "askap-analysis version"           FORCE )
-set ( ASKAP_YANDASOFT_TAG          tags/1.3.0                               CACHE  STRING    "yandasoft version"                FORCE )
-set ( ASKAP_PIPELINETASKS_TAG      tags/1.3.0                               CACHE  STRING    "askap-pipelinetasks version"      FORCE )
-set ( ASKAP_INTERFACES_TAG         tags/1.2.0                               CACHE  STRING    "askap-interfaces version"         FORCE )
-set ( ASKAP_SMS_TAG                tags/1.2.0                               CACHE  STRING    "askap-sms version" FORCE )
- 
-# TOS related repos are not versioned yet, so pinned this build with commit hash values.
-set ( PYTHON_ASKAP_TAG             3c4871a07d7cdf8a71871074cd90e8b3bf8d16de CACHE  STRING    "python-askap (tos) version"       FORCE )
-set ( PYTHON_ICEUTILS_TAG          8e34898ef30d530648b02cf81ca8e6e3c9d0781e CACHE  STRING    "python-iceutils (tos) version"    FORCE )
-set ( PYTHON_LOGHANDLERS_TAG       e3b682ef6a79ab14943789ad5ef6e5a46c4d7bb7 CACHE  STRING    "python-loghandlers (tos) version" FORCE )
-set ( PYTHON_PARSET_TAG            e6bfeb00e5b3a9e5a8aae20db48a1e6470aa1c35 CACHE  STRING    "python-parset (tos) version"      FORCE )
+set ( ASKAP_CMAKE_TAG              tags/1.4.0       CACHE  STRING    "askap.cmake tools"                FORCE )
+set ( LOFAR_COMMON_TAG             tags/1.2.0       CACHE  STRING    "lofar-common version"             FORCE )
+set ( LOFAR_BLOB_TAG               tags/1.3.0       CACHE  STRING    "lofar-blob version"               FORCE )
+set ( BASE_ASKAP_TAG               tags/1.5.0       CACHE  STRING    "base-askap version"               FORCE )
+set ( BASE_LOGFILTERS_TAG          tags/1.3.0       CACHE  STRING    "base-logfilters version"          FORCE )
+set ( BASE_IMAGEMATH_TAG           tags/1.6.0       CACHE  STRING    "base-imagemath version"           FORCE )
+set ( BASE_ASKAPPARRALLEL_TAG      tags/1.3.0       CACHE  STRING    "base-askapparrallel version"      FORCE )
+set ( BASE_SCIMATH_TAG             tags/1.7.0       CACHE  STRING    "base-scimath version"             FORCE )
+set ( BASE_ACCESSORS_TAG           tags/1.6.0       CACHE  STRING    "base-accessors version"           FORCE )
+set ( BASE_COMPONENTS_TAG          tags/1.4.0       CACHE  STRING    "base-components version"          FORCE )
+
+# develop - Use these entries for develop until we fix with AXA-1719
+#set ( ASKAP_CMAKE_TAG              develop          CACHE  STRING    "askap.cmake tools"                FORCE )
+#set ( LOFAR_COMMON_TAG             develop          CACHE  STRING    "lofar-common version"             FORCE )
+#set ( LOFAR_BLOB_TAG               develop          CACHE  STRING    "lofar-blob version"               FORCE )
+#set ( BASE_ASKAP_TAG               develop          CACHE  STRING    "base-askap version"               FORCE )
+#set ( BASE_LOGFILTERS_TAG          develop          CACHE  STRING    "base-logfilters version"          FORCE )
+#set ( BASE_IMAGEMATH_TAG           develop          CACHE  STRING    "base-imagemath version"           FORCE )
+#set ( BASE_ASKAPPARRALLEL_TAG      develop          CACHE  STRING    "base-askapparrallel version"      FORCE )
+#set ( BASE_SCIMATH_TAG             develop          CACHE  STRING    "base-scimath version"             FORCE )
+#set ( BASE_ACCESSORS_TAG           develop          CACHE  STRING    "base-accessors version"           FORCE )
+#set ( BASE_COMPONENTS_TAG          develop          CACHE  STRING    "base-components version"          FORCE )

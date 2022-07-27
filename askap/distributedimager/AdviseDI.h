@@ -81,25 +81,14 @@ namespace askap {
             /// @brief Add the missing parameters
             /// @details Add whatever details we require for both master and
             /// worker implementations
-            /// @param[in/out] parset ParameterSet to add missing parameters to
             /// @param[in] extra - if true check for additional parameters besides frequencies and directions
-            void addMissingParameters(LOFAR::ParameterSet& parset, bool extra=false);
-
-            /// @brief Add the missing parameters
-            /// @details Add whatever details we require for both master and
-            /// worker implementations
-            void addMissingParameters();
+            void addMissingParameters(bool extra=false);
 
             /// @brief Use workunit to set Image direction parameters in parset
-            void updateDirectionFromWorkUnit(LOFAR::ParameterSet& parset, askap::cp::ContinuumWorkUnit& wu);
-
-            /// @brief Access to the parset
-            /// @details Returns the current parset after advice
-            LOFAR::ParameterSet getParset() const { return itsParset; };
+            void updateDirectionFromWorkUnit(askap::cp::ContinuumWorkUnit& wu);
 
             /// @brief the datasets
             std::vector<std::string> getDatasets() const;
-
 
             /// @brief get the channels
             std::vector<int> getChannels() const;
@@ -107,15 +96,13 @@ namespace askap {
             /// @brief get the frequencies
             std::vector<double> getFrequencies() const;
 
-            casacore::MVDirection getTangent(int ms=0) const {return itsTangent[ms];};
+            inline const casacore::MVDirection& getTangent(int ms=0) const {return itsTangent[ms];};
 
-            casacore::MVEpoch getEpoch(int ms=0) const {return itsEpoch[ms]; };
+            inline const casacore::MVEpoch& getEpoch(int ms=0) const {return itsEpoch[ms]; };
 
-            casacore::MPosition getPosition(int ms=0) const {return itsPosition[ms]; };
+            inline const casacore::MPosition& getPosition(int ms=0) const {return itsPosition[ms]; };
 
-            vector<casacore::MFrequency> getBaryFrequencies() const {return itsFFrameFrequencies;};
-
-            vector<casacore::MFrequency> getTopoFrequencies() const {return itsInputFrequencies;};
+            inline const vector<casacore::MFrequency>& getTopoFrequencies() const {return itsInputFrequencies;};
 
             cp::ContinuumWorkUnit getAllocation(int id);
 
@@ -123,12 +110,12 @@ namespace askap {
 
             void updateComms();
 
-            int getWorkUnitCount() const { return itsWorkUnitCount;};
+            inline int getWorkUnitCount() const { return itsWorkUnitCount;};
 
             void prepare();
 
             /// obtain frequency reference frame
-            inline casacore::MFrequency::Ref getFreqRefFrame() const { return itsFreqRefFrame;}
+            inline const casacore::MFrequency::Ref& getFreqRefFrame() const { return itsFreqRefFrame;}
 
         protected:
 
@@ -137,23 +124,21 @@ namespace askap {
             /// redesigned, at least to avoid accessing measurement set from first principles. Currently, this
             /// method adds to uglyness of the code - it uses the functionality of the base class (i.e. the originally
             /// written estimator) to get the basic info for a single measurement set without relying on the correct
-            /// parallel distribution. The returned statistics is valid until the next call to this method or until 
-            /// the full parallel advise is done. 
+            /// parallel distribution. The returned statistics is valid until the next call to this method or until
+            /// the full parallel advise is done.
             /// @param[in] ms measurement set to work with
             /// @return const reference to the object populated with resulted metadata statistics
             const VisMetaDataStats& computeVisMetaDataStats(const std::string &ms);
 
         private:
 
-            bool isPrepared;
+            bool itsPrepared;
 
             int itsWorkUnitCount;
 
             LOFAR::ParameterSet& itsParset;
 
             casacore::uInt itsRef;
-
-            vector<casacore::MFrequency> itsFFrameFrequencies;
 
             vector<casacore::MFrequency> itsInputFrequencies;
 
@@ -166,11 +151,9 @@ namespace askap {
 
             casacore::MFrequency::Types itsFreqType;
 
-            double minFrequency;
+            double itsMinFrequency;
 
-            double maxFrequency;
-
-
+            double itsMaxFrequency;
 
             std::vector<casacore::MVDirection> itsTangent;
 
@@ -180,16 +163,16 @@ namespace askap {
 
             std::vector<casacore::MPosition> itsPosition;
 
-            std::vector< std::vector<double> > chanFreq;
-            std::vector< std::vector<double> > chanWidth;
-            std::vector< std::vector<double> > effectiveBW;
-            std::vector< std::vector<double> > resolution;
-            std::vector< std::vector<double> > centre;
+            std::vector< std::vector<double> > itsChanFreq;
+            std::vector< std::vector<double> > itsChanWidth;
+            std::vector< std::vector<double> > itsEffectiveBW;
+            std::vector< std::vector<double> > itsResolution;
+            std::vector< std::vector<double> > itsCentre;
 
             std::vector< std::vector<double> > itsAllocatedFrequencies;
             std::vector< std::vector<cp::ContinuumWorkUnit> > itsAllocatedWork;
 
-            vector<int> matchall(int,  casacore::MVFrequency, casacore::MVFrequency) const;
+            vector<int> matchAll(int,  casacore::MVFrequency, casacore::MVFrequency) const;
 
             std::vector<int> getBeams() const;
 

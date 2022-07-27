@@ -516,7 +516,7 @@ void MSSplitter::splitMainTable(const casacore::MeasurementSet& source,
     // and how many polarisations are involved.
     const uInt nChanIn = endChan - startChan + 1;
     const uInt nChanOut = nChanIn / width;
-    const uInt nPol = sc.data()(0).shape()(0);
+    const uInt nPol = sc.data().shape(0)(0);
     ASKAPDEBUGASSERT(nPol > 0);
 
     // Test to see whether SIGMA_SPECTRUM has been added

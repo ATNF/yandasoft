@@ -1,0 +1,81 @@
+Yandasoft
+---------
+Third Party Components
+The following third party components may be linked, referenced, imported from the enclosing environment. They are not distributed with this software.
+-------------------------------
+
+Apache Portable Runtime
+https://apr.apache.org
+Copyright © 2008-2016, The Apache Software Foundation Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
+
+BLAS (Basic Linear Algebra Subprograms)
+http://www.netlib.org/blas/ No license mentioned
+
+Boost C++ libraries
+http://www.boost.org
+Copyright Beman Dawes, David Abrahams, 1998-2005. Copyright Rene Rivera 2004-2007.
+Distributed under the Boost Software License, Version 1.0. (http://www.boost.org/LICENSE_1_0.txt)
+
+CASA Core
+https://github.com/casacore/casacore
+Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+CFITSIO
+http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html Copyright NASA
+No specific license mentioned, open source implied
+
+Duchamp
+http://www.atnf.csiro.au/computing/software/duchamp/index.html Copyright (C) 2006-2014 Matthew Whiting, CSIRO Astronomy & Space Science Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+Expat
+http://www.libexpat.org/
+Copyright (c) 1998, 1999, 2000 Thai Open Source Software Center Ltd
+and Clark Cooper
+Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006 Expat maintainers.
+MIT/X Consortium license (https://en.wikipedia.org/wiki/MIT_License)
+
+fftw
+http://fftw.org
+Copyright (c) 2003, 2007-11 Matteo Frigo
+Copyright (c) 2003, 2007-11 Massachusetts Institute of Technology Licensed under 
+GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+GNU Scientific Library
+http://www.gnu.org/software/gsl/ Licensed under GPLv3 (https://www.gnu.org/licenses/gpl.html)
+
+LAPACK
+http://www.netlib.org/lapack/
+Copyright (c) 1992-2011 The University of Tennessee and The University
+of Tennessee Research Foundation. All rights
+reserved.
+Copyright (c) 2000-2011 The University of California Berkeley. All
+rights reserved.
+Copyright (c) 2006-2011 The University of Colorado Denver. All rights
+reserved. BSD-3 License
+(http://directory.fsf.org/wiki/License:BSD_3Clause)
+ 
+LOFAR Common Software
+Licensed under GPLv2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+
+Log4cxx
+https://logging.apache.org/log4cxx/latest_stable/ Copyright 2004-2007 The Apache Software Foundation Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)
+
+mcpp
+http://mcpp.sourceforge.net
+Licensed under BSD (http://www.linfo.org/bsdlicense.html)
+
+MPE (Multi-Processing Environment)
+http://www.mcs.anl.gov/research/projects/perfvis/download/index.htm#MPE No copyright or license evident.
+
+OpenSSL
+https://www.openssl.org
+Copyright © 2015, OpenSSL Software Foundation.
+Dual license, OpenSSl License (Apache 1.0 like), SSLeay License (https://www.openssl.org/source/license.html)
+Note: this is not compatible with GPL.
+
+WCS Lib
+http://www.atnf.csiro.au/people/mcalabre/WCS/ Copyright (C) 1995-2013, Mark Calabretta Licensed under GPLv3 (https://www.gnu.org/licenses/gpl.html)
+
+Xerces
+https://xerces.apache.org/xerces-c/
+Copyright © 1999-2010 The Apache Software Foundation. All Rights Reserved. Licensed under the Apache Software License, Version 2.0. (http://www.apache.org/licenses/LICENSE-2.0)

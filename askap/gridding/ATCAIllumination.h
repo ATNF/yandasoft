@@ -1,4 +1,4 @@
-/// @file 
+/// @file
 /// @brief ATCA L-band illumination model
 /// @details This class represents a ATCA L-band illumination model.
 /// It includes a disk with Jamesian illumination and optionally feed leg shadows.
@@ -54,26 +54,41 @@ struct ATCAIllumination : virtual public IBasicIllumination {
   /// methods like ... to switch these effects off. Default behavior is equivalent
   /// to a disk model.
   ATCAIllumination(double diam, double blockage);
-    
+
   /// @brief obtain illumination pattern
-  /// @details This is the main method which populates the 
+  /// @details This is the main method which populates the
   /// supplied uv-pattern with the values corresponding to the model
-  /// represented by this object. It has to be overridden in the 
+  /// represented by this object. It has to be overridden in the
   /// derived classes. An optional phase slope can be applied to
   /// simulate offset pointing.
   /// @param[in] freq frequency in Hz for which an illumination pattern is required
   /// @param[in] pattern a UVPattern object to fill
   /// @param[in] l angular offset in the u-direction (in radians)
   /// @param[in] m angular offset in the v-direction (in radians)
-  /// @param[in] pa parallactic angle, or strictly speaking the angle between 
+  /// @param[in] pa parallactic angle, or strictly speaking the angle between
   /// uv-coordinate system and the system where the pattern is defined (unused)
-  virtual void getPattern(double freq, UVPattern &pattern, double l, 
+  virtual void getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const;
 
+  /// @brief obtain illumination pattern
+  /// @details This is the main method which populates the
+  /// supplied uv-pattern with the values corresponding to the model
+  /// represented by this object. It has to be overridden in the
+  /// derived classes. An optional phase slope can be applied to
+  /// simulate offset pointing.
+  /// @param[in] freq frequency in Hz for which an illumination pattern is required
+  /// @param[in] pattern a UVPattern object to fill
+  /// @param[in] imageCentre direction of image
+  /// @param[in] beamCentre  direction of beam (pointing)
+  /// @param[in] pa parallactic angle, or strictly speaking the angle between
+  /// uv-coordinate system and the system where the pattern is defined (unused)
+  /// @param[in] isPSF specify if we want the pattern for image or psf (no phase slope)
+  /// @param[in] feed  feed number for case where pattern differs between feeds
   virtual void getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre = {},
                           const casacore::MVDirection &beamCentre = {},
-                          const double pa = 0., const bool isPSF = false) const;
+                          const double pa = 0., const bool isPSF = false,
+                          const int feed = 0) const;
 
   /// @brief check whether the pattern is symmetric
   /// @details Some illumination patterns are known a priori to be symmetric.
@@ -85,18 +100,24 @@ struct ATCAIllumination : virtual public IBasicIllumination {
   /// @details Some illumination patterns need to be generated in the image domain, and given
   /// the standard usage (FFT to image-domain for combination with other functions) any image
   /// domain function may as well stay in the image domain. So check the state before doing the FFT.
-  /// @return false 
+  /// @return false
   virtual bool isImageBased() const;
+
+  /// @brief check whether the output pattern is feed dependent
+  /// @details Some illumination patterns vary with feed (number) and no shortcuts can
+  /// be taken
+  /// @return false
+  virtual bool isFeedDependent() const;
 
   // class-specific methods to configure other modes
   // can add methods to switch off these modes if there is a use case
-  
+
   /// @brief switch on the tapering simulation
   /// @details This method assigns defocusing phase and switches on the simulation of tapering.
   /// @param[in] maxDefocusingPhase the value of the phase in radians at the dish edge, it will
   /// be quadraticly increased with the radius to simulate defocusing
   void simulateTapering(double maxDefocusingPhase);
-  
+
   /// @brief switch on the feed leg simulation
   /// @details This method assigns parameters of the feed leg shadows and allows the
   /// simulation of feed legs. Calling this method also makes the pattern asymmetric.
@@ -105,10 +126,10 @@ struct ATCAIllumination : virtual public IBasicIllumination {
   /// @param[in] shadowingFactor attenuation of the illumination caused by feed legs, assign
   /// zero to get a total blockage.
   void simulateFeedLegShadows(double width, double rotation, double shadowingFactor);
-  
+
   /// @brief switch on the simulation of feed leg wedges
   /// @details This method assigns the parameters of the feed leg wedges and allows
-  /// their simulation. 
+  /// their simulation.
   /// @param[in] wedgeShadowingFactor1 additional attenuation inside the wedge for the feed
   /// leg which is rotated to u axis by the angle specified in simulateFeedLegShadows.
   /// @param[in] wedgeShadowingFactor2 the same as wedgeShadowingFactor1, but for orthogonal
@@ -116,13 +137,13 @@ struct ATCAIllumination : virtual public IBasicIllumination {
   /// @param[in] wedgeOpeningAngle opening angle of the wedge in radians
   /// @param[in] wedgeStartingRadius starting radius in metres of the wedge
   /// @note simulateFeedLegShadows should also be called prior to the first use of this object.
-  void simulateFeedLegWedges(double wedgeShadowingFactor1, double wedgeShadowingFactor2, 
+  void simulateFeedLegWedges(double wedgeShadowingFactor1, double wedgeShadowingFactor2,
         double wedgeOpeningAngle, double wedgeStartingRadius);
-        
+
 protected:
   /// @brief a helper method to return 1D illumination
   /// @details There are some build in parameters of the taper. We may need to expose them
-  /// to the class interface in the future, but currently this method doesn't use the 
+  /// to the class interface in the future, but currently this method doesn't use the
   /// data members and hence made static.
   /// @param[in] fractionalRadius radius given as a fraction of dish radius
   /// @return amplitude of illumination
@@ -141,71 +162,71 @@ protected:
   /// @param[in] fractionalRadius radius given as a fraction of dish radius
   /// @return amplitude of illumination
   static double outerJamesian(double fractionalRadius);
-    
+
 private:
   /// @brief antenna diameter in metres
   double itsDiameter;
-  
+
   /// @brief diameter of the central hole in metres
   double itsBlockage;
-  
+
   /// @brief Apply a jamesian taper, if true
   /// @details If this flag is false, a uniformly illuminated disk is simulated
   bool itsDoTapering;
-  
+
   /// @brief Make feed legs shadows, if true
   /// @details If this flag is false no feed leg shadows are simulated
   bool itsDoFeedLegs;
-  
+
   /// @brief Simulate feed legs wedge, if true
   /// @details If this flag is false, no feed leg wedges are simulated
   bool itsDoFeedLegWedges;
-  
+
   /// @brief phase slope with radius
   /// @details If the taper is applied, the code allows also to apply a quadratic phase
   /// slope with radius to simulate defocusing. This parameter is the value of phase
-  /// in radians at the dish edge. It is not used if itsDoTaper is false. Assign zero 
+  /// in radians at the dish edge. It is not used if itsDoTaper is false. Assign zero
   /// to switch the feature off.
   double itsMaxDefocusingPhase;
-  
+
   /// @brief half width of the feed leg shadows
   /// @details This parameter describes how wide are the shadows from feed legs.
   /// It is not used if itsDoFeedLegs is false.
   double itsFeedLegsHalfWidth;
-  
+
   /// @brief angle in radians of the feed legs with respect to u and v coordinate system
   /// @details Feed leg shadows need not to be aligned with the horizontal and vertical axes.
   /// This parameter controls the rotation of the shadow pattern.
   double itsFeedLegsRotation;
-  
+
   /// @brief shadowing factor for the feed leg shadows (fraction of the attenuation)
-  /// @details Due to the diffraction there is no total blockage behind the feed legs. 
+  /// @details Due to the diffraction there is no total blockage behind the feed legs.
   /// This parameter controls the degree of attenuation for the main feed leg shadows.
-  /// Reasonable values are less than 1. (as 1. means no feed leg shadows), put 0. for 
-  /// the total blockage. 
+  /// Reasonable values are less than 1. (as 1. means no feed leg shadows), put 0. for
+  /// the total blockage.
   double itsFeedLegsShadowing;
-  
-  /// @brief additional shadowing factor for the first pair of feed leg wedges  
+
+  /// @brief additional shadowing factor for the first pair of feed leg wedges
   /// @details Due to multiple reflections in the optical path, the illumination is worse
   /// close to the dish edge. This additional effect can be different for each pair of
   /// feed legs. This parameter is a factor applied on top of itsFeedLegsShadowing for
   /// the pair of feed legs rotated to the angle given by itsFeedLegsRotation.
   double itsFeedLegsWedgeShadowing1;
 
-  /// @brief additional shadowing factor for the first pair of feed leg wedges  
+  /// @brief additional shadowing factor for the first pair of feed leg wedges
   /// @details Due to multiple reflections in the optical path, the illumination is worse
   /// close to the dish edge. This additional effect can be different for each pair of
   /// feed legs. This parameter is a factor applied on top of itsFeedLegsShadowing for
-  /// the pair of feed legs orthogonal to that rotated to the angle given by 
+  /// the pair of feed legs orthogonal to that rotated to the angle given by
   /// itsFeedLegsRotation
   double itsFeedLegsWedgeShadowing2;
-  
+
   /// @brief opening angle of surface-leg blockage in radians
   /// @details The model has triangular blockage near the edge of each feed leg shadow.
   /// This parameter controls the opening angle of this shadow. It is unused if feed leg
   /// shadows are not simulated.
   double itsWedgeOpeningAngle;
-  
+
   /// @brief radius in metres where the wedge starts
   /// @details The model has triangular blockage near the edge of each feed leg shadow.
   /// This parameter controls the starting point of the wedge.
@@ -219,4 +240,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef ATCA_ILLUMINATION_H
-

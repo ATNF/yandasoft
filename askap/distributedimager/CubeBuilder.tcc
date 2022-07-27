@@ -1,4 +1,4 @@
-/// @file CubeBuilder.cc
+/// @file CubeBuilder.tcc
 ///
 /// @copyright (c) 2013 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -70,6 +70,19 @@ namespace cp {
 template <> inline
 casacore::CoordinateSystem
 CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
+                                    const casacore::uInt nx,
+                                    const casacore::uInt ny,
+                                    const casacore::Quantity& f0,
+                                    const casacore::Quantity& inc)
+{
+  // This specialisation will be just for the grid cubes. After all who else wants a complex cube
+  // The coordinates are therefore those of the UV grid.
+  return createUVCoordinateSystem(parset, nx, ny, f0, inc);
+}
+
+template <class T> inline
+casacore::CoordinateSystem
+CubeBuilder<T>::createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::uInt nx,
                                     const casacore::uInt ny,
                                     const casacore::Quantity& f0,
@@ -180,6 +193,7 @@ CubeBuilder<casacore::Complex>::createCoordinateSystem(const LOFAR::ParameterSet
 }
 
 
+
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
@@ -194,14 +208,21 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder co-opting existing cube");
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
-
+    // Check whether image param is stored at a lower resolution
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
+    }
 }
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating Complex cube");
     itsFilename = makeImageName(parset, name);
@@ -252,6 +273,13 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
     // later on, can set to Jy/beam
     itsCube->setUnits(itsFilename,"Jy/pixel");
 
+    // set the header keywords
+    itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
+
+    // set the image HISTORY keywords
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+    itsCube->addHistory(itsFilename,historyLines);
+
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
 
@@ -260,7 +288,8 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
                          const casacore::Quantity& f0,
                          const casacore::Quantity& inc,
-                         const std::string& name)
+                         const std::string& name,
+                         const bool uvcoord)
 {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
     itsFilename = makeImageName(parset, name);
@@ -295,6 +324,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
         itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
         // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
         ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
     }
 
     // Get the image shape
@@ -309,7 +339,9 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     }
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
-    const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
+    const casacore::CoordinateSystem csys =
+    (uvcoord ? createUVCoordinateSystem(parset, nx, ny, f0, inc) :
+               createCoordinateSystem(parset, nx, ny, f0, inc));
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
                        " with shape [xsize:" << nx << " ysize:" << ny <<
@@ -322,6 +354,14 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     // default flux units are Jy/pixel. If we set the restoring beam
     // later on, can set to Jy/beam
     itsCube->setUnits(itsFilename,"Jy/pixel");
+
+    // set the header keywords
+    itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
+
+    // set the image HISTORY keywords
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+    itsCube->addHistory(itsFilename,historyLines);
+
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
@@ -395,7 +435,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
                                     const casacore::Quantity& inc)
 {
     CoordinateSystem coordsys;
-    const vector<string> dirVector = parset.getStringVector("Images.direction");
+    vector<string> dirVector = parset.getStringVector("Images.direction");
+    if (parset.getBool("updatedirection",False)) {
+        // override with image specific direction if present - for mosaic case
+        vector<string> names = parset.getStringVector("Images.Names",{},false);
+        if (names.size()>0) {
+            if (parset.isDefined("Images."+names[0]+".direction")) {
+                dirVector = parset.getStringVector("Images."+names[0]+".direction");
+            }
+        }
+    }
     const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
 
 
@@ -467,15 +516,16 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
         // add rest frequency, but only if requested, and only for
         // image.blah, residual.blah, image.blah.restored
+        // Prefer to have them all consistent and wcs compliant. (MHW)
         if (itsRestFrequency.getValue("Hz") > 0.) {
-            if ((itsFilename.find("image.") != string::npos) ||
-                    (itsFilename.find("residual.") != string::npos)) {
+            //if ((itsFilename.find("image.") != string::npos) ||
+            //        (itsFilename.find("residual.") != string::npos)) {
 
                 if (!sc.setRestFrequency(itsRestFrequency.getValue("Hz"))) {
                     ASKAPLOG_ERROR_STR(CubeBuilderLogger, "Could not set the rest frequency to " <<
                                        itsRestFrequency.getValue("Hz") << "Hz");
                 }
-            }
+            //}
         }
 
         coordsys.addCoordinate(sc);
@@ -487,23 +537,43 @@ template <class T>
 void CubeBuilder<T>::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
 {
         itsCube->setBeamInfo(itsFilename,beam[0].getValue("rad"),beam[1].getValue("rad"),beam[2].getValue("rad"));
-        setUnits("Jy/beam");
-}
-template <class T>
-void CubeBuilder<T>::setUnits(const std::string &units)
-{
-    itsCube->setUnits(itsFilename,units);
+        itsCube->setUnits(itsFilename,"Jy/beam");
 }
 
 template <class T>
-void CubeBuilder<T>::setDateObs(const casacore::MVEpoch &dateObs)
+void CubeBuilder<T>::addBeamList(const BeamList & beamList)
 {
-    String date, timesys;
-    casacore::FITSDateUtil::toFITS(date, timesys, casacore::MVTime(dateObs));
-    itsCube->setMetadataKeyword(itsFilename,"DATE-OBS", date, "Date of observation");
-    if (itsCube->getMetadataKeyword(itsFilename,"TIMESYS")=="")
-        itsCube->setMetadataKeyword(itsFilename,"TIMESYS", timesys, "Time system");
+    itsCube->setBeamInfo(itsFilename, beamList);
 }
 
+template <class T>
+void CubeBuilder<T>::setInfo(const casacore::Record & info)
+{
+    itsCube->setInfo(itsFilename, info);
+}
+
+
+
+template <class T>
+void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)
+{
+    if ( ! historyLines.empty() ) {
+        if ( itsCube ) {
+            itsCube->addHistory(this->itsFilename,historyLines);
+        }
+    }
+}
+
+template <class T>
+boost::shared_ptr<accessors::IImageAccess<T>>  CubeBuilder<T>::imageHandler()
+{
+    return itsCube;
+}
+
+template <class T>
+boost::optional<float> CubeBuilder<T>::oversamplingFactor()
+{
+    return itsExtraOversamplingFactor;
+}
 } // namespace cp
 } // namespace askap

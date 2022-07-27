@@ -316,6 +316,12 @@ class CdeconvolverApp : public askap::Application
             comms.barrier();
             return 0;
         }
+
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
 };
 
 void CdeconvolverApp::getPSF(casacore::Array<casacore::Float> &psfArray,

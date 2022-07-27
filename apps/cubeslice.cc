@@ -45,18 +45,18 @@ using namespace std;
 // Main function
 int main(int argc, const char** argv) { 
   try {
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      // command line parameter
-     cmdlineparser::FlaggedParameter<int> nchan("-n",1);
-     cmdlineparser::GenericParameter<std::string> imgfile;
-     cmdlineparser::GenericParameter<std::string> outfile;
-// 	 cmdlineparser::GenericParameter<int> startchan;
-     cmdlineparser::FlaggedParameter<int> startchan("-c",-1);
-     cmdlineparser::FlaggedParameter<std::string> subsection("-s","[]");
+     utils::FlaggedParameter<int> nchan("-n",1);
+     utils::GenericParameter<std::string> imgfile;
+     utils::GenericParameter<std::string> outfile;
+// 	 utils::GenericParameter<int> startchan;
+     utils::FlaggedParameter<int> startchan("-c",-1);
+     utils::FlaggedParameter<std::string> subsection("-s","[]");
 	 
-     parser.add(nchan,cmdlineparser::Parser::return_default); // optional
-     parser.add(startchan,cmdlineparser::Parser::return_default);
-     parser.add(subsection,cmdlineparser::Parser::return_default);
+     parser.add(nchan,utils::Parser::return_default); // optional
+     parser.add(startchan,utils::Parser::return_default);
+     parser.add(subsection,utils::Parser::return_default);
      parser.add(imgfile);
      parser.add(outfile);
      
@@ -103,7 +103,7 @@ int main(int argc, const char** argv) {
 
      }
      else{
-       throw cmdlineparser::XParser();
+       throw utils::XParser();
      }
 
      std::cerr << "blc  = " << blc << ", trc = " << trc << "\n";
@@ -115,7 +115,7 @@ int main(int argc, const char** argv) {
      res.put(si.get());
   }
   ///==============================================================================
-  catch (const cmdlineparser::XParser &ex) {
+  catch (const utils::XParser &ex) {
 	 std::cerr << "Usage: " << argv[0] << " [-n number_of_chan] [-c start_chan] [-s subsection_string] input_cube output_image"
 			<< std::endl
 		   << "       One of -c or -s must be used" << std::endl

@@ -87,7 +87,7 @@ void ContinuumMaster::run(void)
     // print out the parset
     ASKAPLOG_INFO_STR(logger,"Parset: \n"<<itsParset);
     // Read from the configuration the list of datasets to process
-    const vector<string> ms = getDatasets(itsParset);
+    const vector<string> ms = getDatasets();
     if (ms.size() == 0) {
         ASKAPTHROW(std::runtime_error, "No datasets specified in the parameter set file");
     }
@@ -98,28 +98,26 @@ void ContinuumMaster::run(void)
     // 2 - they have different epochs but the same TOPO centric frequencies
 
     vector<int> theBeams = getBeams();
-    int totalChannels = 0;
 
     const double targetPeakResidual = synthesis::SynthesisParamsHelper::convertQuantity(
                 itsParset.getString("threshold.majorcycle", "-1Jy"), "Jy");
 
-    LOFAR::ParameterSet unitParset = itsParset;
 
-    const bool writeAtMajorCycle = unitParset.getBool("Images.writeAtMajorCycle", false);
-    const int nCycles = unitParset.getInt32("ncycles", 0);
-    const bool localSolver = unitParset.getBool("solverpercore",false);
-    synthesis::AdviseDI diadvise(itsComms,unitParset);
+    const bool writeAtMajorCycle = itsParset.getBool("Images.writeAtMajorCycle", false);
+    const int nCycles = itsParset.getInt32("ncycles", 0);
+    const bool localSolver = itsParset.getBool("solverpercore",false);
+    synthesis::AdviseDI diadvise(itsComms,itsParset);
 
     try {
 
         diadvise.prepare();
-        diadvise.addMissingParameters(unitParset,false);
+        diadvise.addMissingParameters(false);
 
         ASKAPLOG_DEBUG_STR(logger,"*****");
-        ASKAPLOG_DEBUG_STR(logger,"Parset" << diadvise.getParset());
+        ASKAPLOG_DEBUG_STR(logger,"Parset" << itsParset);
         ASKAPLOG_DEBUG_STR(logger,"*****");
 
-        totalChannels = diadvise.getBaryFrequencies().size();
+        const int totalChannels = diadvise.getTopoFrequencies().size();
 
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << totalChannels << " channels to process");
         ASKAPLOG_INFO_STR(logger,"AdviseDI reports " << diadvise.getWorkUnitCount() << " work units to allocate");
@@ -159,7 +157,7 @@ void ContinuumMaster::run(void)
     }
     // all the work units allocated - lets send the DONEs
     // now finish the advice for remaining parameters
-    diadvise.addMissingParameters();
+    diadvise.addMissingParameters(true);
 
     itsStats.logSummary();
 
@@ -175,7 +173,7 @@ void ContinuumMaster::run(void)
 
 
     if (nCycles == 0) { // no solve if ncycles is 0
-        synthesis::ImagerParallel imager(itsComms, diadvise.getParset());
+        synthesis::ImagerParallel imager(itsComms, itsParset);
         ASKAPLOG_DEBUG_STR(logger, "Master beginning single - empty model");
         imager.broadcastModel(); // initially empty model
 
@@ -186,7 +184,7 @@ void ContinuumMaster::run(void)
 
     }
     else {
-        synthesis::ImagerParallel imager(itsComms, diadvise.getParset());
+        synthesis::ImagerParallel imager(itsComms, itsParset);
         for (int cycle = 0; cycle < nCycles; ++cycle) {
             ASKAPLOG_DEBUG_STR(logger, "Master beginning major cycle ** " << cycle);
 
@@ -202,13 +200,18 @@ void ContinuumMaster::run(void)
 
             if (imager.params()->has("peak_residual")) {
                 const double peak_residual = imager.params()->scalarValue("peak_residual");
-                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << peak_residual << " after solve");
+                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << abs(peak_residual) << " after solve");
 
                 if (peak_residual < targetPeakResidual) {
 
-                    ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
+                    if (peak_residual < 0) {
+                      ASKAPLOG_WARN_STR(logger, "Clean diverging, did not reach the major cycle threshold of "
+                                      << targetPeakResidual << " Jy. Stopping.");
+                    } else {
+                      ASKAPLOG_INFO_STR(logger, "It is below the major cycle threshold of "
                                       << targetPeakResidual << " Jy. Stopping.");
 
+                    }
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model");
                     imager.broadcastModel();
                     ASKAPLOG_INFO_STR(logger, "Broadcasting final model - done");
@@ -256,22 +259,22 @@ void ContinuumMaster::run(void)
 }
 
 // Utility function to get dataset names from parset.
-std::vector<std::string> ContinuumMaster::getDatasets(const LOFAR::ParameterSet& parset)
+std::vector<std::string> ContinuumMaster::getDatasets()
 {
-    if (parset.isDefined("dataset") && parset.isDefined("dataset0")) {
+    if (itsParset.isDefined("dataset") && itsParset.isDefined("dataset0")) {
         ASKAPTHROW(std::runtime_error,
                    "Both dataset and dataset0 are specified in the parset");
     }
 
     // First look for "dataset" and if that does not exist try "dataset0"
     vector<string> ms;
-    if (parset.isDefined("dataset")) {
+    if (itsParset.isDefined("dataset")) {
         ms = itsParset.getStringVector("dataset", true);
     } else {
         string key = "dataset0";   // First key to look for
         long idx = 0;
-        while (parset.isDefined(key)) {
-            const string value = parset.getString(key);
+        while (itsParset.isDefined(key)) {
+            const string value = itsParset.getString(key);
             ms.push_back(value);
 
             ostringstream ss;
@@ -283,7 +286,7 @@ std::vector<std::string> ContinuumMaster::getDatasets(const LOFAR::ParameterSet&
 
     return ms;
 }
-// Utility function to get dataset names from parset.
+// Utility function to get beam names from parset.
 std::vector<int> ContinuumMaster::getBeams()
 {
     std::vector<int> bs;

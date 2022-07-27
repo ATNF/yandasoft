@@ -47,6 +47,8 @@
 #include "askap/messages/ContinuumWorkUnit.h"
 #include "askap/distributedimager/CubeBuilder.h"
 #include "askap/distributedimager/CubeComms.h"
+#include <askap/utils/StatsAndMask.h>
+
 namespace askap {
 namespace cp {
 
@@ -60,8 +62,7 @@ class ContinuumWorker
 
         void run(void);
 
-
-
+        void writeCubeStatistics();
 
     private:
 
@@ -79,20 +80,16 @@ class ContinuumWorker
         bool itsGridderCanMosaick;
 
         // Cache a workunit to a different location
-        void cacheWorkUnit(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
+        void cacheWorkUnit(ContinuumWorkUnit& wu);
         // Process a workunit
         void preProcessWorkUnit(ContinuumWorkUnit& wu);
         // Compress all continuous channel allocations into individual workunits
         void compressWorkUnits();
 
         // Delete a workunit from the cache
-        void deleteWorkUnitFromCache(ContinuumWorkUnit& wu, LOFAR::ParameterSet& unitParset);
+        void deleteWorkUnitFromCache(ContinuumWorkUnit& wu);
         // clear the current cached files
         void clearWorkUnitCache();
-
-        // Vector of the stored parsets of the work allocations
-        vector<LOFAR::ParameterSet> itsParsets;
-
 
         //For all workunits .... process
 
@@ -100,10 +97,10 @@ class ContinuumWorker
 
         // For a given workunit, just process a single snapshot - the channel is specified
         // in the parset ...
-        void processSnapshot(LOFAR::ParameterSet& parset);
+        void processSnapshot();
 
 
-        // Setup the image specified in itsParset and add it to the Params instance.
+        // Setup the image specified in parset and add it to the Params instance.
         void setupImage(const askap::scimath::Params::ShPtr& params,
                     double channelFrequency, bool shapeOveride = false);
 
@@ -147,11 +144,25 @@ class ContinuumWorker
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPCFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsPSFGridCube;
         boost::shared_ptr<CubeBuilder<casacore::Complex> > itsVisGridCube;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPCFGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsVisGridCubeReal;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPCFGridCubeImag;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFGridCubeImag;
+        boost::shared_ptr<CubeBuilder<casacore::Float> > itsVisGridCubeImag;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
         boost::shared_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
+        boost::shared_ptr<askap::utils::StatsAndMask> itsRestoredStatsAndMask;
+        boost::shared_ptr<askap::utils::StatsAndMask> itsResidualStatsAndMask;
         std::string itsWeightsName;
+        std::string itsGridType;
+
+        // calculate the statistic of the per plane image
+        void calculateImageStats(boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask,
+                                 boost::shared_ptr<CubeBuilder<casacore::Float> > imgCube,
+                                 int channel, const casacore::Array<float>& arr);
 
         void handleImageParams(askap::scimath::Params::ShPtr params, unsigned int chan);
 
@@ -159,7 +170,7 @@ class ContinuumWorker
 
         void initialiseBeamLog(const unsigned int numChannels);
         void recordBeam(const askap::scimath::Axes &axes, const unsigned int globalChannel);
-        void storeBeam(const unsigned int cubeChannel);
+        //void storeBeam(const unsigned int cubeChannel);
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
         unsigned int itsBeamReferenceChannel;
@@ -193,6 +204,12 @@ class ContinuumWorker
 
         /// @brief write out the gridded data, pcf and psf
         bool itsWriteGrids;
+
+        /// @brief write out the grids with UV coordinate grid
+        bool itsGridCoordUV;
+
+        /// @brief write out the FFT of the grids
+        bool itsGridFFT;
 
         /// @brief the number of rank that can write to the cube
         int itsNumWriters;

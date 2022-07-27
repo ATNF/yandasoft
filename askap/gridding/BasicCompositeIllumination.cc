@@ -1,12 +1,12 @@
-/// @file 
+/// @file
 /// @brief Basic composite illumination pattern
 /// @details This class is implements an basic composite illumination pattern corresponding
 /// to a given weights and offsets of physical feeds. It can be used for simulation and/or
-/// imaging with a synthetic beam. As an implementation of IBasicIllumination interface, 
-/// this class provides a method to obtain illumination pattern by populating a pre-defined 
+/// imaging with a synthetic beam. As an implementation of IBasicIllumination interface,
+/// this class provides a method to obtain illumination pattern by populating a pre-defined
 /// grid supplied as a UVPattern object. It looks like handling of illumination patterns
 /// inside gridders has to be generalised (i.e. main method should receive a full accessor
-/// with all the metadata instead of just the pointing offsets, frequency, etc). Such 
+/// with all the metadata instead of just the pointing offsets, frequency, etc). Such
 /// transition would definitely require an interface change in this class.
 ///
 /// @copyright (c) 2008 CSIRO
@@ -77,18 +77,18 @@ BasicCompositeIllumination::BasicCompositeIllumination(const boost::shared_ptr<I
 }
 
 /// @brief obtain illumination pattern
-/// @details This is the main method which populates the 
+/// @details This is the main method which populates the
 /// supplied uv-pattern with the values corresponding to the model
-/// represented by this object. It has to be overridden in the 
+/// represented by this object. It has to be overridden in the
 /// derived classes. An optional phase slope can be applied to
 /// simulate offset pointing.
 /// @param[in] freq frequency in Hz for which an illumination pattern is required
 /// @param[in] pattern a UVPattern object to fill
 /// @param[in] l angular offset in the u-direction (in radians)
 /// @param[in] m angular offset in the v-direction (in radians)
-/// @param[in] pa parallactic angle, or strictly speaking the angle between 
+/// @param[in] pa parallactic angle, or strictly speaking the angle between
 /// uv-coordinate system and the system where the pattern is defined (unused)
-void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern, double l, 
+void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern, double l,
                           double m, double pa) const
 {
     // zero value of the pattern by default
@@ -101,10 +101,11 @@ void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern, dou
 /// @param[in] beamCentre ra & dec of the beam pointing centre
 /// @param[in] pa polarisation position angle (in radians)
 /// @param[in] isPSF bool indicting if this gridder is for a PSF
+/// @param[in] feed  feed number for case where pattern differs between feeds
 void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern,
                           const casacore::MVDirection &imageCentre,
                           const casacore::MVDirection &beamCentre,
-                          const double pa, const bool isPSF) const
+                          const double pa, const bool isPSF, const int feed) const
 {
    // calculate beam offset
    double l = 0.0;
@@ -115,29 +116,29 @@ void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern,
            cos(beamCentre.getLat()) * sin(imageCentre.getLat()) *
            cos(beamCentre.getLong() - imageCentre.getLong());
    }
- 
+
    itsPattern->getPattern(freq,pattern,l,m,pa);
    // now apply the phase screen appropriate to the feed configuration/weights
-   
+
    const casacore::uInt oversample = pattern.overSample();
    const double cellU = pattern.uCellSize()/oversample;
    const double cellV = pattern.vCellSize()/oversample;
-      
+
    // sizes of the grid to apply the phase screen to
    const casacore::uInt nU = pattern.uSize();
    const casacore::uInt nV = pattern.vSize();
    // number of feeds
    const casacore::uInt nFeeds = itsWeights.nelements();
-   
+
    double sum=0.; // normalisation factor
-   
+
    casacore::SquareMatrix<casacore::Double, 2> rotation(casacore::SquareMatrix<casacore::Double, 2>::General);
    if (!itsSymmetricFlag) {
        rotation(0,0) = rotation(1,1) = cos(pa);
        rotation(0,1) = sin(pa);
        rotation(1,0) = -rotation(0,1);
    }
-        
+
    for (casacore::uInt iU=0; iU<nU; ++iU) {
 	    const double offsetU = double(iU)-double(nU)/2.;
 		for (casacore::uInt iV=0; iV<nV; ++iV) {
@@ -162,10 +163,10 @@ void BasicCompositeIllumination::getPattern(double freq, UVPattern &pattern,
 			 sum += std::abs(weight);
 		}
 	}
-	
-	
+
+
     ASKAPCHECK(sum > 0., "Integral of the synthetic pattern should be non-zero");
-    pattern.pattern() *= imtypeComplex(float(nU)*float(nV)/float(sum),0.); 
+    pattern.pattern() *= imtypeComplex(float(nU)*float(nV)/float(sum),0.);
 }
 
 /// @brief check whether the pattern is symmetric
@@ -183,10 +184,19 @@ bool BasicCompositeIllumination::isSymmetric() const
 /// @details Some illumination patterns need to be generated in the image domain, and given
 /// the standard usage (FFT to image-domain for combination with other functions) any image
 /// domain function may as well stay in the image domain. So check the state before doing the FFT.
-/// @return false 
+/// @return false
 bool BasicCompositeIllumination::isImageBased() const
 {
   return false;
+}
+
+/// @brief check whether the output pattern is feed dependent
+/// @details Some illumination patterns vary with feed (number) and no shortcuts can
+/// be taken
+/// @return false
+bool BasicCompositeIllumination::isFeedDependent() const
+{
+    return false;
 }
 
 } // namespace synthesis

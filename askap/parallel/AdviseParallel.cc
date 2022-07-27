@@ -342,6 +342,8 @@ void AdviseParallel::calcNE()
    boost::shared_ptr<EstimatorAdapter> ea = boost::dynamic_pointer_cast<EstimatorAdapter>(itsNe);
    ASKAPASSERT(ea);
    itsEstimator = ea->get();
+   // we don't need normal equation adapter any more
+   itsNe.reset();
 }
 
 /// @brief helper method to get statistics estimator

@@ -85,13 +85,13 @@ int main(int argc, char **argv) {
 
      timer.mark();
      
-     cmdlineparser::Parser parser; // a command line parser
+     utils::Parser parser; // a command line parser
      
      // command line parameters
-     cmdlineparser::GenericParameter<std::string> msName;
-     cmdlineparser::GenericParameter<double> noiseVariance;
-     parser.add(msName, cmdlineparser::Parser::throw_exception);
-     parser.add(noiseVariance, cmdlineparser::Parser::throw_exception);
+     utils::GenericParameter<std::string> msName;
+     utils::GenericParameter<double> noiseVariance;
+     parser.add(msName, utils::Parser::throw_exception);
+     parser.add(noiseVariance, utils::Parser::throw_exception);
      parser.process(argc, argv);
      
      // Initialize MPI (also succeeds if no MPI available).
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
      std::cerr<<"Job: "<<timer.real()<<std::endl;
      
   }
-  catch(const cmdlineparser::XParser &) {
+  catch(const utils::XParser &) {
      cerr<<"Usage "<<argv[0]<<" measurement_set noise_variance_in_Jy_squared"<<endl;
 	 return -2;    
   }

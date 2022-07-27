@@ -1,11 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 
-set (VERSION "1.4.0")
-if ( "${VERSION}" STREQUAL "")
-    project(yandasoft LANGUAGES C CXX)
-else()
-    project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
-endif()
+set (VERSION "1.6.0")
+project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 # ASKAP Integration (askapsoft)
 #
@@ -24,10 +20,8 @@ endif()
 
 find_package(Git REQUIRED)
 
-option(IS_DEFAULT_VERSION "Create the .version file to make this build the default module" OFF )
 option(BUILD_DOCKER       "Build for Docker" OFF)
 
-set (MODULE_NAME yandasoft)
 include(CheckCXXCompilerFlag)
 include (GNUInstallDirs)
 # Load the version IDs of all the dependency sub repos
@@ -56,17 +50,24 @@ else()
   message (STATUS "No cmake config overrides file specified, using defaults")
 endif()
 
-if ( "${CMAKE_PROJECT_NAME}" STREQUAL "yandasoft" )
-    # this cmake file is the top level cmakefile, for example it is not part of the askap-askapsoft build
-    message(STATUS "--- yandasoft is a top level project")
-    set (BASE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "The original CMAKE_INSTALL_PREFIX passed in." FORCE)
-    set (CMAKE_INSTALL_PREFIX ${BASE_INSTALL_PREFIX}/${MODULE_NAME}/${BUILD_STR} CACHE PATH "Added module name and version to the install prefix." FORCE)
-else()
-    message(STATUS "--- yandasoft is not a top level project")
+# Get a remote git repo url, either already set from config, or from current git dir.
+message (STATUS "Determining remote git url prefix ...")
+if (NOT ASKAPSDP_GIT_URL)
+  message (STATUS "Remote git url prefix not specified with ASKAPSDP_GIT_URL value, using current git dir ...")
+  execute_process(
+     COMMAND git config --get remote.origin.url
+     COMMAND xargs dirname
+     OUTPUT_VARIABLE ASKAPSDP_GIT_URL
+     OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (NOT ASKAPSDP_GIT_URL)
+    message(FATAL_ERROR
+      "Could not determine a remote git url to retrieve dependencies. This can be because we are not in a git dir or you need to set ASKAPSDP_GIT_URL var in your dev-overrides or from the cmake command line with '-DASKAPSDP_GIT_URL=<repo-prefix>'.")
+  endif()
 endif()
+message(STATUS "Remote git url prefix is ${ASKAPSDP_GIT_URL}")
 
 message(STATUS "CMAKE_INSTALL_PREFIX is ${CMAKE_INSTALL_PREFIX}")
-message(STATUS "BASE_INSTALL_PREFIX is ${BASE_INSTALL_PREFIX}")
 
 
 # Declare all of sub repos and tools
@@ -76,7 +77,7 @@ include(FetchContent)
 # We need this before any other Fetch calls so we have the find_package routines available
 # -------- askap cmake modules --------
 FetchContent_Declare(askap-cmake
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-cmake.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/askap-cmake.git
   GIT_TAG           ${ASKAP_CMAKE_TAG}
   SOURCE_DIR        askap-cmake
 )
@@ -93,73 +94,64 @@ message(STATUS "askap-cmake path is ${CMAKE_MODULE_PATH}")
 
 include(version_utils)
 
-# -------- askap-dev --------
-# askap-dev/config/modulefiles has our template module definition file
-FetchContent_Declare(askap-dev
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/askap-dev.git
-  GIT_TAG           ${ASKAP_DEV_TAG}
-  SOURCE_DIR        askap-dev
-)
-
 # -------- lofar common --------
 FetchContent_Declare(lofar-common
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-common.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/lofar-common.git
   GIT_TAG           ${LOFAR_COMMON_TAG}
   SOURCE_DIR        lofar-common
 )
 
 # -------- lofar blob --------
 FetchContent_Declare(lofar-blob
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/lofar-blob.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/lofar-blob.git
   GIT_TAG           ${LOFAR_BLOB_TAG}
   SOURCE_DIR        lofar-blob
 )
 
 # -------- base-askap --------
 FetchContent_Declare(base-askap
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askap.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-askap.git
   GIT_TAG           ${BASE_ASKAP_TAG}
   SOURCE_DIR        base-askap
 )
 
 # -------- base-logfilters --------
 FetchContent_Declare(base-logfilters
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-logfilters.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-logfilters.git
   GIT_TAG           ${BASE_LOGFILTERS_TAG}
   SOURCE_DIR        base-logfilters
 )
 
 # -------- base-imagemath --------
 FetchContent_Declare(base-imagemath
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-imagemath.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-imagemath.git
   GIT_TAG           ${BASE_IMAGEMATH_TAG}
   SOURCE_DIR        base-imagemath
 )
 
 # -------- base-askapparallel --------
 FetchContent_Declare(base-askapparallel
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-askapparallel.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-askapparallel.git
   GIT_TAG           ${BASE_ASKAPPARRALLEL_TAG}
   SOURCE_DIR        base-askapparallel
 )
 
 # -------- base-scimath --------
 FetchContent_Declare(base-scimath
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-scimath.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-scimath.git
   GIT_TAG           ${BASE_SCIMATH_TAG}
   SOURCE_DIR        base-scimath
 )
 
 # -------- base-accessors --------
 FetchContent_Declare(base-accessors
-  GIT_REPOSITORY    ssh://git@bitbucket.csiro.au:7999/askapsdp/base-accessors.git
+  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-accessors.git
   GIT_TAG           ${BASE_ACCESSORS_TAG}
   SOURCE_DIR        base-accessors
 )
 
 message (STATUS "Fetching sub repos")
-FetchContent_MakeAvailable(askap-dev
-                           lofar-common lofar-blob
+FetchContent_MakeAvailable(lofar-common lofar-blob
                            base-askap base-logfilters base-imagemath base-askapparallel base-scimath
                            base-accessors 
 )
@@ -233,15 +225,7 @@ endif(ENABLE_SHARED)
 
 # Yanda depends
 
-# Yanda Packages
-# YandaSoft dependencies .. in order
-find_package(lofar-common REQUIRED)
-find_package(lofar-blob REQUIRED)
-find_package(askap-askap REQUIRED)
-find_package(askap-imagemath REQUIRED)
-find_package(askap-scimath REQUIRED)
-find_package(askap-parallel REQUIRED)
-find_package(askap-accessors REQUIRED)
+# YandaSoft external dependencies. Note, dependencies provided via MakeAvailable mechanism have been removed
 find_package(log4cxx REQUIRED)
 find_package(Casacore REQUIRED COMPONENTS  ms images mirlib coordinates fits lattices measures scimath scimath_f tables casa)
 find_package(GSL REQUIRED)

@@ -101,9 +101,14 @@ public:
                 if (channelShift(0)!=0 or channelShift(nchan-1)!=0) {
                     ASKAPLOG_INFO_STR(logger,"Channel shift at start and end of spectrum: "<<channelShift(0)<<", "<<channelShift(nchan-1));
                 }
-                ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header");
                 ASKAPLOG_INFO_STR(logger,"master creates the new output file and copies header "<<infile<<", "<<outfile);
-                accessor.copy_header(infile, outfile);
+                // add the image history keyword to the outfile
+                const std::vector<std::string> historyLines = subset.getStringVector("imageHistory",std::vector<std::string> {});
+                if ( ! historyLines.empty() ) {
+                    accessor.copyHeaderWithHistoryKW(infile, outfile, historyLines);
+                } else {
+                    accessor.copyHeader(infile, outfile);
+                }
             }
 
             // All wait for header to be written
@@ -112,7 +117,7 @@ public:
             // Now process the rest of the file in parallel
             // Specify axis of cube to distribute over: 1=y -> array dimension returned: (nx,n,nchan)
             const int iax = 1;
-            Array<Float> arr = accessor.read_all(infile, iax);
+            Array<Float> arr = accessor.readAll(infile, iax);
             // remove degenerate 3rd or 4th axis - cube constructor will fail if there isn't one
             arr.removeDegenerate();
             ASKAPCHECK(arr.shape().size()==3,"imcontsub can only deal with 3D data cubes");
@@ -142,6 +147,7 @@ public:
                     int ic = 0;
                     int stop = 0;
                     int lastStopsub = 0;
+                    int lastTopostop = 0;
                     while (stop < nz) {
                         int start = -shift + ic * step;
                         stop = min(start + blocksize, nz);
@@ -164,7 +170,12 @@ public:
                             // make sure we don't skip a channel in bary mode
                             startsub = lastStopsub;
                         }
+                        if (lastTopostop > 0) {
+                            // make sure we don't skip a channel in bary mode
+                            topostart = lastTopostop;
+                        }
                         lastStopsub = stopsub;
+                        lastTopostop = topostop;
                         startsub = max(0, startsub);
                         stopsub =  min(stopsub, nz);
                         topostart = max(0, topostart);
@@ -181,7 +192,7 @@ public:
 
 
             // Write results to output file - make sure we use the same axis as for reading
-            accessor.write_all(outfile,arr,iax);
+            accessor.writeAll(outfile,arr,iax);
             ASKAPLOG_INFO_STR(logger,"Done");
             // Done
             stats.logSummary();
@@ -204,7 +215,7 @@ public:
             ASKAPCHECK(shape.size()>2,"imcontsub needs at least 3 dimensions in the image");
 
             // get some header info we need
-            String specsys = accessor.getMetadataKeyword(infile.before("."),"SPECSYS");
+            String specsys = accessor.getMetadataKeyword(infile, "SPECSYS").first;
 
             // default is TOPO
             if (specsys=="") specsys = "TOPOCENT";
@@ -231,12 +242,12 @@ public:
                 SpectralCoordinate sc = cs.spectralCoordinate();
                 // ASKAP antenna 0
                 MPosition pos(MVPosition(-2556088.476234,  5097405.971301, -2848428.398018),MPosition::ITRF);
-                string dateObs = accessor.getMetadataKeyword(infile,"DATE-OBS");
+                string dateObs = accessor.getMetadataKeyword(infile,"DATE-OBS").first;
                 if (dateObs == "") {
                     dateObs = parset.getString("date-obs","");
                     ASKAPCHECK(dateObs!="","Please specify the observing date (DATE-OBS is missing in FITS)");
                 }
-                string timeSys = accessor.getMetadataKeyword(infile,"TIMESYS");
+                string timeSys = accessor.getMetadataKeyword(infile,"TIMESYS").first;
                 if (timeSys=="") timeSys = "UTC";
                 MVTime mvtime;
                 MEpoch::Types system;
@@ -389,7 +400,12 @@ public:
             }
         }
 
-    };
+    private:
+        std::string getVersion() const override {
+            const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
+            return pkgVersion;
+        }
+};
 
 // Main function
 int main(int argc, char* argv[])

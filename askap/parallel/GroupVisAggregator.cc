@@ -64,18 +64,18 @@ void GroupVisAggregator::update(casacore::Cube<casacore::Complex> &cube) const
   ASKAPASSERT(cube.nelements() != 0); 
   ASKAPASSERT(cube.contiguousStorage());
   // not a very safe way of doing it, but this way we could benefit from MPI reduce/broadcast 
-  ASKAPLOG_DEBUG_STR(logger, "about to sum over the data using comm index: "<<itsCommIndex<<" shape: "<<cube.shape()<<" (0,0,0): "<<cube(0,0,0));
+  //ASKAPLOG_DEBUG_STR(logger, "about to sum over the data using comm index: "<<itsCommIndex<<" shape: "<<cube.shape()<<" (0,0,0): "<<cube(0,0,0));
   itsComms.sumAndBroadcast((float *)cube.data(), 2 * cube.nelements(), itsCommIndex);
-  ASKAPLOG_DEBUG_STR(logger, "after mpi call, shape: "<<cube.shape()<<" (0,0,0): "<<cube(0,0,0));
+  //ASKAPLOG_DEBUG_STR(logger, "after mpi call, shape: "<<cube.shape()<<" (0,0,0): "<<cube(0,0,0));
 }
 
 /// @brief aggregate flag with the logical or operation
 /// @param[in,out] flag flag to reduce
 void GroupVisAggregator::aggregateFlag(bool &flag) const
 {
-  ASKAPLOG_DEBUG_STR(logger, "about to aggregate flag ("<<flag<<")");
+  //ASKAPLOG_DEBUG_STR(logger, "about to aggregate flag ("<<flag<<")");
   itsComms.aggregateFlag(flag, itsCommIndex);
-  ASKAPLOG_DEBUG_STR(logger, "flag after aggregation is "<<flag);
+  //ASKAPLOG_DEBUG_STR(logger, "flag after aggregation is "<<flag);
 }
 
 /// @brief helper method to create an instance of this class

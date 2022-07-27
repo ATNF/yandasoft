@@ -645,7 +645,8 @@ namespace askap
     }
 
     void SynthesisParamsHelper::saveImageParameter(const askap::scimath::Params& ip, const string& name,
-					 const string& imagename, const boost::optional<float> extraOversampleFactor)
+					 const string& imagename, const boost::optional<float> extraOversampleFactor,
+                     const LOFAR::ParameterSet & keywords, const std::vector<std::string>& historyLines)
     {
       ASKAPTRACE("SynthesisParamsHelper::saveImageParameter");
 
@@ -709,6 +710,8 @@ namespace askap
              imageHandler().setUnits(imagename, "Jy/pixel");
           }
       }
+      imageHandler().setMetadataKeywords(imagename, keywords);
+      imageHandler().addHistory(imagename, historyLines);
     }
 
     /// @brief obtain image handler
@@ -1000,6 +1003,105 @@ namespace askap
         image.resize(Agrid.shape());
         image = real(Agrid);
 
+    }
+
+    /// @brief determine sampling to use for nyquistgridding
+    /// @param[in] advice VisMetaDataStats object used to get max U, V, W
+    /// @param[in/out] parset to read and modify (setting extraoversampling and changing cellsize and shape/subshape)
+    // @todo should probably throw an exception if individual cell or image sizes are given
+    void SynthesisParamsHelper::setNyquistSampling(const VisMetaDataStats& advice, LOFAR::ParameterSet& parset) {
+        // add Nyquist gridding parameters if needed. Wait until after doing others requiring VisMetaDataStats.
+        // @todo should probably throw an exception if individual cell or image sizes are given
+        ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
+        if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
+
+            ASKAPCHECK(parset.isDefined("Images.cellsize") && parset.isDefined("Images.shape"),
+            "The global image cellsize and shape are currently required with Nyquist gridding");
+
+            const std::vector<double> cellSize = convertQuantity(parset.getStringVector("Images.cellsize"),"arcsec");
+            std::vector<int> imSize = parset.getInt32Vector("Images.shape");
+
+            // need to make sure that extraOsFactor results in an integer number of pixels,
+            // which could get complicated for rectangular grids and pixels.
+            ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
+            ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
+            ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
+
+            std::vector<double> gCellSize(2);
+            if (parset.isDefined("Images.griddingcellsize")) {
+                const std::vector<string> gParam = parset.getStringVector("Images.griddingcellsize");
+                ASKAPCHECK(gParam.size() == 2, "nyquistgridding requires a griddingcellsize vector of length 2");
+                gCellSize = SynthesisParamsHelper::convertQuantity(gParam,"arcsec");
+                ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
+                ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
+            }
+            else {
+                const double uv_max = casacore::max(advice.maxU(), advice.maxV());
+                const double fov = cellSize[0] * imSize[0] * casacore::C::arcsec;
+                const double wk_max = 6/fov + advice.maxW()*fov;
+                ASKAPASSERT(uv_max > 0);
+                // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
+                //  - the reciprical of twice the longest baseline plus the largest w support
+                //  - doubled wk_max because it seemed too small
+                gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
+                gCellSize[1] = gCellSize[0];
+            }
+
+            // nominal ratio between gridding resolution and cleaning resolution
+            ASKAPDEBUGASSERT(cellSize[0] > 0);
+            double extraOsFactor = gCellSize[0]/cellSize[0];
+            // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
+            ASKAPDEBUGASSERT(extraOsFactor >= 1);
+            int nPix = static_cast<int>(ceil(imSize[0]/extraOsFactor));
+            // also ensure that it is even
+            nPix += nPix % 2;
+
+            int nSubPix = 0;
+            if (parset.isDefined("Images.subshape")) {
+                const std::vector<int> subSize = parset.getInt32Vector("Images.subshape");
+                ASKAPCHECK(subSize.size() == 2, "nyquistgridding requires a subshape vector of length 2");
+                ASKAPCHECK(subSize[0] > 1, "subshape image size too small: "<<subSize[0]);
+                const int factor = static_cast<int>(ceil(static_cast<double>(imSize[0])/subSize[0]));
+                if (imSize[0] % subSize[0] != 0) {
+                    // adjust imSize to be a mulitple of subSize
+                    imSize[0] = subSize[0] * factor;
+                    ASKAPLOG_INFO_STR(logger, "Adjusting imsize to be a multiple of subsize - factor: "<<factor);
+                }
+                nSubPix = static_cast<int>(ceil(subSize[0]/extraOsFactor));
+                ASKAPDEBUGASSERT(nSubPix > 1);
+                // ensure that it is even
+                nSubPix += nSubPix % 2;
+                // reset the extra multiplicative factor
+                extraOsFactor = static_cast<double>(subSize[0]) / nSubPix;
+                nPix = nSubPix * factor;
+            } else {
+                // reset the extra multiplicative factor
+                extraOsFactor = static_cast<double>(imSize[0]) / nPix;
+            }
+
+            ASKAPDEBUGASSERT(extraOsFactor >= 1);
+
+            gCellSize[0] = cellSize[0] * extraOsFactor;
+            gCellSize[1] = gCellSize[0];
+
+            // Only set or reset these parameters if they are needed
+            //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
+            if (extraOsFactor > 1.) {
+                ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
+                ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
+                " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
+                ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
+                " to "<<"["<<nPix<<","<<nPix<<"]");
+                parset.add("Images.extraoversampling", utility::toString(extraOsFactor));
+                parset.replace("Images.cellsize", "["+utility::toString(gCellSize[0])+"arcsec,"+utility::toString(gCellSize[1])+"arcsec]");
+                parset.replace("Images.shape", "["+utility::toString(nPix)+","+utility::toString(nPix)+"]");
+                if (nSubPix > 0) {
+                    ASKAPLOG_INFO_STR(logger, "  Changing subshape from "<<parset.getInt32Vector("Images.subshape")<<
+                    " to "<<"["<<nSubPix<<","<<nSubPix<<"]");
+                    parset.replace("Images.subshape", "["+utility::toString(nSubPix)+","+utility::toString(nSubPix)+"]");
+                }
+            }
+        }
     }
 
     boost::shared_ptr<casacore::TempImage<float> >
@@ -1492,6 +1594,7 @@ namespace askap
            ASKAPLOG_WARN_STR(logger, "Multi-dimensional PSF is present (shape="<<shape<<
                              "), using the first 2D plane only to fit the beam");
        }
+       ASKAPCHECK(shape[0] >= 3 && shape[1] >= 3, "Expect at least 3x3 pixel images, you have shape = "<<shape);
 
        casacore::Matrix<imtype> psfSlice = imagemath::MultiDimArrayPlaneIter::getFirstPlane(psfArray).nonDegenerate();
 
@@ -1502,7 +1605,7 @@ namespace askap
        // search only looks in x and y direction, now extend the support to diagonals
        ss.extendedSupport(psfSlice);
        casacore::uInt support = ss.symmetricalSupport(psfSlice.shape());
-       support = 2 * (support/2) + 1; // if even, move up to next odd.
+
        // limit support size to roughly 100 pixels per beam
        // some mostly flagged channels can have very large support, fit will take too long
        if (support > maxSupport) {
@@ -1510,96 +1613,103 @@ namespace askap
            ASKAPLOG_DEBUG_STR(logger, "Reducing support size for beam fit from "<<support<<" to "<<maxSupport);
            support = maxSupport;
        }
-       casa::Vector<casa::Double> result, errors;
-       // allow for some retries on the beam fitting
-       int retry = 2;
-       while (retry > 0) {
 
-           ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
-           const casa::IPosition newShape(2,support,support);
-           for (int dim=0; dim<2; ++dim) {
-                ASKAPCHECK(psfSlice.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
-                           psfSlice.shape());
-           }
-           //
-           #ifdef ASKAP_FLOAT_IMAGE_PARAMS
-           // avoid making a reference copy since we rescale in next step
-           casa::Array<float> floatPSFSlice;
-           floatPSFSlice = scimath::PaddingUtils::centeredSubArray(psfSlice,newShape);
-           #else
-           casa::Array<float> floatPSFSlice(newShape);
-           casa::convertArray<float, imtype>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
-           #endif
-           // hack for debugging only
-           //floatPSFSlice = imageHandler().read("tmp.img").nonDegenerate();
-           //
-
-           // normalise to 1
-           const float maxPSF = casa::max(floatPSFSlice);
-           if (fabs(maxPSF-1.)>1e-6) {
-               floatPSFSlice /= maxPSF;
-           }
-           //
-
-           // actual fitting
-           // the beam fitter fails at times - producing no or a bad solution
-           // We've tried a few approaches:
-           //  - retry with different support - often works, but still some failures
-           //  - use setIncludeRange to exclude pixels below the cutoff - works sometimes, but worse at times
-           //  - use estimate to set the initial guess - this seems the best solution so far
-           casa::LogIO os;
-           casa::Fit2D fitter(os);
-           // only use pixels above the cutoff for the fit
-           fitter.setIncludeRange(cutoff,1.0);
-	       // Using estimate to set the initial guess seems to make the fit more robust
-           casa::Vector<casa::Double> initialEstimate = fitter.estimate(casa::Fit2D::GAUSSIAN,floatPSFSlice);
-	       ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
-           initialEstimate[0]=1.; // PSF peak is always 1
-           initialEstimate[1]=newShape[0]/2; // centre
-           initialEstimate[2]=newShape[1]/2; // centre
-           casa::Vector<casa::Bool> parameterMask(6,casa::False);
-           parameterMask[3] = casa::True; // fit maj
-           parameterMask[4] = casa::True; // fit min
-           parameterMask[5] = casa::True; // fit pa
-
-           fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
-           casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
-           const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
-           if (fitError != casa::Fit2D::OK) {
-               if (retry > 1) {
-                   // try reducing the support if fit fails, or increasing it if it's tiny
-                   support -= 2;
-                   if (support < 3) support = 5;
-                   ASKAPLOG_INFO_STR(logger, "Beam fit failed, retrying with support = "<<support);
-                   retry--;
-               } else {
-                   ASKAPCHECK(fitError == casa::Fit2D::OK, "Error fitting the beam. fitError="<<fitError<<
-                              " message: "<<fitter.errorMessage());
-               }
-           } else {
-               result = fitter.availableSolution();
-               errors = fitter.availableErrors();
-               ASKAPLOG_DEBUG_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors);
-               ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
-               // Check if fit is reasonable
-               if (result[3] > 2.0 * support || result[4] > 2.0 * support) {
-                   if (retry > 1) {
-                       // try reducing the support if fit fails, or increasing it if it's tiny
-                       support -= 2;
-                       if (support < 3) support = 5;
-                       ASKAPLOG_INFO_STR(logger, "Beam fit bad, retrying with support = "<<support);
-                       retry--;
-                   } else {
-                       // failed!
-                       ASKAPCHECK(result[3] <= 2.0 * support && result[4] <= 2.0 * support,
-                           "Error fitting the beam. Gaussian width >2x support");
-                   }
-               } else {
-                   // fit is fine, no need to retry
-                   retry = 0;
-               }
-           }
+       if (support < 3) {
+           support = 3;
+       } else {
+          if (support % 2 == 0) {
+              // if even, move up to next odd.
+              ++support;
+          }
        }
+       ASKAPDEBUGASSERT(support % 2 == 1);
+
+       ASKAPLOG_INFO_STR(logger, "Extracting support of "<<support<<" pixels for 2D gaussian fitting");
+       const casa::IPosition newShape(2,support,support);
+       for (int dim=0; dim<2; ++dim) {
+            ASKAPCHECK(psfSlice.shape()[dim] >= int(support), "Support is greater than the original size, shape="<<
+                       psfSlice.shape());
+       }
+       //
+       #ifdef ASKAP_FLOAT_IMAGE_PARAMS
+       // avoid making a reference copy since we rescale in next step
+       casa::Array<float> floatPSFSlice;
+       floatPSFSlice = scimath::PaddingUtils::centeredSubArray(psfSlice,newShape);
+       #else
+       casa::Array<float> floatPSFSlice(newShape);
+       casa::convertArray<float, imtype>(floatPSFSlice, scimath::PaddingUtils::centeredSubArray(psfSlice,newShape));
+       #endif
+       // hack for debugging only
+       //floatPSFSlice = imageHandler().read("tmp.img").nonDegenerate();
+       //
+       // normalise to 1 - technically unnecessary as we should have it already normalised
+       const float maxPSF = casa::max(floatPSFSlice);
+       ASKAPLOG_DEBUG_STR(logger," cutoff: "<<cutoff<<" maxPSF="<<maxPSF<<" newShape: "<<newShape);
+       if (fabs(maxPSF-1.)>1e-6) {
+            floatPSFSlice /= maxPSF;
+       }
+       //
+
+       // actual fitting
+       // the beam fitter fails at times - producing no or a bad solution
+       // We've tried a few approaches:
+       //  - retry with different support - often works, but still some failures
+       //  - use setIncludeRange to exclude pixels below the cutoff - works sometimes, but worse at times
+       //  - use estimate to set the initial guess - this seems the best solution so far
+       casa::LogIO os;
+       casa::Fit2D fitter(os);
+       // do not set cutoff for small support, i.e. all pixels will be used for the fit
+       // note, we can't get support less than 3 given the code above
+       if (support > 3) {
+           // for large support case ensure that we get at least 4 neighbouring pixels near the peak above the cutoff
+           double newCutoff = cutoff;
+           const int centrePixel = static_cast<int>(support) / 2;
+           for (int pix = 0; pix < 4; ++pix) {
+                // this gives +/- 1 pixel from centre on each axis and all combinations, assumes integer math.
+                const IPosition cursor(2, centrePixel + (pix % 2) * 2 - 1, centrePixel + (pix / 2) * 2 - 1);
+                const float curVal = floatPSFSlice(cursor);
+                if (curVal < newCutoff) {
+                    newCutoff = curVal;
+                }
+           }
+           if (newCutoff < cutoff) {
+               ASKAPLOG_DEBUG_STR(logger, "Reducing cutoff for fitter to ensure enough pixels are taken into account, new cutoff "<<newCutoff<<
+                         ", it probably means the beam is bad");
+           }
+           fitter.setIncludeRange(newCutoff,1.0);
+       }
+       // Using estimate to set the initial guess seems to make the fit more robust
+       casa::Vector<casa::Double> initialEstimate = fitter.estimate(casa::Fit2D::GAUSSIAN,floatPSFSlice);
+       ASKAPLOG_DEBUG_STR(logger,"Initial beam fit: "<<initialEstimate);
+       initialEstimate[0]=1.; // PSF peak is always 1
+       initialEstimate[1]=newShape[0]/2; // centre
+       initialEstimate[2]=newShape[1]/2; // centre
+       casa::Vector<casa::Bool> parameterMask(6,casa::False);
+       parameterMask[3] = casa::True; // fit maj
+       parameterMask[4] = casa::True; // fit min
+       parameterMask[5] = casa::True; // fit pa
+
+       fitter.addModel(casa::Fit2D::GAUSSIAN,initialEstimate,parameterMask);
+       const casa::Array<casa::Float> sigma(floatPSFSlice.shape(),1.);
+       const casa::Fit2D::ErrorTypes fitError = fitter.fit(floatPSFSlice,sigma);
+       ASKAPCHECK(fitError == casa::Fit2D::OK, "Error fitting the beam. fitError="<<fitError<<
+                  " message: "<<fitter.errorMessage());
+       ASKAPCHECK(fitter.numberPoints() > 4, "The number of points available for fitting the beam ("<<fitter.numberPoints()<<
+                  ") is too small. Either cell size or cutoff are too large");
+
+       const casa::Vector<casa::Double> result = fitter.availableSolution();
+       const casa::Vector<casa::Double> errors = fitter.availableErrors();
+
+       ASKAPLOG_DEBUG_STR(logger, "Got fit result (in pixels) "<<result<<" and uncertainties "<< errors<<
+                          " number of points used for the fit: "<<fitter.numberPoints());
+       ASKAPCHECK(result.nelements() == 6, "Expect 6 parameters for 2D gaussian, result vector has "<<result.nelements());
+       // Check if fit is reasonable
+       for (casacore::uInt i = 0; i < result.nelements(); ++i) {
+            ASKAPCHECK(!isnan(result[i]), "Beam fitting produces NaN in the result ("<<result<<"), most likely beam is not sampled properly, decrease the cell size");
+            ASKAPCHECK(!isinf(result[i]), "Beam fitting produces infinity in the result ("<<result<<"), most likely beam is not sampled properly, decrease the cell size");
+       }
+       ASKAPCHECK(result[3] <= 2.0 * support && result[4] <= 2.0 * support,
+                  "Error fitting the beam. Gaussian width >2x support");
        casacore::Vector<double> beam(3);
        beam[0] = result[3];
        beam[1] = result[4];

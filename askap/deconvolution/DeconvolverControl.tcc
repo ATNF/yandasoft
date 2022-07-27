@@ -118,14 +118,29 @@ namespace askap {
             }
 
             // Check if we have started to diverge
-            // Simplest check: next component > 2* initial residual
-            if (itsDetectDivergence && state.initialObjectiveFunction() > 0 &&
-                state.objectiveFunction() > 2 * state.initialObjectiveFunction() ) {
-                ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Objective function " <<
-                state.objectiveFunction() << " > 2 * initialObjectiveFunction = " <<
-                2*state.initialObjectiveFunction());
-                itsTerminationCause = DIVERGED;
-                return True;
+            if (itsDetectDivergence) {
+                // Simplest check: next component > 2* initial residual
+                if ( state.initialObjectiveFunction() > 0 &&
+                     state.objectiveFunction() > 2 * state.initialObjectiveFunction() )
+                {
+                  ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Objective function " <<
+                  state.objectiveFunction() << " > 2 * initialObjectiveFunction = " <<
+                  2*state.initialObjectiveFunction());
+                  itsTerminationCause = DIVERGED;
+                  return True;
+                }
+
+                // Check for major cycle divergence
+                // (only need to check this once per major cycle but it fits here)
+                if ( state.previousInitialObjectiveFunction() > 0 &&
+                     state.initialObjectiveFunction() > 1.1 * state.previousInitialObjectiveFunction() )
+                {
+                  ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Initial Objective function " <<
+                  state.initialObjectiveFunction() << " > 1.1 * previous Initial ObjectiveFunction = " <<
+                  1.1*state.previousInitialObjectiveFunction());
+                  itsTerminationCause = DIVERGED;
+                  return True;
+                }
             }
 
             // Check for external signal

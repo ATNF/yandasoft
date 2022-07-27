@@ -55,11 +55,11 @@ class ImplCalWeightSolver {
        
 public:
     //static const double lambda=0.2;   // wavelength in metres
-    ImplCalWeightSolver() throw();
-    ~ImplCalWeightSolver() throw(casa::AipsError);
+    ImplCalWeightSolver();
+    ~ImplCalWeightSolver();
     // set up calculation for a given pointing centre and sky model
     void setSky(const casa::MDirection &ipc, 
-		const casa::String &clname) throw(casa::AipsError);
+		const casa::String &clname);
 		
 	/// @brief make synthetic beam
 	/// @details This method constructs synthetic primary beam for the given weights.
@@ -69,13 +69,11 @@ public:
 	                     const casa::Vector<casa::Complex> &weights);
 		
     // set up the voltage pattern from a disk-based image
-    void setVP(const casa::String &namer,const casa::String &namei) 
-	      throw(casa::AipsError); 
+    void setVP(const casa::String &namer,const casa::String &namei); 
     // main method
     casa::Matrix<casa::Complex>
          solveWeights(const casa::Matrix<casa::Double> &feed_offsets,
-		      const casa::Vector<casa::Double> &uvw) const
-	                            throw(casa::AipsError);
+		      const casa::Vector<casa::Double> &uvw) const;
    // solve for eigenvectors for the VP matrix. The first vector
    // (column=0) corresponds to the maximum attainable flux,
    // the last one (column=Nfeeds-1) corresponds to the
@@ -85,8 +83,7 @@ public:
    // w.r.t. the dish pointing centre
    casa::Matrix<casa::Complex>
          eigenWeights(const casa::Matrix<casa::Double> &feed_offsets,
-	 casa::Double pa = 0., const casa::String &skycat="")
-	                        const throw(casa::AipsError);
+	 casa::Double pa = 0., const casa::String &skycat="") const;
 
    // solve for a basis in the space of weights, which is best for calibration
    // in the sense that the flux from known sources is maximized
@@ -99,8 +96,7 @@ public:
    casa::Matrix<casa::Complex>
          calBasis(const casa::Matrix<casa::Double> &feed_offsets,
 	          casa::uInt ndim, casa::Double pa=0.,
-		  const casa::String &skycat="")
-		                      const throw(casa::AipsError);
+		  const casa::String &skycat="") const;
 				      
 protected:
     // calculate visibility matrix for given feed_offsets
@@ -108,8 +104,7 @@ protected:
     // vismatrix will have visibilities for each element (column) and 
     // measurement (row)
     void formVisMatrix(const casa::Matrix<casa::Double> &feed_offsets,
-		       const casa::Vector<casa::Double> &uvw) const
-	                throw(casa::AipsError);
+		       const casa::Vector<casa::Double> &uvw) const;
 
     // this version fills vismatrix with sum(F_i E_k*E_l^H), where 
     // E is the voltage pattern value at the source position and
@@ -119,14 +114,14 @@ protected:
     // w.r.t. the dish pointing centre
     void formVPMatrix(const casa::Matrix<casa::Double> &feed_offsets,
                 casa::Double pa = 0., const casa::String &skycat = "")
-	          const  throw(casa::AipsError);
+	          const;
     
     
     // an auxiliary function to extract a Value of the Voltage Pattern
     // at the given offset (in radians). Return True if successful, and
     // False if the requested offset lies outside the model
     casa::Bool getVPValue(casa::Complex &val, casa::Double l, casa::Double m)
-                            const throw(casa::AipsError);
+                            const;
 private:
     boost::shared_ptr<askap::synthesis::IBasicIllumination> itsIllumination;
 };

@@ -56,8 +56,6 @@ class ContinuumMaster {
         ~ContinuumMaster();
 
         void run(void);
-
-
     private:
 
         struct MSInfo {
@@ -81,9 +79,8 @@ class ContinuumMaster {
         /// <and so on>
         /// @endcode
         ///
-        /// @param[in] parset   the parameterset to use as input.
         /// @return a vector containing in each element one dataset.
-        std::vector<std::string> getDatasets(const LOFAR::ParameterSet& itsParset);
+        std::vector<std::string> getDatasets();
 
         std::vector<int> getBeams(void);
 
@@ -98,15 +95,6 @@ class ContinuumMaster {
         StatReporter& itsStats;
 
         MSGroupInfo isMSGroupInfo;
-
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsImageCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsPSFCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsResidualCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsWeightsCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsPSFimageCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Float> > itsRestoredCube;
-        boost::scoped_ptr<CubeBuilder<casacore::Complex> > itsGriddedVis;
-
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
 
