@@ -607,14 +607,14 @@ namespace askap {
             Vector<Array<FT> > subXFRVec(2*this->nTerms() - 1);
             for (uInt term1 = 0; term1 < subXFRVec.nelements(); ++term1) {
                 subXFRVec(term1).resize(subPsfShape);
-                // rely on reference semantics of casa arrays 
+                // rely on reference semantics of casa arrays
                 // MV: we can probably change subXFRVec to be a vector of matrices to reduce technical debt
                 Matrix<FT> subXFRTerm1(subXFRVec(term1));
                 subXFRTerm1.set(0.0);
                 casacore::setReal(subXFRTerm1, this->itsPsfLongVec(term1).nonDegenerate()(subPsfSlicer));
                 //scimath::fft2d(subXFRVec(term1), true);
                 fft2d(subXFRTerm1, true);
-                // we only need conjugated FT of subXFRVec (or real part of it, which doesn't change with conjugation), 
+                // we only need conjugated FT of subXFRVec (or real part of it, which doesn't change with conjugation),
                 // it is better to compute conjugation in situ now and don't do it on the fly later
                 utility::conjugateComplexArray(subXFRTerm1);
             }
@@ -641,7 +641,7 @@ namespace askap {
 
                             // the following expression is what we had here originally. It is replaced by an optimised
                             // method allowing us to avoid creation of temporary objects (+ it is normally faster if OMP is used)
-                            // note, the procedure doesn't have conj(subXFRVec(term1 + term2)) and for this we conjugated the whole 
+                            // note, the procedure doesn't have conj(subXFRVec(term1 + term2)) and for this we conjugated the whole
                             // subXFRVec(term1 + term2) above, when it is filled with values
                             //work = conj(basisFunctionFFT.xyPlane(base1)) * basisFunctionFFT.xyPlane(base2) *
                             //       conj(subXFRVec(term1 + term2)) / normPSF;
@@ -731,22 +731,22 @@ namespace askap {
             Vector<Array<T> > coefficients(this->nTerms());
             casa::Matrix<T> res, wt;
             Array<T> negchisq;
-            casa::IPosition residualShape;
-            casa::IPosition psfShape;
+            casa::IPosition residualShape(2);
+            casa::IPosition psfShape(2);
             bool isWeighted((this->itsWeight.nelements() > 0) &&
                 (this->itsWeight(0).shape().nonDegenerate().conform(this->itsResidualBasis(0)(0).shape())));
             Vector<T> maxTermVals(this->nTerms());
             Vector<T> maxBaseVals(nBases);
 
+            // temporary matrix references
+            casa::Matrix<T> mat1, mat2;
+
             // Timers for analysis
             const int no_timers = 10;
-            double TimerStart[no_timers], TimerStop[no_timers], Times[no_timers];
-            memset(TimerStart, 0, sizeof(TimerStart));
-            memset(TimerStop, 0, sizeof(TimerStop));
-            memset(Times, 0, sizeof(Times));
+            Vector<double> TimerStart(no_timers,0), TimerStop(no_timers,0), Times(no_timers,0);
 
-		      	// Termination
-		      	int converged;
+	      	// Termination
+	      	int converged;
             this->control()->maskNeedsResetting(true);
 
             if (this->control()->targetIter() != 0) {
@@ -757,6 +757,12 @@ namespace askap {
             #pragma omp parallel
             {
                 bool IsNotCont;
+                #pragma omp master
+                {
+                    uint nthreads = LOFAR::OpenMP::numThreads();
+                    if (nthreads>1) ASKAPLOG_INFO_STR(decmtbflogger, "Cleaning using "<<nthreads<< " threads");
+                }
+
 
                 // =============== Set weights =======================
 
@@ -1084,30 +1090,28 @@ namespace askap {
                         #pragma omp single
                         TimerStart[7] = MPI_Wtime();
 
+                        if (isWeighted) {
+                            #pragma omp single
+                            wt.reference(this->itsWeight(0).nonDegenerate());
+                        }
+
                         for (uInt term = 0; term < this->nTerms(); term++) {
                             for (uInt base = 0; base < nBases; base++) {
 
-                                maxPos(0) = 0; maxPos(1) = 0;
-                                maxVal = 0.0;
-                                #pragma omp single
-                                res.reference(this->itsResidualBasis(base)(term));
-
-                                if (isWeighted) {
-                                    #pragma omp single
-                                    wt.reference(this->itsWeight(0).nonDegenerate());
-
-                                    absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
-                                } else {
-
-                                    absMaxPosOMP(maxVal, maxPos, res);
-                                }
-                                // TODO: Do I need this barrier? No - absmax already has one
-                                #pragma omp barrier
-
                                 #pragma omp single
                                 {
-                                    maxBaseVals(base) = abs(this->itsResidualBasis(base)(term)(maxPos));
+                                    maxPos(0) = 0; maxPos(1) = 0;
+                                    maxVal = 0.0;
+                                    res.reference(this->itsResidualBasis(base)(term));
                                 }
+                                if (isWeighted) {
+                                    absMaxPosMaskedOMP(maxVal, maxPos, res, wt);
+                                } else {
+                                    absMaxPosOMP(maxVal, maxPos, res);
+                                }
+
+                                #pragma omp single
+                                maxBaseVals(base) = abs(res(maxPos));
                             } // End of loop over bases
 
                             #pragma omp single
@@ -1180,27 +1184,16 @@ namespace askap {
                     // without OpenMP, this may be faster
                     //sumFlux = sum(this->model(0));
 
+
                     #pragma omp single
-                    this->state()->setTotalFlux(sumFlux);
-
-                    #pragma omp sections
                     {
-                        // Now we adjust model and residual for this component
-                        #pragma omp section
-                        residualShape = this->dirty(0).shape().nonDegenerate();
-
-                        #pragma omp section
-                        {
-                            psfShape(0) = this->itsBasisFunction->shape()(0),
-                            psfShape(1) = this->itsBasisFunction->shape()(1);
-                        }
+                        this->state()->setTotalFlux(sumFlux);
+                        ASKAPLOG_DEBUG_STR(decmtbflogger,"Peak="<<absPeakVal<<", Pos="<< absPeakPos <<", Base="<<optimumBase<<", Total flux = "<<sumFlux);
+                        residualShape(0) = this->dirty(0).shape()(0);
+                        residualShape(1) = this->dirty(0).shape()(1);
+                        psfShape(0) = this->itsBasisFunction->shape()(0),
+                        psfShape(1) = this->itsBasisFunction->shape()(1);
                     }
-
-                    casa::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
-                    casa::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
-                    const casa::IPosition modelShape(this->model(0).shape().nonDegenerate());
-                    casa::IPosition modelStart(2, 0), modelEnd(2, 0), modelStride(2, 1);
-
                     // End of section 8
                     #pragma omp single
                     { TimerStop[8] = MPI_Wtime(); Times[8] += (TimerStop[8]-TimerStart[8]); }
@@ -1209,9 +1202,12 @@ namespace askap {
                     #pragma omp single
                     TimerStart[9] = MPI_Wtime();
 
+                    casa::IPosition residualStart(2, 0), residualEnd(2, 0), residualStride(2, 1);
+                    casa::IPosition psfStart(2, 0), psfEnd(2, 0), psfStride(2, 1);
+
                     const casacore::IPosition peakPSFPos = this->getPeakPSFPosition();
                     ASKAPDEBUGASSERT(peakPSFPos.nelements() >= 2);
-                    // that there are some edge cases for which it fails.
+                    // work out the array sections we need
                     for (uInt dim = 0; dim < 2; dim++) {
                         residualStart(dim) = max(0, Int(absPeakPos(dim) - psfShape(dim) / 2));
                         residualEnd(dim) = min(Int(absPeakPos(dim) + psfShape(dim) / 2 - 1), Int(residualShape(dim) - 1));
@@ -1220,31 +1216,10 @@ namespace askap {
                         psfStart(dim) = max(0, Int(peakPSFPos(dim) - (absPeakPos(dim) - residualStart(dim))));
                         psfEnd(dim) = min(Int(peakPSFPos(dim) - (absPeakPos(dim) - residualEnd(dim))),
                                         Int(psfShape(dim) - 1));
-                        modelStart(dim) = residualStart(dim);
-                        modelEnd(dim) = residualEnd(dim);
                     }
 
-                    casa::Slicer psfSlicer(psfStart, psfEnd, psfStride, Slicer::endIsLast);
-                    casa::Slicer residualSlicer(residualStart, residualEnd, residualStride, Slicer::endIsLast);
-                    casa::Slicer modelSlicer(modelStart, modelEnd, modelStride, Slicer::endIsLast);
-
-                    // Add to model
-                    // We loop over all terms for the optimum base and ignore those terms with no flux
-                    #pragma omp single
-                    {
-                        for (uInt term = 0; term < this->nTerms(); ++term) {
-                            if (abs(peakValues(term)) > 0.0) {
-                                casa::Array<float> slice = this->model(term).nonDegenerate()(modelSlicer);
-                                slice += this->control()->gain() * peakValues(term) *
-                                        this->itsBasisFunction->basisFunction(optimumBase).nonDegenerate()(psfSlicer);
-                                this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
-                            }
-                        }
-                    }
-
-/*
-                    const uInt ni = residualEnd(0) - residualStart(0);
-                    const uInt nj = residualEnd(1) - residualStart(1);
+                    const uInt ni = residualEnd(0) - residualStart(0) + 1;
+                    const uInt nj = residualEnd(1) - residualStart(1) + 1;
                     const uInt ri0 = residualStart(0);
                     const uInt rj0 = residualStart(1);
                     const uInt pi0 = psfStart(0);
@@ -1255,80 +1230,54 @@ namespace askap {
                     for (uInt term = 0; term < this->nTerms(); ++term) {
                         if (abs(peakValues(term)) > 0.0) {
                             const T amp = this->control()->gain() * peakValues(term);
-                            casa::Matrix<T> mMdl, mBfn;
-                            mMdl.reference(this->model(term).nonDegenerate()(modelSlicer));
-                            mBfn.reference(Cube<T>(this->itsBasisFunction->basisFunction()).xyPlane(optimumBase).nonDegenerate()(psfSlicer));
+                            #pragma omp single
+                            {
+                                mat1.reference(this->model(term).nonDegenerate());
+                                mat2.reference(this->itsBasisFunction->basisFunction(optimumBase));
+                                this->itsTermBaseFlux(optimumBase)(term) += amp;
+                            }
                             #pragma omp for schedule(static)
                             for (uInt j = 0; j < nj; j++ ) {
-                                Vector<T> mdlcol = mMdl.column(j);
-                                T* pMdl = mdlcol.getStorage(IsNotCont);
-                                Vector<T> bfncol = mBfn.column(j);
-                                T* pBfn = bfncol.getStorage(IsNotCont);
+                                T* pMdl = &mat1(ri0, rj0 + j);
+                                T* pBfn = &mat2(pi0, pj0 + j);
                                 for (uInt i = 0; i < ni; i++ ) {
-                                    pMdl[i] += amp * (*(pBfn+i));
-                                }
-                            }
-
-                            this->itsTermBaseFlux(optimumBase)(term) += this->control()->gain() * peakValues(term);
-
-                        }
-                    }
-*/
-
-                    #pragma omp single
-                    {
-                        // Subtract PSFs, including base-base crossterms
-                        for (uInt term1 = 0; term1 < this->nTerms(); term1++) {
-                            for (uInt term2 = 0; term2 < this->nTerms(); term2++) {
-                                if (abs(peakValues(term2)) > 0.0) {
-                                    for (uInt base = 0; base < nBases; base++) {
-                                        // This can be done in parallel, but isnt worth it.
-                                        this->itsResidualBasis(base)(term1)(residualSlicer) =
-                                            this->itsResidualBasis(base)(term1)(residualSlicer)
-                                            - this->control()->gain() * peakValues(term2) *
-                                            this->itsPSFCrossTerms(base, optimumBase)(term1, term2)(psfSlicer);
-                                    }
+                                    pMdl[i] += amp * pBfn[i];
                                 }
                             }
                         }
                     }
 
-/*
+
                     // Subtract PSFs, including base-base crossterms
                     for (uInt term1 = 0; term1 < this->nTerms(); term1++) {
                         for (uInt term2 = 0; term2 < this->nTerms(); term2++) {
                             if (abs(peakValues(term2)) > 0.0) {
+                                const T amp = this->control()->gain() * peakValues(term2);
                                 for (uInt base = 0; base < nBases; base++) {
-
-
-                                    // This can be done in parallel, but isnt worth it.
-                                    //this->itsResidualBasis(base)(term1)(residualSlicer) =
-                                    //    this->itsResidualBasis(base)(term1)(residualSlicer)
-                                    //    - this->control()->gain() * peakValues(term2) *
-                                    //    this->itsPSFCrossTerms(base, optimumBase)(term1, term2)(psfSlicer);
-
-                                    const T amp = this->control()->gain() * peakValues(term2);
-                                    casa::Matrix<T> mRes, mPSF;
-                                    mRes.reference(this->itsResidualBasis(base)(term1));
-                                    mPSF.reference(this->itsPSFCrossTerms(base,optimumBase)(term1,term2));
+                                    // optimise the following code
+                                    // this->itsResidualBasis(base)(term1)(residualSlicer) =
+                                    //     this->itsResidualBasis(base)(term1)(residualSlicer)
+                                    //     - this->control()->gain() * peakValues(term2) *
+                                    //     this->itsPSFCrossTerms(base, optimumBase)(term1, term2)(psfSlicer);
+                                    #pragma omp single
+                                    {
+                                        mat1.reference(this->itsResidualBasis(base)(term1));
+                                        mat2.reference(this->itsPSFCrossTerms(base, optimumBase)(term1, term2));
+                                    }
                                     #pragma omp for schedule(static)
-                                    for (uInt j = 0; j < nj; j++ ) {
-                                        Vector<T> rescol = mRes.column(rj0+j);
-                                        T* pRes = rescol.getStorage(IsNotCont);
-                                        Vector<T> psfcol = mPSF.column(pj0+j);
-                                        T* pPSF = psfcol.getStorage(IsNotCont);
-                                        for (uInt i = 0; i < ni; i++ ) {
-                                            pRes[ri0+i] -= amp * (*(pPSF+pi0+i));
+                                    for (uInt j = 0; j < nj; j++) {
+                                        T* pRes = &mat1(ri0, rj0 + j);
+                                        T* pPsf = &mat2(pi0, pj0 + j);
+                                        for (uInt i = 0; i < ni; i++) {
+                                            pRes[i] -= amp * pPsf[i];
                                         }
                                     }
-
                                 }
                             }
                         }
                     }
-*/
 
-                    #pragma omp single
+                    #pragma omp master
                     {
 						this->monitor()->monitor(*(this->state()));
 						this->state()->incIter();
