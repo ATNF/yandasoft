@@ -747,6 +747,7 @@ void ContinuumWorker::processChannels()
 
     // write out the beam log
     ASKAPLOG_INFO_STR(logger, "About to log the full set of restoring beams");
+
     logBeamInfo();
     logWeightsInfo();
 
@@ -1457,6 +1458,12 @@ void ContinuumWorker::processChannels()
       itsComms.removeChannelFromWriter(itsComms.rank());
     }
   }
+
+  // write out the beam log
+  ASKAPLOG_INFO_STR(logger, "About to log the full set of restoring beams");
+  ASKAPLOG_INFO_STR(logger, "Test by MAX-wasim : Rank " << itsComms.rank() << " at barrier");
+  itsComms.barrier(itsComms.theWorkers());
+  ASKAPLOG_INFO_STR(logger, "Test by Max-wasim Rank " << itsComms.rank() << " passed barrier");
 
   // write out the beam log
   ASKAPLOG_INFO_STR(logger, "About to log the full set of restoring beams");
