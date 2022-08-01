@@ -81,16 +81,20 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
   const int limitSupport = parset.getInt32("limitsupport",0);
   const int maxFeeds = parset.getInt32("maxfeeds", 1);
   const int maxFields = parset.getInt32("maxfields", 1);
+  const bool freqDep=parset.getBool("frequencydependent", true);
+  const bool spheroidalTaper=parset.getBool("spheroidaltaper", false);
+  const string tablename=parset.getString("tablename","");
+  ASKAPLOG_INFO_STR(logger,"Gridding with Antenna Illumination projection");
   if (parset.isDefined("maxantennas")) {
       ASKAPLOG_WARN_STR(logger,"maxantennas is no longer used! Update your parset");
   }
-  const bool freqDep=parset.getBool("frequencydependent", true);
-  const string tablename=parset.getString("tablename","");
-  ASKAPLOG_INFO_STR(logger,"Gridding with Antenna Illumination projection");
   if (freqDep) {
       ASKAPLOG_INFO_STR(logger,	"Antenna illumination scales with frequency");
   } else {
       ASKAPLOG_INFO_STR(logger,	"Antenna illumination independent of frequency");
+  }
+  if (spheroidalTaper) {
+      ASKAPLOG_INFO_STR(logger,	"A-function will be tapered with a spheroidal for gridding");
   }
   ASKAPLOG_INFO_STR(logger, "Parallactic angle tolerance = "<<paTol/casacore::C::pi*180.<<" deg");
   ASKAPLOG_INFO_STR(logger, "Fields offset by more than "<<pointingTol/casacore::C::pi*180.*3600.<<
@@ -104,7 +108,7 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
 
   boost::shared_ptr<GridderType> gridder(new GridderType(makeIllumination(parset),
                 wmax, nwplanes, cutoff, oversample, maxSupport, limitSupport, maxFeeds, maxFields,
-                pointingTol, paTol, freqTol, freqDep, tablename));
+                pointingTol, paTol, freqTol, freqDep, spheroidalTaper, tablename));
   gridder->configureWSampling(parset);
   return gridder;
 }

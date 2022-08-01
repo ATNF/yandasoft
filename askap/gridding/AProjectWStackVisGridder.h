@@ -75,17 +75,19 @@ namespace askap
       /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value
       ///        means the frequency axis is ignored
       /// @param frequencyDependent Frequency dependent gridding?
+      /// @param spheroidalTaper Apply spheroidal taper to the A-function during gridding?
       /// @param name Name of table to save convolution function into
       /// @note cutoff parameter (after nwplanes) is missing, because it is not required
       /// for this gridder. We however want to have the same signatures for both mosaicing gridders.
       AProjectWStackVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
           const double wmax, const int nwplanes, const double cutoff, const int overSample,
           const int maxSupport, const int limitSupport,
-			       const int maxFeeds=1, const int maxFields=1,
-			       const double pointingTol=0.0001,
-			       const double paTol=0.01,
-			       const double freqTol = 1e-6,
-			       const bool frequencyDependent=true,
+          const int maxFeeds=1, const int maxFields=1,
+          const double pointingTol=0.0001,
+          const double paTol=0.01,
+          const double freqTol = 1e-6,
+          const bool frequencyDependent=true,
+          const bool spheroidalTaper=false,
           const std::string& name=std::string(""));
 
       /// @brief copy constructor
@@ -176,6 +178,8 @@ namespace askap
       int itsMaxFields;
       /// Is the convolution function frequency dependent?
       bool itsFreqDep;
+      /// Should a spheroidal taper be applied to A functions during gridding?
+      bool itsSpheroidalTaper;
       /// Maximum support to test
       int itsMaxSupport;
       /// Upper limit of support

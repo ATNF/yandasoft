@@ -380,6 +380,8 @@ AProjectGridderBase::makeIllumination(const LOFAR::ParameterSet &parset)
                 parset.getString("illumination.pointing.dec"), "rad" );
         }
 
+        ASKAPLOG_INFO_STR(logger, "with aperture = "<<diameter<< ", ra,dec="<<ra<<","<<dec );
+
         // was thinking of updating the pointingDir1() data accessor, however this is a temporary beam
         // model so leave it for now. Accessor-based offsets are still available via MS FEED tables.
         illum->setPointing(ra,dec,diameter);

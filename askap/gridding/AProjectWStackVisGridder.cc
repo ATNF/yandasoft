@@ -57,17 +57,22 @@ AProjectWStackVisGridder::AProjectWStackVisGridder(const boost::shared_ptr<IBasi
         const int maxFields,
         const double pointingTol, const double paTol,
         const double freqTol,
-        const bool frequencyDependent, const std::string& name) :
+        const bool frequencyDependent, const bool spheroidalTaper,
+        const std::string& name) :
     AProjectGridderBase(maxFeeds,maxFields,pointingTol, paTol, freqTol),
     WStackVisGridder(wmax, nwplanes),
     itsReferenceFrequency(0.0),
     itsIllumination(illum),
     itsMaxFeeds(maxFeeds), itsMaxFields(maxFields),
-    itsFreqDep(frequencyDependent)
+    itsFreqDep(frequencyDependent),
+    itsSpheroidalTaper(spheroidalTaper)
 {
     ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport>0, "Maximum support must be greater than 0")
     ASKAPDEBUGASSERT(itsIllumination);
+    if (itsSpheroidalTaper) {
+        ASKAPLOG_WARN_STR(logger, "Spheroidal taper not currently availble for AProjectWStack");
+    }
     itsSupport=0;
     itsOverSample=overSample;
     itsMaxSupport=maxSupport;

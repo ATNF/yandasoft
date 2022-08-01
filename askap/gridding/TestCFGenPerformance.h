@@ -78,9 +78,10 @@ public:
                       const double paTol=0.01,
                       const double freqTol = 1e-6,
                       const bool frequencyDependent=true,
+                      const bool spheroidalTaper=false,
                       const std::string& name=std::string("")) :
                        AWProjectVisGridder(illum, wmax,nwplanes,cutoff,overSample, maxSupport, limitSupport,
-                            maxFeeds, maxFields, pointingTol, paTol, freqTol, frequencyDependent, name),
+                            maxFeeds, maxFields, pointingTol, paTol, freqTol, frequencyDependent, spheroidalTaper, name),
                        itsNBeams(maxFeeds) {}
 
 
