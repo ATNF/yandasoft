@@ -661,8 +661,6 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
     // for debugging
     double totSumWt = 0.;
 
-std::cout << "DAM "<<nZ<<" planes, os = "<<itsOverSample << std::endl;
-
     for (int iz = 0; iz < nZ; ++iz) {
         const int plane = cfIndexFromSumOfWeightsRow(iz);
 
