@@ -192,7 +192,7 @@ namespace askap {
             this->setAbsoluteThreshold(parset.getFloat("absolutethreshold", 0.0));
             this->setLambda(parset.getFloat("lambda", 0.0001));
             this->setPSFWidth(parset.getInt32("psfwidth", 0));
-            this->setDetectDivergence(parset.getBool("detectdivergence",false));
+            this->setDetectDivergence(parset.getBool("detectdivergence",true));
         }
 
     } // namespace synthesis

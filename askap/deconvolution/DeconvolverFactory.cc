@@ -75,13 +75,13 @@ namespace askap {
                 Array<Float> dirty(DeconvolverHelpers::getArrayFromImage("dirty", parset));
                 Array<Float> psf(DeconvolverHelpers::getArrayFromImage("psf", parset));
 
-                string algorithm = parset.getString("solver.Clean.algorithm", "Basisfunction");
+                string algorithm = parset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
 
                 if (algorithm == "Basisfunction") {
                     ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver");
                     deconvolver.reset(new DeconvolverBasisFunction<Float, Complex>(dirty, psf));
                     ASKAPASSERT(deconvolver);
-                } else if (algorithm == "MultiTermBasisfunction") {
+                } else if (algorithm == "BasisfunctionMFS") {
                     ASKAPLOG_INFO_STR(logger, "Constructing MultiTermBasisfunction Clean solver");
                     deconvolver.reset(new DeconvolverMultiTermBasisFunction<Float, Complex>(dirty, psf));
                     ASKAPASSERT(deconvolver);

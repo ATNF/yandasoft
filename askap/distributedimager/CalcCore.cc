@@ -86,7 +86,7 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     /// the parent class.
     /// Not sure whether to use it directly or copy it.
     const std::string solver_par = parset.getString("solver");
-    const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
+    const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
     // tell gridder it can throw the grids away if we don't need to write them out
     bool writeGrids = parset.getBool("dumpgrids",false);
     writeGrids = parset.getBool("write.grids",writeGrids); // new name
@@ -110,7 +110,7 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     : ImagerParallel(comms,parset), itsParset(parset), itsComms(comms),itsData(ds),itsGridder_p(gdr), itsChannel(localChannel)
 {
   const std::string solver_par = parset.getString("solver");
-  const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "MultiScale");
+  const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
   itsSolver = ImageSolverFactory::make(parset);
   itsRestore = parset.getBool("restore", false);
 }
