@@ -504,8 +504,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                     for (int fracu = 0; fracu < itsOverSample; fracu++) {
                         for (int fracv = 0; fracv < itsOverSample; fracv++) {
-                            const int plane = fracu + itsOverSample * (fracv + itsOverSample
-                                              * zIndex);
+                            const int plane = fracu + itsOverSample * (fracv + itsOverSample * zIndex);
                             ASKAPDEBUGASSERT(plane >= 0 && plane < int(itsConvFunc.size()));
                             if (isPCFGridder()) {
                                 itsConvFunc[plane].resize(3,3);
@@ -518,9 +517,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                             // Now cut out the inner part of the convolution function and
                             // insert it into the convolution function
-                            for (int iy = -support; iy < support+1; iy++) {
+                            for (int iy = -support; iy <= support; iy++) {
                                 const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2;
-                                for (int ix = -support; ix < support+1; ix++) {
+                                for (int ix = -support; ix <= support; ix++) {
                                     const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2;
                                     itsConvFunc[plane](ix + support, iy + support) = imtype(rescale) * thisPlane(kx, ky);
                                 }
@@ -534,6 +533,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                             ASKAPDEBUGASSERT(norm>0.);
                             if (norm>0.) {
                                 //itsConvFunc[plane]*=casacore::Complex(norm/thisPlaneNorm);
+                                itsConvFunc[plane] /= casacore::Complex(norm);
                             }
                             */
 
@@ -698,8 +698,8 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
 
             const std::pair<int, int> cfOffset = getConvFuncOffset(iz);
 
-            for (int iy = -support; iy < +support; ++iy) {
-                for (int ix = -support; ix < +support; ++ix) {
+            for (int iy = -support; iy <= support; ++iy) {
+                for (int ix = -support; ix <= support; ++ix) {
                     const int xPos = ix + ccenx + cfOffset.first;
                     const int yPos = iy + cceny + cfOffset.second;
 
