@@ -308,8 +308,8 @@ namespace askap {
             itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
                                orthogonal));
 
-            String solutionType = parset.getString("solutiontype", "MAXCHISQ");
-            itsDecoupled = parset.getBool("decoupled", false);
+            String solutionType = parset.getString("solutiontype", "MAXBASE");
+            itsDecoupled = parset.getBool("decoupled", true);
             if (itsDecoupled) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Using decoupled residuals");
             }
