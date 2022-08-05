@@ -70,6 +70,8 @@ public:
   /// @param freqTol Frequency tolerance (relative, threshold for df/f), negative value
   ///        means the frequency axis is ignored
   /// @param frequencyDependent Frequency dependent gridding?
+  /// @param spheroidalTaper Apply spheroidal taper to the A-function during gridding?
+  /// @param spheroidalWeightsCutoff set weights to zero below when spheroidalTaper is below this cutoff
   /// @param name Name of table to save convolution function into
   TestCFGenPerformance(const boost::shared_ptr<IBasicIllumination const> &illum,
                       const double wmax, const int nwplanes, const double cutoff,
@@ -79,9 +81,11 @@ public:
                       const double freqTol = 1e-6,
                       const bool frequencyDependent=true,
                       const bool spheroidalTaper=false,
+                      const double spheroidalWeightsCutoff=0.0,
                       const std::string& name=std::string("")) :
                        AWProjectVisGridder(illum, wmax,nwplanes,cutoff,overSample, maxSupport, limitSupport,
-                            maxFeeds, maxFields, pointingTol, paTol, freqTol, frequencyDependent, spheroidalTaper, name),
+                            maxFeeds, maxFields, pointingTol, paTol, freqTol, frequencyDependent,
+                            spheroidalTaper, spheroidalWeightsCutoff, name),
                        itsNBeams(maxFeeds) {}
 
 

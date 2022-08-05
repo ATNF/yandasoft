@@ -84,12 +84,13 @@ AWProjectVisGridder::AWProjectVisGridder(const boost::shared_ptr<IBasicIlluminat
         const double cutoff, const int overSample,
         const int maxSupport, const int limitSupport,
         const int maxFeeds, const int maxFields, const double pointingTol,
-        const double paTol, const double freqTol,
-        const bool frequencyDependent, const bool spheroidalTaper, const std::string& name) :
+        const double paTol, const double freqTol, const bool frequencyDependent,
+        const bool spheroidalTaper, const double spheroidalWeightsCutoff, const std::string& name) :
         AProjectGridderBase(maxFeeds, maxFields, pointingTol, paTol, freqTol),
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample, maxSupport, limitSupport, name),
         itsReferenceFrequency(0.0), itsIllumination(illum), itsFreqDep(frequencyDependent),
-        itsSpheroidalTaper(spheroidalTaper), itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
+        itsSpheroidalTaper(spheroidalTaper), itsSpheroidalWeightsCutoff(spheroidalWeightsCutoff),
+        itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
 {
     ASKAPDEBUGASSERT(itsIllumination);
     ASKAPCHECK(maxFeeds > 0, "Maximum number of feeds must be one or more");
@@ -109,6 +110,7 @@ AWProjectVisGridder::AWProjectVisGridder(const AWProjectVisGridder &other) :
         itsReferenceFrequency(other.itsReferenceFrequency),
         itsIllumination(other.itsIllumination), itsFreqDep(other.itsFreqDep),
         itsSpheroidalTaper(other.itsSpheroidalTaper),
+        itsSpheroidalWeightsCutoff(other.itsSpheroidalWeightsCutoff),
         itsMaxFeeds(other.itsMaxFeeds), itsMaxFields(other.itsMaxFields) {}
 
 /// Clone a copy of this Gridder
@@ -639,13 +641,16 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
         for (int ix=0; ix<cnx; ++ix) {
              const double nux = std::abs(double(ix)-double(ccenx))/double(ccenx);
              const double val = grdsf(nux);
-             ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             //ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfx(ix) = val > itsSpheroidalWeightsCutoff ? val : 0.;
         }
         for (int iy=0; iy<cny; ++iy) {
              const double nuy = std::abs(double(iy)-double(cceny))/double(cceny);
              const double val = grdsf(nuy);
-             ccfy(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             //ccfy(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfy(iy) = val > itsSpheroidalWeightsCutoff ? val : 0.;
         }
+        // this isn't really needed unless itsSpheroidalWeightsCutoff==0. But shouldn't hurt
         if (itsInterp) {
           // The spheroidal is undefined and set to zero at nu=1, but that
           // is not the numerical limit. Estimate it from its neighbours.

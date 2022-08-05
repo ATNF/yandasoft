@@ -76,9 +76,13 @@ namespace askap
       ///        means the frequency axis is ignored
       /// @param frequencyDependent Frequency dependent gridding?
       /// @param spheroidalTaper Apply spheroidal taper to the A-function during gridding?
+      /// @param spheroidalTaper Apply spheroidal taper to the A-function during gridding?
+      /// @param spheroidalWeightsCutoff set weights to zero below when spheroidalTaper is
+      ///        below this cutoff
       /// @param name Name of table to save convolution function into
       /// @note cutoff parameter (after nwplanes) is missing, because it is not required
       /// for this gridder. We however want to have the same signatures for both mosaicing gridders.
+      /// @note same with the two spheroidal parameters
       AProjectWStackVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
           const double wmax, const int nwplanes, const double cutoff, const int overSample,
           const int maxSupport, const int limitSupport,
@@ -88,6 +92,7 @@ namespace askap
           const double freqTol = 1e-6,
           const bool frequencyDependent=true,
           const bool spheroidalTaper=false,
+          const double spheroidalWeightsCutoff = 0.0,
           const std::string& name=std::string(""));
 
       /// @brief copy constructor

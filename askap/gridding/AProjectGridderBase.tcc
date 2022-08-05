@@ -83,6 +83,7 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
   const int maxFields = parset.getInt32("maxfields", 1);
   const bool freqDep=parset.getBool("frequencydependent", true);
   const bool spheroidalTaper=parset.getBool("spheroidaltaper", false);
+  const double spheroidalWeightsCutoff=parset.getDouble("spheroidalweightscutoff", 0.0);
   const string tablename=parset.getString("tablename","");
   ASKAPLOG_INFO_STR(logger,"Gridding with Antenna Illumination projection");
   if (parset.isDefined("maxantennas")) {
@@ -108,7 +109,7 @@ boost::shared_ptr<GridderType> AProjectGridderBase::createAProjectGridder(const 
 
   boost::shared_ptr<GridderType> gridder(new GridderType(makeIllumination(parset),
                 wmax, nwplanes, cutoff, oversample, maxSupport, limitSupport, maxFeeds, maxFields,
-                pointingTol, paTol, freqTol, freqDep, spheroidalTaper, tablename));
+                pointingTol, paTol, freqTol, freqDep, spheroidalTaper, spheroidalWeightsCutoff, tablename));
   gridder->configureWSampling(parset);
   return gridder;
 }
