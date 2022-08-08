@@ -247,7 +247,7 @@ namespace askap
         ASKAPCHECK(!parset.isDefined("solver.Clean.threshold"),
                    "The use of the parameter solver.Clean.threshold is deprecated, use threshold.minorcycle instead");
 
-        string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
+        string algorithm=parset.getString("solver.Clean.algorithm","BasisfunctionMFS");
         casacore::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
 
         if (algorithm=="MultiScale") {
