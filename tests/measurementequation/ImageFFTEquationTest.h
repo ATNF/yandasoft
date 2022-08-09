@@ -210,7 +210,7 @@ namespace askap
         boost::shared_ptr<IBasicIllumination> illum(new DiskIllumination(12.0, 1.0));
 
         IVisGridder::ShPtr gridder=IVisGridder::ShPtr(new AWProjectVisGridder(illum,
-									      8000, 9, 1e-3, 8, 512, 0));
+                                          8000, 9, 1e-3, 8, 512, 0));
         p1.reset(new ImageFFTEquation(*params1, idi, gridder));
         p2.reset(new ImageFFTEquation(*params2, idi, gridder));
         p1->predict();

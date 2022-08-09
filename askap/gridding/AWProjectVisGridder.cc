@@ -84,12 +84,13 @@ AWProjectVisGridder::AWProjectVisGridder(const boost::shared_ptr<IBasicIlluminat
         const double cutoff, const int overSample,
         const int maxSupport, const int limitSupport,
         const int maxFeeds, const int maxFields, const double pointingTol,
-        const double paTol, const double freqTol,
-        const bool frequencyDependent, const std::string& name) :
+        const double paTol, const double freqTol, const bool frequencyDependent,
+        const bool spheroidalTaper, const double spheroidalWeightsCutoff, const std::string& name) :
         AProjectGridderBase(maxFeeds, maxFields, pointingTol, paTol, freqTol),
         WProjectVisGridder(wmax, nwplanes, cutoff, overSample, maxSupport, limitSupport, name),
-        itsReferenceFrequency(0.0), itsIllumination(illum),
-        itsFreqDep(frequencyDependent), itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
+        itsReferenceFrequency(0.0), itsIllumination(illum), itsFreqDep(frequencyDependent),
+        itsSpheroidalTaper(spheroidalTaper), itsSpheroidalWeightsCutoff(spheroidalWeightsCutoff),
+        itsMaxFeeds(maxFeeds), itsMaxFields(maxFields)
 {
     ASKAPDEBUGASSERT(itsIllumination);
     ASKAPCHECK(maxFeeds > 0, "Maximum number of feeds must be one or more");
@@ -108,6 +109,8 @@ AWProjectVisGridder::AWProjectVisGridder(const AWProjectVisGridder &other) :
         IVisGridder(other), AProjectGridderBase(other), WProjectVisGridder(other),
         itsReferenceFrequency(other.itsReferenceFrequency),
         itsIllumination(other.itsIllumination), itsFreqDep(other.itsFreqDep),
+        itsSpheroidalTaper(other.itsSpheroidalTaper),
+        itsSpheroidalWeightsCutoff(other.itsSpheroidalWeightsCutoff),
         itsMaxFeeds(other.itsMaxFeeds), itsMaxFields(other.itsMaxFields) {}
 
 /// Clone a copy of this Gridder
@@ -330,18 +333,27 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     const double ccellx = 1.0 / (double(qnx) * itsUVCellSize(0));
     const double ccelly = 1.0 / (double(qny) * itsUVCellSize(1));
 
-    /*
-    casacore::Vector<double> ccfx(nx);
-    casacore::Vector<double> ccfy(ny);
-    for (casacore::uInt ix = 0; ix < nx; ++ix) {
-        const double nux = std::abs(double(ix) - double(nx / 2)) / double(nx / 2);
-        ccfx(ix) = grdsf(nux); // /double(qnx);
+    casacore::Vector<double> ccfx;
+    casacore::Vector<double> ccfy;
+    if (itsSpheroidalTaper) {
+        // Include spheroidal for anti-aliasing and general kernel robustness
+        ccfx.resize(qnx);
+        ccfy.resize(qny);
+        for (casacore::uInt qix = 0; qix < qnx; ++qix) {
+            const double nux = std::abs(double(qix) - double(qnx / 2)) / double(qnx / 2);
+            ccfx(qix) = grdsf(nux);
+        }
+        for (casacore::uInt qiy = 0; qiy < qny; ++qiy) {
+            const double nuy = std::abs(double(qiy) - double(qny / 2)) / double(qny / 2);
+            ccfy(qiy) = grdsf(nuy);
+        }
+        if (itsInterp) {
+          // The spheroidal is undefined and set to zero at nu=1, but that
+          // is not the numerical limit. Estimate it from its neighbours.
+          interpolateEdgeValues(ccfx);
+          interpolateEdgeValues(ccfy);
+        }
     }
-    for (casacore::uInt iy = 0; iy < ny; ++iy) {
-        const double nuy = std::abs(double(iy) - double(ny / 2)) / double(ny / 2);
-        ccfy(iy) = grdsf(nuy); // /double(qny);
-    }
-    */
 
     UVPattern &pattern = uvPattern();
     casacore::Matrix<imtypeComplex> thisPlane = getCFBuffer();
@@ -384,17 +396,19 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                     for (int iy = 0; iy < int(ny); ++iy) {
                         const double y2 = casacore::square((double(iy) - double(ny) / 2) * ccelly);
+                        const int qiy = iy + int(qny)/2 - int(ny)/2;
 
                         for (int ix = 0; ix < int(nx); ++ix) {
                             const double x2 = casacore::square((double(ix) - double(nx) / 2) * ccellx);
+                            const int qix = ix + int(qnx)/2 - int(nx)/2;
                             const double r2 = x2 + y2;
 
-                            if (r2 < 1.0) {
+                            // The spheroidal is only defined in the qnx,qny region
+                            if ((r2 < 1.0) &&
+                                (!itsSpheroidalTaper || ((qix>=0) && (qix<qnx) && (qiy>=0) && (qiy<qny)))) {
                                 const double phase = w * (1.0 - sqrt(1.0 - r2));
-                                // grid correction is temporary disabled as otherwise the fluxes are overestimated
-                                // for polarised beams this should be J*J'
-                                const imtypeComplex wt = pattern(ix, iy) * conj(pattern(ix, iy));
-                                //*imtypeComplex(ccfx(ix)*ccfy(iy));
+                                const imtype taper = itsSpheroidalTaper ? ccfx(qix) * ccfy(qiy) : 1.0;
+                                const imtypeComplex wt = pattern(ix, iy) * conj(pattern(ix, iy)) * taper;
                                 // this ensures the oversampling is done
                                 thisPlane(ix, iy) = wt * imtypeComplex(cos(phase), -sin(phase));
                                 //thisPlane(ix, iy)=wt*imtypeComplex(cos(phase));
@@ -492,8 +506,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                     for (int fracu = 0; fracu < itsOverSample; fracu++) {
                         for (int fracv = 0; fracv < itsOverSample; fracv++) {
-                            const int plane = fracu + itsOverSample * (fracv + itsOverSample
-                                              * zIndex);
+                            const int plane = fracu + itsOverSample * (fracv + itsOverSample * zIndex);
                             ASKAPDEBUGASSERT(plane >= 0 && plane < int(itsConvFunc.size()));
                             if (isPCFGridder()) {
                                 itsConvFunc[plane].resize(3,3);
@@ -506,9 +519,9 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                             // Now cut out the inner part of the convolution function and
                             // insert it into the convolution function
-                            for (int iy = -support; iy < support+1; iy++) {
+                            for (int iy = -support; iy <= support; iy++) {
                                 const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + int(ny) / 2;
-                                for (int ix = -support; ix < support+1; ix++) {
+                                for (int ix = -support; ix <= support; ix++) {
                                     const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + int(nx) / 2;
                                     itsConvFunc[plane](ix + support, iy + support) = imtype(rescale) * thisPlane(kx, ky);
                                 }
@@ -522,6 +535,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                             ASKAPDEBUGASSERT(norm>0.);
                             if (norm>0.) {
                                 //itsConvFunc[plane]*=casacore::Complex(norm/thisPlaneNorm);
+                                itsConvFunc[plane] /= casacore::Complex(norm);
                             }
                             */
 
@@ -546,10 +560,8 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                                 itsMaxFeeds * currentField()));
                             for (int fracu = 0; fracu < itsOverSample; fracu++) {
                                 for (int fracv = 0; fracv < itsOverSample; fracv++) {
-                                    const int plane = fracu + itsOverSample * (fracv +
-                                        itsOverSample * zIndex);
-                                    const int refPlane = fracu + itsOverSample * (fracv +
-                                        itsOverSample * refzIndex);
+                                    const int plane = fracu + itsOverSample * (fracv + itsOverSample * zIndex);
+                                    const int refPlane = fracu + itsOverSample * (fracv + itsOverSample * refzIndex);
                                     itsConvFunc[plane].reference(itsConvFunc[refPlane]);
                                 }
                             }
@@ -619,22 +631,33 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
     const int ccenx = cnx / 2;
     const int cceny = cny / 2;
 
-    /*
-    // the following code is for grid-correction of the weight
-    casacore::Vector<double> ccfx(cnx);
-    casacore::Vector<double> ccfy(cny);
-    for (int ix=0; ix<cnx; ++ix) {
-         const double nux = std::abs(double(ix)-double(ccenx))/double(ccenx);
-         const double val = grdsf(nux);
-         ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+    casacore::Vector<double> ccfx;
+    casacore::Vector<double> ccfy;
+    if (itsSpheroidalTaper) {
+        // the spheroidal ccf needs to be removed from the weights before they are stored
+        // it will also be removed from the image in correctConvolution
+        ccfx.resize(cnx);
+        ccfy.resize(cny);
+        for (int ix=0; ix<cnx; ++ix) {
+             const double nux = std::abs(double(ix)-double(ccenx))/double(ccenx);
+             const double val = grdsf(nux);
+             //ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfx(ix) = val > itsSpheroidalWeightsCutoff ? val : 0.;
+        }
+        for (int iy=0; iy<cny; ++iy) {
+             const double nuy = std::abs(double(iy)-double(cceny))/double(cceny);
+             const double val = grdsf(nuy);
+             //ccfy(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfy(iy) = val > itsSpheroidalWeightsCutoff ? val : 0.;
+        }
+        // this isn't really needed unless itsSpheroidalWeightsCutoff==0. But shouldn't hurt
+        if (itsInterp) {
+          // The spheroidal is undefined and set to zero at nu=1, but that
+          // is not the numerical limit. Estimate it from its neighbours.
+          interpolateEdgeValues(ccfx);
+          interpolateEdgeValues(ccfy);
+        }
     }
-    for (int iy=0; iy<cny; ++iy) {
-         const double nuy = std::abs(double(iy)-double(cceny))/double(cceny);
-         const double val = grdsf(nuy);
-         ccfx(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
-    }
-    //
-    */
 
     /// This is the output array before sinc padding
     casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
@@ -680,8 +703,8 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
 
             const std::pair<int, int> cfOffset = getConvFuncOffset(iz);
 
-            for (int iy = -support; iy < +support; ++iy) {
-                for (int ix = -support; ix < +support; ++ix) {
+            for (int iy = -support; iy <= support; ++iy) {
+                for (int ix = -support; ix <= support; ++ix) {
                     const int xPos = ix + ccenx + cfOffset.first;
                     const int yPos = iy + cceny + cfOffset.second;
 
@@ -704,15 +727,30 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
                     ASKAPCHECK(!std::isnan(wt), "sumOfWeights returns NaN for row=" << iz <<
                                " pol=" << pol << " chan=" << chan);
 
-                    for (int ix = 0; ix < cnx; ix++) {
-                        ip(0) = ix;
-
-                        for (int iy = 0; iy < cny; iy++) {
-                            ip(1) = iy;
-                            const imtypeComplex val = thisPlane(ix, iy);
-                            cOut(ip) += double(wt) * casacore::real(val * conj(val));//*ccfx(ix)*ccfy(iy);
+                    if (itsSpheroidalTaper) {
+                        // if itsConvFunc has an additional taper, remove it before updating the weights.
+                        for (int ix = 0; ix < cnx; ix++) {
+                            ip(0) = ix;
+                            for (int iy = 0; iy < cny; iy++) {
+                                ip(1) = iy;
+                                imtype taper = ccfx(ix) * ccfy(iy);
+                                const imtypeComplex val = taper > 0 ? thisPlane(ix, iy) / taper : 0.;
+                                cOut(ip) += double(wt) * casacore::real(val * conj(val));
+                            }
                         }
                     }
+                    else {
+                        // if itsConvFunc has an additional taper, remove it before updating the weights.
+                        for (int ix = 0; ix < cnx; ix++) {
+                            ip(0) = ix;
+                            for (int iy = 0; iy < cny; iy++) {
+                                ip(1) = iy;
+                                const imtypeComplex val = thisPlane(ix, iy);
+                                cOut(ip) += double(wt) * casacore::real(val * conj(val));
+                            }
+                        }
+                    }
+
                 }
             }
         }
@@ -729,9 +767,13 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
 
 /// Correct for gridding convolution function
 /// @param image image to be corrected
-void AWProjectVisGridder::correctConvolution(casacore::Array<imtype>& /*image*/)
+void AWProjectVisGridder::correctConvolution(casacore::Array<imtype>& image)
 {
-    //SphFuncVisGridder::correctConvolution(image);
+
+    // if there are any kernel factors that are not A or W terms, remove them now
+    if (itsSpheroidalTaper) {
+        SphFuncVisGridder::correctConvolution(image);
+    }
 
     // experiments with grid-correction, I didn't manage to bring this code
     // into working order so far, so it is commented out (and grid-correction is
