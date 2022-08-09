@@ -68,10 +68,8 @@ AProjectWStackVisGridder::AProjectWStackVisGridder(const boost::shared_ptr<IBasi
 {
     ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport>0, "Maximum support must be greater than 0")
+    ASKAPCHECK(!itsSpheroidalTaper, "Spheroidal taper not currently availble for AProjectWStack");
     ASKAPDEBUGASSERT(itsIllumination);
-    if (itsSpheroidalTaper) {
-        ASKAPLOG_WARN_STR(logger, "Spheroidal taper not currently availble for AProjectWStack");
-    }
     itsSupport=0;
     itsOverSample=overSample;
     itsMaxSupport=maxSupport;
