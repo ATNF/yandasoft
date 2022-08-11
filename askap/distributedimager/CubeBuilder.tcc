@@ -95,41 +95,34 @@ CubeBuilder<T>::createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
     const vector<string> cellSizeVector = parset.getStringVector("Images.cellsize");
     // Get the image shape (I get nx and ny passed to me so I probably dont need this)
     const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
+    ASKAPASSERT(imageShapeVector.size() >= 2u);
 
 
     const Quantum<Double> xcellsize = asQuantity(cellSizeVector.at(0), "arcsec");
     const Quantum<Double> ycellsize = asQuantity(cellSizeVector.at(1), "arcsec");
     // UV cellsize is probably
-    casacore::Vector<casacore::Double> UVCellSize;
-    UVCellSize.resize(2);
+    casacore::Vector<casacore::Double> UVCellSize(2);
     ASKAPDEBUGASSERT(imageShapeVector.size()>=2);
     UVCellSize[0] = 1./(xcellsize.getValue("rad")*(imageShapeVector[0]));
     UVCellSize[1] = 1./(ycellsize.getValue("rad")*(imageShapeVector[1]));
 
     // Direction Coordinate - which is now UV in metres - and now Linear
     {
-        std::vector<std::string> units;
-        units.resize(2);
-        units[0] = "m";
-        units[1] = "m";
+        casacore::Vector<casacore::String> units(2, casacore::String("m"));
 
-        std::vector<std::string> names;
-        names.resize(2);
+        casacore::Vector<casacore::String> names(2);
         names[0] = "u";
         names[1] = "v";
 
-        Matrix<Double> xform(2, 2);
-        xform = 0.0;
+        casacore::Matrix<casacore::Double> xform(2, 2, 0.);
         xform.diagonal() = 1.0;
 
-        std::vector<Double> crpix;
-        crpix.resize(2);
-        std::vector<Double> crval;
-        crval.resize(2);
+        casacore::Vector<casacore::Double> crpix(2);
+        casacore::Vector<casacore::Double> crval(2, 0.);
 
         for (size_t dim = 0; dim < 2; ++dim) {
+            // note from MV: this way it will be an integer division. Do we want that?
             crpix[dim] = imageShapeVector[dim]/2;
-            crval[dim] = 0.0;
         }
 
         LinearCoordinate lc(names, units, crval, UVCellSize,xform,crpix);

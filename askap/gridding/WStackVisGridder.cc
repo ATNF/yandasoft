@@ -312,7 +312,7 @@ namespace askap
         itsModelIsEmpty=false;
         ASKAPLOG_INFO_STR(logger, "Filling " << nWPlanes()
                            << " planes of W stack with model");
-        casacore::Array<imtype> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,static_cast<imtype>(0.));
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
         for (int i=0; i<nWPlanes(); ++i)

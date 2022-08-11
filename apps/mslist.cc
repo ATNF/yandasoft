@@ -148,7 +148,7 @@ MSSummary::~MSSummary ()
 //
 // Retrieve number of rows
 //
-Int MSSummary::nrow () const
+Int64 MSSummary::nrow () const
 {
     return _msmd->nRows();
 }
@@ -361,7 +361,7 @@ void MSSummary::listMain (LogIO& os, Record& outRec, Bool verbose,
     std::shared_ptr<const std::map<SubScanKey, MSMetaData::SubScanProperties> > ssprops
         = _msmd->getSubScanProperties(True);
     std::shared_ptr<const std::map<SubScanKey, std::set<String> > > ssToIntents = _msmd->getSubScanToIntentsMap();
-    std::shared_ptr<const map<SubScanKey, uInt> > nrowMap = _msmd->getNRowMap(MSMetaData::BOTH);
+    std::shared_ptr<const map<SubScanKey, casacore::rownr_t> > nrowMap = _msmd->getNRowMap(MSMetaData::BOTH);
     for (; iter != end; ++iter) {
         Int obsid = iter->obsID;
         Int arrid = iter->arrayID;
@@ -860,7 +860,7 @@ void MSSummary::listAntenna (LogIO& os, Bool verbose) const
         os << "z";
         os << endl;
         vector<MPosition> antPos = _msmd->getAntennaPositions();
-        Bool posIsITRF = antPos[0].type() != MPosition::ITRF;
+        Bool posIsITRF = antPos[0].getRef().getType() != MPosition::ITRF;
         vector<QVD> offsets = _msmd->getAntennaOffsets();
         QVD diameters = _msmd->getAntennaDiameters();
         std::set<Int>::const_iterator iter = antIds.begin();
@@ -1419,7 +1419,7 @@ void MSSummary::getSpectralWindowInfo(Record& outRec) const
     MSRange msr(*pMS);
 
     Vector<Int> ddId = msr.range(MSS::DATA_DESC_ID).asArrayInt(RecordFieldId(0));
-    Vector<uInt> uddId(ddId.nelements());
+    Vector<casacore::rownr_t> uddId(ddId.nelements());
 
     for (uInt i=0; i<ddId.nelements(); i++) uddId(i)=ddId(i);
     // now get the corresponding spectral windows and pol setups

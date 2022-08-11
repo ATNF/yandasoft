@@ -47,7 +47,7 @@
 using namespace askap;
 
 template<typename T>
-void copyArrayColumn(casa::Table &tab, const std::string &name, const casa::uInt nOrigRows)
+void copyArrayColumn(casa::Table &tab, const std::string &name, const casacore::rownr_t nOrigRows)
 {
   const casa::TableDesc td = tab.actualTableDesc();
   ASKAPASSERT(tab.nrow() == 2*nOrigRows);
@@ -55,8 +55,8 @@ void copyArrayColumn(casa::Table &tab, const std::string &name, const casa::uInt
   ASKAPASSERT(cd.isArray());
   casa::ArrayColumn<T> col(tab, name);
   casa::Array<T> buf;
-  for (casa::uInt row=0; row<nOrigRows; ++row) {       
-       col.get(row,buf,casa::True);
+  for (casacore::rownr_t row=0; row<nOrigRows; ++row) {       
+       col.get(row,buf,casacore::True);
        col.put(nOrigRows + row, buf);
   }  
 }
@@ -72,7 +72,7 @@ try {
   }
   casa::Table mytab(argv[1],casa::Table::Update);
   casa::TableDesc td = mytab.actualTableDesc();
-  const casa::uInt nOrigRows = mytab.nrow();
+  const casacore::rownr_t nOrigRows = mytab.nrow();
   std::cout<<"Table has "<<nOrigRows<<" rows and "<<td.ncolumn()<<" columns"<<std::endl;
   casa::Vector<casa::String> colList = td.columnNames();
   mytab.addRow(nOrigRows);
@@ -107,7 +107,7 @@ try {
             std::cout<<"default processing..."<<std::endl;
             incol.attach(mytab,col);
             outcol.attach(mytab,col);
-            for (casa::uInt row = 0; row<nOrigRows; ++row) {
+            for (casacore::rownr_t row = 0; row<nOrigRows; ++row) {
                 outcol.put(nOrigRows + row, incol, row);
             }       
          }
@@ -118,7 +118,7 @@ try {
   casa::ArrayColumn<casa::Complex> dataCol(mytab,"DATA");
   casa::Array<double> dBuf;
   casa::Array<casa::Complex> cBuf;
-  for (casa::uInt row=0; row<nOrigRows; ++row) {       
+  for (casacore::rownr_t row=0; row<nOrigRows; ++row) {       
        uvwCol.get(row,dBuf,casa::True);
        uvwCol.put(nOrigRows + row, -1.*dBuf);
        dataCol.get(row,cBuf,casa::True);

@@ -1303,7 +1303,7 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
 
     if (casacore::max(casacore::abs(in))>0.0) {
         itsModelIsEmpty=false;
-        casacore::Array<imtype> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,static_cast<imtype>(0.));
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
         casacore::Array<imtypeComplex> scratch2(itsGrid[0].shape());

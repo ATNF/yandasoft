@@ -43,6 +43,7 @@
 #include <askap/measurementequation/SynthesisParamsHelper.h>
 #include <casacore/scimath/Fitting/LinearFitSVD.h>
 
+#include <casacore/casa/Arrays/ArrayMath.h>
 
 // logging stuff
 #include <askap/askap_synthesis.h>
@@ -51,6 +52,7 @@ ASKAP_LOGGER(logger, ".parallel");
 
 #include <casacore/casa/OS/Timer.h>
 
+#include <vector>
 
 using namespace askap;
 using namespace askap::synthesis;
@@ -192,7 +194,7 @@ void ContSubtractParallel::modelSpectrum(casa::Vector<casa::Float> & model,
     // we are doing the fitting in channel bins
     if (itsWidth == 0) itsWidth = nChan;
     casa::Vector<casa::Float> y(itsWidth);
-    casa::Block<casa::Float> tmp;
+    std::vector<casacore::Float> tmp;
     uint lastDof = nParams;
     for (int binStart=-itsOffset; binStart<nChan; binStart+=itsWidth) {
         int start = max(0,binStart);
@@ -214,7 +216,6 @@ void ContSubtractParallel::modelSpectrum(casa::Vector<casa::Float> & model,
                     casa::Float q25 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.25f, casa::False, casa::True);
                     casa::Float q50 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.50f, casa::False, casa::True);
                     casa::Float q75 = casa::fractile(y(casa::Slice(0,n)), tmp, 0.75f, casa::False, casa::True);
-                    // if (tmp.nelements()>0) casa::cerr<<"tmp was used!"<<casa::endl;
                     casa::Float sigma = (q75-q25)/1.35; // robust sigma estimate
                     int count = 0;
                     // flag outliers
