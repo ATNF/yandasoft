@@ -900,7 +900,8 @@ namespace askap
 
         if (itsRestore && postfix == "") {
             // add a second pass if a separate restore preconditioner is defined
-            LOFAR::ParameterSet tmpset = parset();
+            // make a deep copy of the parset
+            LOFAR::ParameterSet tmpset = parset().makeSubset("");
             string restore_suffix;
             uint n_passes = 1;
             // if extra passes are required, save anything that is changed so it can be reset
@@ -915,7 +916,13 @@ namespace askap
                 map<string,int> facetmap;
                 SynthesisParamsHelper::listFacets(names, facetmap);
                 for (map<string,int>::const_iterator ci=facetmap.begin();ci!=facetmap.end();++ci) {
-                    const string name="image"+ci->first;
+                    string name;
+                    if (extraOSfactor) {
+                     name = "fullres"+ci->first;
+                    }
+                    else {
+                     name = "image"+ci->first;
+                    }
                     if ((ci->second != 1) && !itsModel->has(name)) {
                         // this is a multi-facet image, add a fixed parameter representing the whole image
                         ASKAPLOG_INFO_STR(logger, "Adding a fixed parameter "<<name<<
@@ -941,7 +948,7 @@ namespace askap
                     // replace any existing preconditioner params with the restore.* set
                     tmpset.subtractSubset("preconditioner.");
                     tmpset.adoptCollection(parset().makeSubset("restore.preconditioner.","preconditioner."));
-                    restore_suffix = ".alt";
+                    restore_suffix = "."+parset().getString("restore.preconditioner.suffix","alt");
                     // reset image models to be free parameters with their initial values
                     for (std::map<string, boost::shared_ptr<casacore::ImageInterface<float> > >::iterator
                         it=saved_models.begin(); it!=saved_models.end(); ++it)
