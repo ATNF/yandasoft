@@ -145,13 +145,13 @@ static void merge(const LOFAR::ParameterSet &parset) {
         accumulator.setOutputParameters(inShapeVec, inCoordSysVec);
 
         // set up the output pixel arrays
-        Array<float> outPix(accumulator.outShape(),0.);
-        Array<float> outWgtPix(accumulator.outShape(),0.);
-        Array<bool> outMask(accumulator.outShape(),0.);
+        Array<float> outPix(accumulator.outShape(),0.f);
+        Array<float> outWgtPix(accumulator.outShape(),0.f);
+        Array<bool> outMask(accumulator.outShape(),false);
 
         Array<float> outSenPix;
         if (accumulator.doSensitivity()) {
-            outSenPix = Array<float>(accumulator.outShape(),0.);
+            outSenPix = Array<float>(accumulator.outShape(),0.f);
         }
 
         // set up an indexing vector for the arrays

@@ -79,7 +79,7 @@ public:
      // MV: this test is not about DeconvolverBase, but rather about assumptions
      // about casacore methods used throughout the deconvolve package which were not documented well
      IPosition shape(2,2,3);
-     Array<Float> realArr(shape, 1.);
+     Array<Float> realArr(shape, 1.f);
      Array<Complex> complexArr(shape, Complex(2.,3.));
      CPPUNIT_ASSERT(realArr.contiguousStorage());
      CPPUNIT_ASSERT(complexArr.contiguousStorage());
@@ -108,7 +108,7 @@ public:
      }
 
      // special array with twice as many elements on the first axis
-     Array<Float> realArr2(IPosition(2,shape(0)*2, shape(1)), 5.);
+     Array<Float> realArr2(IPosition(2,shape(0)*2, shape(1)), 5.f);
      int index = 0;
      for (Array<Float>::iterator it = realArr2.begin(); it != realArr2.end(); ++it, ++index) {
           CPPUNIT_ASSERT_DOUBLES_EQUAL(5., *it, 1e-10);

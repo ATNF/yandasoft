@@ -60,7 +60,7 @@ ASKAP_LOGGER(logger, ".simulator");
 #include <casacore/casa/Arrays/Cube.h>
 #include <casacore/casa/Arrays/MatrixMath.h>
 #include <casacore/casa/Arrays/ArrayLogical.h>
-#include <casacore/casa/Arrays/ArrayIO.h>
+#include <casacore/casa/IO/ArrayIO.h>
 #include <casacore/casa/Arrays/Slice.h>
 #include <casacore/measures/Measures/Stokes.h>
 #include <casacore/measures/Measures/MeasFrame.h>

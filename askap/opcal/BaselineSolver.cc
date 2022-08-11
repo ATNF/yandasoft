@@ -222,8 +222,8 @@ void BaselineSolver::process(const ScanStats &scans, const casacore::Matrix<Gene
       std::ofstream os("corrections.dat");
       for (std::vector<std::string>::const_iterator ci=antennas.begin(); ci != antennas.end(); ++ci) {
            const std::string parsetKey = "antenna."+*ci+".location.itrf";
-           const casacore::Vector<double> oldXYZ = fcmParset.isDefined(parsetKey) ? 
-                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey);
+           const casacore::Vector<double> oldXYZ = casacore::Vector<double>(fcmParset.isDefined(parsetKey) ? 
+                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey));
            ASKAPCHECK(oldXYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
            std::map<std::string, casacore::uInt>::const_iterator mapIt = antmap.find(*ci);
            if (mapIt == antmap.end()) { 
@@ -643,15 +643,15 @@ void BaselineSolver::solveForRateDependentPhase(const ScanStats &scans, const ca
   const std::map<casa::uInt,std::string>::const_iterator refAntIt = antmap.find(itsRefAnt);
   ASKAPCHECK(refAntIt != antmap.end(), "Reference antenna is not found");
   const std::string refAntKey = "antenna."+refAntIt->second+".location.itrf";
-  const casa::Vector<double> refXYZ = fcmParset.isDefined(refAntKey) ? 
-                   fcmParset.getDoubleVector(refAntKey) : fcmParset.getDoubleVector("common."+refAntKey);
+  const casacore::Vector<double> refXYZ = casacore::Vector<double>(fcmParset.isDefined(refAntKey) ? 
+                   fcmParset.getDoubleVector(refAntKey) : fcmParset.getDoubleVector("common."+refAntKey));
   ASKAPCHECK(refXYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
   const double siderealRate = casa::C::_2pi / 86400. / (1. - 1./365.25);
   
   for (casa::uInt ant=0; ant < caldata.ncolumn(); ++ant) {
        const std::string parsetKey = "antenna."+antmap[ant]+".location.itrf";
-       const casa::Vector<double> XYZ = fcmParset.isDefined(parsetKey) ? 
-                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey);
+       const casacore::Vector<double> XYZ = casacore::Vector<double>(fcmParset.isDefined(parsetKey) ? 
+                        fcmParset.getDoubleVector(parsetKey) : fcmParset.getDoubleVector("common."+parsetKey));
        ASKAPCHECK(XYZ.nelements() == 3, "Expect exactly 3 elements for antenna.ant??.location.itrf key");
        ASKAPLOG_INFO_STR(logger, "Antenna "<<ant<<" is "<<idMap[ant]);
        if (ant == itsRefAnt) {

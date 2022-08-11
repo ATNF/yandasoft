@@ -116,7 +116,7 @@ void ImageCleaningSolver::setPaddingFactor(float padding)
 /// @return padded image converted to floats
 casacore::Array<float> ImageCleaningSolver::padImage(const casacore::Array<imtype> &image) const
 {
-  casacore::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.);
+  casacore::Array<float> result(scimath::PaddingUtils::paddedShape(image.shape(),paddingFactor()),0.f);
   casacore::Array<float> subImage = scimath::PaddingUtils::extract(result,paddingFactor());
   #ifdef ASKAP_FLOAT_IMAGE_PARAMS
   subImage = image;
@@ -150,7 +150,7 @@ casacore::Vector<imtype> ImageCleaningSolver::padDiagonal(const casacore::Array<
   if (scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()) == diag.shape()) {
       return casacore::Vector<imtype>(diag.reform(casacore::IPosition(1,diag.nelements())));
   }
-  casacore::Array<imtype> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),0.);
+  casacore::Array<imtype> result(scimath::PaddingUtils::paddedShape(diag.shape(),paddingFactor()),static_cast<imtype>(0.));
   scimath::PaddingUtils::extract(result,paddingFactor()) = diag;
   return casacore::Vector<imtype>(result.reform(casacore::IPosition(1,result.nelements())));
 }

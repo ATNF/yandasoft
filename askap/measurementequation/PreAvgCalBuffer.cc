@@ -40,6 +40,8 @@
 #include <askap/dataaccess/MemBufferDataAccessor.h>
 #include <askap/scimath/utils/PolConverter.h>
 
+#include <casacore/casa/BasicMath.h>
+
 
 using namespace askap;
 using namespace askap::synthesis;
