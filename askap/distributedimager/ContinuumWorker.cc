@@ -1891,6 +1891,7 @@ void ContinuumWorker::calculateImageStats(boost::shared_ptr<askap::utils::StatsA
 void ContinuumWorker::writeCubeStatistics()
 {
   const std::string imageType = itsParset.getString("imagetype","casa");
+  const std::string statsFile = itsParset.getString("outputStats","");
 
   // get one of the ranks that create the cube
   std::list<int> creators = itsComms.getCubeCreators();
@@ -1917,7 +1918,10 @@ void ContinuumWorker::writeCubeStatistics()
             itsRestoredStatsAndMask->receiveStats(excludedRanks);
           }
           ASKAPLOG_INFO_STR(logger,"Writing statistic to restored image: " << fullFilename);
-          itsRestoredStatsAndMask->writeStatsToFile("./imgstats.txt");
+          if ( statsFile != "" ) {
+            const std::string restoredStatsFile = std::string("Restored_") + statsFile;
+            itsRestoredStatsAndMask->writeStatsToFile(restoredStatsFile);
+          }
           itsRestoredStatsAndMask->writeStatsToImageTable(fullFilename);
         } else {
             ASKAPLOG_INFO_STR(logger, "itsRestoredStatsAndMask of statsCollectorRank: " << statsCollectorRank << " is null");
@@ -1951,7 +1955,10 @@ void ContinuumWorker::writeCubeStatistics()
             std::set<unsigned int> excludedRanks {0,statsCollectorRank};
             itsResidualStatsAndMask->receiveStats(excludedRanks);
           }
-          itsResidualStatsAndMask->writeStatsToFile("./imgstats_residual.txt");
+          if ( statsFile != "" ) {
+            const std::string residualStatsFile = std::string("Residual_") + statsFile;
+            itsResidualStatsAndMask->writeStatsToFile(residualStatsFile);
+          }
           ASKAPLOG_INFO_STR(logger,"Writing statistic to residual image: " << fullFilename);
           itsResidualStatsAndMask->writeStatsToImageTable(fullFilename);
         }

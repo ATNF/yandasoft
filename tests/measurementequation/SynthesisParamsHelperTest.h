@@ -240,9 +240,9 @@ namespace askap
            casacore::IPosition shape = params.shape("psf.testsrc");
            CPPUNIT_ASSERT(shape.nonDegenerate().nelements() == 2);
            CPPUNIT_ASSERT(shape[0] == shape[1]);
-           casacore::Array<float> dirty(shape,0.);
-           casacore::Array<float> psfArray(shape,0.);
-           casacore::Array<float> pcfArray(shape,0.);
+           casacore::Array<float> dirty(shape,0.f);
+           casacore::Array<float> psfArray(shape,0.f);
+           casacore::Array<float> pcfArray(shape,0.f);
            casacore::Matrix<float> psf(psfArray.nonDegenerate());
            casacore::Matrix<float> pcf(pcfArray.nonDegenerate());
            psf(shape[0]/2,shape[1]/2) = 1.;
@@ -276,7 +276,7 @@ namespace askap
 
         void testFitBeam() {
            // test of beam fitting in some degenerate case found in real ops
-           casacore::Matrix<imtype> inArr(5,5,0.);
+           casacore::Matrix<imtype> inArr(5,5,static_cast<imtype>(0.));
            inArr(1,1) = 0.127558;
            inArr(2,1) = 0.356727;
            inArr(3,1) = 0.0656468;

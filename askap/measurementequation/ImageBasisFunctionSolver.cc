@@ -78,14 +78,15 @@ namespace askap
       itsMonitor = boost::shared_ptr<DeconvolverMonitor<Float> >(new DeconvolverMonitor<Float>());
 
       // Make the basis function
-      std::vector<float> defaultScales(3);
+      casacore::Vector<float> defaultScales(3);
       defaultScales[0]=0.0;
       defaultScales[1]=10.0;
       defaultScales[2]=30.0;
+
       itsBasisFunction=BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(defaultScales));
     }
 
-    ImageBasisFunctionSolver::ImageBasisFunctionSolver(casacore::Vector<float>& scales)
+    ImageBasisFunctionSolver::ImageBasisFunctionSolver(const casacore::Vector<float>& scales)
     {
       // Now set up controller
       itsControl = boost::shared_ptr<DeconvolverControl<Float> >(new DeconvolverControl<Float>());

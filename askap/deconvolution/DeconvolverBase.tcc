@@ -158,13 +158,13 @@ namespace askap {
             itsDM->configure(parset);
 
             // Get the beam information
-            const casacore::Vector<float> beam = parset.getFloatVector("beam");
-            ASKAPCHECK(beam.size() == 3, "Need three elements for beam. You have " << beam);
-            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam(0) <<
-                              " x " << beam(1) << " pixels at position angle " << beam(2) << " degrees");
-            itsBMaj = beam(0);
-            itsBMin = beam(1);
-            itsBPa = beam(2);
+            const std::vector<float> beam = parset.getFloatVector("beam");
+            ASKAPCHECK(beam.size() == 3u, "Need three elements for beam. You have " << beam);
+            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam[0] <<
+                              " x " << beam[1] << " pixels at position angle " << beam[2] << " degrees");
+            itsBMaj = beam[0];
+            itsBMin = beam[1];
+            itsBPa = beam[2];
         }
 
         template<class T, class FT>
@@ -343,8 +343,11 @@ namespace askap {
             // (support of which has been removed from the FFT wrapper a while back, but is only apparent now
             // when we need a more rigid interface with the new wrapper). So I am changing Array to Matrix and
             // it will throw exception if we ever encounter extra dimensions
-            Matrix<FT> xfr(psf(0).shape(), ArrayInitPolicies::NO_INIT);
-            Matrix<FT> work(model(0).shape(), ArrayInitPolicies::NO_INIT);
+            //
+            // uninitialized construction doesn't work for complex type any more in casacore-3.4
+            // default constructor of complex will be called for each element
+            Matrix<FT> xfr(psf(0).shape());
+            Matrix<FT> work(model(0).shape());
 
             // Don't reorder harmonics as with the original wrapper (hence, pass false to the wrapper), it seems possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space

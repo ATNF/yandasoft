@@ -54,12 +54,12 @@
 #ifdef USE_OPENACC
 template<class T>
 class ACCManager {
-    
+
     public:
-    
+
         ACCManager();
         ~ACCManager();
-        
+
         void CopyToDevice();
         void InitMask(int base);
         void UpdateMask(int base);
@@ -75,13 +75,13 @@ class ACCManager {
         uInt64 *residuals;
         uInt64 *masks;
         T** coefficients;
-        
+
         T* maskToUse;
         T* weight;
 
         Bool * deleteResiduals;
         Bool * deleteMasks;
-        Bool * deleteCoefficients; 
+        Bool * deleteCoefficients;
 };
 #endif // USE_OPENACC
 
@@ -220,7 +220,7 @@ namespace askap {
 
                 /// Long vector of PSFs
                 casacore::Vector<casacore::Array<T> > itsPsfLongVec;
-                
+
                 /// Residual images convolved with basis functions, [nx,ny][nterms][nbases]
                 casacore::Vector<casacore::Vector<casacore::Array<T> > > itsResidualBasis;
 

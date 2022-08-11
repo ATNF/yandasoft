@@ -48,18 +48,19 @@ namespace askap {
 /// @details shares the same format as csimulator feed definition. This is needed to support ASKAP BETA,
 ///    which initially uses the same image centre for all beams, leaving beam offsets unspecified.
 ///    Therefore, this information has to be supplied by other means. Copied from testlinmos.
-/// @param[in] const LOFAR::ParameterSet &parset : parset containing spacing and offset parameters
-/// @param[in] const Vector<std::string> beamNames : which offsets to get from the parset
-/// @param[in] MVDirection centre : the pointing centre, which all offsets are relative to
-/// @return Vector<MVDirection> : a MVDirection for each name in beamNames
+/// @param[in] parset parset containing spacing and offset parameters
+/// @param[in] beamNames which offsets to get from the parset
+/// @param[in] centre the pointing centre, which all offsets are relative to
+/// @return a MVDirection for each name in beamNames
 Vector<MVDirection> loadBeamOffsets(const LOFAR::ParameterSet &parset,
-                                    const Vector<std::string> beamNames,
+                                    const std::vector<std::string> &beamNames,
                                     MVDirection centre);
+
 /// @brief helper method to get beam centres from parset and/or image metadata
 /// @details separate from loadParset to allow metadata to be read from input images
-/// @param[in] const LOFAR::ParameterSet &parset: linmos parset
-/// @param[in] const accessors::IImageAccess &iacc: image accessor
-/// @param[in] const string outImgName: current mosaic name
+/// @param[in] parset linmos parset
+/// @param[in] iacc image accessor
+/// @param[in] outImgName current mosaic name
 /// @return bool true=success, false=fail
 Vector<MVDirection> loadBeamCentres(const LOFAR::ParameterSet &parset,
                                     const accessors::IImageAccess<casacore::Float> &iacc,

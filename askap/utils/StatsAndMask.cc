@@ -572,7 +572,8 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
                                           const LOFAR::ParameterSet& parset)
 {
     ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable using static method. imgName: " << imgName);
-    const bool singleoutputfile = parset.getBool("singleoutputfile", false);
+    //const bool singleoutputfile = parset.getBool("singleoutputfile", false);
+    const std::string statsFile = parset.getString("outputStats","");
     const bool calcstats = parset.getBool("calcstats", false);
     if ( !calcstats ) {
         ASKAPLOG_INFO_STR(logger,"calcstats param is false - StatsAndMask is not used");
@@ -599,5 +600,8 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
             stats.calculate(imgName,chan,imagePerPlane);
         }
         stats.writeStatsToImageTable(imgName);
+        if ( statsFile != "" ) {
+           stats.writeStatsToFile(imgName+"_"+statsFile); 
+        }
     }
 }

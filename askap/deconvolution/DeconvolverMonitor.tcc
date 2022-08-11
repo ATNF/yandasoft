@@ -52,18 +52,11 @@ namespace askap {
         template<class T>
         void DeconvolverMonitor<T>::monitor(const DeconvolverState<T>& ds)
         {
-            if (itsVerbose) {
+            if (itsVerbose || (ds.currentIter() % itsLogEvery) == 0) {
                 ASKAPLOG_INFO_STR(decmonlogger, "Iteration " << ds.currentIter()
                                       << ", Peak residual " << ds.peakResidual()
                                       << ", Objective function " << ds.objectiveFunction()
                                       << ", Total flux " << ds.totalFlux());
-            } else {
-                if ((ds.currentIter() % itsLogEvery) == 0) {
-                    ASKAPLOG_INFO_STR(decmonlogger, "Iteration " << ds.currentIter()
-                                          << ", Peak residual " << ds.peakResidual()
-                                          << ", Objective function " << ds.objectiveFunction()
-                                          << ", Total flux " << ds.totalFlux());
-                }
             }
         }
 

@@ -88,15 +88,18 @@ namespace askap
 	defaultScales[0]=0.0;
 	defaultScales[1]=2.0;
 	defaultScales[2]=4.0;
-	defaultScales[2]=8.0;
-	defaultScales[2]=16.0;
-	defaultScales[2]=32.0;
+	defaultScales[3]=8.0;
+	defaultScales[4]=16.0;
+	defaultScales[5]=32.0;
 	std::vector<float> scales=parset.getFloatVector("scales", defaultScales);
 
 	ASKAPLOG_INFO_STR(decfistalogger, "Constructing Multiscale basis function with scales " << scales);
         Bool orthogonal=parset.getBool("orthogonal", "false");
 
-	itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
+        // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+        // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse 
+	itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<casacore::Float>(scales),
                                                                                           orthogonal));
       }
     }

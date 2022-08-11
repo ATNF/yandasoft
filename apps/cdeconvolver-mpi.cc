@@ -127,7 +127,7 @@ class CdeconvolverApp : public askap::Application
             return std::make_pair(first_chan, num_chans);
         }
 
-        virtual int run(int argc, char* argv[])
+        virtual int run(int argc, char* argv[]) override
         {
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
             try {
