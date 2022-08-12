@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-set (VERSION "1.6.1")
+set (VERSION "1.6.2")
 project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
 
 # ASKAP Integration (askapsoft)
