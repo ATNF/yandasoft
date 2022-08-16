@@ -63,6 +63,8 @@ robottests:
   script:
     - export CDIR=${PWD}
     - cd tests/data/simulation/synthregression
+    - which cimager
+    - which imgstat
     - python -m robot synthregression.robot
   artifacts:
     paths:
