@@ -105,6 +105,9 @@ Cimager.gridder.AWProject.blockage              = 2m
 Cimager.gridder.AWProject.maxfeeds              = 1
 Cimager.gridder.AWProject.maxsupport       = 1024
 Cimager.gridder.AWProject.frequencydependent     = false
+# enable antialiasing filter, this fixes position of the weights peak (see AXA-1996)
+Cimager.gridder.AWProject.spheroidaltaper = true
+Cimager.gridder.AWProject.spheroidalweightscutoff = 0.02
 
 #
 # Use a multiscale Clean solver
