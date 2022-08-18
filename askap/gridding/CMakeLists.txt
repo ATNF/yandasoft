@@ -27,6 +27,7 @@ VisWeightsMultiFrequency.cc
 WDependentGridderBase.cc
 WProjectVisGridder.cc
 WStackVisGridder.cc
+MPIWProjectVisGridder.cc
 )
 
 install (FILES
@@ -64,6 +65,7 @@ VisWeightsMultiFrequency.h
 WDependentGridderBase.h
 WProjectVisGridder.h
 WStackVisGridder.h
+MPIWProjectVisGridder.h
 DESTINATION include/askap/gridding
 )
 
