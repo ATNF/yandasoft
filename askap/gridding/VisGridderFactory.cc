@@ -38,6 +38,7 @@ ASKAP_LOGGER(logger, ".gridding.visgridderfactory");
 #include <askap/gridding/BoxVisGridder.h>
 #include <askap/gridding/SphFuncVisGridder.h>
 #include <askap/gridding/WProjectVisGridder.h>
+#include <askap/gridding/MPIWProjectVisGridder.h>
 #include <askap/gridding/AltWProjectVisGridder.h>
 #include <askap/gridding/AWProjectVisGridder.h>
 #include <askap/gridding/WStackVisGridder.h>
@@ -65,8 +66,7 @@ namespace synthesis {
     theirRegistry[name] = creatorFunc;
   }
 
-  IVisGridder::ShPtr VisGridderFactory::createGridder (const std::string& name,
-                                    const LOFAR::ParameterSet& parset)
+  IVisGridder::ShPtr VisGridderFactory::createGridder (const std::string& name, const LOFAR::ParameterSet& parset)
   {
     std::map<std::string,GridderCreator*>::const_iterator it = theirRegistry.find (name);
     if (it == theirRegistry.end()) {
@@ -109,11 +109,13 @@ namespace synthesis {
   // Currently the standard gridders are still handled by this function.
   // In the (near) future it should be done by putting creator functions
   // for these gridders in the registry and use that.
-IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
+IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset)
+{
     if (theirRegistry.size() == 0) {
         // this is the first call of the method, we need to fill the registry with
         // all pre-defined gridders
         ASKAPLOG_DEBUG_STR(logger, "Filling the gridder registry with pre-defined gridders");
+        addPreDefinedGridder<MPIWProjectVisGridder>();
         addPreDefinedGridder<WProjectVisGridder>();
         addPreDefinedGridder<AltWProjectVisGridder>();
         addPreDefinedGridder<WStackVisGridder>();
@@ -129,9 +131,8 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset) {
     std::string prefix("gridder");
     const string gridderName = parset.getString(prefix);
     prefix += "." + gridderName + ".";
-    ASKAPLOG_DEBUG_STR(logger, "Attempting to greate gridder "<<gridderName);
+    ASKAPLOG_DEBUG_STR(logger, "Attempting to create gridder "<<gridderName);
     gridder = createGridder (gridderName, parset.makeSubset(prefix));
-
     ASKAPASSERT(gridder);
     if (parset.isDefined("gridder.padding")) {
         const float padding =parset.getFloat("gridder.padding");
