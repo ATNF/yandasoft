@@ -281,8 +281,17 @@ namespace askap
                 int      itsWindowDisp;
                 // int*     itsWindowPtr;
                 MPI_Win  itsWindowTable;
-                /// @brief  communicator variable for all ranks on a node
+                /// @brief communicator variable for all ranks on a node
                 MPI_Comm itsNodeComms;
+                /// @brief  communicator variable for for all ranks except rank 0.
+                /// @detail this communicator is only valid and used when 
+                ///         itsPlaneDependentCFSupport is true. i.e we want to create
+                ///         a communicator to contain all the ranks except rank 0. This
+                ///         is used to create itsNodeComms when itsPlaneDependentCFSupport
+                ///         is true because if the flag is set, rank 0 of the first node
+                ///         does not have gridder.
+                MPI_Comm itsPlaneDependentCFSupportComm;
+
                 /// @brief number of ranks within a node
                 int      itsNodeSize;
                 /// @brief current rank in the itsNodeComms

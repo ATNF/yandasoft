@@ -96,27 +96,23 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(/* const askap::askapparallel::Aska
     itsSupport = 0;
     itsOverSample = overSample;
     setTableName(name);
-    // itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
-    //itsConvFunc.resize(0);
-    itsConvFunc.reserve(nWPlanes()*itsOverSample*itsOverSample);
+    itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
 
-    // create a communicator for each node
-    MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms); 
-    // number of ranks within the node
-    MPI_Comm_size(itsNodeComms, &itsNodeSize);
-    // rank within a node
-    MPI_Comm_rank(itsNodeComms, &itsNodeRank);
-    
-    ASKAPLOG_INFO_STR(logger,"number of ranks per node: " << itsNodeSize);    
-
+    // MPI setup is done in configureGridder() method
     ObjCount += 1;
 }
 
 MPIWProjectVisGridder::~MPIWProjectVisGridder()
 {
+    if ( itsNodeRank < 5 ) {
+        ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << ", ObjCount: " << ObjCount);
+    }
     ObjCount -= 1;
     if ( ObjCount == 0 ) {
         MPI_Win_free(&itsWindowTable);
+        if ( itsNodeRank < 5 ) {
+            ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << " invokes MPI_Win_free()");
+        }
     }
     
 }
@@ -225,12 +221,6 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
       // with an appropriate use of the wKernelPix data.
 
       itsSupport=1;
-
-      // calculate the mpi shared memory required
-      //casacore::Matrix<imtypeComplex> notUsed;
-      //size_t bufferSize = calcMpiMemorySize(notUsed,isPCFGridder());
-      //setupMpiMemory(bufferSize);
-
       const int cSize=2*itsSupport+1;
       const int cCenter=(cSize-1)/2;
 
@@ -712,6 +702,44 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     setAbsCutoffFlag(absCutoff);
 
     itsShareCF = parset.getBool("sharecf",false);
+
+    ASKAPLOG_INFO_STR(logger, "Setup MPI subgroup communicator for MPI Shared Memory");
+    
+    int worldRank, worldSize;
+    MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
+
+    if ( !itsPlaneDependentCFSupport ) {
+        // the case where every rank has a gridder object
+
+        // create a communicator for each node
+        MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
+        // number of ranks within the node
+        MPI_Comm_size(itsNodeComms, &itsNodeSize);
+        // rank within a node
+        MPI_Comm_rank(itsNodeComms, &itsNodeRank);
+
+        ASKAPLOG_INFO_STR(logger,"number of ranks per node: " << itsNodeSize);
+    } else {
+        int color = 0;
+        if ( worldRank == 0 ) {
+            color = MPI_UNDEFINED;
+        }
+        MPI_Comm_split(MPI_COMM_WORLD, color, worldRank, &itsPlaneDependentCFSupportComm);
+        // itsPlaneDependentCFSupportComm has all the ranks in the MPI_COMM_WORLD except 
+        // rank 0
+        // create a communicator for each node
+        MPI_Comm_split_type(itsPlaneDependentCFSupportComm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
+        // number of ranks within the node
+        MPI_Comm_size(itsNodeComms, &itsNodeSize);
+        // rank within a node
+        MPI_Comm_rank(itsNodeComms, &itsNodeRank);
+    }
+
+    ASKAPLOG_INFO_STR(logger,"number of ranks per node: " << itsNodeSize);
+    if ( itsNodeRank < 5 ) {
+        ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << ", ObjCount: " << ObjCount);
+    }
 }
 
 
