@@ -56,6 +56,7 @@ tstuvw
 tstuvw2
 statsAndMaskChanApp
 tWeightsLogGather
+tMajorCycleComms
 )
 
 
