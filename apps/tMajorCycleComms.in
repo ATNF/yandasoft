@@ -1,0 +1,15 @@
+Cimager.Images.Names                            = [image.i.fake]
+Cimager.Images.shape                            = [12288, 12288]
+Cimager.Images.cellsize                         = [2arcsec, 2arcsec]
+Cimager.Images.image.i.fake.direction    = [12h34m56.789, -12.34.56.78, J2000]
+Cimager.Images.image.i.fake.nchan        = 1
+Cimager.Images.image.i.fake.nterms       = 2
+Cimager.Images.image.i.fake.frequency    = [0.856e9,1.096e9]
+# note, this number of groups matches nterms defined above (nworkergroups = 2*nterms - 1, or 1 for serial Taylor terms), 
+# the job would require 3*nworkergroups + 1 rank
+Cimager.nworkergroups                           = 3
+Cimager.ncycles                                 = 10
+# optional delay emulaating solver or normal equation calculation in seconds (default is 10s)
+# if rank specific delay is not defined, the "delay.default" will be used
+Cimager.delay.default                           = 5
+Cimager.delay.rank3                             = 20
