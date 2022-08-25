@@ -321,6 +321,7 @@ void ContinuumWorker::run(void)
   ASKAPLOG_INFO_STR(logger, "Rank " << itsComms.rank() << " passed final barrier");
 }
 
+// unused
 void ContinuumWorker::deleteWorkUnitFromCache(ContinuumWorkUnit& wu)
 {
 
@@ -819,7 +820,7 @@ void ContinuumWorker::processChannels()
         // NOTE: this is because if we are mosaicking ON THE FLY. We do
         // not process the first workunit outside the imaging loop.
         // But for "normal" processing the first workunit is processed outside the loops
-        // This adds alsorts of complications to the logic BTW.
+        // This adds all sorts of complications to the logic BTW.
 
         initialChannelWorkUnit = workUnitCount+1;
       }
@@ -832,6 +833,8 @@ void ContinuumWorker::processChannels()
       int globalChannel;
 
       bool usetmpfs = itsParset.getBool("usetmpfs", false);
+      bool clearcache = itsParset.getBool("clearcache", false);
+
       if (usetmpfs) {
         // probably in spectral line mode
         // copy the caching here ...
@@ -841,6 +844,9 @@ void ContinuumWorker::processChannels()
 
       } else {
         localChannel = workUnits[workUnitCount].get_localChannel();
+        if (clearcache) {
+            cached_files.push_back(workUnits[workUnitCount].get_dataset());
+        }
       }
 
       const string ms = workUnits[workUnitCount].get_dataset();
@@ -969,11 +975,14 @@ void ContinuumWorker::processChannels()
 
           } else {
             localChannel = workUnits[tempWorkUnitCount].get_localChannel();
+            if (clearcache) {
+                cached_files.push_back(workUnits[tempWorkUnitCount].get_dataset());
+            }
           }
           globalChannel = workUnits[tempWorkUnitCount].get_globalChannel();
 
           const string myMs = workUnits[tempWorkUnitCount].get_dataset();
-          TableDataSource myDs(myMs, TableDataSource::DEFAULT, colName);
+          TableDataSource myDs(myMs, TableDataSource::MEMORY_BUFFERS, colName);
           myDs.configureUVWMachineCache(uvwMachineCacheSize, uvwMachineCacheTolerance);
           try {
 
@@ -1276,7 +1285,26 @@ void ContinuumWorker::processChannels()
         clearWorkUnitCache();
         ASKAPLOG_INFO_STR(logger, "done clearing cache");
 
+      } else if (clearcache) {
+        // clear the hypercube caches (with 1 channel tiles we won't use it again)
+        static int count = 0;
+        for (string fileName : cached_files) {
+            ROTiledStManAccessor tsm(Table(fileName),colName,True);
+            ASKAPLOG_INFO_STR(logger, "Clearing Table cache for " <<colName<< " column");
+            tsm.clearCaches();
+            // Not sure we should clear the FLAG cache everytime, flags are normally stored in tile with 8 channels
+            if (count == 16) {
+                ROTiledStManAccessor tsm2(Table(fileName),"FLAG",True);
+                ASKAPLOG_INFO_STR(logger, "Clearing Table cache for FLAG column");
+                tsm2.clearCaches();
+            }
+        }
+        cached_files.clear();
+        if (++count > 16) {
+            count = 0;
+        }
       }
+
       itsStats.logSummary();
 
       ASKAPLOG_INFO_STR(logger, "writing channel into cube");
@@ -1426,7 +1454,7 @@ void ContinuumWorker::processChannels()
         result.sendRequest(workUnits[goodUnitCount].get_writer(), itsComms);
         ASKAPLOG_INFO_STR(logger, "Sent\n");
       }
-      // No need to increment workunit. Although this assumes that we are here becuase we failed the solveNE not the calcNE
+      // No need to increment workunit. Although this assumes that we are here because we failed the solveNE not the calcNE
 
     }
 
