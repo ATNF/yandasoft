@@ -1,9 +1,6 @@
 # GitLab CI script for yandasoft
 
-#image: registry.gitlab.com/askapsdp/yandasoft_image/all_yandasoft:1.1.x-latest
-#image: csirocass/yandasoft:casacore3.4-mpich
-#image: csirocass/yandasoft:casacore0572d931d-mpich
-image: csirocass/yandasoft:casacore3.5.0-mpich
+image: registry.gitlab.com/askapsdp/yandasoft_image/yandasoft:casacore3.5.0-mpich
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
