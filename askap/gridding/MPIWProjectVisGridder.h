@@ -40,7 +40,8 @@ namespace askap
 {
     namespace synthesis
     {
-        /// @brief Visibility gridder using W projection
+        /// @brief Visibility gridder using W projection by utilising MPI 
+	///        shared memory to reduce memory footprint.
         /// @details The visibilities are gridded using a convolution
         /// function that implements a Fresnel transform. This corrects
         /// for the w term in the full synthesis measurement equation.
@@ -53,6 +54,10 @@ namespace askap
         ///
         /// The scaling is slow in data points, fast in w planes.
         ///
+	/// NOTE: At the moment, this class only works for the imager 
+	///       but not cimager because it is setup in a way that rank
+	///       0 of the first node does not have the gridder.
+	///
         /// @ingroup gridding
         class MPIWProjectVisGridder : public WDependentGridderBase
         {
@@ -277,30 +282,33 @@ namespace askap
                 //const askap::askapparallel::AskapParallel& itsComms;
 
                 /// @brief MPI variables used to setup MPI shared memory
-                MPI_Aint itsWindowSize;
-                int      itsWindowDisp;
-                // int*     itsWindowPtr;
-                MPI_Win  itsWindowTable;
-                /// @brief communicator variable for all ranks on a node
-                MPI_Comm itsNodeComms;
-                /// @brief  communicator variable for for all ranks except rank 0.
-                /// @detail this communicator is only valid and used when 
-                ///         itsPlaneDependentCFSupport is true. i.e we want to create
-                ///         a communicator to contain all the ranks except rank 0. This
-                ///         is used to create itsNodeComms when itsPlaneDependentCFSupport
-                ///         is true because if the flag is set, rank 0 of the first node
-                ///         does not have gridder.
-                MPI_Comm itsPlaneDependentCFSupportComm;
+		        /// @details - MPI_Win_get_attr(itsWindowTable,MPI_WIN_SIZE,&val,&flag)
+		        ///            should return a val which is the size of the shared memory segment.
+                static MPI_Aint itsWindowSize;
+                static int      itsWindowDisp;
+                static MPI_Win  itsWindowTable;
+		        /// @brief - get the group associated with the COMM_WORLD communicator
+		        static MPI_Group itsWorldGroup;
+		        /// @brief this communicator contains all the ranks except rank 0 of COMM_WORLD
+                static MPI_Comm itsNonRankZeroComms;
+		        /// @details - get the group associated with the itsNonRankZeroComms communicator.
+		        ///            This group does not contain rank 0
+		        static MPI_Group itsGridderGroup;
+		        /// @brief - communicator for a given node
+		        static MPI_Comm itsNodeComms;
 
                 /// @brief number of ranks within a node
-                int      itsNodeSize;
+                static int     itsNodeSize;
                 /// @brief current rank in the itsNodeComms
-                int      itsNodeRank;
+                static int      itsNodeRank;
                 /// @brief a pointer to the MPI shared memory
-                imtypeComplex* itsMpiSharedMemory;
+                static imtypeComplex* itsMpiSharedMemory;
 
-
-                //static std::mutex ObjCountMutex;
+		        /// @details - These are used to synchronise and keep track of how many
+		        ///            gridder objects are instantiated. The ObjCount member is 
+		        ///            employed to determined when the process should cleanup the
+		        ///            shared memory segment. This is done when ObjCount is 0.
+                static std::mutex ObjCountMutex;
                 static unsigned int ObjCount;
         
         };

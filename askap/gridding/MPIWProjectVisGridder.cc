@@ -1,4 +1,4 @@
-/// @file MPIWProjectVisGridder.cc
+/// @file WProjectVisGridder.cc
 ///
 /// @copyright (c) 2007,2016 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -43,13 +43,23 @@
 #include <askap/gridding/MPIWProjectVisGridder.h>
 #include <askap/gridding/SupportSearcher.h>
 
-
-ASKAP_LOGGER(logger, ".gridding.mpiwprojectvisgridder");
+ASKAP_LOGGER(logger, ".gridding.MPIwprojectvisgridder");
 
 namespace askap {
 namespace synthesis {
 
-//std::mutex MPIWProjectVisGridder::ObjCountMutex;
+
+MPI_Aint MPIWProjectVisGridder::itsWindowSize;
+int      MPIWProjectVisGridder::itsWindowDisp;
+MPI_Win  MPIWProjectVisGridder::itsWindowTable;
+MPI_Comm MPIWProjectVisGridder::itsNodeComms;
+MPI_Comm MPIWProjectVisGridder::itsNonRankZeroComms;
+MPI_Group MPIWProjectVisGridder::itsWorldGroup;
+MPI_Group MPIWProjectVisGridder::itsGridderGroup;
+int MPIWProjectVisGridder::itsNodeSize;
+int MPIWProjectVisGridder::itsNodeRank;
+imtypeComplex* MPIWProjectVisGridder::itsMpiSharedMemory = nullptr;
+std::mutex MPIWProjectVisGridder::ObjCountMutex;
 unsigned int MPIWProjectVisGridder::ObjCount = 0;
 
 std::vector<casa::Matrix<casa::Complex> > MPIWProjectVisGridder::theirCFCache;
@@ -60,12 +70,14 @@ std::vector<std::pair<int,int> > MPIWProjectVisGridder::theirConvFuncOffsets;
 /// @param[in] in input array
 /// @param[out] out output array (will be resized)
 /// @return size of the cache in bytes (assuming Complex array elements)
+
 template<typename T>
 size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
                             std::vector<T> &out)
 {
    out.resize(in.size());
    size_t total = 0;
+   
    const typename std::vector<T>::const_iterator inEnd = in.end();
    typename std::vector<T>::iterator outIt = out.begin();
    for (typename std::vector<T>::const_iterator inIt = in.begin();
@@ -73,11 +85,11 @@ size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
        outIt->reference(*inIt);
        total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
    }
+   
    return total;
 }
 
-MPIWProjectVisGridder::MPIWProjectVisGridder(/* const askap::askapparallel::AskapParallel& comms, */
-                                       const double wmax,
+MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
                                        const int nwplanes,
                                        const double cutoff,
                                        const int overSample,
@@ -89,7 +101,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(/* const askap::askapparallel::Aska
         WDependentGridderBase(wmax, nwplanes, alpha),
         itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
         itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false),
-        itsShareCF(shareCF) /* , itsComms(comms) */
+        itsShareCF(shareCF)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport > 0, "Maximum support must be greater than 0")
@@ -98,23 +110,23 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(/* const askap::askapparallel::Aska
     setTableName(name);
     itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
 
-    // MPI setup is done in configureGridder() method
+    std::lock_guard<std::mutex> lk(ObjCountMutex);
     ObjCount += 1;
 }
 
 MPIWProjectVisGridder::~MPIWProjectVisGridder()
 {
-    if ( itsNodeRank < 5 ) {
-        ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << ", ObjCount: " << ObjCount);
+    {
+        std::lock_guard<std::mutex> lk(ObjCountMutex);
+        ObjCount -= 1;
     }
-    ObjCount -= 1;
     if ( ObjCount == 0 ) {
+        MPI_Group_free(&itsWorldGroup);
+        MPI_Group_free(&itsGridderGroup);
+        MPI_Comm_free(&itsNodeComms);
+        MPI_Comm_free(&itsNonRankZeroComms);
         MPI_Win_free(&itsWindowTable);
-        if ( itsNodeRank < 5 ) {
-            ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << " invokes MPI_Win_free()");
-        }
     }
-    
 }
 
 /// @brief copy constructor
@@ -128,10 +140,10 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other)
         itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
         itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
         itsCutoffAbs(other.itsCutoffAbs),
-        itsShareCF(other.itsShareCF)
-        /* itsComms(other.itsComms) */
+        itsShareCF(other.itsShareCF) 
 {
-    ObjCount += 1;
+	std::lock_guard<std::mutex> lk(ObjCountMutex);
+	ObjCount += 1;
 }
 
 
@@ -157,7 +169,7 @@ void MPIWProjectVisGridder::initialiseSumOfWeights()
 /// could be optimized by using symmetries.
 void MPIWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
 {
-    ASKAPTRACE("MPIWProjectVisGridder::initIndices");
+    ASKAPTRACE("WProjectVisGridder::initIndices");
     /// We have to calculate the lookup function converting from
     /// row and channel to plane of the w-dependent convolution
     /// function
@@ -194,7 +206,7 @@ void MPIWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc
 /// could be optimized by using symmetries.
 void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAccessor&)
 {
-    ASKAPTRACE("MPIWProjectVisGridder::initConvolutionFunction");
+    ASKAPTRACE("WProjectVisGridder::initConvolutionFunction");
     /// We have to calculate the lookup function converting from
     /// row and channel to plane of the w-dependent convolution
     /// function
@@ -266,6 +278,8 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
       return;
     }
 
+    ASKAPLOG_INFO_STR(logger, "theirCFCache size: " << theirCFCache.size()
+		    << ", itsShareCF: " << itsShareCF);
     if (itsShareCF && theirCFCache.size()>0) {
         // we already have what we need
         itsSupport = 1;
@@ -278,6 +292,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         }
         return;
     }
+
 
     /// These are the actual cell sizes used
     const double cellx = 1.0 / (double(itsShape(0)) * itsUVCellSize(0));
@@ -495,34 +510,50 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     itsCFBuffer.reset();
 
     // Save the CF to the cache
+    ASKAPLOG_INFO_STR(logger,"itsShareCF: " << itsShareCF);
     if (itsShareCF) {
+    	ASKAPLOG_INFO_STR(logger,"copy itsConvFunc vector to cache");
+	
+        if ( itsNodeRank == 0 ) {
+            ASKAPLOG_INFO_STR(logger, "Copy to shared memory etc ...");
+            ASKAPLOG_INFO_STR(logger, "number of elements in itsConvFunc: " << itsConvFunc.size());
+        }
         // workout the size of itsConvFunc
         size_t total = 0; // in bytes
+	    unsigned int nplane = itsConvFunc.size();
         for (auto it = itsConvFunc.begin();
-             it != itsConvFunc.end(); ++it) {
-            total += it->nelements() * sizeof(imtypeComplex);    
-        }     
+            it != itsConvFunc.end(); ++it) {
+            total += it->nelements() * sizeof(imtypeComplex);
+		    // matrixSizePerPlaneVect.push_back(std::make_pair(it->nrow(),it->ncolumn()));
+        }
         // create MPI shared memory
         setupMpiMemory(total);
 
         // copy itsConvFunc to shared memory
         imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
-        for ( auto it = itsConvFunc.begin();
-            it != itsConvFunc.end(); ++it) {
-            std::copy(it->data(),it->data() + it->nelements(),shareMemPtr);
-            shareMemPtr += it->nelements();
-        }
-        // copy shared memory back to itsConvFunc
-        shareMemPtr = itsMpiSharedMemory;
-        const int nplane = itsConvFunc.size();
+	    // only itsNodeRank 0 does the copy 
+	    if ( itsNodeRank == 0 ) {
+      	    ASKAPLOG_INFO_STR(logger, "copy itsConvFunc to shared memory");
+            for ( auto it = itsConvFunc.begin();
+            	it != itsConvFunc.end(); ++it) {
+            	std::copy(it->data(),it->data() + it->nelements(),shareMemPtr);
+            	shareMemPtr += it->nelements();
+       	    }
+	    }
+	    MPI_Barrier(itsNodeComms);
+
+    	// copy shared memory back to itsConvFunc
+    	ASKAPLOG_INFO_STR(logger, "copy shared memory back to itsConvFunc");
+     	shareMemPtr = itsMpiSharedMemory;
         for (int plane = 0; plane < nplane; plane++) {
             casacore::IPosition pos(2,itsConvFunc[plane].nrow(),itsConvFunc[plane].ncolumn());
             casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
             itsConvFunc[plane].reference(m);
             shareMemPtr += m.nelements();
-        }
-        // below is original code
-        deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
+        }	
+
+        // this is the original code from WProjectVisGridder
+        total = deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
         if (isOffsetSupportAllowed()) {
             theirConvFuncOffsets.resize(nWPlanes());
             for (int nw=0; nw<nWPlanes(); nw++) {
@@ -539,7 +570,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
 /// @return an instance of CFSupport with support parameters
 MPIWProjectVisGridder::CFSupport MPIWProjectVisGridder::extractSupport(const casacore::Matrix<casacore::DComplex> &cfPlane) const
 {
-    ASKAPDEBUGTRACE("MPIWProjectVisGridder::extractSupport");
+    ASKAPDEBUGTRACE("WProjectVisGridder::extractSupport");
     CFSupport result(-1);
     SupportSearcher ss(itsCutoff);
 
@@ -655,6 +686,7 @@ IVisGridder::ShPtr MPIWProjectVisGridder::createGridder(const LOFAR::ParameterSe
     const bool useDouble = parset.getBool("usedouble",false);
 
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
+    ASKAPLOG_INFO_STR(logger, "Gridding using maxsupport: " << maxSupport );
     ASKAPLOG_INFO_STR(logger, "Using " << (useDouble ? "double":"single")<<
                       " precision to calculate convolution functions");
     boost::shared_ptr<MPIWProjectVisGridder> gridder(new MPIWProjectVisGridder(wmax, nwplanes,
@@ -673,12 +705,6 @@ IVisGridder::ShPtr MPIWProjectVisGridder::createGridder(const LOFAR::ParameterSe
 void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 {
     const bool planeDependentSupport = parset.getBool("variablesupport", false);
-
-    if (planeDependentSupport) {
-        ASKAPLOG_INFO_STR(logger, "Support size will be calculated separately for each w-plane");
-    } else {
-        ASKAPLOG_INFO_STR(logger, "Common support size will be used for all w-planes");
-    }
 
     MPIWProjectVisGridder::planeDependentSupport(planeDependentSupport);
 
@@ -701,45 +727,33 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
     setAbsCutoffFlag(absCutoff);
 
-    itsShareCF = parset.getBool("sharecf",false);
+    //itsShareCF = parset.getBool("sharecf",false);
+    itsShareCF = parset.getBool("sharecf",true);
+
+    // Each rank should only run the code below once.
+    static bool doOnce = false;
+    if ( doOnce ) return;
+    doOnce = true;
 
     ASKAPLOG_INFO_STR(logger, "Setup MPI subgroup communicator for MPI Shared Memory");
-    
-    int worldRank, worldSize;
-    MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
 
-    if ( !itsPlaneDependentCFSupport ) {
-        // the case where every rank has a gridder object
-
-        // create a communicator for each node
-        MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
-        // number of ranks within the node
-        MPI_Comm_size(itsNodeComms, &itsNodeSize);
-        // rank within a node
-        MPI_Comm_rank(itsNodeComms, &itsNodeRank);
-
-        ASKAPLOG_INFO_STR(logger,"number of ranks per node: " << itsNodeSize);
-    } else {
-        int color = 0;
-        if ( worldRank == 0 ) {
-            color = MPI_UNDEFINED;
-        }
-        MPI_Comm_split(MPI_COMM_WORLD, color, worldRank, &itsPlaneDependentCFSupportComm);
-        // itsPlaneDependentCFSupportComm has all the ranks in the MPI_COMM_WORLD except 
-        // rank 0
-        // create a communicator for each node
-        MPI_Comm_split_type(itsPlaneDependentCFSupportComm, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
-        // number of ranks within the node
-        MPI_Comm_size(itsNodeComms, &itsNodeSize);
-        // rank within a node
-        MPI_Comm_rank(itsNodeComms, &itsNodeRank);
-    }
-
-    ASKAPLOG_INFO_STR(logger,"number of ranks per node: " << itsNodeSize);
-    if ( itsNodeRank < 5 ) {
-        ASKAPLOG_INFO_STR(logger,"nodeRank: " << itsNodeRank << ", ObjCount: " << ObjCount);
-    }
+    // The code below setup a MPI communicator for each node where the 
+    // rank 0 (in the COMM_WORLD) of the first node is not included.
+    int r;
+    r = MPI_Comm_group(MPI_COMM_WORLD, &itsWorldGroup);
+    ASKAPASSERT(r == MPI_SUCCESS);
+    const int exclude_ranks[1] = {0};
+    r = MPI_Group_excl(itsWorldGroup, 1, exclude_ranks, &itsGridderGroup);
+    ASKAPASSERT(r == MPI_SUCCESS);
+    r = MPI_Comm_create_group(MPI_COMM_WORLD, itsGridderGroup, 0, &itsNonRankZeroComms);
+    ASKAPASSERT(r == MPI_SUCCESS);
+    r = MPI_Comm_split_type(itsNonRankZeroComms, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
+	ASKAPASSERT(r == MPI_SUCCESS);
+    // number of ranks within the node
+    MPI_Comm_size(itsNodeComms, &itsNodeSize);
+    // rank within a node
+    MPI_Comm_rank(itsNodeComms, &itsNodeRank);
+    MPI_Barrier(itsNodeComms);
 }
 
 
@@ -762,90 +776,40 @@ MPIWProjectVisGridder& MPIWProjectVisGridder::operator=(const MPIWProjectVisGrid
     return *this;
 }
 
-/// @brief calculates the total shared memory size and stores the matrix size of each plane
-///        in a map (itsMatrixSizePerPlane)
-/*
-size_t MPIWProjectVisGridder::calcMpiMemorySize(const casacore::Matrix<imtypeComplex>& thisPlane, bool PcfGridder)
-{
-    size_t totalMemorySize = 0; // in bytes
-    const int nx = maxSupport();
-    for (int iw = 0; iw < nWPlanes(); ++iw) {
-        int cSize;
-        if ( PcfGridder ) {
-            cSize = 2*itsSupport+1;
-        } else {
-            CFSupport cfSupport(itsSupport);
-            if (isSupportPlaneDependent() || (itsSupport == 0)) {
-                cfSupport = extractSupport(thisPlane);
-                const int support = cfSupport.itsSize;
-                SKAPCHECK((support+1)*itsOverSample < nx / 2,
-                       "Overflowing convolution function for w-plane " << iw <<
-                       " - increase maxSupport or cutoff or decrease overSample; support=" <<
-                       support << " oversample=" << itsOverSample << " nx=" << nx);
-                cfSupport.itsSize = limitSupportIfNecessary(support);
-
-            }
-            const int support = isSupportPlaneDependent() ? cfSupport.itsSize : itsSupport;
-            cSize = 2 * support + 1;
-        }
-        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
-            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
-                totalMemorySize = totalMemorySize + cSize * cSize; // number of elements in the vector
-                const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
-                // store the size of the matrix of each plane in a map
-                // @see  initItsConvFuncVar() method
-                itsMatrixSizePerPlane[plane] = cSize;
-            }
-        }
-    }
-    totalMemorySize = totalMemorySize * sizeof(imtypeComplex); // in bytes
-
-    return totalMemorySize;
-}
-*/
-
 void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
 {
-    if ( !itsPlaneDependentCFSupport ) {
+    static bool runOnce = false;
+    if ( runOnce  ) {
+	    ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << " - mpi shared memory already setup");
+        return;
+    }
+
+    runOnce = true;
+
+    ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << ", bufferSize: " << bufferSize);
+
+    if ( itsNodeComms != MPI_COMM_NULL ) {
         // the case where every rank has a gridder object
         size_t memSizeInBytes = 0;
         if ( itsNodeRank == 0 ) {
-            memSizeInBytes = bufferSize;  
+            memSizeInBytes = bufferSize;
         }
-        MPI_Win_allocate_shared(memSizeInBytes, sizeof(imtypeComplex),
-                                MPI_INFO_NULL, itsNodeComms, &itsMpiSharedMemory, 
+        int r = MPI_Win_allocate_shared(memSizeInBytes,sizeof(imtypeComplex),
+                                MPI_INFO_NULL, itsNodeComms, &itsMpiSharedMemory,
                                 &itsWindowTable);
-        MPI_Barrier(itsNodeComms);
+        ASKAPCHECK(r == MPI_SUCCESS, "MPI_Win_allocate_shared failed.");
         // For itsNodeRanks != 0, get their itsMpiSharedMemory pointer variable to point the
         // start of the MPI shared memory allocated by itsNodeRank = 0
         if ( itsNodeRank != 0 ) {
-            MPI_Win_shared_query(itsWindowTable, 0, &itsWindowSize, &itsWindowDisp, &itsMpiSharedMemory);
+            int r = MPI_Win_shared_query(itsWindowTable, 0, &itsWindowSize, &itsWindowDisp, &itsMpiSharedMemory);
+            ASKAPCHECK(r == MPI_SUCCESS, "MPI_Win_shared_query failed.");
         }
         MPI_Barrier(itsNodeComms);
-    } else {
-        // the case where rank 0 of the 1st node does not have a gridder bject - TODO
+	    //unsigned long* val;
+	    //int flag = 1;
+	    //r = MPI_Win_get_attr(itsWindowTable,MPI_WIN_SIZE,&val,&flag);
     }
 }
 
-// initialise itsConvFunc variable with MPI shared memory
-/*
-void MPIWProjectVisGridder::initItsConvFuncVar()
-{
-    std::map<unsigned int, size_t> matrixSizePerPlane;
-
-    imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
-    const int nplane = matrixSizePerPlane.size();
-    for (int plane = 0; plane < nplane; plane++) {
-        size_t cSize = matrixSizePerPlane[plane];
-        casacore::IPosition pos(2,cSize.cSize);
-        casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
-        m.set(0.0);
-        itsConvFunc[plane] = m;
-        shareMemPtr += m.nrow() * m.ncolumn();
-    }
-}
-*/
 } // namespace askap
 } // namespace synthesis
-
-
