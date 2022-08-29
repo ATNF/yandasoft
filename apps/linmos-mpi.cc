@@ -67,7 +67,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   // get the calcstats flag from the parset. if it is true, then this task also calculates the image statistics
   const bool calcstats = parset.getBool("calcstats", false);
   // file to store the statistics
-  const std::string outputStats = parset.getString("outputStats",""); 
+  const std::string outputStats = parset.getString("outputStats","");
 
   // get the list of keywords to copy from the input
   // Set some defaults for simple beam mosaic, won't be correct for more complex cases
@@ -259,7 +259,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     boost::shared_ptr<askap::accessors::IImageAccess<>> iaccPtr;
     boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask;
     if ( calcstats ) {
-      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});    
+      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});
       statsAndMask.reset(new askap::utils::StatsAndMask{comms,outImgName,iaccPtr});
     }
 
@@ -321,42 +321,47 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       //
 
 
-      if (comms.isMaster() && channel == firstChannel) { // build this cube - does not need to loop over the outWgtNames
+      if (channel == firstChannel) { // build this cube - does not need to loop over the outWgtNames
+        if (comms.isMaster()) {
+            ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
+            ASKAPLOG_INFO_STR(logger, "Building output mosaic " << outImgName);
+            ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
+            casa::IPosition outShape  = accumulator.outShape();
+            // has the channel dimension of the allocation - so lets fix that.
+            outShape[3] = nchanCube;
 
-        ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
-        ASKAPLOG_INFO_STR(logger, "Building output mosaic " << outImgName);
-        ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
-        casa::IPosition outShape  = accumulator.outShape();
-        // has the channel dimension of the allocation - so lets fix that.
-        outShape[3] = nchanCube;
+            ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
+            iacc.create(outImgName, outShape, accumulator.outCoordSys());
+            copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
+            iacc.addHistory(outImgName, historyLines);
+            iacc.makeDefaultMask(outImgName);
 
-        ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
-        iacc.create(outImgName, outShape, accumulator.outCoordSys());
-        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
-        iacc.addHistory(outImgName, historyLines);
-        iacc.makeDefaultMask(outImgName);
+            if (accumulator.outWgtDuplicates()[outImgName]) {
+              ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
+            } else {
+              outWgtName = accumulator.outWgtNames()[outImgName];
+              ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
+              iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+              copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
+              iacc.addHistory(outWgtName, historyLines);
+              iacc.makeDefaultMask(outWgtName);
 
-        if (accumulator.outWgtDuplicates()[outImgName]) {
-          ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
-        } else {
-          outWgtName = accumulator.outWgtNames()[outImgName];
-          ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
-          iacc.create(outWgtName, outShape, accumulator.outCoordSys());
-          copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
-          iacc.addHistory(outWgtName, historyLines);
-          iacc.makeDefaultMask(outWgtName);
+            }
+            if (accumulator.doSensitivity()) {
+              outSenName = accumulator.outSenNames()[outImgName];
+              ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
+              iacc.create(outSenName, outShape, accumulator.outCoordSys());
+              copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+              iacc.addHistory(outSenName, historyLines);
+              iacc.makeDefaultMask(outSenName);
 
+            }
         }
-        if (accumulator.doSensitivity()) {
-          outSenName = accumulator.outSenNames()[outImgName];
-          ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
-          iacc.create(outSenName, outShape, accumulator.outCoordSys());
-          copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
-          iacc.addHistory(outSenName, historyLines);
-          iacc.makeDefaultMask(outSenName);
-
+        // built the output cube for this image, all wait until done (for parallel write)
+        if (!serialWrite) {
+            comms.barrier();
         }
-      } // built the output cube for this image
+      }
 
       // here we have to loop over the channels and let everything else take care of the
       // other planes ...
@@ -816,7 +821,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       // the stats to the image table
       if (comms.isMaster()) {
         statsAndMask->receiveStats();
-        statsAndMask->writeStatsToImageTable(outImgName);  
+        statsAndMask->writeStatsToImageTable(outImgName);
         if ( outputStats != "" ) {
             statsAndMask->writeStatsToFile(outputStats);
         }
