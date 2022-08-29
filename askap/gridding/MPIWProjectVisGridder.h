@@ -240,6 +240,7 @@ namespace askap
 
                 //size_t calcMpiMemorySize(const casacore::Matrix<imtypeComplex>& thisPlane, bool PcfGridder);
                 void  setupMpiMemory(size_t bufferSize /* in bytes */);
+                //bool  checkNodeHasOnlyRank0() const;
 
                 /// @brief assignment operator
                 /// @details Defined as private, so it can't be called (to enforce usage of the
