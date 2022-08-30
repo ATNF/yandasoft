@@ -744,7 +744,6 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    ASKAPLOG_INFO_STR(logger, "XXXXXXX rank: " << rank);
 
     // Each rank should only run the code below once.
     //static bool doOnce = false;
