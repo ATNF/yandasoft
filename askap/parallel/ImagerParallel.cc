@@ -305,6 +305,7 @@ namespace askap
 
       // make a vector containing all gridders that require the wmax parameter
       std::vector<std::string> wGridders;
+      wGridders.push_back("MPIWProject");
       wGridders.push_back("WProject");
       wGridders.push_back("WStack");
       wGridders.push_back("AWProject");

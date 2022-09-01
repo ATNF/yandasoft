@@ -238,9 +238,7 @@ namespace askap
 
             private:
 
-                //size_t calcMpiMemorySize(const casacore::Matrix<imtypeComplex>& thisPlane, bool PcfGridder);
                 void  setupMpiMemory(size_t bufferSize /* in bytes */);
-                //bool  checkNodeHasOnlyRank0() const;
 
                 /// @brief assignment operator
                 /// @details Defined as private, so it can't be called (to enforce usage of the
@@ -311,6 +309,7 @@ namespace askap
 		        ///            shared memory segment. This is done when ObjCount is 0.
                 static std::mutex ObjCountMutex;
                 static unsigned int ObjCount;
+                static bool     itsMpiMemSetup;
         
         };
     }
