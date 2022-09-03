@@ -310,220 +310,220 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     }
 
 
-    /// These are the actual cell sizes used
-    const double cellx = 1.0 / (double(itsShape(0)) * itsUVCellSize(0));
-    const double celly = 1.0 / (double(itsShape(1)) * itsUVCellSize(1));
+    // only rank 0 of each node does the calculation and then copy itsConvFunc to the MPI
+    // shared memory then other ranks within the node fill their itsConvFunc vector from the
+    // shared memory.
+    if ( itsNodeRank == 0 ) {
+        /// These are the actual cell sizes used
+        const double cellx = 1.0 / (double(itsShape(0)) * itsUVCellSize(0));
+        const double celly = 1.0 / (double(itsShape(1)) * itsUVCellSize(1));
 
-    /// Limit the size of the convolution function since
-    /// we don't need it finely sampled in image space. This
-    /// will reduce the time taken to calculate it.
-    //      int nx=std::min(maxSupport(), itsShape(0));
-    //      int ny=std::min(maxSupport(), itsShape(1));
-    const int nx = maxSupport();
-    const int ny = maxSupport();
+        /// Limit the size of the convolution function since
+        /// we don't need it finely sampled in image space. This
+        /// will reduce the time taken to calculate it.
+        //      int nx=std::min(maxSupport(), itsShape(0));
+        //      int ny=std::min(maxSupport(), itsShape(1));
+        const int nx = maxSupport();
+        const int ny = maxSupport();
 
-    // initialise the buffer for full-sized CF
-    ASKAPDEBUGASSERT((nx > 0) && (ny > 0));
-    initCFBuffer(casacore::uInt(nx), casacore::uInt(ny));
+        // initialise the buffer for full-sized CF
+        ASKAPDEBUGASSERT((nx > 0) && (ny > 0));
+        initCFBuffer(casacore::uInt(nx), casacore::uInt(ny));
 
-    /// We want nx * ccellx = overSample * itsShape(0) * cellx
+        /// We want nx * ccellx = overSample * itsShape(0) * cellx
 
-    const int qnx = nx / itsOverSample;
-    const int qny = ny / itsOverSample;
-    ASKAPDEBUGASSERT((qnx != 0) && (qny != 0));
+        const int qnx = nx / itsOverSample;
+        const int qny = ny / itsOverSample;
+        ASKAPDEBUGASSERT((qnx != 0) && (qny != 0));
 
-    // Find the actual cellsizes in x and y (radians) after over
-    // oversampling (in uv space)
-    const double ccellx = double(itsShape(0)) * cellx / double(qnx);
-    const double ccelly = double(itsShape(1)) * celly / double(qny);
+        // Find the actual cellsizes in x and y (radians) after over
+        // oversampling (in uv space)
+        const double ccellx = double(itsShape(0)) * cellx / double(qnx);
+        const double ccelly = double(itsShape(1)) * celly / double(qny);
 
-    casacore::Vector<float> ccfx(qnx);
-    casacore::Vector<float> ccfy(qny);
+        casacore::Vector<float> ccfx(qnx);
+        casacore::Vector<float> ccfy(qny);
 
-    for (int ix = 0; ix < qnx; ix++) {
-        float nux = std::abs(float(ix - qnx / 2)) / float(qnx / 2);
-        ccfx(ix) = grdsf(nux) / float(qnx);
-    }
-
-    for (int iy = 0; iy < qny; iy++) {
-        float nuy = std::abs(float(iy - qny / 2)) / float(qny / 2);
-        ccfy(iy) = grdsf(nuy) / float(qny);
-    }
-
-    if (itsInterp) {
-      // The spheroidal is undefined and set to zero at nu=1, but that
-      // is not the numerical limit. Estimate it from its neighbours.
-      interpolateEdgeValues(ccfx);
-      interpolateEdgeValues(ccfy);
-    }
-
-    // Now we step through the w planes, starting the furthest
-    // out. We calculate the support for that plane and use it
-    // for all the others.
-
-    // We pad here to do sinc interpolation of the convolution
-    // function in uv space
-    casacore::Matrix<imtypeComplex> thisPlane(getCFBuffer());
-    ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx));
-    ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny));
-
-    for (int iw = 0; iw < nWPlanes(); ++iw) {
-        thisPlane.set(0.0);
-
-        //const double w = isPSFGridder() ? 0. : 2.0f*casacore::C::pi*getWTerm(iw);
-        const double w = 2.0f * casacore::C::pi * getWTerm(iw);
-
-        // Loop over the central nx, ny region, setting it to the product
-        // of the phase screen and the spheroidal function
-        for (int iy = 0; iy < qny; iy++) {
-            double y2 = double(iy - qny / 2) * ccelly;
-            y2 *= y2;
-
-            for (int ix = 0; ix < qnx; ix++) {
-                double x2 = double(ix - qnx / 2) * ccellx;
-                x2 *= x2;
-                const double r2 = x2 + y2;
-
-                if (r2 < 1.0) {
-                    const double phase = w * (1.0 - sqrt(1.0 - r2));
-                    const float wt = ccfx(ix) * ccfy(iy);
-                    ASKAPDEBUGASSERT(ix - qnx / 2 + nx / 2 < nx);
-                    ASKAPDEBUGASSERT(iy - qny / 2 + ny / 2 < ny);
-                    ASKAPDEBUGASSERT(ix + nx / 2 >= qnx / 2);
-                    ASKAPDEBUGASSERT(iy + ny / 2 >= qny / 2);
-                    thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
-                    imtypeComplex(wt * cos(phase), -wt * sin(phase));
-                }
-                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=imtypeComplex(wt*cos(phase));
-            }
+        for (int ix = 0; ix < qnx; ix++) {
+            float nux = std::abs(float(ix - qnx / 2)) / float(qnx / 2);
+            ccfx(ix) = grdsf(nux) / float(qnx);
         }
 
-        // At this point, we have the phase screen multiplied by the spheroidal
-        // function, sampled on larger cellsize (itsOverSample larger) in image
-        // space. Only the inner qnx, qny pixels have a non-zero value
+        for (int iy = 0; iy < qny; iy++) {
+            float nuy = std::abs(float(iy - qny / 2)) / float(qny / 2);
+            ccfy(iy) = grdsf(nuy) / float(qny);
+        }
 
-        // Now we have to calculate the Fourier transform to get the
-        // convolution function in uv space
-        scimath::fft2d(thisPlane, true);
+        if (itsInterp) {
+            // The spheroidal is undefined and set to zero at nu=1, but that
+            // is not the numerical limit. Estimate it from its neighbours.
+            interpolateEdgeValues(ccfx);
+            interpolateEdgeValues(ccfy);
+        }
 
-        // Now thisPlane is filled with convolution function
-        // sampled on a finer grid in u,v
-        //
-        // If the support is not yet set, find it and size the
-        // convolution function appropriately
+        // Now we step through the w planes, starting the furthest
+        // out. We calculate the support for that plane and use it
+        // for all the others.
 
-        // by default the common support without offset is used
-        CFSupport cfSupport(itsSupport);
+        // We pad here to do sinc interpolation of the convolution
+        // function in uv space
+        casacore::Matrix<imtypeComplex> thisPlane(getCFBuffer());
+        ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx));
+        ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny));
 
-        if (isSupportPlaneDependent() || (itsSupport == 0)) {
-            cfSupport = extractSupport(thisPlane);
-            const int support = cfSupport.itsSize;
-            // fail here if the cutoff level is on the edge of the image
-            ASKAPCHECK((support+1)*itsOverSample < nx / 2,
+        for (int iw = 0; iw < nWPlanes(); ++iw) {
+            thisPlane.set(0.0);
+
+            //const double w = isPSFGridder() ? 0. : 2.0f*casacore::C::pi*getWTerm(iw);
+            const double w = 2.0f * casacore::C::pi * getWTerm(iw);
+
+            // Loop over the central nx, ny region, setting it to the product
+            // of the phase screen and the spheroidal function
+            for (int iy = 0; iy < qny; iy++) {
+                double y2 = double(iy - qny / 2) * ccelly;
+                y2 *= y2;
+
+                for (int ix = 0; ix < qnx; ix++) {
+                    double x2 = double(ix - qnx / 2) * ccellx;
+                    x2 *= x2;
+                    const double r2 = x2 + y2;
+
+                    if (r2 < 1.0) {
+                        const double phase = w * (1.0 - sqrt(1.0 - r2));
+                        const float wt = ccfx(ix) * ccfy(iy);
+                        ASKAPDEBUGASSERT(ix - qnx / 2 + nx / 2 < nx);
+                        ASKAPDEBUGASSERT(iy - qny / 2 + ny / 2 < ny);
+                        ASKAPDEBUGASSERT(ix + nx / 2 >= qnx / 2);
+                        ASKAPDEBUGASSERT(iy + ny / 2 >= qny / 2);
+                        thisPlane(ix - qnx / 2 + nx / 2, iy - qny / 2 + ny / 2) =
+                        imtypeComplex(wt * cos(phase), -wt * sin(phase));
+                    }
+                    //thisPlane(ix-qnx/2+nx/2, iy-qny/2+ny/2)=imtypeComplex(wt*cos(phase));
+                }
+            }
+
+            // At this point, we have the phase screen multiplied by the spheroidal
+            // function, sampled on larger cellsize (itsOverSample larger) in image
+            // space. Only the inner qnx, qny pixels have a non-zero value
+
+            // Now we have to calculate the Fourier transform to get the
+            // convolution function in uv space
+            scimath::fft2d(thisPlane, true);
+
+            // Now thisPlane is filled with convolution function
+            // sampled on a finer grid in u,v
+            //
+            // If the support is not yet set, find it and size the
+            // convolution function appropriately
+
+            // by default the common support without offset is used
+            CFSupport cfSupport(itsSupport);
+
+            if (isSupportPlaneDependent() || (itsSupport == 0)) {
+                cfSupport = extractSupport(thisPlane);
+                const int support = cfSupport.itsSize;
+                // fail here if the cutoff level is on the edge of the image
+                ASKAPCHECK((support+1)*itsOverSample < nx / 2,
                        "Overflowing convolution function for w-plane " << iw <<
                        " - increase maxSupport or cutoff or decrease overSample; support=" <<
                        support << " oversample=" << itsOverSample << " nx=" << nx);
-            cfSupport.itsSize = limitSupportIfNecessary(support);
+                cfSupport.itsSize = limitSupportIfNecessary(support);
 
-            if (itsSupport == 0) {
-                itsSupport = cfSupport.itsSize;
-            }
-
-            if (isOffsetSupportAllowed()) {
-                setConvFuncOffset(iw, cfSupport.itsOffsetU, cfSupport.itsOffsetV);
-            }
-
-        }
-
-        ASKAPCHECK(itsConvFunc.size() > 0, "Convolution function not sized correctly");
-        // use either support determined for this particular plane or a generic one,
-        // determined from the first plane (largest support as we have the largest w-term)
-        const int support = isSupportPlaneDependent() ? cfSupport.itsSize : itsSupport;
-
-        const int cSize = 2 * support + 1;
-
-        // work out range of kx, ky and see if they will overflow the array
-        const int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
-        const int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
-        const int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
-        const int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
-        int overflow = 0;
-        if (kxmin<0) {
-            overflow = -kxmin;
-        }
-        if (kxmax>=nx) {
-            overflow = std::max(overflow, kxmax-(nx-1));
-        }
-        if (kymin<0) {
-            overflow = std::max(overflow, -kymin);
-        }
-        if (kymax>=ny) {
-            overflow = std::max(overflow, kymax-(ny-1));
-        }
-
-        ASKAPCHECK(overflow==0,"Convolution function overflowing - increase maxsupport or cutoff or decrease oversample, overflow="<<overflow);
-
-        for (int fracu = 0; fracu < itsOverSample; ++fracu) {
-            for (int fracv = 0; fracv < itsOverSample; ++fracv) {
-                const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
-                ASKAPDEBUGASSERT(plane < int(itsConvFunc.size()));
-                itsConvFunc[plane].resize(cSize, cSize);
-                itsConvFunc[plane].set(0.0);
-
-                // Now cut out the inner part of the convolution function and
-                // insert it into the convolution function
-                for (int iy = -support; iy <= support; ++iy) {
-                    for (int ix = -support; ix <= support; ++ix) {
-                        const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
-                        const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
-                        //if (w < 0) {
-                        //    itsConvFunc[plane](ix + support, iy + support) =
-                        //        conj(thisPlane(kx, ky);
-                        //} else {
-                        itsConvFunc[plane](ix + support, iy + support) =thisPlane(kx, ky);
-                        //}
-                    }
+                if (itsSupport == 0) {
+                    itsSupport = cfSupport.itsSize;
                 }
 
-            } // for fracv
-        } // for fracu
+                if (isOffsetSupportAllowed()) {
+                    setConvFuncOffset(iw, cfSupport.itsOffsetU, cfSupport.itsOffsetV);
+                }
+            }
 
-    } // for iw
+            ASKAPCHECK(itsConvFunc.size() > 0, "Convolution function not sized correctly");
+            // use either support determined for this particular plane or a generic one,
+            // determined from the first plane (largest support as we have the largest w-term)
+            const int support = isSupportPlaneDependent() ? cfSupport.itsSize : itsSupport;
 
-    // force normalization for all fractional offsets (or planes)
-    for (size_t plane = 0; plane < itsConvFunc.size(); ++plane) {
-        if (itsConvFunc[plane].nelements() == 0) {
-            // this plane of the cache is unused
-            continue;
-        }
+            const int cSize = 2 * support + 1;
 
-        const double norm = sum(casacore::real(itsConvFunc[plane]));
-        // ASKAPLOG_INFO_STR(logger, "Sum of convolution function = " << norm);
-        ASKAPDEBUGASSERT(norm > 0.);
+            // work out range of kx, ky and see if they will overflow the array
+            const int kxmin = (-support + cfSupport.itsOffsetU)*itsOverSample + nx/2;
+            const int kxmax = (support + cfSupport.itsOffsetU)*itsOverSample + itsOverSample-1 + nx/2;
+            const int kymin = (-support + cfSupport.itsOffsetV)*itsOverSample + ny/2;
+            const int kymax = (support + cfSupport.itsOffsetV)*itsOverSample + itsOverSample-1 + ny/2;
+            int overflow = 0;
+            if (kxmin<0) {
+                overflow = -kxmin;
+            }
+            if (kxmax>=nx) {
+                overflow = std::max(overflow, kxmax-(nx-1));
+            }
+            if (kymin<0) {
+                overflow = std::max(overflow, -kymin);
+            }
+            if (kymax>=ny) {
+                overflow = std::max(overflow, kymax-(ny-1));
+            }
 
-        if (norm > 0.) {
-            const casacore::Complex invNorm = casacore::Complex(1.0/norm);
-            itsConvFunc[plane] *= invNorm;
-        }
-    } // for plane
+            ASKAPCHECK(overflow==0,"Convolution function overflowing - increase maxsupport or cutoff or decrease oversample, overflow="<<overflow);
 
-    if (isSupportPlaneDependent()) {
-        ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
-        ASKAPLOG_DEBUG_STR(logger, "Variable support size is used:");
-        const size_t step = casacore::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
+            for (int fracu = 0; fracu < itsOverSample; ++fracu) {
+                for (int fracv = 0; fracv < itsOverSample; ++fracv) {
+                    const int plane = fracu + itsOverSample * (fracv + itsOverSample * iw);
+                    ASKAPDEBUGASSERT(plane < int(itsConvFunc.size()));
+                    itsConvFunc[plane].resize(cSize, cSize);
+                    itsConvFunc[plane].set(0.0);
 
-        for (size_t plane = 0; plane < itsConvFunc.size(); plane += step * itsOverSample * itsOverSample) {
-            ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
+                    // Now cut out the inner part of the convolution function and
+                    // insert it into the convolution function
+                    for (int iy = -support; iy <= support; ++iy) {
+                        for (int ix = -support; ix <= support; ++ix) {
+                            const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
+                            const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
+                            itsConvFunc[plane](ix + support, iy + support) =thisPlane(kx, ky);
+                        }
+                    }
+                } // for fracv
+            } // for fracu
+
+        } // for iw
+
+        // force normalization for all fractional offsets (or planes)
+        for (size_t plane = 0; plane < itsConvFunc.size(); ++plane) {
+            if (itsConvFunc[plane].nelements() == 0) {
+                // this plane of the cache is unused
+                continue;
+            }
+
+            const double norm = sum(casacore::real(itsConvFunc[plane]));
+            // ASKAPLOG_INFO_STR(logger, "Sum of convolution function = " << norm);
+            ASKAPDEBUGASSERT(norm > 0.);
+
+            if (norm > 0.) {
+                const casacore::Complex invNorm = casacore::Complex(1.0/norm);
+                itsConvFunc[plane] *= invNorm;
+            }
+        } // for plane
+
+        if (isSupportPlaneDependent()) {
+            ASKAPLOG_DEBUG_STR(logger, "Convolution function cache has " << itsConvFunc.size() << " planes");
+            ASKAPLOG_DEBUG_STR(logger, "Variable support size is used:");
+            const size_t step = casacore::max(itsConvFunc.size() / itsOverSample / itsOverSample / 10, 1);
+
+            for (size_t plane = 0; plane < itsConvFunc.size(); plane += step * itsOverSample * itsOverSample) {
+                ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
                                " prior to oversampling) shape is " << itsConvFunc[plane].shape());
-        }
-    } else {
-        ASKAPLOG_INFO_STR(logger, "Shape of convolution function = "
+            }
+        } else {
+            ASKAPLOG_INFO_STR(logger, "Shape of convolution function = "
                               << itsConvFunc[0].shape() << " by " << itsConvFunc.size() << " planes");
-    }
+        }
 
-    ASKAPCHECK(itsSupport > 0, "Support not calculated correctly");
-    // we can free up the memory because for WProject gridder this method is called only once!
-    itsCFBuffer.reset();
+        ASKAPCHECK(itsSupport > 0, "Support not calculated correctly");
+        // we can free up the memory because for WProject gridder this method is called only once!
+        itsCFBuffer.reset();
+    } // End of rank 0 in a given node
+    // ranks > 0 of a given node wait here
+    MPI_Barrier(itsNodeComms);
 
     // Save the CF to the cache
     ASKAPLOG_DEBUG_STR(logger,"itsShareCF: " << itsShareCF);
@@ -533,45 +533,105 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
             ASKAPLOG_DEBUG_STR(logger, "Copy to shared memory etc ...");
             ASKAPLOG_DEBUG_STR(logger, "number of elements in itsConvFunc: " << itsConvFunc.size());
         }
-        // workout the size of itsConvFunc
+
         size_t total = 0; // in bytes
-	    unsigned int nplane = itsConvFunc.size();
-        for (auto it = itsConvFunc.begin();
-            it != itsConvFunc.end(); ++it) {
-            total += it->nelements() * sizeof(imtypeComplex);
+        unsigned int nplane = 0;
+        if ( itsNodeRank == 0 ) {
+            // workout the size of itsConvFunc
+	        nplane = itsConvFunc.size();
+            for (auto it = itsConvFunc.begin();
+                it != itsConvFunc.end(); ++it) {
+                total += it->nelements() * sizeof(imtypeComplex);
+            }
+            // The MPI_Send/MPI_Recv below works but commented out because it is probably
+            // better to use MPI_Bcast here.
+
+            // rank 0 of a given node sends the number of planes to other ranks. This
+            // is the number of elements of the itsConvFunc
+            //for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+            //    MPI_Send(&nplane, 1, MPI_UNSIGNED_LONG, dest, 0, itsNodeComms);
+            //}
+        } else {
+            // other ranks receive the nplane sent from rank 0
+            //MPI_Recv(&nplane, 1, MPI_UNSIGNED_LONG, 0, 0, itsNodeComms, MPI_STATUS_IGNORE);
         }
+        // rank 0 of a given node sends/broadcasts the number of planes to other ranks.
+        // This is the number of elements of the itsConvFunc. 
+        MPI_Bcast(&nplane,1,MPI_UNSIGNED_LONG,0,itsNodeComms);
         // create MPI shared memory
+        ASKAPLOG_DEBUG_STR(logger, "nplane: " << nplane << ", itsNodeRank: " << itsNodeRank);
+	    MPI_Barrier(itsNodeComms);
+        // only rank 0 has a total value > 0 and other ranks have a value of 0 but there is
+        // nothing wrong with this
         setupMpiMemory(total);
+
+        //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage prior to copy to shared memory: ");
+        //statReport.logMemorySummary();
 
         // copy itsConvFunc to shared memory
         imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
+        // itsConvFuncMatSize keeps an array of pairs whose values are number of rows and columns
+        // of the matrixes of the itsConvFunc vector. This variable is required by ranks > 0 because
+        // their itsConvFunc is empty up until now.
+        std::vector<std::pair<int,int> > itsConvFuncMatSize;
 	    // only itsNodeRank 0 does the copy 
 	    if ( itsNodeRank == 0 ) {
       	    ASKAPLOG_DEBUG_STR(logger, "copy itsConvFunc to shared memory");
+            int matrixSize[2];
             for ( auto it = itsConvFunc.begin();
             	it != itsConvFunc.end(); ++it) {
             	std::copy(it->data(),it->data() + it->nelements(),shareMemPtr);
             	shareMemPtr += it->nelements();
+                // Send the nrows and ncolumns of each matrix in the itsConvFunc vector of rank 0
+                // to other ranks
+                for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+                    matrixSize[0] = it->nrow();
+                    matrixSize[1] = it->ncolumn();
+                    MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms);
+                }
        	    }
-	    }
+            // Tell ranks > 0 that rank 0 has finished by sending -99
+            matrixSize[0] = -99;
+            matrixSize[1] = -99;
+            for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+                MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms)    ;
+            }
+	    } else {
+            // ranks > 0, receive the matrix dimension from rank 0 and store them
+            // in itsConvFuncMatSize.
+            while ( true ) {
+                int matrixSize[2] ={0,0}; 
+                MPI_Recv(matrixSize, 2, MPI_INT, 0, 0, itsNodeComms,MPI_STATUS_IGNORE);
+                if ( matrixSize[0] == -99 && matrixSize[1] == -99 ) break;
+                itsConvFuncMatSize.push_back(std::make_pair(matrixSize[0],matrixSize[1]));
+            }
+        }
 	    MPI_Barrier(itsNodeComms);
 
     	// copy shared memory back to itsConvFunc
-        ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage before using shared memory: ");
-        statReport.logMemorySummary();
+        //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage before using shared memory: ");
+        //statReport.logMemorySummary();
     	ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
      	shareMemPtr = itsMpiSharedMemory;
         for (int plane = 0; plane < nplane; plane++) {
-            casacore::IPosition pos(2,itsConvFunc[plane].nrow(),itsConvFunc[plane].ncolumn());
-            casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
-            itsConvFunc[plane].reference(m);
-            shareMemPtr += m.nelements();
-        }	
+            if ( itsNodeRank == 0 ) {
+                casacore::IPosition pos(2,itsConvFunc[plane].nrow(),itsConvFunc[plane].ncolumn());
+                casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
+                itsConvFunc[plane].reference(m);
+                shareMemPtr += m.nelements();
+            } else {
+                casacore::IPosition pos(2,itsConvFuncMatSize[plane].first,itsConvFuncMatSize[plane].second);
+                casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
+                itsConvFunc[plane].reference(m);
+                shareMemPtr += m.nelements();
+            }
+        }
 
+        MPI_Barrier(itsNodeComms);
         // this is the original code from WProjectVisGridder
         total = deepRefCopyOfSTDVector(itsConvFunc,theirCFCache);
-        ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage after using shared memory: ");
-        statReport.logMemorySummary();
+        //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage after using shared memory: ");
+        //statReport.logMemorySummary();
         if (isOffsetSupportAllowed()) {
             theirConvFuncOffsets.resize(nWPlanes());
             for (int nw=0; nw<nWPlanes(); nw++) {
