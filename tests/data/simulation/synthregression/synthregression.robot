@@ -54,7 +54,11 @@ leakagecalibtest: test of polarisation leakage calibration
 
 *** Keywords ***
 Run PythonTest ${thetest}
+    ${time} = Get Time
+    Log To Console "Start: " ${time}
     Log            ${thetest}
     [Tags]         ${thetest}
     ${result} =    Run Process   python3   ${thetest}.py    stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt    shell=True
     Should Be Equal As Integers      ${result.rc}     0
+    ${time} = Get Time
+    Log To Console "Finish: " ${time}
