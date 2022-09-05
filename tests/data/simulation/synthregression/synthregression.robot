@@ -57,10 +57,10 @@ leakagecalibtest: test of polarisation leakage calibration
 *** Keywords ***
 Run PythonTest ${thetest}
     ${start_time} =    Get Current Date
-    Log             ${thetest}
+    Log    console = True    ${thetest}
     [Tags]          ${thetest}
     ${result} =    Run Process   python3   ${thetest}.py    stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt    shell=True
     Should Be Equal As Integers      ${result.rc}     0
     ${end_time} =    Get Current Date
     ${elapsed_time} =    Subtract Date From Date  ${end_time}  ${start_time}
-    Log To Console    "Elapsed time: " ${elapsed_time}
+    Log    console = True    Elapsed time: ${elapsed_time} seconds
