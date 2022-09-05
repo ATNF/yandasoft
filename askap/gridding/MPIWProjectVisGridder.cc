@@ -160,6 +160,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other)
         itsShareCF(other.itsShareCF) 
 {
 	std::lock_guard<std::mutex> lk(ObjCountMutex);
+    ASKAPLOG_DEBUG_STR(logger, "copy constructor");
 	ObjCount += 1;
 }
 
@@ -167,6 +168,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other)
 /// Clone a copy of this Gridder
 IVisGridder::ShPtr MPIWProjectVisGridder::clone()
 {
+    ASKAPLOG_DEBUG_STR(logger, "clone()");
     return IVisGridder::ShPtr(new MPIWProjectVisGridder(*this));
 }
 
@@ -525,6 +527,39 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     // ranks > 0 of a given node wait here
     MPI_Barrier(itsNodeComms);
 
+    // Copy the offsets from rank 0 to other ranks on a per node basis
+    if (isOffsetSupportAllowed()) {
+        int offsetPerPlane[3] = {-1,-1,-1};
+        if ( itsNodeRank == 0 ) {
+            for (int nw=0; nw<nWPlanes(); nw++) {
+                std::pair<int,int> offset = getConvFuncOffset(nw);
+                offsetPerPlane[0] = nw;
+                offsetPerPlane[1] = offset.first;
+                offsetPerPlane[2] = offset.second;
+                //ASKAPLOG_DEBUG_STR(logger,"YYYYYY nw: " << offsetPerPlane[0]
+                //                    << ", x: " << offsetPerPlane[1] << ", y: " << offsetPerPlane[2]);
+                for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+                    MPI_Send(offsetPerPlane, 3, MPI_INT, dest, 0, itsNodeComms);
+                }
+            }
+            offsetPerPlane[0] = -99;
+            offsetPerPlane[1] = -99;
+            offsetPerPlane[2] = -99;
+            for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+                MPI_Send(offsetPerPlane, 3, MPI_INT, dest, 0, itsNodeComms)    ;
+            }
+        } else {
+            while ( true ) {
+                MPI_Recv(offsetPerPlane, 3, MPI_INT, 0, 0, itsNodeComms,MPI_STATUS_IGNORE);
+                if ( offsetPerPlane[1] == -99 && offsetPerPlane[2] == -99 ) break;
+                //ASKAPLOG_DEBUG_STR(logger,"XXXX nw: " << offsetPerPlane[0]
+                //                    << ", x: " << offsetPerPlane[1] << ", y: " << offsetPerPlane[2]); 
+                setConvFuncOffset(offsetPerPlane[0],offsetPerPlane[1],offsetPerPlane[2]);
+            }
+        }
+    }
+
+    MPI_Barrier(itsNodeComms);
     // Save the CF to the cache
     ASKAPLOG_DEBUG_STR(logger,"itsShareCF: " << itsShareCF);
     if (itsShareCF) {
@@ -543,18 +578,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
                 it != itsConvFunc.end(); ++it) {
                 total += it->nelements() * sizeof(imtypeComplex);
             }
-            // The MPI_Send/MPI_Recv below works but commented out because it is probably
-            // better to use MPI_Bcast here.
-
-            // rank 0 of a given node sends the number of planes to other ranks. This
-            // is the number of elements of the itsConvFunc
-            //for ( int dest = 1; dest < itsNodeSize; dest++ ) {
-            //    MPI_Send(&nplane, 1, MPI_UNSIGNED_LONG, dest, 0, itsNodeComms);
-            //}
-        } else {
-            // other ranks receive the nplane sent from rank 0
-            //MPI_Recv(&nplane, 1, MPI_UNSIGNED_LONG, 0, 0, itsNodeComms, MPI_STATUS_IGNORE);
-        }
+        } 
         // rank 0 of a given node sends/broadcasts the number of planes to other ranks.
         // This is the number of elements of the itsConvFunc. 
         MPI_Bcast(&nplane,1,MPI_UNSIGNED_LONG,0,itsNodeComms);
@@ -614,17 +638,17 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     	ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
      	shareMemPtr = itsMpiSharedMemory;
         for (int plane = 0; plane < nplane; plane++) {
+            casacore::IPosition pos(2);
             if ( itsNodeRank == 0 ) {
-                casacore::IPosition pos(2,itsConvFunc[plane].nrow(),itsConvFunc[plane].ncolumn());
-                casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
-                itsConvFunc[plane].reference(m);
-                shareMemPtr += m.nelements();
+                pos(0) = itsConvFunc[plane].nrow();
+                pos(1) = itsConvFunc[plane].ncolumn();
             } else {
-                casacore::IPosition pos(2,itsConvFuncMatSize[plane].first,itsConvFuncMatSize[plane].second);
-                casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
-                itsConvFunc[plane].reference(m);
-                shareMemPtr += m.nelements();
+                pos(0) = itsConvFuncMatSize[plane].first;
+                pos(1) = itsConvFuncMatSize[plane].second;
             }
+            casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
+            itsConvFunc[plane].reference(m);
+            shareMemPtr += m.nelements();
         }
 
         MPI_Barrier(itsNodeComms);
@@ -753,6 +777,7 @@ int MPIWProjectVisGridder::cIndex(int row, int pol, int chan)
 /// @return a shared pointer to the gridder instance
 IVisGridder::ShPtr MPIWProjectVisGridder::createGridder(const LOFAR::ParameterSet& parset)
 {
+
     const double wmax = parset.getDouble("wmax", 35000.0);
     const int nwplanes = parset.getInt32("nwplanes", 65);
     const double cutoff = parset.getDouble("cutoff", 1e-3);
@@ -782,12 +807,14 @@ IVisGridder::ShPtr MPIWProjectVisGridder::createGridder(const LOFAR::ParameterSe
 /// @param[in] parset input parset file
 void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 {
+    std::lock_guard<std::mutex> lk(ObjCountMutex);
     ASKAPLOG_INFO_STR(logger, "configureGridder");
     const bool planeDependentSupport = parset.getBool("variablesupport", false);
 
     MPIWProjectVisGridder::planeDependentSupport(planeDependentSupport);
 
     const bool offsetSupport = parset.getBool("offsetsupport", false);
+
     ASKAPCHECK((!offsetSupport && !planeDependentSupport) || planeDependentSupport,
                "offsetsupport option of the gridder should only be used together with variablesupport option");
     MPIWProjectVisGridder::offsetSupport(offsetSupport);
@@ -808,7 +835,7 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
     itsShareCF = parset.getBool("sharecf",false);
 
-    std::lock_guard<std::mutex> lk(ObjCountMutex);
+    //std::lock_guard<std::mutex> lk(ObjCountMutex);
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
