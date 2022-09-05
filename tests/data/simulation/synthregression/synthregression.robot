@@ -1,7 +1,9 @@
 *** Settings ***
 Library             Process
+Library             DateTime
 Documentation       Synthesis Regresssion Test Suite 
 Default Tags        synthesis  
+
 *** Test Cases ***
 MSMFS with new imager
     [Tags]          testmsmfs      newimager
@@ -54,11 +56,11 @@ leakagecalibtest: test of polarisation leakage calibration
 
 *** Keywords ***
 Run PythonTest ${thetest}
-    ${time} = Get Time
-    Log To Console "Start: " ${time}
+    ${start_time} = Get Current Date
     Log            ${thetest}
     [Tags]         ${thetest}
     ${result} =    Run Process   python3   ${thetest}.py    stdout=${thetest}.stdout.txt    stderr=${thetest}.stderr.txt    shell=True
     Should Be Equal As Integers      ${result.rc}     0
-    ${time} = Get Time
-    Log To Console "Finish: " ${time}
+    ${end_time} = Get Current Date
+    ${elapsed_time} = Subtract Date From Date  ${end_time}  ${start_time}
+    Log To Console  "Elapsed time: " ${elapsed_time}
