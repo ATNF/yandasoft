@@ -596,11 +596,15 @@ if __name__ == '__main__':
 
     runTests("SVD")
     runTests("LSQR")
-    if opt.parallel:
-        runTestsParallel(1)
-        runTestsParallel(5)
-        runTestsSmoothnessConstraintsParallel()
-        runTestsSmoothnessConstraintsGradientCost()
+    runTestsParallel(1)
+    runTestsParallel(5)
+    runTestsSmoothnessConstraintsParallel()
+    runTestsSmoothnessConstraintsGradientCost()
+    # if opt.parallel:
+    #     runTestsParallel(1)
+    #     runTestsParallel(5)
+    #     runTestsSmoothnessConstraintsParallel()
+    #     runTestsSmoothnessConstraintsGradientCost()
 
     #clean up
     import os
