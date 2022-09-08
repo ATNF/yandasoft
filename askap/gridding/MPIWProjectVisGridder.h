@@ -238,7 +238,9 @@ namespace askap
 
             private:
 
-                void  setupMpiMemory(size_t bufferSize /* in bytes */);
+                void setupMpiMemory(size_t bufferSize /* in bytes */);
+                void copyToSharedMemory(std::vector<std::pair<int,int> >& itsConvFuncMatSize);
+                void copyFromSharedMemory(const std::vector<std::pair<int,int> >& itsConvFuncMatSize, unsigned int nplane);
 
                 /// @brief assignment operator
                 /// @details Defined as private, so it can't be called (to enforce usage of the

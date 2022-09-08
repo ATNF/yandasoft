@@ -44,7 +44,7 @@
 #include <askap/gridding/MPIWProjectVisGridder.h>
 #include <askap/gridding/SupportSearcher.h>
 
-ASKAP_LOGGER(logger, ".gridding.MPIwprojectvisgridder");
+ASKAP_LOGGER(logger, ".gridding.mpiwprojectvisgridder");
 
 namespace askap {
 namespace synthesis {
@@ -256,6 +256,8 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
       const int cCenter=(cSize-1)/2;
 
       // Use the w & oversampling setup as the main grid kernels.
+//    unsigned long total = 0;
+//  if ( itsNodeRank == 0 ) {
       for (int iw = 0; iw < nWPlanes(); ++iw) {
 
         // Store the main kernel size (in pixels) in the imag part.
@@ -284,6 +286,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
                 ASKAPDEBUGASSERT(plane < int(itsConvFunc.size()));
                 itsConvFunc[plane].resize(cSize, cSize);
                 itsConvFunc[plane].set(0.0);
+                //total += cSize * cSize * sizeof(imtypeComplex);
                 // are fracu and fracv being correctly used here?
                 // I think they should be -ve, since the offset in nux & nuy is +ve.
                 const int ix = -float(fracu)/float(itsOverSample);
@@ -293,7 +296,10 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         }
 
       }
-
+//  }
+//    MPI_Barrier(itsNodeComms);
+//    MPI_Bcast(&total,1,MPI_UNSIGNED_LONG,0,itsNodeComms);
+//    setupMpiMemory(total);
       return;
     }
 
@@ -593,63 +599,18 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         //statReport.logMemorySummary();
 
         // copy itsConvFunc to shared memory
-        imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
         // itsConvFuncMatSize keeps an array of pairs whose values are number of rows and columns
         // of the matrixes of the itsConvFunc vector. This variable is required by ranks > 0 because
         // their itsConvFunc is empty up until now.
         std::vector<std::pair<int,int> > itsConvFuncMatSize;
-	    // only itsNodeRank 0 does the copy 
-	    if ( itsNodeRank == 0 ) {
-      	    ASKAPLOG_DEBUG_STR(logger, "copy itsConvFunc to shared memory");
-            int matrixSize[2];
-            for ( auto it = itsConvFunc.begin();
-            	it != itsConvFunc.end(); ++it) {
-            	std::copy(it->data(),it->data() + it->nelements(),shareMemPtr);
-            	shareMemPtr += it->nelements();
-                // Send the nrows and ncolumns of each matrix in the itsConvFunc vector of rank 0
-                // to other ranks
-                for ( int dest = 1; dest < itsNodeSize; dest++ ) {
-                    matrixSize[0] = it->nrow();
-                    matrixSize[1] = it->ncolumn();
-                    MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms);
-                }
-       	    }
-            // Tell ranks > 0 that rank 0 has finished by sending -99
-            matrixSize[0] = -99;
-            matrixSize[1] = -99;
-            for ( int dest = 1; dest < itsNodeSize; dest++ ) {
-                MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms)    ;
-            }
-	    } else {
-            // ranks > 0, receive the matrix dimension from rank 0 and store them
-            // in itsConvFuncMatSize.
-            while ( true ) {
-                int matrixSize[2] ={0,0}; 
-                MPI_Recv(matrixSize, 2, MPI_INT, 0, 0, itsNodeComms,MPI_STATUS_IGNORE);
-                if ( matrixSize[0] == -99 && matrixSize[1] == -99 ) break;
-                itsConvFuncMatSize.push_back(std::make_pair(matrixSize[0],matrixSize[1]));
-            }
-        }
+        copyToSharedMemory(itsConvFuncMatSize);
 	    MPI_Barrier(itsNodeComms);
 
     	// copy shared memory back to itsConvFunc
         //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage before using shared memory: ");
         //statReport.logMemorySummary();
     	ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
-     	shareMemPtr = itsMpiSharedMemory;
-        for (int plane = 0; plane < nplane; plane++) {
-            casacore::IPosition pos(2);
-            if ( itsNodeRank == 0 ) {
-                pos(0) = itsConvFunc[plane].nrow();
-                pos(1) = itsConvFunc[plane].ncolumn();
-            } else {
-                pos(0) = itsConvFuncMatSize[plane].first;
-                pos(1) = itsConvFuncMatSize[plane].second;
-            }
-            casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
-            itsConvFunc[plane].reference(m);
-            shareMemPtr += m.nelements();
-        }
+        copyFromSharedMemory(itsConvFuncMatSize,nplane);
 
         MPI_Barrier(itsNodeComms);
         // this is the original code from WProjectVisGridder
@@ -897,22 +858,33 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
 
     itsMpiMemSetup = true;
 
-    ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << ", bufferSize: " << bufferSize);
 
     size_t memSizeInBytes = 0;
     if ( itsNodeRank == 0 ) {
         memSizeInBytes = bufferSize;
+        // memSizeInBytes = 41032802304;
     }
+    char estring[MPI_MAX_ERROR_STRING];
+    int elen = 0;
+    ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << ", bufferSize: " << memSizeInBytes);
     ASKAPCHECK(itsNodeComms != MPI_COMM_NULL,"itsNodeRank: " << itsNodeRank << " - itsNodeComms is Null");
+    ASKAPLOG_INFO_STR(logger,"111 - itsNodeRank: " << itsNodeRank << ", calling MPI_Win_allocate_shared()");
     int r = MPI_Win_allocate_shared(memSizeInBytes,sizeof(imtypeComplex),
                                 MPI_INFO_NULL, itsNodeComms, &itsMpiSharedMemory,
                                 &itsWindowTable);
+    if ( r != MPI_SUCCESS ) {
+        MPI_Error_string(error, estring, &elen);
+        ASKAPLOG_INFO_STR(logger,"MPI_Win_allocate_shared - " << estring);    
+    }
+    ASKAPLOG_INFO_STR(logger,"222 - itsNodeRank: " << itsNodeRank << ", MPI_Win_allocate_shared() - done");
     ASKAPCHECK(r == MPI_SUCCESS, "itsNodeRank: " << itsNodeRank << " - MPI_Win_allocate_shared() failed.");
     // For itsNodeRanks != 0, get their itsMpiSharedMemory pointer variable to point the
     // start of the MPI shared memory allocated by itsNodeRank = 0
     MPI_Barrier(itsNodeComms);
     if ( itsNodeRank != 0 ) {
+        ASKAPLOG_INFO_STR(logger,"333 - itsNodeRank: " << itsNodeRank << ", calling MPI_Win_shared_query()");
         int r = MPI_Win_shared_query(itsWindowTable, 0, &itsWindowSize, &itsWindowDisp, &itsMpiSharedMemory);
+        ASKAPLOG_INFO_STR(logger,"444 - itsNodeRank: " << itsNodeRank << ", MPI_Win_shared_query() - done");
         ASKAPCHECK(r == MPI_SUCCESS, "MPI_Win_shared_query failed.");
     }
         
@@ -920,6 +892,66 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
 	//unsigned long* val;
 	//int flag = 1;
 	//r = MPI_Win_get_attr(itsWindowTable,MPI_WIN_SIZE,&val,&flag);
+}
+
+void MPIWProjectVisGridder::copyToSharedMemory(std::vector<std::pair<int,int>>& itsConvFuncMatSize)
+{
+    imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
+    // itsConvFuncMatSize keeps an array of pairs whose values are number of rows and columns
+    // of the matrixes of the itsConvFunc vector. This variable is required by ranks > 0 because
+    // their itsConvFunc is empty up until now.
+    // only itsNodeRank 0 does the copy 
+	if ( itsNodeRank == 0 ) {
+        ASKAPLOG_DEBUG_STR(logger, "copy itsConvFunc to shared memory");
+        int matrixSize[2];
+        for ( auto it = itsConvFunc.begin();
+        	it != itsConvFunc.end(); ++it) {
+           	std::copy(it->data(),it->data() + it->nelements(),shareMemPtr);
+           	shareMemPtr += it->nelements();
+            // Send the nrows and ncolumns of each matrix in the itsConvFunc vector of rank 0
+            // to other ranks
+            for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+                matrixSize[0] = it->nrow();
+                matrixSize[1] = it->ncolumn();
+                MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms);
+            }
+       	}
+        // Tell ranks > 0 that rank 0 has finished by sending -99
+        matrixSize[0] = -99;
+        matrixSize[1] = -99;
+        for ( int dest = 1; dest < itsNodeSize; dest++ ) {
+            MPI_Send(matrixSize, 2, MPI_INT, dest, 0, itsNodeComms);
+        }
+	} else {
+        // ranks > 0, receive the matrix dimension from rank 0 and store them
+        // in itsConvFuncMatSize.
+        while ( true ) {
+            int matrixSize[2] ={0,0}; 
+            MPI_Recv(matrixSize, 2, MPI_INT, 0, 0, itsNodeComms,MPI_STATUS_IGNORE);
+            if ( matrixSize[0] == -99 && matrixSize[1] == -99 ) break;
+            itsConvFuncMatSize.push_back(std::make_pair(matrixSize[0],matrixSize[1]));
+        }
+    }    
+}
+
+void MPIWProjectVisGridder::copyFromSharedMemory(const std::vector<std::pair<int,int>>& itsConvFuncMatSize, unsigned int nplane)
+{
+    ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
+    imtypeComplex* shareMemPtr = itsMpiSharedMemory;
+    for (unsigned int plane = 0; plane < nplane; plane++) {
+        casacore::IPosition pos(2);
+        if ( itsNodeRank == 0 ) {
+            pos(0) = itsConvFunc[plane].nrow();
+            pos(1) = itsConvFunc[plane].ncolumn();
+        } else {
+            pos(0) = itsConvFuncMatSize[plane].first;
+            pos(1) = itsConvFuncMatSize[plane].second;
+        }
+        
+        casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
+        itsConvFunc[plane].reference(m);
+        shareMemPtr += m.nelements();
+    }
 }
 
 } // namespace askap
