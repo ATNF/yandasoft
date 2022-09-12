@@ -78,7 +78,8 @@ namespace askap
                         const int maxSupport, const int limitSupport,
                         const std::string& name=std::string(""),
                         const float alpha=1.,
-                        const bool shareCF=false);
+                        const bool shareCF=false,
+                        const bool mpipresetup = false);
 
                 virtual ~MPIWProjectVisGridder();
 
@@ -235,7 +236,6 @@ namespace askap
                 /// @brief cached CF offsets
                 static std::vector<std::pair<int,int> > theirConvFuncOffsets;
 
-
             private:
 
                 void setupMpiMemory(size_t bufferSize /* in bytes */);
@@ -312,7 +312,8 @@ namespace askap
                 static std::mutex ObjCountMutex;
                 static unsigned int ObjCount;
                 static bool     itsMpiMemSetup;
-        
+                // hard code the mpi shared memory on startup 
+                bool itsMpiMemPreSetup;
         };
     }
 }

@@ -61,9 +61,8 @@ int MPIWProjectVisGridder::itsNodeSize;
 int MPIWProjectVisGridder::itsNodeRank;
 imtypeComplex* MPIWProjectVisGridder::itsMpiSharedMemory = nullptr;
 bool MPIWProjectVisGridder::itsMpiMemSetup = false;
-std::mutex MPIWProjectVisGridder::ObjCountMutex;
 unsigned int MPIWProjectVisGridder::ObjCount = 0;
-
+std::mutex MPIWProjectVisGridder::ObjCountMutex;
 
 std::vector<casa::Matrix<casa::Complex> > MPIWProjectVisGridder::theirCFCache;
 std::vector<std::pair<int,int> > MPIWProjectVisGridder::theirConvFuncOffsets;
@@ -100,11 +99,12 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
                                        const int limitSupport,
                                        const std::string& name,
                                        const float alpha,
-                                       const bool shareCF) :
+                                       const bool shareCF,
+                                       const bool mpipresetup) :
         WDependentGridderBase(wmax, nwplanes, alpha),
         itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
         itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false),
-        itsShareCF(shareCF)
+        itsShareCF(shareCF),itsMpiMemPreSetup(mpipresetup)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport > 0, "Maximum support must be greater than 0")
@@ -113,6 +113,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
     setTableName(name);
     itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
 
+    
     std::lock_guard<std::mutex> lk(ObjCountMutex);
     ObjCount += 1;
 }
@@ -148,7 +149,7 @@ MPIWProjectVisGridder::~MPIWProjectVisGridder()
 
 /// @brief copy constructor
 /// @details It is required to decouple internal arrays in the input
-/// object and the copy.
+/// object and the copy
 /// @param[in] other input object
 MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other) :
         IVisGridder(other), WDependentGridderBase(other),
@@ -157,7 +158,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other)
         itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
         itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
         itsCutoffAbs(other.itsCutoffAbs),
-        itsShareCF(other.itsShareCF) 
+        itsShareCF(other.itsShareCF),itsMpiMemPreSetup(other.itsMpiMemPreSetup) 
 {
 	std::lock_guard<std::mutex> lk(ObjCountMutex);
     ASKAPLOG_DEBUG_STR(logger, "copy constructor");
@@ -309,6 +310,8 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         itsSupport = 1;
         size_t size = deepRefCopyOfSTDVector(theirCFCache,itsConvFunc)/1024/1024;
         ASKAPLOG_INFO_STR(logger, "Using cached convolution functions ("<<size<<" MB)");
+        StatReporter s;
+        s.logSummary();
         if (isOffsetSupportAllowed()) {
             for (size_t i=0; i<theirConvFuncOffsets.size(); i++) {
                 setConvFuncOffset(i,theirConvFuncOffsets[i].first,theirConvFuncOffsets[i].second);
@@ -593,7 +596,13 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
 	    MPI_Barrier(itsNodeComms);
         // only rank 0 has a total value > 0 and other ranks have a value of 0 but there is
         // nothing wrong with this
-        setupMpiMemory(total);
+        if ( ! itsMpiMemPreSetup )
+        {
+            std::lock_guard<std::mutex> lk(ObjCountMutex);
+            setupMpiMemory(total);
+        } else {
+            ASKAPLOG_INFO_STR(logger, "itsNodeRank: " << itsNodeRank << ".  memory has been presetup.");
+        }
 
         //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage prior to copy to shared memory: ");
         //statReport.logMemorySummary();
@@ -609,7 +618,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     	// copy shared memory back to itsConvFunc
         //ASKAPLOG_DEBUG_STR(logger,"itsNodeRank: " << itsNodeRank << ", Memory usage before using shared memory: ");
         //statReport.logMemorySummary();
-    	ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
+    	//ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
         copyFromSharedMemory(itsConvFuncMatSize,nplane);
 
         MPI_Barrier(itsNodeComms);
@@ -749,12 +758,14 @@ IVisGridder::ShPtr MPIWProjectVisGridder::createGridder(const LOFAR::ParameterSe
     const float alpha=parset.getFloat("alpha", 1.);
     const bool useDouble = parset.getBool("usedouble",false);
 
+    const bool mpipresetup = parset.getBool("mpipresetup", false);
+
     ASKAPLOG_INFO_STR(logger, "Gridding using W projection with " << nwplanes << " w-planes");
     ASKAPLOG_INFO_STR(logger, "Gridding using maxsupport: " << maxSupport );
     ASKAPLOG_INFO_STR(logger, "Using " << (useDouble ? "double":"single")<<
                       " precision to calculate convolution functions");
     boost::shared_ptr<MPIWProjectVisGridder> gridder(new MPIWProjectVisGridder(wmax, nwplanes,
-            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble));
+            cutoff, oversample, maxSupport, limitSupport, tablename, alpha, useDouble,mpipresetup));
     gridder->configureGridder(parset);
     gridder->configureWSampling(parset);
 
@@ -826,6 +837,14 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     MPI_Barrier(itsNodeComms);
 
     ASKAPLOG_INFO_STR(logger,"rank: " << rank << ", itsNodeSize: " << itsNodeSize << ", itsNodeRank: " << itsNodeRank);
+
+    if ( itsMpiMemPreSetup ) {
+        std::string mpiMem = parset.getString("mpipresetmemory","");
+        ASKAPCHECK(mpiMem != "", "mpipresetmemory option is not set");
+        unsigned long memoryInBytes = std::stoul(mpiMem);;
+        ASKAPLOG_INFO_STR(logger,"Presetup the shared memory. " << memoryInBytes);
+        setupMpiMemory(memoryInBytes); 
+    }
 }
 
 
@@ -850,7 +869,7 @@ MPIWProjectVisGridder& MPIWProjectVisGridder::operator=(const MPIWProjectVisGrid
 
 void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
 {
-    std::lock_guard<std::mutex> lk(ObjCountMutex);
+    //std::lock_guard<std::mutex> lk(ObjCountMutex);
     if ( itsMpiMemSetup  ) {
 	    ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << " - mpi shared memory already setup. ObjCount: " << ObjCount);
         return;
@@ -859,7 +878,8 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
     itsMpiMemSetup = true;
 
 
-    size_t memSizeInBytes = 0;
+    //size_t memSizeInBytes = 0;
+    MPI_Aint memSizeInBytes = 0;
     if ( itsNodeRank == 0 ) {
         memSizeInBytes = bufferSize;
         // memSizeInBytes = 41032802304;
@@ -868,23 +888,22 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
     int elen = 0;
     ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << ", bufferSize: " << memSizeInBytes);
     ASKAPCHECK(itsNodeComms != MPI_COMM_NULL,"itsNodeRank: " << itsNodeRank << " - itsNodeComms is Null");
-    ASKAPLOG_INFO_STR(logger,"111 - itsNodeRank: " << itsNodeRank << ", calling MPI_Win_allocate_shared()");
+    StatReporter statReport;
+    statReport.logMemorySummary();
     int r = MPI_Win_allocate_shared(memSizeInBytes,sizeof(imtypeComplex),
                                 MPI_INFO_NULL, itsNodeComms, &itsMpiSharedMemory,
                                 &itsWindowTable);
     if ( r != MPI_SUCCESS ) {
-        MPI_Error_string(error, estring, &elen);
+        MPI_Error_string(r, estring, &elen);
         ASKAPLOG_INFO_STR(logger,"MPI_Win_allocate_shared - " << estring);    
     }
-    ASKAPLOG_INFO_STR(logger,"222 - itsNodeRank: " << itsNodeRank << ", MPI_Win_allocate_shared() - done");
+    statReport.logMemorySummary();
     ASKAPCHECK(r == MPI_SUCCESS, "itsNodeRank: " << itsNodeRank << " - MPI_Win_allocate_shared() failed.");
     // For itsNodeRanks != 0, get their itsMpiSharedMemory pointer variable to point the
     // start of the MPI shared memory allocated by itsNodeRank = 0
     MPI_Barrier(itsNodeComms);
     if ( itsNodeRank != 0 ) {
-        ASKAPLOG_INFO_STR(logger,"333 - itsNodeRank: " << itsNodeRank << ", calling MPI_Win_shared_query()");
         int r = MPI_Win_shared_query(itsWindowTable, 0, &itsWindowSize, &itsWindowDisp, &itsMpiSharedMemory);
-        ASKAPLOG_INFO_STR(logger,"444 - itsNodeRank: " << itsNodeRank << ", MPI_Win_shared_query() - done");
         ASKAPCHECK(r == MPI_SUCCESS, "MPI_Win_shared_query failed.");
     }
         
@@ -936,7 +955,7 @@ void MPIWProjectVisGridder::copyToSharedMemory(std::vector<std::pair<int,int>>& 
 
 void MPIWProjectVisGridder::copyFromSharedMemory(const std::vector<std::pair<int,int>>& itsConvFuncMatSize, unsigned int nplane)
 {
-    ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
+    ASKAPLOG_DEBUG_STR(logger, "itsNodeRank: " << itsNodeRank << " - copy shared memory back to itsConvFunc");
     imtypeComplex* shareMemPtr = itsMpiSharedMemory;
     for (unsigned int plane = 0; plane < nplane; plane++) {
         casacore::IPosition pos(2);
