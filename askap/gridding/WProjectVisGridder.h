@@ -39,6 +39,27 @@ namespace askap
 {
     namespace synthesis
     {
+        /// helper function
+        /// @brief a helper method for a ref copy of casa arrays held in stl vector
+        /// @param[in] in input array
+        /// @param[out] out output array (will be resized)
+        /// @return size of the cache in bytes (assuming Complex array elements)
+        template<typename T>
+        size_t deepRefCopyOfSTDVector(const std::vector<T> &in, std::vector<T> &out)
+        {
+            out.resize(in.size());
+            size_t total = 0;
+            const typename std::vector<T>::const_iterator inEnd = in.end();
+            typename std::vector<T>::iterator outIt = out.begin();
+            for (typename std::vector<T>::const_iterator inIt = in.begin();
+                inIt != inEnd; ++inIt,++outIt) {
+                outIt->reference(*inIt);
+                total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
+            }
+            return total;
+        }
+
+
         /// @brief Visibility gridder using W projection
         /// @details The visibilities are gridded using a convolution
         /// function that implements a Fresnel transform. This corrects
@@ -214,6 +235,11 @@ namespace askap
                 /// @return true if the shared cache is used
                 inline bool shareCF() const { return itsShareCF; }
 
+
+                void doPCFGridder();
+                void generate();
+                void save();
+
                 /// @brief Specify if we are using the shared CF cache
                 /// @param[in] true if the shared cache is used
                 inline void setShareCF(bool flag) { itsShareCF = flag; }
@@ -236,6 +262,7 @@ namespace askap
                 /// @return reference to itself
                 WProjectVisGridder& operator=(const WProjectVisGridder &other);
 
+            protected:
                 /// Maximum support
                 int itsMaxSupport;
 

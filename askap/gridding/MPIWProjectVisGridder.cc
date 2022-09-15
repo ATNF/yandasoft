@@ -64,8 +64,8 @@ bool MPIWProjectVisGridder::itsMpiMemSetup = false;
 unsigned int MPIWProjectVisGridder::ObjCount = 0;
 std::mutex MPIWProjectVisGridder::ObjCountMutex;
 
-std::vector<casa::Matrix<casa::Complex> > MPIWProjectVisGridder::theirCFCache;
-std::vector<std::pair<int,int> > MPIWProjectVisGridder::theirConvFuncOffsets;
+//std::vector<casa::Matrix<casa::Complex> > MPIWProjectVisGridder::theirCFCache;
+//std::vector<std::pair<int,int> > MPIWProjectVisGridder::theirConvFuncOffsets;
 
 /// @brief a helper method for a ref copy of casa arrays held in
 /// stl vector
@@ -73,23 +73,23 @@ std::vector<std::pair<int,int> > MPIWProjectVisGridder::theirConvFuncOffsets;
 /// @param[out] out output array (will be resized)
 /// @return size of the cache in bytes (assuming Complex array elements)
 
-template<typename T>
-size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
-                            std::vector<T> &out)
-{
-   out.resize(in.size());
-   size_t total = 0;
+//template<typename T>
+//size_t deepRefCopyOfSTDVector(const std::vector<T> &in,
+//                            std::vector<T> &out)
+//{
+//   out.resize(in.size());
+//   size_t total = 0;
    
-   const typename std::vector<T>::const_iterator inEnd = in.end();
-   typename std::vector<T>::iterator outIt = out.begin();
-   for (typename std::vector<T>::const_iterator inIt = in.begin();
-       inIt != inEnd; ++inIt,++outIt) {
-       outIt->reference(*inIt);
-       total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
-   }
+//   const typename std::vector<T>::const_iterator inEnd = in.end();
+//   typename std::vector<T>::iterator outIt = out.begin();
+//   for (typename std::vector<T>::const_iterator inIt = in.begin();
+//       inIt != inEnd; ++inIt,++outIt) {
+//       outIt->reference(*inIt);
+//       total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
+//   }
    
-   return total;
-}
+//   return total;
+//}
 
 MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
                                        const int nwplanes,
@@ -101,18 +101,11 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
                                        const float alpha,
                                        const bool shareCF,
                                        const bool mpipresetup) :
-        WDependentGridderBase(wmax, nwplanes, alpha),
-        itsMaxSupport(maxSupport), itsCutoff(cutoff), itsLimitSupport(limitSupport),
-        itsPlaneDependentCFSupport(false), itsOffsetSupportAllowed(false), itsCutoffAbs(false),
-        itsShareCF(shareCF),itsMpiMemPreSetup(mpipresetup)
+        WProjectVisGridder(wmax, nwplanes, alpha,overSample,maxSupport,limitSupport,name,alpha,shareCF),
+        itsMpiMemPreSetup(mpipresetup)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport > 0, "Maximum support must be greater than 0")
-    itsSupport = 0;
-    itsOverSample = overSample;
-    setTableName(name);
-    itsConvFunc.resize(nWPlanes()*itsOverSample*itsOverSample);
-
     
     std::lock_guard<std::mutex> lk(ObjCountMutex);
     ObjCount += 1;
@@ -152,13 +145,8 @@ MPIWProjectVisGridder::~MPIWProjectVisGridder()
 /// object and the copy
 /// @param[in] other input object
 MPIWProjectVisGridder::MPIWProjectVisGridder(const MPIWProjectVisGridder &other) :
-        IVisGridder(other), WDependentGridderBase(other),
-        itsCMap(other.itsCMap.copy()), itsMaxSupport(other.itsMaxSupport),
-        itsCutoff(other.itsCutoff), itsLimitSupport(other.itsLimitSupport),
-        itsPlaneDependentCFSupport(other.itsPlaneDependentCFSupport),
-        itsOffsetSupportAllowed(other.itsOffsetSupportAllowed),
-        itsCutoffAbs(other.itsCutoffAbs),
-        itsShareCF(other.itsShareCF),itsMpiMemPreSetup(other.itsMpiMemPreSetup) 
+        IVisGridder(other), WProjectVisGridder(other),
+        itsMpiMemPreSetup(other.itsMpiMemPreSetup)
 {
 	std::lock_guard<std::mutex> lk(ObjCountMutex);
     ASKAPLOG_DEBUG_STR(logger, "copy constructor");
@@ -171,55 +159,6 @@ IVisGridder::ShPtr MPIWProjectVisGridder::clone()
 {
     ASKAPLOG_DEBUG_STR(logger, "clone()");
     return IVisGridder::ShPtr(new MPIWProjectVisGridder(*this));
-}
-
-/// @brief initialise sum of weights
-/// @details We keep track the number of times each convolution function is used per
-/// channel and polarisation (sum of weights). This method is made virtual to be able
-/// to do gridder specific initialisation without overriding initialiseGrid.
-/// This method accepts no parameters as itsShape, itsNWPlanes, etc should have already
-/// been initialised by the time this method is called.
-void MPIWProjectVisGridder::initialiseSumOfWeights()
-{
-    resizeSumOfWeights(nWPlanes());
-    zeroSumOfWeights();
-}
-
-/// Initialize the convolution function into the cube. If necessary this
-/// could be optimized by using symmetries.
-void MPIWProjectVisGridder::initIndices(const accessors::IConstDataAccessor& acc)
-{
-    ASKAPTRACE("MPIWProjectVisGridder::initIndices");
-    /// We have to calculate the lookup function converting from
-    /// row and channel to plane of the w-dependent convolution
-    /// function
-    const int nSamples = acc.nRow();
-    const int nChan = acc.nChannel();
-    const int nPol = acc.nPol();
-
-    itsCMap.resize(nSamples, nPol, nChan);
-
-#ifdef ASKAP_DEBUG
-    // in the debug mode we check that all used indices are initialised.
-    // negative value means an uninitialised index. In the production version we don't care
-    // about uninitialised indices as long as they are not used.
-    itsCMap.set(-1);
-#endif
-
-    const casacore::Vector<casacore::RigidVector<double, 3> > &rotatedUVW = acc.rotatedUVW(getTangentPoint());
-    const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
-
-    for (int i = 0; i < nSamples; ++i) {
-        const double w = (rotatedUVW(i)(2)) / (casacore::C::c);
-        for (int chan = 0; chan < nChan; ++chan) {
-            /// Calculate the index into the convolution functions
-            const double freq = chanFreq[chan];
-            const int wPlane = getWPlane(w * freq);
-            for (int pol = 0; pol < nPol; ++pol) {
-                itsCMap(i, pol, chan) = wPlane;
-            }
-        }
-    }
 }
 
 /// Initialize the convolution function into the cube. If necessary this
@@ -635,108 +574,6 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     }
 }
 
-/// @brief search for support parameters
-/// @details This method encapsulates support search operation, taking into account the
-/// cutoff parameter and whether or not an offset is allowed.
-/// @param[in] cfPlane const reference to 2D plane with the convolution function
-/// @return an instance of CFSupport with support parameters
-MPIWProjectVisGridder::CFSupport MPIWProjectVisGridder::extractSupport(const casacore::Matrix<casacore::DComplex> &cfPlane) const
-{
-    ASKAPDEBUGTRACE("MPIWProjectVisGridder::extractSupport");
-    CFSupport result(-1);
-    SupportSearcher ss(itsCutoff);
-
-    if (isCutoffAbsolute()) {
-        ss.search(cfPlane, 1.);
-    } else {
-        ss.search(cfPlane);
-    }
-
-    if (isOffsetSupportAllowed()) {
-        result.itsSize = ss.support();
-        const casacore::IPosition peakPos = ss.peakPos();
-        ASKAPDEBUGASSERT(peakPos.nelements() == 2);
-        result.itsOffsetU = (peakPos[0] - int(cfPlane.nrow()) / 2) / itsOverSample;
-        result.itsOffsetV = (peakPos[1] - int(cfPlane.ncolumn()) / 2) / itsOverSample;
-    } else {
-        result.itsSize = ss.symmetricalSupport(cfPlane.shape());
-        ASKAPCHECK(result.itsSize > 0, "Unable to determine support of convolution function");
-    }
-
-    result.itsSize /= 2 * itsOverSample;
-    if (result.itsSize < 3) {
-        result.itsSize = 3;
-    }
-
-    return result;
-}
-
-/// @brief search for support parameters
-/// @details This method encapsulates support search operation, taking into account the
-/// cutoff parameter and whether or not an offset is allowed.
-/// @param[in] cfPlane const reference to 2D plane with the convolution function
-/// @return an instance of CFSupport with support parameters
-MPIWProjectVisGridder::CFSupport MPIWProjectVisGridder::extractSupport(const casacore::Matrix<casacore::Complex> &cfPlane) const
-{
-    ASKAPDEBUGTRACE("MPIWProjectVisGridder::extractSupport");
-    CFSupport result(-1);
-    SupportSearcher ss(itsCutoff);
-
-    if (isCutoffAbsolute()) {
-        ss.search(cfPlane, 1.);
-    } else {
-        ss.search(cfPlane);
-    }
-
-    if (isOffsetSupportAllowed()) {
-        result.itsSize = ss.support();
-        const casacore::IPosition peakPos = ss.peakPos();
-        ASKAPDEBUGASSERT(peakPos.nelements() == 2);
-        result.itsOffsetU = (peakPos[0] - int(cfPlane.nrow()) / 2) / itsOverSample;
-        result.itsOffsetV = (peakPos[1] - int(cfPlane.ncolumn()) / 2) / itsOverSample;
-    } else {
-        result.itsSize = ss.symmetricalSupport(cfPlane.shape());
-        ASKAPCHECK(result.itsSize > 0, "Unable to determine support of convolution function");
-    }
-
-    result.itsSize /= 2 * itsOverSample;
-    if (result.itsSize < 3) {
-        result.itsSize = 3;
-    }
-
-    return result;
-}
-
-/// @brief truncate support, if necessary
-/// @details This method encapsulates all usage of itsLimitSupport. It truncates the support
-/// if necessary and reports the new value back.
-/// @param[in] support support size to truncate according to itsLimitSupport
-/// @return support size to use (after possible truncation)
-int MPIWProjectVisGridder::limitSupportIfNecessary(int support) const
-{
-    if (itsLimitSupport > 0  &&  support > itsLimitSupport) {
-        ASKAPLOG_INFO_STR(logger, "Convolution function support = "
-                              << support << " pixels exceeds upper support limit; "
-                              << "set to limit = " << itsLimitSupport << " pixels");
-        support = itsLimitSupport;
-    }
-
-    const int cSize = 2 * support + 1;
-    ASKAPLOG_DEBUG_STR(logger, "Convolution function support = "
-                           << support << " pixels, convolution function size = "
-                           << cSize << " pixels");
-    return support;
-}
-
-int MPIWProjectVisGridder::cIndex(int row, int pol, int chan)
-{
-    const int plane = itsCMap(row, pol, chan);
-    //ASKAPDEBUGASSERT(plane >= 0);
-    if (plane >=0) notifyOfWPlaneUse(plane);
-    return plane;
-}
-
-
 /// @brief static method to create gridder
 /// @details Each gridder should have a static factory method, which is
 /// able to create a particular type of the gridder and initialise it with
@@ -848,13 +685,6 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 }
 
 
-/// @brief obtain buffer used to create convolution functions
-/// @return a reference to the buffer held as a shared pointer
-casacore::Matrix<imtypeComplex> MPIWProjectVisGridder::getCFBuffer() const
-{
-    ASKAPDEBUGASSERT(itsCFBuffer);
-    return *itsCFBuffer;
-}
 
 /// @brief assignment operator
 /// @details Defined as private, so it can't be called (to enforce usage of the
