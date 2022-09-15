@@ -101,7 +101,7 @@ MPIWProjectVisGridder::MPIWProjectVisGridder(const double wmax,
                                        const float alpha,
                                        const bool shareCF,
                                        const bool mpipresetup) :
-        WProjectVisGridder(wmax, nwplanes, alpha,overSample,maxSupport,limitSupport,name,alpha,shareCF),
+        WProjectVisGridder(wmax, nwplanes, cutoff,overSample,maxSupport,limitSupport,name,alpha,shareCF),
         itsMpiMemPreSetup(mpipresetup)
 {
     ASKAPCHECK(overSample > 0, "Oversampling must be greater than 0");
@@ -620,13 +620,13 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     ASKAPLOG_INFO_STR(logger, "configureGridder");
     const bool planeDependentSupport = parset.getBool("variablesupport", false);
 
-    MPIWProjectVisGridder::planeDependentSupport(planeDependentSupport);
+    WProjectVisGridder::planeDependentSupport(planeDependentSupport);
 
     const bool offsetSupport = parset.getBool("offsetsupport", false);
 
     ASKAPCHECK((!offsetSupport && !planeDependentSupport) || planeDependentSupport,
                "offsetsupport option of the gridder should only be used together with variablesupport option");
-    MPIWProjectVisGridder::offsetSupport(offsetSupport);
+    WProjectVisGridder::offsetSupport(offsetSupport);
 
     const bool absCutoff = parset.getBool("cutoff.absolute", false);
 
