@@ -153,6 +153,7 @@ namespace askap
                 static int     itsNodeSize;
                 /// @brief current rank in the itsNodeComms
                 static int      itsNodeRank;
+                static int      itsWorldRank;
                 /// @brief a pointer to the MPI shared memory
                 static imtypeComplex* itsMpiSharedMemory;
 

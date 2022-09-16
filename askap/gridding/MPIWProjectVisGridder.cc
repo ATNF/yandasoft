@@ -59,6 +59,7 @@ MPI_Group MPIWProjectVisGridder::itsWorldGroup = MPI_GROUP_NULL;
 MPI_Group MPIWProjectVisGridder::itsGridderGroup = MPI_GROUP_NULL;
 int MPIWProjectVisGridder::itsNodeSize;
 int MPIWProjectVisGridder::itsNodeRank;
+int MPIWProjectVisGridder::itsWorldRank;
 imtypeComplex* MPIWProjectVisGridder::itsMpiSharedMemory = nullptr;
 bool MPIWProjectVisGridder::itsMpiMemSetup = false;
 unsigned int MPIWProjectVisGridder::ObjCount = 0;
@@ -165,8 +166,6 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         itsSupport = 1;
         size_t size = deepRefCopyOfSTDVector(WProjectVisGridder::theirCFCache,itsConvFunc)/1024/1024;
         ASKAPLOG_INFO_STR(logger, "Using cached convolution functions ("<<size<<" MB)");
-        StatReporter s;
-        s.logSummary();
         if (isOffsetSupportAllowed()) {
             for (size_t i=0; i<WProjectVisGridder::theirConvFuncOffsets.size(); i++) {
                 setConvFuncOffset(i,WProjectVisGridder::theirConvFuncOffsets[i].first,WProjectVisGridder::theirConvFuncOffsets[i].second);
@@ -183,7 +182,8 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         generate();
     } // End of rank 0 in a given node
     // ranks > 0 of a given node wait here
-    MPI_Barrier(itsNodeComms);
+    //MPI_Barrier(itsNodeComms);
+    MPI_Barrier(itsNonRankZeroComms);
 
     // Copy the offsets from rank 0 to other ranks on a per node basis
     if (isOffsetSupportAllowed()) {
@@ -202,9 +202,9 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
         }
     }
 
-    MPI_Barrier(itsNodeComms);
+    //MPI_Barrier(itsNodeComms);
+    MPI_Barrier(itsNonRankZeroComms);
     // Save the CF to the cache
-    ASKAPLOG_DEBUG_STR(logger,"itsShareCF: " << itsShareCF);
     if (itsShareCF) {
         if ( itsNodeRank == 0 ) {
             ASKAPLOG_DEBUG_STR(logger, "Copy to shared memory etc ...");
@@ -242,7 +242,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     	//ASKAPLOG_DEBUG_STR(logger, "copy shared memory back to itsConvFunc");
         copyFromSharedMemory(itsConvFuncMatSize);
 
-        MPI_Barrier(itsNodeComms);
+        //MPI_Barrier(itsNodeComms);
         // this is the original code from WProjectVisGridder
         total = deepRefCopyOfSTDVector(itsConvFunc,WProjectVisGridder::theirCFCache);
         if (isOffsetSupportAllowed()) {
@@ -252,6 +252,9 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
             }
         }
     }
+    //ASKAPLOG_INFO_STR(logger, "itsWorldRank: " << itsWorldRank << ", itsNodeRank: " << itsNodeRank << ".  Waiting for all ranks to get here");
+    //MPI_Barrier(itsNonRankZeroComms);
+    //ASKAPLOG_INFO_STR(logger, "itsWorldRank: " << itsWorldRank << ", itsNodeRank: " << itsNodeRank << ".  All ranks arrived here");
 }
 
 /// @brief static method to create gridder
@@ -326,8 +329,7 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
 
     //std::lock_guard<std::mutex> lk(ObjCountMutex);
 
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_rank(MPI_COMM_WORLD, &itsWorldRank);
 
     // Each rank should only run the code below once.
     if ( ObjCount > 1 ) return;
@@ -341,19 +343,19 @@ void MPIWProjectVisGridder::configureGridder(const LOFAR::ParameterSet& parset)
     ASKAPASSERT(r == MPI_SUCCESS);
     const int exclude_ranks[1] = {0};
     r = MPI_Group_excl(itsWorldGroup, 1, exclude_ranks, &itsGridderGroup);
-    ASKAPCHECK(r == MPI_SUCCESS,"rank: " << rank << " - MPI_Group_excl() failed");
+    ASKAPCHECK(r == MPI_SUCCESS,"rank: " << itsWorldRank << " - MPI_Group_excl() failed");
     r = MPI_Comm_create_group(MPI_COMM_WORLD, itsGridderGroup, 0, &itsNonRankZeroComms);
-    ASKAPCHECK(r == MPI_SUCCESS,"rank: " << rank << " - MPI_Comm_create_group() failed");
+    ASKAPCHECK(r == MPI_SUCCESS,"rank: " << itsWorldRank << " - MPI_Comm_create_group() failed");
     r = MPI_Comm_split_type(itsNonRankZeroComms, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &itsNodeComms);
-	ASKAPCHECK(r == MPI_SUCCESS,"rank: " << rank << " - MPI_Comm_split_type() failed");
+	ASKAPCHECK(r == MPI_SUCCESS,"rank: " << itsWorldRank << " - MPI_Comm_split_type() failed");
     // number of ranks within the node
     MPI_Comm_size(itsNodeComms, &itsNodeSize);
     // rank within a node
     MPI_Comm_rank(itsNodeComms, &itsNodeRank);
-    ASKAPCHECK(itsNodeComms != MPI_COMM_NULL, "rank: " << rank << ", itsNodeRank: " << itsNodeRank << " has itsNodeComms = MPI_COMM_NULL");
+    ASKAPCHECK(itsNodeComms != MPI_COMM_NULL, "rank: " << itsWorldRank << ", itsNodeRank: " << itsNodeRank << " has itsNodeComms = MPI_COMM_NULL");
     MPI_Barrier(itsNodeComms);
 
-    ASKAPLOG_INFO_STR(logger,"rank: " << rank << ", itsNodeSize: " << itsNodeSize << ", itsNodeRank: " << itsNodeRank);
+    ASKAPLOG_INFO_STR(logger,"rank: " << itsWorldRank << ", itsNodeSize: " << itsNodeSize << ", itsNodeRank: " << itsNodeRank);
 
     if ( itsMpiMemPreSetup ) {
         std::string mpiMem = parset.getString("mpipresetmemory","");
@@ -398,8 +400,6 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
     int elen = 0;
     ASKAPLOG_INFO_STR(logger,"itsNodeRank: " << itsNodeRank << ", bufferSize: " << memSizeInBytes);
     ASKAPCHECK(itsNodeComms != MPI_COMM_NULL,"itsNodeRank: " << itsNodeRank << " - itsNodeComms is Null");
-    StatReporter statReport;
-    statReport.logMemorySummary();
     int r = MPI_Win_allocate_shared(memSizeInBytes,sizeof(imtypeComplex),
                                 MPI_INFO_NULL, itsNodeComms, &itsMpiSharedMemory,
                                 &itsWindowTable);
@@ -407,11 +407,10 @@ void  MPIWProjectVisGridder::setupMpiMemory(size_t bufferSize /* in bytes */)
         MPI_Error_string(r, estring, &elen);
         ASKAPLOG_INFO_STR(logger,"MPI_Win_allocate_shared - " << estring);    
     }
-    statReport.logMemorySummary();
     ASKAPCHECK(r == MPI_SUCCESS, "itsNodeRank: " << itsNodeRank << " - MPI_Win_allocate_shared() failed.");
     // For itsNodeRanks != 0, get their itsMpiSharedMemory pointer variable to point the
     // start of the MPI shared memory allocated by itsNodeRank = 0
-    MPI_Barrier(itsNodeComms);
+    //MPI_Barrier(itsNodeComms);
     if ( itsNodeRank != 0 ) {
         int r = MPI_Win_shared_query(itsWindowTable, 0, &itsWindowSize, &itsWindowDisp, &itsMpiSharedMemory);
         ASKAPCHECK(r == MPI_SUCCESS, "MPI_Win_shared_query failed.");
