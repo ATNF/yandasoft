@@ -120,17 +120,11 @@ namespace askap
                 /// @param[in] acc const data accessor to work with
                 virtual void initConvolutionFunction(const accessors::IConstDataAccessor& acc);
 
-                /// @brief cached CF
-                //static std::vector<casa::Matrix<casa::Complex> > theirCFCache;
-
-                /// @brief cached CF offsets
-                //static std::vector<std::pair<int,int> > theirConvFuncOffsets;
-
             private:
 
                 void setupMpiMemory(size_t bufferSize /* in bytes */);
                 void copyToSharedMemory(std::vector<std::pair<int,int> >& itsConvFuncMatSize);
-                void copyFromSharedMemory(const std::vector<std::pair<int,int> >& itsConvFuncMatSize, unsigned int nplane);
+                void copyFromSharedMemory(const std::vector<std::pair<int,int> >& itsConvFuncMatSize);
 
                 /// @brief assignment operator
                 /// @details Defined as private, so it can't be called (to enforce usage of the
