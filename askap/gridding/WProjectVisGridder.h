@@ -239,6 +239,25 @@ namespace askap
                 void doPCFGridder();
                 void generate();
                 void save();
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::DComplex> &thisPlane,int iw);
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::Complex> &thisPlane,int iw);
+                void populateItsConvFunc(const casacore::Matrix<casacore::Complex> &thisPlane, const int iw, 
+                                         const int support, const CFSupport& cfSupport, const int cSize, 
+                                         const int nx, const int ny);
+                void normalise(std::vector<casacore::Matrix<casacore::Complex> >& convFunc);
+                void populateThisPlane(casacore::Matrix<casacore::Complex> &thisPlane, 
+                                       const int qnx, const int qny,
+                                       const int nx, const int ny, 
+                                       const double ccellx, const double ccelly,
+                                       const double w, const casacore::Vector<float>& ccfx, 
+                                       const casacore::Vector<float>& ccfy);
+                void setup(int& nx, int& ny, int& qnx, int& qny, 
+                           double& ccellx, double& ccelly,
+                           casacore::Vector<float>& ccfx,
+                           casacore::Vector<float>& ccfy);
+                void calcConvFuncOverflow(const int support, const CFSupport& cfSupport, 
+                                          const int nx, const int ny, int& overflow);
+                                
 
                 /// @brief Specify if we are using the shared CF cache
                 /// @param[in] true if the shared cache is used
