@@ -133,6 +133,8 @@ namespace askap {
 
             bool itsPrepared;
 
+            bool itsDetailedLog;
+
             int itsWorkUnitCount;
 
             LOFAR::ParameterSet& itsParset;
