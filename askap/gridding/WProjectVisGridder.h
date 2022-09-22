@@ -235,26 +235,33 @@ namespace askap
                 /// @return true if the shared cache is used
                 inline bool shareCF() const { return itsShareCF; }
 
-
+                /// @brief setup and intialise the varialbes to be used by the helper methods below.
+                void setup(int& nx, int& ny, int& qnx, int& qny,
+                           double& ccellx, double& ccelly,
+                           casacore::Vector<float>& ccfx,
+                           casacore::Vector<float>& ccfy);
+                /// @brief generates the convolution cache for the PSF gridder
                 void doPCFGridder();
+                /// @brief generates the convolution cache for the non PSF gridder
                 void generate();
+                /// @brief helper method. save/copy the itsConvFunc to/from the convoultion cache
                 void save();
+                /// @brief helper methods. calculate the support for a given plane
                 WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::DComplex> &thisPlane,int iw);
                 WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::Complex> &thisPlane,int iw);
+                /// @brief helper method. calculate the convolution function for this plane.
+                void populateThisPlane(casacore::Matrix<casacore::Complex> &thisPlane,
+                                       const int qnx, const int qny,
+                                       const int nx, const int ny,
+                                       const double ccellx, const double ccelly,
+                                       const double w, const casacore::Vector<float>& ccfx,
+                                       const casacore::Vector<float>& ccfy);
+                /// @brief helper method. store the convolution function to the itsConvFunc vector.
                 void populateItsConvFunc(const casacore::Matrix<casacore::Complex> &thisPlane, const int iw, 
                                          const int support, const CFSupport& cfSupport, const int cSize, 
                                          const int nx, const int ny);
                 void normalise(std::vector<casacore::Matrix<casacore::Complex> >& convFunc);
-                void populateThisPlane(casacore::Matrix<casacore::Complex> &thisPlane, 
-                                       const int qnx, const int qny,
-                                       const int nx, const int ny, 
-                                       const double ccellx, const double ccelly,
-                                       const double w, const casacore::Vector<float>& ccfx, 
-                                       const casacore::Vector<float>& ccfy);
-                void setup(int& nx, int& ny, int& qnx, int& qny, 
-                           double& ccellx, double& ccelly,
-                           casacore::Vector<float>& ccfx,
-                           casacore::Vector<float>& ccfy);
+                /// @brief - helper method. check if the given support is overflow
                 void calcConvFuncOverflow(const int support, const CFSupport& cfSupport, 
                                           const int nx, const int ny, int& overflow);
                                 
