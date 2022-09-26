@@ -41,7 +41,7 @@ namespace askap
     namespace synthesis
     {
         /// @brief Visibility gridder using W projection by utilising MPI 
-	///        shared memory to reduce memory footprint.
+        ///        shared memory to reduce memory footprint.
         /// @details The visibilities are gridded using a convolution
         /// function that implements a Fresnel transform. This corrects
         /// for the w term in the full synthesis measurement equation.
@@ -54,10 +54,10 @@ namespace askap
         ///
         /// The scaling is slow in data points, fast in w planes.
         ///
-	/// NOTE: At the moment, this class only works for the imager 
-	///       but not cimager because it is setup in a way that rank
-	///       0 of the first node does not have the gridder.
-	///
+        /// NOTE: At the moment, this class only works for the imager 
+        ///       but not cimager because it is setup in a way that rank
+        ///       0 of the first node does not have the gridder.
+        ///
         /// @ingroup gridding
         class MPIWProjectVisGridder : public WProjectVisGridder
         {
