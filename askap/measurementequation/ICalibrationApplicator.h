@@ -96,6 +96,11 @@ struct ICalibrationApplicator {
   /// @param[in] flag if true, leakage free calibration is applied
   virtual void leakageFree(bool flag) {};
 
+  /// @brief determines whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @param[in] flag, if true interpolate between solutions
+  virtual void interpolateTime(bool flag) {};
+
 };
 
 } // namespace synthesis

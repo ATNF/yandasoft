@@ -104,6 +104,11 @@ public:
   /// @param[in] flag if true, channel=0 calibration is applied to all channels
   virtual void channelIndependent(bool flag);
 
+  /// @brief determines whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @param[in] flag, if true interpolate between solutions
+  virtual void interpolateTime(bool flag);
+
 private:
   /// @brief correct model visibilities for one accessor
   /// @details This method corrects the data in the given accessor
@@ -124,6 +129,8 @@ private:
   bool itsBeamIndependent;
   /// @brief true, if channel index can be ignored and channel=0 corrections applied to all channels
   bool itsChannelIndependent;
+  /// @brief true, if time interpolation should be used
+  bool itsInterpolateTime;
 };
 
 } // namespace synthesis
