@@ -39,6 +39,27 @@ namespace askap
 {
     namespace synthesis
     {
+        /// helper function
+        /// @brief a helper method for a ref copy of casa arrays held in stl vector
+        /// @param[in] in input array
+        /// @param[out] out output array (will be resized)
+        /// @return size of the cache in bytes (assuming Complex array elements)
+        template<typename T>
+        size_t deepRefCopyOfSTDVector(const std::vector<T> &in, std::vector<T> &out)
+        {
+            out.resize(in.size());
+            size_t total = 0;
+            const typename std::vector<T>::const_iterator inEnd = in.end();
+            typename std::vector<T>::iterator outIt = out.begin();
+            for (typename std::vector<T>::const_iterator inIt = in.begin();
+                inIt != inEnd; ++inIt,++outIt) {
+                outIt->reference(*inIt);
+                total += outIt->nelements()*sizeof(casa::Complex)+sizeof(T);
+            }
+            return total;
+        }
+
+
         /// @brief Visibility gridder using W projection
         /// @details The visibilities are gridded using a convolution
         /// function that implements a Fresnel transform. This corrects
@@ -214,6 +235,46 @@ namespace askap
                 /// @return true if the shared cache is used
                 inline bool shareCF() const { return itsShareCF; }
 
+                /// @brief setup and intialise the variables to be used by the helper methods below.
+                /// @param[in] nx, ny - size of full size convolution function grid
+                /// @param[in] qnx, qny - size of filled CF grid
+                /// @param[in] ccellx, celly - UV cell size after oversampling
+                /// @param[in] ccfx, ccfy - Spheroidal weighting for grid
+                void setup(int& nx, int& ny, int& qnx, int& qny,
+                           double& ccellx, double& ccelly,
+                           casacore::Vector<float>& ccfx,
+                           casacore::Vector<float>& ccfy);
+                /// @brief generates the convolution cache for the PSF gridder
+                void doPCFGridder();
+                /// @brief generates the convolution cache for the non PSF gridder
+                void generate();
+                /// @brief helper method. save/copy the itsConvFunc to/from the convoultion cache
+                void save();
+                /// @brief helper methods. calculate the support for a given plane
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::DComplex> &cfPlane,int iw);
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::Complex> &cfPlane,int iw);
+                /// @brief helper method. calculate the convolution function for this plane.
+                /// @param[in] cfPlane - buffer for CF calculation
+                /// @param[in] qnx, qny - size of filled CF grid
+                /// @param[in] nx, ny - size of full size convolution function grid
+                /// @param[in] ccellx, celly - UV cell size after oversampling
+                /// @param[in] w - w-value for current plane
+                void populateThisPlane(casacore::Matrix<casacore::Complex> &cfPlane,
+                                       const int qnx, const int qny,
+                                       const int nx, const int ny,
+                                       const double ccellx, const double ccelly,
+                                       const double w, const casacore::Vector<float>& ccfx,
+                                       const casacore::Vector<float>& ccfy);
+                /// @brief helper method. store the convolution function to the itsConvFunc vector.
+                void populateItsConvFunc(const casacore::Matrix<casacore::Complex> &thisPlane, const int iw, 
+                                         const int support, const CFSupport& cfSupport, const int cSize, 
+                                         const int nx, const int ny);
+                void normalise(std::vector<casacore::Matrix<casacore::Complex> >& convFunc);
+                /// @brief - helper method. check if the given support is overflowing
+                void calcConvFuncOverflow(const int support, const CFSupport& cfSupport, 
+                                          const int nx, const int ny, int& overflow);
+                                
+
                 /// @brief Specify if we are using the shared CF cache
                 /// @param[in] true if the shared cache is used
                 inline void setShareCF(bool flag) { itsShareCF = flag; }
@@ -236,6 +297,7 @@ namespace askap
                 /// @return reference to itself
                 WProjectVisGridder& operator=(const WProjectVisGridder &other);
 
+            protected:
                 /// Maximum support
                 int itsMaxSupport;
 
@@ -263,10 +325,6 @@ namespace askap
 
                 /// @brief itsCutoff is an absolute cutoff, rather than relative to the peak of a particular CF plane
                 bool itsCutoffAbs;
-
-                /// @brief Are we using a double precision CF Buffer?
-                bool itsDoubleCF;
-
         };
     }
 }
