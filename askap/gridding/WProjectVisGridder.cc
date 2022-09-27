@@ -536,7 +536,7 @@ void WProjectVisGridder::save()
     }
 }
 
-WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Matrix<casacore::DComplex> &thisPlane,int iw)
+WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Matrix<casacore::DComplex> &cfPlane,int iw)
 {
     // If the support is not yet set, find it and size the
     // convolution function appropriately
@@ -545,7 +545,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Ma
     CFSupport cfSupport(itsSupport);
     const int nx = maxSupport();
     if (isSupportPlaneDependent() || (itsSupport == 0)) {
-        cfSupport = extractSupport(thisPlane);
+        cfSupport = extractSupport(cfPlane);
         const int support = cfSupport.itsSize;
         // fail here if the cutoff level is on the edge of the image
         ASKAPCHECK((support+1)*itsOverSample < nx / 2,
@@ -560,7 +560,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Ma
     }
     return cfSupport;
 }
-WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Matrix<casacore::Complex> &thisPlane,int iw)
+WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Matrix<casacore::Complex> &cfPlane,int iw)
 {
     //ASKAPLOG_INFO_STR(logger,"calcSupport()");
     // If the support is not yet set, find it and size the
@@ -570,7 +570,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Ma
     CFSupport cfSupport(itsSupport);
     const int nx = maxSupport();
     if (isSupportPlaneDependent() || (itsSupport == 0)) {
-        cfSupport = extractSupport(thisPlane);
+        cfSupport = extractSupport(cfPlane);
         const int support = cfSupport.itsSize;
         // fail here if the cutoff level is on the edge of the image
         ASKAPCHECK((support+1)*itsOverSample < nx / 2,
@@ -586,7 +586,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Ma
     return cfSupport;
 }
 
-void WProjectVisGridder::populateItsConvFunc(const casacore::Matrix<casacore::Complex> &thisPlane, const int iw,
+void WProjectVisGridder::populateItsConvFunc(const casacore::Matrix<casacore::Complex> &cfPlane, const int iw,
                          const int support, const CFSupport& cfSupport, const int cSize, 
                          const int nx, const int ny)
 {
@@ -604,7 +604,7 @@ void WProjectVisGridder::populateItsConvFunc(const casacore::Matrix<casacore::Co
                 for (int ix = -support; ix <= support; ++ix) {
                     const int kx = (ix + cfSupport.itsOffsetU)*itsOverSample + fracu + nx / 2;
                     const int ky = (iy + cfSupport.itsOffsetV)*itsOverSample + fracv + ny / 2;
-                    itsConvFunc[plane](ix + support, iy + support) =thisPlane(kx, ky);
+                    itsConvFunc[plane](ix + support, iy + support) = cfPlane(kx, ky);
                 }
             }
         }  // for fracv

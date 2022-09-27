@@ -235,7 +235,11 @@ namespace askap
                 /// @return true if the shared cache is used
                 inline bool shareCF() const { return itsShareCF; }
 
-                /// @brief setup and intialise the varialbes to be used by the helper methods below.
+                /// @brief setup and intialise the variables to be used by the helper methods below.
+                /// @param[in] nx, ny - size of full size convolution function grid
+                /// @param[in] qnx, qny - size of filled CF grid
+                /// @param[in] ccellx, celly - UV cell size after oversampling
+                /// @param[in] ccfx, ccfy - Spheroidal weighting for grid
                 void setup(int& nx, int& ny, int& qnx, int& qny,
                            double& ccellx, double& ccelly,
                            casacore::Vector<float>& ccfx,
@@ -247,10 +251,15 @@ namespace askap
                 /// @brief helper method. save/copy the itsConvFunc to/from the convoultion cache
                 void save();
                 /// @brief helper methods. calculate the support for a given plane
-                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::DComplex> &thisPlane,int iw);
-                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::Complex> &thisPlane,int iw);
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::DComplex> &cfPlane,int iw);
+                WProjectVisGridder::CFSupport calcSupport(const casacore::Matrix<casacore::Complex> &cfPlane,int iw);
                 /// @brief helper method. calculate the convolution function for this plane.
-                void populateThisPlane(casacore::Matrix<casacore::Complex> &thisPlane,
+                /// @param[in] cfPlane - buffer for CF calculation
+                /// @param[in] qnx, qny - size of filled CF grid
+                /// @param[in] nx, ny - size of full size convolution function grid
+                /// @param[in] ccellx, celly - UV cell size after oversampling
+                /// @param[in] w - w-value for current plane
+                void populateThisPlane(casacore::Matrix<casacore::Complex> &cfPlane,
                                        const int qnx, const int qny,
                                        const int nx, const int ny,
                                        const double ccellx, const double ccelly,
@@ -261,7 +270,7 @@ namespace askap
                                          const int support, const CFSupport& cfSupport, const int cSize, 
                                          const int nx, const int ny);
                 void normalise(std::vector<casacore::Matrix<casacore::Complex> >& convFunc);
-                /// @brief - helper method. check if the given support is overflow
+                /// @brief - helper method. check if the given support is overflowing
                 void calcConvFuncOverflow(const int support, const CFSupport& cfSupport, 
                                           const int nx, const int ny, int& overflow);
                                 
@@ -316,10 +325,6 @@ namespace askap
 
                 /// @brief itsCutoff is an absolute cutoff, rather than relative to the peak of a particular CF plane
                 bool itsCutoffAbs;
-
-                /// @brief Are we using a double precision CF Buffer?
-                bool itsDoubleCF;
-
         };
     }
 }
