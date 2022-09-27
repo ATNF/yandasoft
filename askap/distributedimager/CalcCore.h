@@ -99,12 +99,9 @@ namespace cp {
         casacore::Array<casacore::Complex> getPCFGrid();
         /// @brief return the PSF grid
         casacore::Array<casacore::Complex> getPSFGrid();
-        
+
 
     private:
-
-        // Parameter set
-        LOFAR::ParameterSet& itsParset;
 
         // Communications class
         askap::askapparallel::AskapParallel& itsComms;

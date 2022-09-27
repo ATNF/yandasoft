@@ -78,7 +78,7 @@ ASKAP_LOGGER(logger, ".CalcCore");
 CalcCore::CalcCore(LOFAR::ParameterSet& parset,
                        askap::askapparallel::AskapParallel& comms,
                        accessors::TableDataSource ds, int localChannel)
-    : ImagerParallel(comms,parset), itsParset(parset), itsComms(comms),itsData(ds),itsChannel(localChannel)
+    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsChannel(localChannel)
 {
     /// We need to set the calibration info here
     /// the ImagerParallel constructor will do the work to
@@ -101,13 +101,13 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
     parset.replace(LOFAR::KVpair("restore.savepsfimage",writePsfImage));
     itsSolver = ImageSolverFactory::make(parset);
     itsGridder_p = VisGridderFactory::make(parset); // this is private to an inherited class so have to make a new one
-    itsRestore = itsParset.getBool("restore", false);
+    itsRestore = parset.getBool("restore", false);
 }
 CalcCore::CalcCore(LOFAR::ParameterSet& parset,
                        askap::askapparallel::AskapParallel& comms,
                        accessors::TableDataSource ds, askap::synthesis::IVisGridder::ShPtr gdr,
                        int localChannel)
-    : ImagerParallel(comms,parset), itsParset(parset), itsComms(comms),itsData(ds),itsGridder_p(gdr), itsChannel(localChannel)
+    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsGridder_p(gdr), itsChannel(localChannel)
 {
   const std::string solver_par = parset.getString("solver");
   const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
@@ -135,11 +135,11 @@ void CalcCore::doCalc()
         IDataSelectorPtr sel = ds.createSelector();
 
         sel->chooseCrossCorrelations();
-        sel << itsParset;
+        sel << parset();
 
         // This is the logic that switches on the combination of channels.
         // Earlier logic has updated the Channels parameter in the parset ....
-        bool combineChannels = itsParset.getBool("combinechannels",false);
+        bool combineChannels = parset().getBool("combinechannels",false);
 
         if (!combineChannels) {
             sel->chooseChannels(1, itsChannel);
@@ -396,7 +396,6 @@ void CalcCore::writeLocalModel(const std::string &postfix) {
         }
         boost::shared_ptr<ImageSolver> template_solver = boost::dynamic_pointer_cast<ImageSolver>(itsSolver);
         ASKAPDEBUGASSERT(template_solver);
-        //ImageSolverFactory::configurePreconditioners(itsParset,ir);
         ir->configureSolver(*template_solver);
         ir->copyNormalEquations(*template_solver);
         Quality q;
@@ -439,7 +438,7 @@ void CalcCore::restoreImage()
 {
     ASKAPDEBUGASSERT(itsModel);
     boost::shared_ptr<ImageRestoreSolver>
-    ir = ImageRestoreSolver::createSolver(itsParset.makeSubset("restore."));
+    ir = ImageRestoreSolver::createSolver(parset().makeSubset("restore."));
     ASKAPDEBUGASSERT(ir);
     ASKAPDEBUGASSERT(itsSolver);
 
@@ -458,7 +457,6 @@ void CalcCore::restoreImage()
     // Can we copy the preconditioners from itsSolver to avoid some work & memory?
     // Both Wiener and Gaussian keep a cache we should try to reuse
     // added code to configureSolver to do this.
-    // ImageSolverFactory::configurePreconditioners(itsParset, ir);
     ir->configureSolver(*template_solver);
 
     try {

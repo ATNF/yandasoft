@@ -856,16 +856,20 @@ void ContinuumWorker::processChannels()
       TableDataSource ds(ms, TableDataSource::MEMORY_BUFFERS, colName);
 
       /// Need to set up the rootImager here
-      if (updateDir == true) {
+      if (updateDir) {
         itsAdvisor->updateDirectionFromWorkUnit(workUnits[workUnitCount]);
       }
-      if (updateDir || !gridder_initialized) {
-
-        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,localChannel));
-        rootImagerPtr = tempIm;
-        gridder_initialized = true;
-      }
-      else if (gridder_initialized){
+      if (updateDir) {
+            // change gridder for initial calcNE in updateDir mode
+            LOFAR::ParameterSet tmpParset = itsParset.makeSubset("");
+            tmpParset.replace("gridder","SphFunc");
+            boost::shared_ptr<CalcCore> tempIm(new CalcCore(tmpParset,itsComms,ds,localChannel));
+            rootImagerPtr = tempIm;
+      } else if (!gridder_initialized) {
+            boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,localChannel));
+            rootImagerPtr = tempIm;
+            gridder_initialized = true;
+      } else {
         boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,rootImagerPtr->gridder(),localChannel));
         rootImagerPtr = tempIm;
       }

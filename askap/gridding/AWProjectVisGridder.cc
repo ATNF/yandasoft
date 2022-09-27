@@ -583,6 +583,11 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                 ASKAPLOG_DEBUG_STR(logger, "CF cache plane " << plane << " (" << plane / itsOverSample / itsOverSample <<
                                    " prior to oversampling) shape is " << itsConvFunc[plane].shape());
             }
+            size_t total = 0;
+            for (auto matrix : itsConvFunc) {
+                total += matrix.shape().product() * sizeof(imtypeComplex);
+            }
+            ASKAPLOG_INFO_STR(logger,"Convolution function cache size = "<< total/1024/1024 <<" MB");
         } else {
             ASKAPLOG_INFO_STR(logger, "Shape of convolution function = "
                                   << itsConvFunc[0].shape() << " by " << itsConvFunc.size() << " planes");
