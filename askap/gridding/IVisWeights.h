@@ -60,7 +60,7 @@ namespace askap
 			/// Shared pointer definition
 			typedef boost::shared_ptr<IVisWeights> ShPtr;
 
-			IVisWeights();
+                        /// @brief empty destructor to keep the compiler happy
 			virtual ~IVisWeights();
 			
 			/// Clone a copy of this Gridder
@@ -70,11 +70,10 @@ namespace askap
 			/// @param order The index of the enumerated expansion
 			virtual void setParameters(int order)=0;
 			
-			/// @brief Calculate the visibility weight.
-			/// @param i Sample Index
-			/// @param freq Frequency
-			/// @param pol Polarization index
-			virtual float getWeight(int i, double freq, int pol) = 0;
+                        /// @brief Calculate the visibility weight.
+                        /// @param freq Frequency
+                        /// @note we used to pass sample index and polarisation here which has not been used so far, so I (MV) took it out
+                        virtual float getWeight(double freq) = 0;
 
 		};
 	}
