@@ -64,7 +64,7 @@ namespace askap
 			virtual ~IVisWeights();
 			
 			/// Clone a copy of this Gridder
-			virtual ShPtr clone() = 0;
+			virtual ShPtr clone() const = 0;
 
 			/// @brief Set the context
 			/// @param order The index of the enumerated expansion
@@ -73,7 +73,7 @@ namespace askap
                         /// @brief Calculate the visibility weight.
                         /// @param freq Frequency
                         /// @note we used to pass sample index and polarisation here which has not been used so far, so I (MV) took it out
-                        virtual float getWeight(double freq) = 0;
+                        virtual float getWeight(double freq) const = 0;
 
 		};
 	}

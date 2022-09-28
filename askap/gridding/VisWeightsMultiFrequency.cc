@@ -46,7 +46,7 @@ namespace askap
       ASKAPDEBUGASSERT(itsRefFreq!=0.);
     }
     
-    IVisWeights::ShPtr VisWeightsMultiFrequency::clone()
+    IVisWeights::ShPtr VisWeightsMultiFrequency::clone() const
     {
        return IVisWeights::ShPtr(new VisWeightsMultiFrequency(*this));
     }
@@ -56,7 +56,7 @@ namespace askap
        itsOrder = order;
     }
 
-    float VisWeightsMultiFrequency::getWeight(double freq)
+    float VisWeightsMultiFrequency::getWeight(double freq) const
     {
 	    // expensive..... choose fastest : if/else  or  'pow' operator.
 	    if (itsOrder==0)  {
