@@ -45,7 +45,7 @@ namespace askap
     /// Blah blah...
     ///
     /// @ingroup gridding
-    class VisWeightsMultiFrequency : public IVisWeights
+    class VisWeightsMultiFrequency final : virtual public IVisWeights
     {
   public:
 
@@ -54,26 +54,25 @@ namespace askap
       
       /// @brief constructor 
       /// @param[in] reffreq reference frequency
-      VisWeightsMultiFrequency(casacore::Double & reffreq);
+      explicit VisWeightsMultiFrequency(const casacore::Double & reffreq);
 
       /// @brief copy constructor
       /// @param[in] other input object
       VisWeightsMultiFrequency(const VisWeightsMultiFrequency &other);
 
-      
-      ~VisWeightsMultiFrequency();
+      VisWeightsMultiFrequency& operator=(const VisWeightsMultiFrequency &other) = delete;
 
-      virtual IVisWeights::ShPtr clone();
+      /// @brief clone the object
+      /// @return shared pointer to the copy
+      virtual IVisWeights::ShPtr clone() const override;
      
       /// @brief Set the context
       /// @param order The order of the Taylor term
-      void setParameters(int order);
+      virtual void setParameters(int order) override;
 
       /// @brief Calculate the visibility weight.
-      /// @param i Sample Index
-      /// @param freq frequency
-      /// @param pol Polarization index
-      float getWeight(int i, double freq, int pol);
+      /// @param freq frequency (same units as reffreq)
+      virtual float getWeight(double freq) const override;
       
   protected:
 
