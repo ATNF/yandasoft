@@ -21,10 +21,6 @@ build:
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
     - cmake -C .gitlab-ci.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
-    # - cmake -C .gitlab-ci.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -DCMAKE_CXX_FLAGS_RELEASE="-DASKAP_DEBUG" -B _build -S .
-    # - cmake -C .gitlab-ci.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"  -B _build -S .
-    # - sed -i '/CMAKE_CXX_FLAGS_RELEASE:STRING/c\CMAKE_CXX_FLAGS_RELEASE:STRING=-O3' _build/CMakeCache.txt
-    # - sed -i '/CMAKE_C_FLAGS_RELEASE:STRING/c\CMAKE_C_FLAGS_RELEASE:STRING=-O3' _build/CMakeCache.txt
     - sudo cmake --build _build --target install -j $n_cpus
   artifacts:
     paths:
