@@ -20,7 +20,7 @@ build:
     - sudo ln -s /usr/lib/x86_64-linux-gnu/ /usr/lib64
   script:
     - n_cpus=`grep '^processor' /proc/cpuinfo  | wc -l`
-    - cmake -C .gitlab-ci.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage"  -B _build -S .
+    - cmake -C .gitlab-ci.cmake.in -DASKAPSDP_GIT_URL="https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/ASKAPSDP/" -DENABLE_OPENMP=OFF -DCMAKE_INSTALL_PREFIX=./_install -DCMAKE_CXX_FLAGS="-coverage" -DCMAKE_EXE_LINKER_FLAGS="-coverage" -B _build -S .
     - sudo cmake --build _build --target install -j $n_cpus
   artifacts:
     paths:
