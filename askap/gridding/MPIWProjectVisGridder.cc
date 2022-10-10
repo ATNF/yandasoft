@@ -177,6 +177,7 @@ void MPIWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataA
     // here is to let each rank within a node to generate a portion the convoulution cache
     // (ie each rank does a portion of nWPlanes()*itsOverSample*itsOverSample)
     ASKAPCHECK(itsCFRank > 0,"CF Rank (i.e itsCFRank) is <= 0");
+    ASKAPCHECK(itsCFRank <= itsNodeSize,"CF Rank (i.e itsCFRank) is more than the number of ranks per node");
     // itsCFRank => number of ranks that participate in the CF calculation
     if ( itsNodeRank < itsCFRank ) {
         int numberOfPlanePerNodeRank;
@@ -468,7 +469,6 @@ void MPIWProjectVisGridder::copyToSharedMemory(std::vector<std::pair<int,int>>& 
     for (unsigned int iw = 0; iw < itsConvFuncMatSize.size(); iw++) {
         if (itsConvFunc[iw].nelements() != 0) {
             std::copy(itsConvFunc[iw].data(),itsConvFunc[iw].data() + itsConvFunc[iw].nelements(),shareMemPtr);
-            // std::memcpy(shareMemPtr,itsConvFunc[iw].data(),sizeof(imtypeComplex) * itsConvFunc[iw].nelements());
         }
         shareMemPtr += itsConvFuncMatSize[iw].first *  itsConvFuncMatSize[iw].second;;
     }
