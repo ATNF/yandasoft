@@ -247,6 +247,8 @@ namespace askap
                 /// @brief generates the convolution cache for the PSF gridder
                 void doPCFGridder();
                 /// @brief generates the convolution cache for the non PSF gridder
+                /// @param[in] startlane - the nwplane where the CF generation starts from
+                /// @param[in] endPlane - the nwplane where the CF generation finishes
                 void generate(int startPlane, int endPlane);
                 /// @brief helper method. save/copy the itsConvFunc to/from the convoultion cache
                 void save();

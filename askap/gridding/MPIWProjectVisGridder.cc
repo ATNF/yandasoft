@@ -436,33 +436,53 @@ void MPIWProjectVisGridder::copyToSharedMemory(std::vector<std::pair<int,int>>& 
     ASKAPLOG_INFO_STR(logger, "copyToSharedMemory itsNodeRank: " << itsNodeRank 
                             << ", number of planes: " << numberOfElements);
     // the itsConvFunc vector of each rank only has a portion of the data
+    // matrixSizeVect variable stores the planes and shapes of the matrices.
+    std::vector<std::tuple<unsigned long, unsigned long, unsigned long>> matrixSizeVect;
     for (unsigned int iw = 0; iw < numberOfElements; iw++) {
-        ASKAPLOG_DEBUG_STR(logger, "copyToSharedMemory itsNodeRank: " << itsNodeRank << 
-                            " - " << iw << "/" << itsConvFuncMatSize.size());
-        unsigned long matrixSize[3] = {0,0,0};
-        // rank that has data (i.e casacore::Matrix nelements() != 0, sends
-        // its plane index, nrow and ncol to other ranks
         if (itsConvFunc[iw].nelements() != 0) {
-            matrixSize[0] = iw;
-            matrixSize[1] = itsConvFunc[iw].nrow();
-            matrixSize[2] = itsConvFunc[iw].ncolumn();
-            itsConvFuncMatSize[matrixSize[0]] = std::make_pair(matrixSize[1],matrixSize[2]);
-            for (int rank=0; rank < itsNodeSize; rank++) {
-                if ( rank != itsNodeRank ) { // dont send to ourselves
-                    MPI_Send(matrixSize,3,MPI_UNSIGNED_LONG,rank,0,itsNodeComms);
+            matrixSizeVect.push_back(std::make_tuple(iw,itsConvFunc[iw].nrow(),itsConvFunc[iw].ncolumn()));
+        } 
+    }
+    unsigned long howmany = matrixSizeVect.size();
+    ASKAPLOG_DEBUG_STR(logger, "copyToSharedMemory itsNodeRank: " << itsNodeRank <<
+                        " - size of matrixSizeVect = " << howmany);
+
+    // for each rank, broadcast its matrixSizeVect to other ranks
+    // First, broadcast the size of the matrixSizeVect and if the size
+    // is not 0, then broadcast the payload (i.e the content of matrixSizeVect)
+    // as one large message.
+    for (int rank=0; rank < itsNodeSize; rank++) {
+        unsigned long len = 0;
+        unsigned long* buffer = nullptr;
+        if ( rank == itsNodeRank ) {
+            len = howmany;
+        }
+    
+        MPI_Bcast(&len,1,MPI_UNSIGNED_LONG,rank,itsNodeComms);
+        if ( len != 0 ) {
+            unsigned long* buffer = new unsigned long[len * 3];
+            if ( rank == itsNodeRank ) {
+                unsigned int count = 0;
+                for (auto i = 0; i < len; i++) {
+                    buffer[count] = std::get<0>(matrixSizeVect[i]);
+                    buffer[count+1] = std::get<1>(matrixSizeVect[i]);
+                    buffer[count+2] = std::get<2>(matrixSizeVect[i]);
+                    count += 3;
                 }
             }
-        } else {
-            // Since we dont know the sender, we use MPI_ANY_SOURCE
-            MPI_Recv(matrixSize,3,MPI_UNSIGNED_LONG,MPI_ANY_SOURCE,0,itsNodeComms,MPI_STATUS_IGNORE);
-            if ( matrixSize[1] != 0 && matrixSize[2] != 0 ) {
-                itsConvFuncMatSize[matrixSize[0]] = std::make_pair(matrixSize[1],matrixSize[2]);
+            MPI_Bcast(buffer,len*3,MPI_UNSIGNED_LONG,rank,itsNodeComms);
+            for (unsigned long i = 0; i < len*3; i += 3) {
+                itsConvFuncMatSize[buffer[i]] = std::make_pair(buffer[i+1],buffer[i+2]);    
             }
+    
+            delete []buffer;
         }
-    }
+    }        
+    // if we get here, the itsConvFuncMatSize variable contains the shapes of all the matrices
+    // from 0 to (nwplane*oversample^2 - 1)        
+    ASKAPLOG_DEBUG_STR(logger, "copyToSharedMemory itsNodeRank: " << itsNodeRank <<
+                        " writes/saves itsConvFunc data to shared memory");
     //MPI_Barrier(itsNodeComms);
-    // if we get here, itsConvFuncMatSize of each rank knows the nrow and ncol and contains the full
-    // size of the itsConvFunc vector
 
     // now each rank copies its CF to the shared memory
     imtypeComplex* shareMemPtr = itsMpiSharedMemory; // a contiguous chunk of shared memory
@@ -477,13 +497,15 @@ void MPIWProjectVisGridder::copyToSharedMemory(std::vector<std::pair<int,int>>& 
 
 void MPIWProjectVisGridder::copyFromSharedMemory(const std::vector<std::pair<int,int>>& itsConvFuncMatSize)
 {
-    ASKAPLOG_DEBUG_STR(logger, "itsNodeRank: " << itsNodeRank << " - copy shared memory back to itsConvFunc");
+    ASKAPLOG_DEBUG_STR(logger, "itsNodeRank: " << itsNodeRank << 
+                                " - copy shared memory back to itsConvFunc. number of CFs = " << itsConvFuncMatSize.size());
     unsigned int numOfElems = itsConvFuncMatSize.size();
     imtypeComplex* shareMemPtr = itsMpiSharedMemory;
     for (unsigned int elem = 0; elem < numOfElems; elem++) {
         casacore::IPosition pos(2);
         pos(0) = itsConvFuncMatSize[elem].first;
         pos(1) = itsConvFuncMatSize[elem].second;
+        ASKAPCHECK(itsConvFuncMatSize[elem].first != 0 || itsConvFuncMatSize[elem].second != 0, "shape of CF is zero");
         
         casacore::Matrix<imtypeComplex> m(pos,shareMemPtr,casacore::SHARE);
         itsConvFunc[elem].reference(m);
