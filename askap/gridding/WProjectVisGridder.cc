@@ -185,7 +185,7 @@ void WProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcce
     }
 
     // Generate the convolution vector
-    generate();
+    generate(0,nWPlanes());
     // Save the CF to the cache
     save();
 }
@@ -432,7 +432,7 @@ void WProjectVisGridder::doPCFGridder()
         }
     }
 }
-void WProjectVisGridder::generate()
+void WProjectVisGridder::generate(int startPlane, int endPlane)
 {
     int nx = 0;
     int ny = 0;
@@ -443,7 +443,6 @@ void WProjectVisGridder::generate()
     casacore::Vector<float> ccfx;
     casacore::Vector<float> ccfy;
 
-    ASKAPLOG_INFO_STR(logger,"generate()");
     setup(nx,ny,qnx,qny,ccellx,ccelly,ccfx,ccfy);
     initCFBuffer(casacore::uInt(nx), casacore::uInt(ny));
 
@@ -457,7 +456,7 @@ void WProjectVisGridder::generate()
     ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx));
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny));
 
-    for (int iw = 0; iw < nWPlanes(); ++iw) {
+    for (int iw = startPlane; iw < endPlane; ++iw) {
         thisPlane.set(0.0);
 
         //const double w = isPSFGridder() ? 0. : 2.0f*casacore::C::pi*getWTerm(iw);
@@ -691,7 +690,6 @@ void WProjectVisGridder::setup(int& nx, int& ny, int& qnx, int& qny,
         float nux = std::abs(float(ix - qnx / 2)) / float(qnx / 2);
         ccfx(ix) = grdsf(nux) / float(qnx);
     }
-    ASKAPLOG_INFO_STR(logger,"setup() - 3");
     for (int iy = 0; iy < qny; iy++) {
         float nuy = std::abs(float(iy - qny / 2)) / float(qny / 2);
         ccfy(iy) = grdsf(nuy) / float(qny);

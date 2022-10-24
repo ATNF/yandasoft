@@ -79,6 +79,7 @@ namespace askap
                         const std::string& name=std::string(""),
                         const float alpha=1.,
                         const bool shareCF=false,
+                        const int  cfRank = 1,
                         const bool mpipresetup = false);
 
                 virtual ~MPIWProjectVisGridder();
@@ -125,6 +126,7 @@ namespace askap
                 void setupMpiMemory(size_t bufferSize /* in bytes */);
                 void copyToSharedMemory(std::vector<std::pair<int,int> >& itsConvFuncMatSize);
                 void copyFromSharedMemory(const std::vector<std::pair<int,int> >& itsConvFuncMatSize);
+                void copyConvFuncOffset();
 
                 /// @brief assignment operator
                 /// @details Defined as private, so it can't be called (to enforce usage of the
@@ -164,8 +166,11 @@ namespace askap
                 static std::mutex ObjCountMutex;
                 static unsigned int ObjCount;
                 static bool     itsMpiMemSetup;
-                // hard code the mpi shared memory on startup 
+                /// mpi shared memory on startup 
                 bool itsMpiMemPreSetup;
+
+                /// number of ranks to do the CF calculation
+                int itsCFRank; 
         };
     }
 }
