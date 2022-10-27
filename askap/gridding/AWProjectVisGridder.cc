@@ -855,7 +855,7 @@ void AWProjectVisGridder::correctConvolution(casacore::Array<imtype>& image)
 int AWProjectVisGridder::cIndex(int row, int pol, int chan)
 {
     const int plane = itsCMap(row, pol, chan);
-    if (nWPlanes() > 0) {
+    if (nWPlanes() > 0 && plane >= 0) {
         notifyOfWPlaneUse(plane % nWPlanes());
     }
 
