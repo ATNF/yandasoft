@@ -67,7 +67,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
   // get the calcstats flag from the parset. if it is true, then this task also calculates the image statistics
   const bool calcstats = parset.getBool("calcstats", false);
   // file to store the statistics
-  const std::string outputStats = parset.getString("outputStats",""); 
+  const std::string outputStats = parset.getString("outputStats","");
 
   // get the list of keywords to copy from the input
   // Set some defaults for simple beam mosaic, won't be correct for more complex cases
@@ -259,7 +259,7 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
     boost::shared_ptr<askap::accessors::IImageAccess<>> iaccPtr;
     boost::shared_ptr<askap::utils::StatsAndMask> statsAndMask;
     if ( calcstats ) {
-      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});    
+      iaccPtr.reset(&iacc,askap::utility::NullDeleter{});
       statsAndMask.reset(new askap::utils::StatsAndMask{comms,outImgName,iaccPtr});
     }
 
@@ -321,42 +321,72 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
       //
 
 
-      if (comms.isMaster() && channel == firstChannel) { // build this cube - does not need to loop over the outWgtNames
+      if (channel == firstChannel) { // build this cube - does not need to loop over the outWgtNames
+        if (comms.isMaster()) {
+            ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
+            ASKAPLOG_INFO_STR(logger, "Building output mosaic " << outImgName);
+            ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
+            casa::IPosition outShape  = accumulator.outShape();
+            // has the channel dimension of the allocation - so lets fix that.
+            outShape[3] = nchanCube;
 
-        ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
-        ASKAPLOG_INFO_STR(logger, "Building output mosaic " << outImgName);
-        ASKAPLOG_INFO_STR(logger, "++++++++++++++++++++++++++++++++++++++++++");
-        casa::IPosition outShape  = accumulator.outShape();
-        // has the channel dimension of the allocation - so lets fix that.
-        outShape[3] = nchanCube;
+            // set one of the input images as a reference for metadata (the first by default)
+            const uint psfref = parset.getUint("psfref",0);
 
-        ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
-        iacc.create(outImgName, outShape, accumulator.outCoordSys());
-        copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
-        iacc.addHistory(outImgName, historyLines);
-        iacc.makeDefaultMask(outImgName);
+            ASKAPLOG_INFO_STR(logger, "Getting brightness info for the output image from input number " << psfref);
+            // get pixel units from the selected reference image
+            const string units = iacc.getUnits(inImgNames[psfref]);
+            ASKAPLOG_INFO_STR(logger, "Got units as " << units);
 
-        if (accumulator.outWgtDuplicates()[outImgName]) {
-          ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
-        } else {
-          outWgtName = accumulator.outWgtNames()[outImgName];
-          ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
-          iacc.create(outWgtName, outShape, accumulator.outCoordSys());
-          copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
-          iacc.addHistory(outWgtName, historyLines);
-          iacc.makeDefaultMask(outWgtName);
+            ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
+            // get psf beam information from the selected reference image
+            Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
+            bool psfValid = (psf.nelements()==3) && (psf[0].getValue("rad")>0) && (psf[1].getValue("rad")>0);
+            accessors::BeamList refBeamList = iacc.beamList(inImgNames[psfref]);
+
+            ASKAPLOG_INFO_STR(logger, " Creating output file - Shape " << outShape << " nchanCube " << nchanCube);
+            iacc.create(outImgName, outShape, accumulator.outCoordSys());
+            if (psfValid) {
+                iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
+            }
+            if (!refBeamList.empty()) {
+                iacc.setBeamInfo(outImgName,refBeamList);
+            }
+            copyKeywords(outImgName, accumulator.getReference(outImgName), keywordsToCopy);
+            iacc.setUnits(outImgName,units);
+            iacc.addHistory(outImgName, historyLines);
+            iacc.makeDefaultMask(outImgName);
+            // Save table of mosaic pointing centres & beamsizes?
+            saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
+
+            if (accumulator.outWgtDuplicates()[outImgName]) {
+              ASKAPLOG_INFO_STR(logger, "Accumulated weight image " << outWgtName << " already written");
+            } else {
+              outWgtName = accumulator.outWgtNames()[outImgName];
+              ASKAPLOG_INFO_STR(logger, "Writing accumulated weight image to " << outWgtName);
+              iacc.create(outWgtName, outShape, accumulator.outCoordSys());
+              copyKeywords(outWgtName, accumulator.getReference(outImgName), keywordsToCopy);
+              iacc.setUnits(outWgtName,units);
+              iacc.addHistory(outWgtName, historyLines);
+              iacc.makeDefaultMask(outWgtName);
+            }
+
+            if (accumulator.doSensitivity()) {
+              outSenName = accumulator.outSenNames()[outImgName];
+              ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
+              iacc.create(outSenName, outShape, accumulator.outCoordSys());
+              copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
+              iacc.setUnits(outSenName,units);
+              iacc.addHistory(outSenName, historyLines);
+              iacc.makeDefaultMask(outSenName);
+            }
 
         }
-        if (accumulator.doSensitivity()) {
-          outSenName = accumulator.outSenNames()[outImgName];
-          ASKAPLOG_INFO_STR(logger, "Writing accumulated sensitivity image to " << outSenName);
-          iacc.create(outSenName, outShape, accumulator.outCoordSys());
-          copyKeywords(outSenName, accumulator.getReference(outImgName), keywordsToCopy);
-          iacc.addHistory(outSenName, historyLines);
-          iacc.makeDefaultMask(outSenName);
-
+        // built the output cube for this image, all wait until done (for parallel write)
+        if (!serialWrite) {
+            comms.barrier();
         }
-      } // built the output cube for this image
+      }
 
       // here we have to loop over the channels and let everything else take care of the
       // other planes ...
@@ -763,60 +793,17 @@ static void mergeMPI(const LOFAR::ParameterSet &parset, askap::askapparallel::As
           }
       }
     }
-    // Update header when all the writing is done
+    // Update stats when all the writing is done
     ASKAPLOG_INFO_STR(logger,"rank " << comms.rank() << " got to barrier");
     comms.barrier();
-    if (comms.isMaster()) {
-        // set one of the input images as a reference for metadata (the first by default)
-        const uint psfref = parset.getUint("psfref",0);
 
-        ASKAPLOG_INFO_STR(logger, "Getting brightness info for the output image from input number " << psfref);
-        // get pixel units from the selected reference image
-        const string units = iacc.getUnits(inImgNames[psfref]);
-        ASKAPLOG_INFO_STR(logger, "Got units as " << units);
-
-        ASKAPLOG_INFO_STR(logger, "Getting PSF beam info for the output image from input number " << psfref);
-        // get psf beam information from the selected reference image
-        Vector<Quantum<double> > psf = iacc.beamInfo(inImgNames[psfref]);
-        bool psfValid = (psf.nelements()==3) && (psf[0].getValue("rad")>0) && (psf[1].getValue("rad")>0);
-        accessors::BeamList refBeamList = iacc.beamList(inImgNames[psfref]);
-
-        iacc.setUnits(outImgName,units);
-        if (psfValid) {
-            iacc.setBeamInfo(outImgName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-        }
-        if (!refBeamList.empty()) {
-            iacc.setBeamInfo(outImgName,refBeamList);
-        }
-        if (!accumulator.outWgtDuplicates()[outImgName]) {
-            iacc.setUnits(outWgtName,units);
-            if (psfValid) {
-                iacc.setBeamInfo(outWgtName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-            }
-            if (!refBeamList.empty()) {
-                iacc.setBeamInfo(outWgtName,refBeamList);
-            }
-        }
-        if (accumulator.doSensitivity()) {
-            iacc.setUnits(outSenName,units);
-            if (psfValid) {
-                iacc.setBeamInfo(outSenName, psf[0].getValue("rad"), psf[1].getValue("rad"), psf[2].getValue("rad"));
-            }
-            if (!refBeamList.empty()) {
-                iacc.setBeamInfo(outSenName,refBeamList);
-            }
-        }
-        // Save table of mosaic pointing centres & beamsizes?
-        saveMosaicTable(outImgName,inImgNames,accumulator.getBeamCentres());
-    }
     if ( calcstats ) {
-      comms.barrier();
       // Since the processing of the image channels is distributed among the MPI ranks,
       // the master has to collect all the stats from the worker ranks prior to writing
       // the stats to the image table
       if (comms.isMaster()) {
         statsAndMask->receiveStats();
-        statsAndMask->writeStatsToImageTable(outImgName);  
+        statsAndMask->writeStatsToImageTable(outImgName);
         if ( outputStats != "" ) {
             statsAndMask->writeStatsToFile(outputStats);
         }

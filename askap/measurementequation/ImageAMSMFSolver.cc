@@ -750,13 +750,13 @@ namespace askap
 
       ASKAPASSERT(this->itsControl);
       this->itsControl->configure(parset);
-      String solutionType=parset.getString("solutiontype", "MAXCHISQ");
-      if(solutionType=="MAXBASE") {
+      String solutionType=parset.getString("solutiontype", "MAXBASE");
+      if(solutionType=="MAXCHISQ") {
       }
       else if(solutionType=="MAXTERM0") {
       }
       else {
-        solutionType="MAXCHISQ";
+        solutionType="MAXBASE";
       }
       ASKAPLOG_INFO_STR(logger, "Solution type = " << solutionType);
       this->itsSolutionType=solutionType;
@@ -768,7 +768,7 @@ namespace askap
           const BasisFunction<Float>::ShPtr bfPtr(new MultiScaleBasisFunction<Float>(itsScales, itsOrthogonal));
           itsBasisFunction = bfPtr;
       }
-      this->itsDecoupled = parset.getBool("decoupled", false);
+      this->itsDecoupled = parset.getBool("decoupled", true);
       if (this->itsDecoupled) {
           ASKAPLOG_DEBUG_STR(logger, "Using decoupled residuals");
       }

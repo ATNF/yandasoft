@@ -324,7 +324,16 @@ void AdviseParallel::calcNE()
    if (itsComms.isWorker()) {
        ASKAPCHECK(itsNe, "Statistics estimator (stored as NormalEquations) is not defined");
        if (itsComms.isParallel()) {
-           calcOne(measurementSets()[itsComms.rank()-1]);
+           ASKAPLOG_DEBUG_STR(logger,"calcNE parallel mode  - rank = "<<itsComms.rank()<<" #ms = "<<measurementSets().size());
+           // if we are in imager's joint imaging mode we do the MS's in serial
+           // this is yet another patch for imager's broken advise design
+           if (parset().getBool("updatedirection",false)) {
+               for (size_t iMs=0; iMs<measurementSets().size(); ++iMs) {
+                    calcOne(measurementSets()[iMs]);
+               }
+           } else {
+               calcOne(measurementSets()[itsComms.rank()-1]);
+           }
            sendNE();
        } else {
           for (size_t iMs=0; iMs<measurementSets().size(); ++iMs) {

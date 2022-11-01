@@ -528,13 +528,13 @@ void CdeconvolverApp::doTheWork(const LOFAR::ParameterSet subset,
     // *** Deconvolution ***
     // We have a normalised corrected preconditioned image
     DeconvolverBase<Float, Complex>::ShPtr deconvolver;
-    string algorithm = subset.getString("solver.Clean.algorithm", "Basisfunction");
+    string algorithm = subset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
 
     if (algorithm == "Basisfunction") {
         ASKAPLOG_INFO_STR(logger, "Constructing Basisfunction Clean solver");
         deconvolver.reset(new DeconvolverBasisFunction<Float, Complex>(fBuffer, psfArray));
         ASKAPASSERT(deconvolver);
-    } else if (algorithm == "MultiTermBasisfunction") {
+    } else if (algorithm == "BasisfunctionMFS") {
         ASKAPLOG_INFO_STR(logger, "Constructing MultiTermBasisfunction Clean solver");
         deconvolver.reset(new DeconvolverMultiTermBasisFunction<Float, Complex>(fBuffer, psfArray));
         ASKAPASSERT(deconvolver);
