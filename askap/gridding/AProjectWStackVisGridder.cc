@@ -64,11 +64,11 @@ AProjectWStackVisGridder::AProjectWStackVisGridder(const boost::shared_ptr<IBasi
     itsIllumination(illum),
     itsMaxFeeds(maxFeeds), itsMaxFields(maxFields),
     itsFreqDep(frequencyDependent),
-    itsSpheroidalTaper(spheroidalTaper)
+    itsSpheroidalTaper(spheroidalTaper),
+    itsSpheroidalWeightsCutoff(spheroidalWeightsCutoff)
 {
     ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport>0, "Maximum support must be greater than 0")
-    ASKAPCHECK(!itsSpheroidalTaper, "Spheroidal taper not currently availble for AProjectWStack");
     ASKAPDEBUGASSERT(itsIllumination);
     itsSupport=0;
     itsOverSample=overSample;
@@ -90,7 +90,10 @@ AProjectWStackVisGridder::AProjectWStackVisGridder(const AProjectWStackVisGridde
     itsReferenceFrequency(other.itsReferenceFrequency),
     itsIllumination(other.itsIllumination), itsMaxFeeds(other.itsMaxFeeds),
     itsMaxFields(other.itsMaxFields),
-    itsFreqDep(other.itsFreqDep), itsMaxSupport(other.itsMaxSupport),
+    itsFreqDep(other.itsFreqDep),
+    itsSpheroidalTaper(other.itsSpheroidalTaper),
+    itsSpheroidalWeightsCutoff(other.itsSpheroidalWeightsCutoff),
+    itsMaxSupport(other.itsMaxSupport),
     itsLimitSupport(other.itsLimitSupport),
     itsCMap(other.itsCMap.copy())
 {
@@ -252,7 +255,33 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
     const casacore::uInt nx = pattern.uSize();
     const casacore::uInt ny = pattern.vSize();
 
+    const casacore::uInt qnx = nx / itsOverSample;
+    const casacore::uInt qny = ny / itsOverSample;
 
+    casacore::Vector<double> ccfx;
+    casacore::Vector<double> ccfy;
+    if (itsSpheroidalTaper) {
+        // Include spheroidal for anti-aliasing and general kernel robustness
+        ccfx.resize(qnx);
+        ccfy.resize(qny);
+        for (casacore::uInt qix = 0; qix < qnx; ++qix) {
+            const double nux = std::abs(double(qix) - double(qnx / 2)) / double(qnx / 2);
+            ccfx(qix) = grdsf(nux);
+        }
+        for (casacore::uInt qiy = 0; qiy < qny; ++qiy) {
+            const double nuy = std::abs(double(qiy) - double(qny / 2)) / double(qny / 2);
+            ccfy(qiy) = grdsf(nuy);
+        }
+        if (itsInterp) {
+          // The spheroidal is undefined and set to zero at nu=1, but that
+          // is not the numerical limit. Estimate it from its neighbours.
+          interpolateEdgeValues(ccfx);
+          interpolateEdgeValues(ccfy);
+        }
+    }
+
+
+    casacore::Matrix<imtypeComplex> cplane(pattern.pattern().shape());
     int nDone=0;
     for (int row=0; row<nSamples; ++row) {
         const int feed=acc.feed1()(row);
@@ -261,56 +290,57 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
             makeCFValid(feed, currentField());
             nDone++;
             casacore::MVDirection offset(acc.pointingDir1()(row).getAngle());
-            rwSlopes()(0, feed, currentField()) = isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLong()
-                    -out.getLong()) *cos(offset.getLat());
-            rwSlopes()(1, feed, currentField())= isPSFGridder() || isPCFGridder() ? 0. : sin(offset.getLat())
-                *cos(out.getLat()) - cos(offset.getLat())*sin(out.getLat())
-                *cos(offset.getLong()-out.getLong());
-
             const double parallacticAngle = hasSymmetricIllumination ? 0. : acc.feed1PA()(row);
 
             for (int chan=0; chan<nChan; chan++) {
                 /// Extract illumination pattern for this channel
                 itsIllumination->getPattern(acc.frequency()[chan], pattern,
                                             out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
-
-                //itsIllumination->getPattern(acc.frequency()[chan], pattern,
-                //        rwSlopes()(0, feed, currentField()),
-                //        rwSlopes()(1, feed, currentField()),
-                //        parallacticAngle);
-
                 /// Now convolve the disk with itself using an FFT
                 if( !imageBasedPattern ) {
                     scimath::fft2d(pattern.pattern(), false);
                 }
 
                 double peak=0.0;
-                for (casacore::uInt ix=0; ix<nx; ++ix) {
-                    for (casacore::uInt iy=0; iy<ny; ++iy) {
-                        pattern(ix, iy)=pattern(ix,iy)*conj(pattern(ix,iy));
-                        if (casacore::abs(pattern(ix,iy))>peak) {
-                            peak=casacore::abs(pattern(ix,iy));
+                cplane.set(0.);
+                for (casacore::uInt iy=0; iy<ny; ++iy) {
+                    const int qiy = iy + int(qny)/2 - int(ny)/2;
+                    for (casacore::uInt ix=0; ix<nx; ++ix) {
+                        const int qix = ix + int(qnx)/2 - int(nx)/2;
+                        if (!itsSpheroidalTaper || ((qix>=0) && (qix<qnx) && (qiy>=0) && (qiy<qny))) {
+                            const imtype taper = itsSpheroidalTaper ? ccfx(qix) * ccfy(qiy) : 1.0;
+                            cplane(ix, iy) = pattern(ix, iy) * conj(pattern(ix,iy)) * taper;
+                            if (casacore::abs(cplane(ix,iy))>peak) {
+                                peak=casacore::abs(cplane(ix,iy));
+                            }
                         }
                     }
                 }
+
                 if(peak>0.0) {
-                    pattern.pattern()*=imtypeComplex(1.0/peak);
+                    cplane *= imtypeComplex(1.0/peak);
                 }
                 // The maximum will be 1.0
-                ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casacore::max(pattern.pattern()));
-                scimath::fft2d(pattern.pattern(), true);
+                ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casacore::max(cplane));
+                scimath::fft2d(cplane, true);
                 // Now correct for normalization of FFT
-                pattern.pattern()*=imtypeComplex(1.0/(double(nx)*double(ny)));
-                ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casacore::sum(pattern.pattern()));
+                cplane *= imtypeComplex(1.0/(double(nx)*double(ny)));
+                ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casacore::sum(cplane));
 
                 if (itsSupport==0) {
                     // we probably need a proper support search here
                     // it can be encapsulated in a method of the UVPattern class
-                    itsSupport = pattern.maxSupport();
+                    itsSupport = pattern.maxSupport() / (2 * itsOverSample);
+                    if (itsSupport < 3) {
+                        itsSupport = 3;
+                    }
+
                     ASKAPCHECK(itsSupport>0,
                             "Unable to determine support of convolution function");
                     ASKAPCHECK(itsSupport*itsOverSample<int(nx)/2,
-                            "Overflowing convolution function - increase maxSupport or decrease overSample");
+                            "Overflowing convolution function - increase maxSupport or decrease overSample, "<<
+                            "Current support size = " << itsSupport << " oversampling factor=" << itsOverSample <<
+                            " image size nx=" << nx)
                     if (itsLimitSupport > 0  &&  itsSupport > itsLimitSupport) {
                         ASKAPLOG_INFO_STR(logger, "Convolution function support = "
                                 << itsSupport << " pixels exceeds upper support limit; "
@@ -348,7 +378,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                         for (int iy=-itsSupport; iy<itsSupport; iy++) {
                             for (int ix=-itsSupport; ix<itsSupport; ix++) {
                                 itsConvFunc[plane](ix+itsSupport, iy+itsSupport)
-                                    = rescale * pattern(itsOverSample*ix+fracu+nx/2,
+                                    = rescale * cplane(itsOverSample*ix+fracu+nx/2,
                                             itsOverSample*iy+fracv+ny/2);
                             } // for ix
                         } // for iy
@@ -389,6 +419,36 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
     const int cny=std::min(itsMaxSupport, ny);
     const int ccenx = cnx/2;
     const int cceny = cny/2;
+
+    casacore::Vector<double> ccfx;
+    casacore::Vector<double> ccfy;
+
+    if (itsSpheroidalTaper) {
+        // the spheroidal ccf needs to be removed from the weights before they are stored
+        // it will also be removed from the image in correctConvolution
+        ccfx.resize(cnx);
+        ccfy.resize(cny);
+        for (int ix=0; ix<cnx; ++ix) {
+             const double nux = std::abs(double(ix)-double(ccenx))/double(ccenx);
+             const double val = grdsf(nux);
+             //ccfx(ix) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfx(ix) = val > itsSpheroidalWeightsCutoff ? val : 0.;
+        }
+        for (int iy=0; iy<cny; ++iy) {
+             const double nuy = std::abs(double(iy)-double(cceny))/double(cceny);
+             const double val = grdsf(nuy);
+             //ccfy(iy) = val; //casacore::abs(val) > 1e-10 ? 1./val : 0.;
+             ccfy(iy) = val > itsSpheroidalWeightsCutoff ? val : 0.;
+        }
+        // this isn't really needed unless itsSpheroidalWeightsCutoff==0. But shouldn't hurt
+        if (itsInterp) {
+          // The spheroidal is undefined and set to zero at nu=1, but that
+          // is not the numerical limit. Estimate it from its neighbours.
+          interpolateEdgeValues(ccfx);
+          interpolateEdgeValues(ccfy);
+        }
+    }
+
 
     /// This is the output array before sinc padding
     casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
@@ -456,11 +516,27 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
                     const double wt = sumOfWeights()(iz, pol, chan);
                     ASKAPCHECK(!std::isnan(wt), "sumWeights returns NaN for row="<<iz<<
                                " pol="<<pol<<" chan="<<chan);
-                    for (int ix=0; ix<cnx; ++ix) {
-                        ip(0)=ix;
-                        for (int iy=0; iy<cny; ++iy) {
-                            ip(1)=iy;
-                            cOut(ip)+=wt*casacore::real(thisPlane(ix, iy)*conj(thisPlane(ix, iy)));
+
+                    if (itsSpheroidalTaper) {
+                       // if itsConvFunc has an additional taper, remove it before updating the weights.
+                       for (int ix = 0; ix < cnx; ix++) {
+                           ip(0) = ix;
+                           for (int iy = 0; iy < cny; iy++) {
+                               ip(1) = iy;
+                               imtype taper = ccfx(ix) * ccfy(iy);
+                               const imtypeComplex val = taper > 0 ? thisPlane(ix, iy) / taper : 0.;
+                               cOut(ip) += double(wt) * casacore::real(val * conj(val));
+                           }
+                       }
+                    } else {
+
+                        for (int ix=0; ix<cnx; ++ix) {
+                            ip(0)=ix;
+                            for (int iy=0; iy<cny; ++iy) {
+                                ip(1)=iy;
+                                const imtypeComplex val = thisPlane(ix, iy);
+                                cOut(ip) += double(wt) * casacore::real(val * conj(val));
+                            }
                         }
                     }
                 }
@@ -476,7 +552,11 @@ int AProjectWStackVisGridder::cIndex(int row, int pol, int chan) {
     return itsCMap(row, pol, chan);
 }
 
-void AProjectWStackVisGridder::correctConvolution(casacore::Array<imtype>& /*grid*/) {
+void AProjectWStackVisGridder::correctConvolution(casacore::Array<imtype>& image) {
+    // if there are any kernel factors that are not A or W terms, remove them now
+    if (itsSpheroidalTaper) {
+        SphFuncVisGridder::correctConvolution(image);
+    }
 }
 
 /// @brief static method to create gridder
