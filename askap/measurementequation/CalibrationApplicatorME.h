@@ -129,8 +129,6 @@ private:
   bool itsBeamIndependent;
   /// @brief true, if channel index can be ignored and channel=0 corrections applied to all channels
   bool itsChannelIndependent;
-  /// @brief true, if time interpolation should be used
-  bool itsInterpolateTime;
 };
 
 } // namespace synthesis

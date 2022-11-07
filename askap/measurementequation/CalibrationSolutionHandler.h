@@ -106,8 +106,15 @@ public:
   /// @brief determines whether time interpolation is used
   /// @details Interpolating solutions in time improves dynamic range
   /// @param[in] flag, if true interpolate between solutions
-  void interpolateTime(bool flag) {
+  void setInterpolateTime(bool flag) {
       itsInterpolateTime = flag;
+  }
+
+  /// @brief determine whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @return if true interpolate between solutions
+  bool getInterpolateTime() const {
+      return itsInterpolateTime;
   }
 
 

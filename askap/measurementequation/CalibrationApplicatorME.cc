@@ -59,7 +59,7 @@ namespace synthesis {
 /// @param[in] src calibration solution source to work with
 CalibrationApplicatorME::CalibrationApplicatorME(const boost::shared_ptr<accessors::ICalSolutionConstSource> &src) :
      CalibrationSolutionHandler(src), itsScaleNoise(false), itsFlagAllowed(false), itsBeamIndependent(false),
-     itsChannelIndependent(false), itsInterpolateTime(false)
+     itsChannelIndependent(false)
 {}
 
 /// @brief correct model visibilities for one accessor (chunk).
@@ -283,7 +283,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                 calSolution().jonesAndValidity(antenna2[row], b2, chan);
             validSolution = jv1.second && jv2.second;
             if (validSolution) {
-                if (itsInterpolateTime) {
+                if (getInterpolateTime()) {
                     // get second lot of calibration parameters
                     std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1a =
                         nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
@@ -455,10 +455,9 @@ void CalibrationApplicatorME::channelIndependent(bool flag)
 /// @param[in] flag if true, interpolate the gains in time
 void CalibrationApplicatorME::interpolateTime(bool flag)
 {
-  itsInterpolateTime = flag;
-  // make sure the CalibrationSolutionHandler knows about this too
-  interpolateTime(flag);
-  if (itsInterpolateTime) {
+  // make sure the parent CalibrationSolutionHandler knows about this too
+  setInterpolateTime(flag);
+  if (getInterpolateTime()) {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will interpolate the gains in time");
   } else {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will not interpolate the gains in time");
