@@ -86,15 +86,30 @@ public:
   /// @return a const reference to the calibration solution accessor
   const accessors::ICalSolutionConstAccessor& nextCalSolution() const;
 
+  /// @brief return the timestamp for the current solution
+  /// @details This method returns the timestamp for the current solution.
+  /// @return solution timestamp
   const double calSolutionTime() const
   {
       return itsCurrentSolutionTime;
   }
 
+  /// @brief return the timestamp for the next solution
+  /// @details This method returns the timestamp for the next solution.
+  /// If there is no next solution it returns the current timestamp
+  /// @return next solution timestamp
   const double nextCalSolutionTime() const
   {
       return itsNextSolutionTime;
   }
+
+  /// @brief determines whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @param[in] flag, if true interpolate between solutions
+  void interpolateTime(bool flag) {
+      itsInterpolateTime = flag;
+  }
+
 
   /// @brief obtain change monitor
   /// @details This class is handy if one wants to track changes in the
@@ -130,6 +145,10 @@ private:
 
   /// @brief change monitor (to track changes in the accessor returned by calSolution)
   mutable scimath::ChangeMonitor itsChangeMonitor;
+
+  /// @brief true, if time interpolation should be used
+  bool itsInterpolateTime;
+
 };
 
 } // namespace synthesis

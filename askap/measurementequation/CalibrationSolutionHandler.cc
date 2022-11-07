@@ -40,7 +40,7 @@ namespace synthesis {
 /// @details It constructs the handler class with uninitialised shared pointer to the
 /// solution source
 CalibrationSolutionHandler::CalibrationSolutionHandler() : itsCurrentSolutionID(-1), itsNextSolutionID(-1),
-itsCurrentSolutionTime(0), itsNextSolutionTime(0)
+itsCurrentSolutionTime(0), itsNextSolutionTime(0), itsInterpolateTime(false)
 {}
 
 /// @brief construct with the given solution source
@@ -48,7 +48,7 @@ itsCurrentSolutionTime(0), itsNextSolutionTime(0)
 /// @param[in] css shared pointer to solution source
 CalibrationSolutionHandler::CalibrationSolutionHandler(const boost::shared_ptr<accessors::ICalSolutionConstSource> &css) :
      itsCalSolutionSource(css), itsCurrentSolutionID(-1), itsNextSolutionID(-1),
-     itsCurrentSolutionTime(0), itsNextSolutionTime(0)
+     itsCurrentSolutionTime(0), itsNextSolutionTime(0), itsInterpolateTime(false)
 {
   ASKAPCHECK(itsCalSolutionSource,
       "An attempt to initialise CalibrationSolutionHandler with a void calibration solution source shared pointer");
@@ -68,6 +68,7 @@ void CalibrationSolutionHandler::setCalSolutionSource(const boost::shared_ptr<ac
   itsNextSolutionID = -1;
   itsCurrentSolutionTime = 0;
   itsNextSolutionTime = 0;
+  itsInterpolateTime = false;
   itsChangeMonitor.notifyOfChanges();
 }
 
@@ -86,15 +87,15 @@ void CalibrationSolutionHandler::updateAccessor(const double time) const
       itsCurrentSolutionTime = idt.second;
       itsChangeMonitor.notifyOfChanges();
   }
-
-  idt = itsCalSolutionSource->solutionIDAfter(time);
-  if ((idt.first != itsNextSolutionID) || !itsNextCalSolutionAccessor) {
-      itsNextCalSolutionAccessor = itsCalSolutionSource->roSolution(idt.first);
-      itsNextSolutionID = idt.first;
-      itsNextSolutionTime = idt.second;
-      //itsChangeMonitor.notifyOfChanges();
+  if (itsInterpolateTime) {
+      idt = itsCalSolutionSource->solutionIDAfter(time);
+      if ((idt.first != itsNextSolutionID) || !itsNextCalSolutionAccessor) {
+          itsNextCalSolutionAccessor = itsCalSolutionSource->roSolution(idt.first);
+          itsNextSolutionID = idt.first;
+          itsNextSolutionTime = idt.second;
+          //itsChangeMonitor.notifyOfChanges();
+      }
   }
-
 }
 
 /// @brief helper method to get current solution accessor

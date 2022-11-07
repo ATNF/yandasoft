@@ -310,14 +310,16 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                                 casa::Complex g2b = j2b(i,i);
                                 casa::Complex g1a = j1a(i,i);
                                 casa::Complex g2a = j2a(i,i);
-                                casa::Complex g = g1b / g1a;
-                                float mag = abs(g);
-                                casa::Complex g1 = g1a * (1 + (mag-1)*factor) * pow(g/mag,factor);
-                                g = g2b / g1a;
-                                mag = abs(g);
-                                casa::Complex g2 = g2a * (1 + (mag-1)*factor) * pow(g/mag,factor);
-                                j1b(i,i) = g1;
-                                j2b(i,i) = g2;
+                                if (abs(g1a) > 0 && abs(g1b) > 0) {
+                                    casa::Complex g = g1b / g1a;
+                                    float mag = abs(g);
+                                    casa::Complex g1 = g1a * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                    g = g2b / g1a;
+                                    mag = abs(g);
+                                    casa::Complex g2 = g2a * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                    j1b(i,i) = g1;
+                                    j2b(i,i) = g2;
+                                }
                             }
                         }
                     }
@@ -454,6 +456,8 @@ void CalibrationApplicatorME::channelIndependent(bool flag)
 void CalibrationApplicatorME::interpolateTime(bool flag)
 {
   itsInterpolateTime = flag;
+  // make sure the CalibrationSolutionHandler knows about this too
+  interpolateTime(flag);
   if (itsInterpolateTime) {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will interpolate the gains in time");
   } else {
