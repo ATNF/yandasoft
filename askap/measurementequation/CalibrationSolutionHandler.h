@@ -145,10 +145,10 @@ private:
   mutable long itsNextSolutionID;
 
   /// @brief solution time corresponding to the current solution accessor
-  mutable long itsCurrentSolutionTime;
+  mutable double itsCurrentSolutionTime;
 
   /// @brief solution time corresponding to the next solution accessor
-  mutable long itsNextSolutionTime;
+  mutable double itsNextSolutionTime;
 
   /// @brief change monitor (to track changes in the accessor returned by calSolution)
   mutable scimath::ChangeMonitor itsChangeMonitor;

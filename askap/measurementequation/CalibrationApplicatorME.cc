@@ -285,6 +285,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
             if (validSolution) {
                 if (getInterpolateTime()) {
                     // get second lot of calibration parameters
+                    // a=after b=before 1=ant1 2=ant2
                     std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1a =
                         nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
                     std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2a =
@@ -304,21 +305,21 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                             //j1b += (j1a - j1b) * factor;
                             //j2b += (j2a - j2b) * factor;
                             // Interpolate ampl and phase separately
-                            // can only interpolate pure gain, not leakage
+                            // can only interpolate pure gain this way, not leakage
                             for (int i=0; i<=1; i++) {
                                 casa::Complex g1b = j1b(i,i);
                                 casa::Complex g2b = j2b(i,i);
                                 casa::Complex g1a = j1a(i,i);
                                 casa::Complex g2a = j2a(i,i);
                                 if (abs(g1a) > 0 && abs(g1b) > 0) {
-                                    casa::Complex g = g1b / g1a;
+                                    casa::Complex g = g1a / g1b;
                                     float mag = abs(g);
-                                    casa::Complex g1 = g1a * (1 + (mag-1)*factor) * pow(g/mag,factor);
-                                    g = g2b / g1a;
-                                    mag = abs(g);
-                                    casa::Complex g2 = g2a * (1 + (mag-1)*factor) * pow(g/mag,factor);
-                                    j1b(i,i) = g1;
-                                    j2b(i,i) = g2;
+                                    j1b(i,i) = g1b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                }
+                                if (abs(g2a) > 0 && abs(g2b) > 0) {
+                                    casa::Complex g = g2a / g2b;
+                                    float mag = abs(g);
+                                    j2b(i,i) = g2b * (1 + (mag-1)*factor) * pow(g/mag,factor);
                                 }
                             }
                         }
