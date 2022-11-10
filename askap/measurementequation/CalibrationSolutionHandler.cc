@@ -1,5 +1,5 @@
 /// @file
-/// 
+///
 /// @brief helper class to manage calibration solution source
 /// @details We need a similar functionality in a number of places
 /// to update calibration solution accessor if new solution is
@@ -39,47 +39,65 @@ namespace synthesis {
 /// @brief default constructor
 /// @details It constructs the handler class with uninitialised shared pointer to the
 /// solution source
-CalibrationSolutionHandler::CalibrationSolutionHandler() : itsCurrentSolutionID(-1) {}
+CalibrationSolutionHandler::CalibrationSolutionHandler() : itsCurrentSolutionID(-1), itsNextSolutionID(-1),
+itsCurrentSolutionTime(0), itsNextSolutionTime(0), itsInterpolateTime(false)
+{}
 
 /// @brief construct with the given solution source
 /// @details
 /// @param[in] css shared pointer to solution source
 CalibrationSolutionHandler::CalibrationSolutionHandler(const boost::shared_ptr<accessors::ICalSolutionConstSource> &css) :
-     itsCalSolutionSource(css), itsCurrentSolutionID(-1) 
+     itsCalSolutionSource(css), itsCurrentSolutionID(-1), itsNextSolutionID(-1),
+     itsCurrentSolutionTime(0), itsNextSolutionTime(0), itsInterpolateTime(false)
 {
-  ASKAPCHECK(itsCalSolutionSource, 
+  ASKAPCHECK(itsCalSolutionSource,
       "An attempt to initialise CalibrationSolutionHandler with a void calibration solution source shared pointer");
 }
 
-/// @brief setup handler with the given solution source  
+/// @brief setup handler with the given solution source
 /// @details
 /// @param[in] css shared pointer to solution source
 void CalibrationSolutionHandler::setCalSolutionSource(const boost::shared_ptr<accessors::ICalSolutionConstSource> &css)
 {
-  ASKAPCHECK(css, 
-      "An attempt to initialise CalibrationSolutionHandler with a void calibration solution source shared pointer");  
+  ASKAPCHECK(css,
+      "An attempt to initialise CalibrationSolutionHandler with a void calibration solution source shared pointer");
   itsCalSolutionSource = css;
   itsCalSolutionAccessor.reset();
+  itsNextCalSolutionAccessor.reset();
   itsCurrentSolutionID = -1;
-  itsChangeMonitor.notifyOfChanges();    
+  itsNextSolutionID = -1;
+  itsCurrentSolutionTime = 0;
+  itsNextSolutionTime = 0;
+  itsInterpolateTime = false;
+  itsChangeMonitor.notifyOfChanges();
 }
 
 
 /// @brief helper method to update accessor pointer if necessary
-/// @details This method updates the accessor shared pointer if it is 
+/// @details This method updates the accessor shared pointer if it is
 /// uninitialised, or if it has been updated for the given time.
 /// @param[in] time timestamp (seconds since 0 MJD)
 void CalibrationSolutionHandler::updateAccessor(const double time) const
 {
   ASKAPDEBUGASSERT(itsCalSolutionSource);
-  const long newID = itsCalSolutionSource->solutionID(time);
-  if ((newID != itsCurrentSolutionID) || !itsCalSolutionAccessor) {
-      itsCalSolutionAccessor = itsCalSolutionSource->roSolution(newID);
-      itsCurrentSolutionID = newID;
-      itsChangeMonitor.notifyOfChanges();    
+  std::pair<long, double> idt = itsCalSolutionSource->solutionIDBefore(time);
+  if ((idt.first != itsCurrentSolutionID) || !itsCalSolutionAccessor) {
+      itsCalSolutionAccessor = itsCalSolutionSource->roSolution(idt.first);
+      itsCurrentSolutionID = idt.first;
+      itsCurrentSolutionTime = idt.second;
+      itsChangeMonitor.notifyOfChanges();
+  }
+  if (itsInterpolateTime) {
+      idt = itsCalSolutionSource->solutionIDAfter(time);
+      if ((idt.first != itsNextSolutionID) || !itsNextCalSolutionAccessor) {
+          itsNextCalSolutionAccessor = itsCalSolutionSource->roSolution(idt.first);
+          itsNextSolutionID = idt.first;
+          itsNextSolutionTime = idt.second;
+          //itsChangeMonitor.notifyOfChanges();
+      }
   }
 }
-  
+
 /// @brief helper method to get current solution accessor
 /// @details This method returns a reference to the current solution
 /// accessor or throws an exception if it is uninitialised
@@ -91,8 +109,18 @@ const accessors::ICalSolutionConstAccessor& CalibrationSolutionHandler::calSolut
   return *itsCalSolutionAccessor;
 }
 
+/// @brief helper method to get current solution accessor
+/// @details This method returns a reference to the current solution
+/// accessor or throws an exception if it is uninitialised
+/// (this shouldn't happen if updateAccessor is called first)
+/// @return a const reference to the calibration solution accessor
+const accessors::ICalSolutionConstAccessor& CalibrationSolutionHandler::nextCalSolution() const
+{
+  ASKAPASSERT(itsNextCalSolutionAccessor);
+  return *itsNextCalSolutionAccessor;
+}
+
 
 } // namespace synthesis
 
 } // namespace askap
-
