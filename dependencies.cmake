@@ -19,4 +19,4 @@ set ( BASE_IMAGEMATH_TAG           tags/1.8.1                               CACH
 set ( BASE_ASKAPPARRALLEL_TAG      tags/1.4.1                               CACHE  STRING    "base-askapparrallel version"      FORCE )
 set ( BASE_SCIMATH_TAG             tags/1.8.1                               CACHE  STRING    "base-scimath version"             FORCE )
 set ( BASE_COMPONENTS_TAG          tags/1.5.1                               CACHE  STRING    "base-components version"          FORCE )
-set ( BASE_ACCESSORS_TAG           feature/AXA-1776-calibration-application-needs-interpolation  CACHE  STRING    "base-accessors version"           FORCE )
+set ( BASE_ACCESSORS_TAG           develop                                  CACHE  STRING    "base-accessors version"           FORCE )

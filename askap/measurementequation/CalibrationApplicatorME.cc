@@ -290,7 +290,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                         nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
                     std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2a =
                         nextCalSolution().jonesAndValidity(antenna2[row], b2, chan);
-                    bool valid = jv1a.second && jv2a.second;
+                    const bool valid = jv1a.second && jv2a.second;
                     if (valid) {
                         casa::SquareMatrix<casa::Complex, 2>& j1b = jv1.first;
                         casa::SquareMatrix<casa::Complex, 2>& j2b = jv2.first;
@@ -312,13 +312,13 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                                 casa::Complex g1a = j1a(i,i);
                                 casa::Complex g2a = j2a(i,i);
                                 if (abs(g1a) > 0 && abs(g1b) > 0) {
-                                    casa::Complex g = g1a / g1b;
-                                    float mag = abs(g);
+                                    const casa::Complex g = g1a / g1b;
+                                    const float mag = abs(g);
                                     j1b(i,i) = g1b * (1 + (mag-1)*factor) * pow(g/mag,factor);
                                 }
                                 if (abs(g2a) > 0 && abs(g2b) > 0) {
-                                    casa::Complex g = g2a / g2b;
-                                    float mag = abs(g);
+                                    const casa::Complex g = g2a / g2b;
+                                    const float mag = abs(g);
                                     j2b(i,i) = g2b * (1 + (mag-1)*factor) * pow(g/mag,factor);
                                 }
                             }
