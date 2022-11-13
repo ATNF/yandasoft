@@ -168,13 +168,13 @@ void CalcCore::doCalc()
             boost::shared_ptr<ImageFFTEquation> fftEquation(new ImageFFTEquation (*itsModel, it, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
 // DAM TRADITIONAL
-            if (itsParset.isDefined("gridder.robustness")) {
-                const float robustness = itsParset.getFloat("gridder.robustness");
+            if (parset().isDefined("gridder.robustness")) {
+                const float robustness = parset().getFloat("gridder.robustness");
                 ASKAPCHECK((robustness>=-2) && (robustness<=2), "gridder.robustness should be in the range [-2,2]");
                 // also check that it is spectral line? Or do that earlier
                 //  - won't work in continuum imaging, unless combo is done with combinechannels on a single worker
                 //  - won't work with Taylor terms
-                fftEquation->setRobustness(itsParset.getFloat("gridder.robustness"));
+                fftEquation->setRobustness(parset().getFloat("gridder.robustness"));
             }
             fftEquation->useAlternativePSF(parset());
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
@@ -196,10 +196,10 @@ void CalcCore::doCalc()
             new ImageFFTEquation (*itsModel, calIter, gridder()));
             ASKAPDEBUGASSERT(fftEquation);
 // DAM TRADITIONAL
-            if (itsParset.isDefined("gridder.robustness")) {
-                const float robustness = itsParset.getFloat("gridder.robustness");
+            if (parset().isDefined("gridder.robustness")) {
+                const float robustness = parset().getFloat("gridder.robustness");
                 ASKAPCHECK((robustness>=-2) && (robustness<=2), "gridder.robustness should be in the range [-2,2]");
-                fftEquation->setRobustness(itsParset.getFloat("gridder.robustness"));
+                fftEquation->setRobustness(parset().getFloat("gridder.robustness"));
             }
             fftEquation->useAlternativePSF(parset());
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
