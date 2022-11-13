@@ -47,7 +47,7 @@ namespace askap {
                 ImageBasisFunctionSolver();
 
                 /// @brief default constructor
-     	        ImageBasisFunctionSolver(casacore::Vector<float>& scales);
+                ImageBasisFunctionSolver(const casacore::Vector<float>& scales);
 
                 /// @brief Initialize this solver
                 virtual void init();

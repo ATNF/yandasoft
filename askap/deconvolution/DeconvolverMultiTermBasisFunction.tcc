@@ -305,11 +305,15 @@ namespace askap {
             if (orthogonal) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Multiscale basis functions will be orthogonalised");
             }
-            itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
+
+            // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+            // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+            // there is no benefit of using casacore::Vector)
+            itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<casacore::Float>(scales),
                                orthogonal));
 
-            String solutionType = parset.getString("solutiontype", "MAXCHISQ");
-            itsDecoupled = parset.getBool("decoupled", false);
+            String solutionType = parset.getString("solutiontype", "MAXBASE");
+            itsDecoupled = parset.getBool("decoupled", true);
             if (itsDecoupled) {
                 ASKAPLOG_DEBUG_STR(decmtbflogger, "Using decoupled residuals");
             }

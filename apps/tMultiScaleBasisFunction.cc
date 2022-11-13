@@ -105,7 +105,7 @@ void MultiScaleBasisFunctionTestApp::doSphFuncTest() {
 void MultiScaleBasisFunctionTestApp::doTest() {
   const casa::uInt size = config().getUint32("size");
   const casacore::IPosition shape(2, size, size);
-  MultiScaleBasisFunction<float> msbf(shape, config().getFloatVector("scales"), config().getBool("orthogonal", false));
+  MultiScaleBasisFunction<float> msbf(shape, casacore::Vector<float>(config().getFloatVector("scales")), config().getBool("orthogonal", false));
 }
 
 int MultiScaleBasisFunctionTestApp::run(int argc, char **argv) {

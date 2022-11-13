@@ -29,9 +29,9 @@ def analyseResult(spr, expected_flux = 1.):
    stats = spr.imageStats('weights.field1')
    print("Statistics for weights image: ",stats)
    weights_peak=offsetDirection(psf_peak,-feed_offset[0],feed_offset[1])
-   disterr = getDistance(stats,weights_peak[0],weights_peak[1])*60.
-   if disterr > 1:
-      raise RuntimeError("Offset between true and expected peak weights position exceeds 1 arcmin, d=%f, weights_peak=%s" % (disterr,weights_peak))
+   disterr = getDistance(stats,weights_peak[0],weights_peak[1])*3600.
+   if disterr > 8:
+      raise RuntimeError("Offset between true and expected peak weights position exceeds 1 cell size (8 arcsec), d=%f, weights_peak=%s" % (disterr,weights_peak))
 
    stats = spr.imageStats('psf.field1')
    print("Statistics for psf image: ",stats)

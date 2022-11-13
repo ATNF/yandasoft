@@ -170,7 +170,7 @@ std::pair<double, double> PointingSolver::solveOne(const casacore::Vector<Generi
   const size_t nIter = 10;
   for (size_t iter=0; iter<nIter; ++iter) {
        casacore::Matrix<double> nm(2,2,0.); // normal matrix
-       casacore::Vector<double> data(2.,0.); // projected right-hand side
+       casacore::Vector<double> data(2,0.); // projected right-hand side
        for (casacore::uInt point=0; point<amplitudes.nelements(); ++point) {
             const double off1 = raOffsets[point] + result.first;
             const double off2 = decOffsets[point] + result.second;

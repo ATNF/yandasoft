@@ -114,7 +114,10 @@ namespace askap {
                     ASKAPLOG_DEBUG_STR(decbflogger, "Multiscale basis functions will be orthogonalised");
                 }
 
-                itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(scales,
+                // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+                // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+                // there is no benefit of using casacore::Vector)
+                itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<float>(scales),
                                    orthogonal));
             }
             itsUseCrossTerms = parset.getBool("usecrossterms", true);
@@ -131,7 +134,7 @@ namespace askap {
         {
             this->updateResiduals(this->itsModel);
 
-            const Array<T> ones(this->itsL1image(0).shape(), 1.0);
+            const Array<T> ones(this->itsL1image(0).shape(), static_cast<T>(1.0));
             const T l0Norm(sum(ones(abs(this->itsL1image(0)) > T(0.0))));
             const T l1Norm(sum(abs(this->itsL1image(0))));
             ASKAPLOG_INFO_STR(decbflogger, "L0 norm = " << l0Norm << ", L1 norm   = " << l1Norm
@@ -244,7 +247,7 @@ namespace askap {
 
             itsResidualBasisFunction.resize(stackShape);
 
-            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), 0.);
+            Cube<FT> basisFunctionFFT(this->itsBasisFunction->shape(), FT(0.));
 
             // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
@@ -269,7 +272,8 @@ namespace askap {
             //scimath::fft2d(residualFFT, true);
             fft2d(residualFFT, true);
 
-            Matrix<FT> work(this->model().shape().nonDegenerate(2), ArrayInitPolicies::NO_INIT);
+            // there is no bypass of complex initialisation in casacore-3.4
+            Matrix<FT> work(this->model().shape().nonDegenerate(2));
             ASKAPLOG_DEBUG_STR(decbflogger,
                                "Calculating convolutions of residual image with basis functions");
 
@@ -461,7 +465,7 @@ namespace askap {
 
         template<typename T, typename FT>
         void DeconvolverBasisFunction<T, FT>::reportOnCouplingMatrix() const {
-            Matrix<T> identity(this->itsCouplingMatrix.shape(), 0.0);
+            Matrix<T> identity(this->itsCouplingMatrix.shape(), static_cast<T>(0.0));
             const uInt nRows(this->itsCouplingMatrix.nrow());
             const uInt nCols(this->itsCouplingMatrix.ncolumn());
             ASKAPDEBUGASSERT(this->itsCouplingMatrix.shape() == this->itsInverseCouplingMatrix.shape());
@@ -801,7 +805,7 @@ namespace askap {
         Array<T> DeconvolverBasisFunction<T, FT>::applyInverse(const Matrix<Double>& invCoupling,
                 const Array<T>& dataArray)
         {
-            Array<T> invDataArray(dataArray.shape(), 0.0);
+            Array<T> invDataArray(dataArray.shape(), static_cast<T>(0.0));
 
             const uInt nRows(invCoupling.nrow());
             const uInt nCols(invCoupling.ncolumn());
@@ -833,7 +837,7 @@ namespace askap {
         Array<T> DeconvolverBasisFunction<T, FT>::apply(const Matrix<Double>& coupling,
                 const Vector<T> dataVector)
         {
-            Vector<T> vecDataVector(dataVector.shape(), 0.0);
+            Vector<T> vecDataVector(dataVector.shape(), static_cast<T>(0.0));
 
             const uInt nRows(coupling.nrow());
             const uInt nCols(coupling.ncolumn());

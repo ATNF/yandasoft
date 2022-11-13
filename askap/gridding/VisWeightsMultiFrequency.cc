@@ -31,47 +31,44 @@ namespace askap
   {
 
     VisWeightsMultiFrequency::VisWeightsMultiFrequency():
-	    itsRefFreq((casacore::Double)(1.405e+09)),itsOrder(0)
+	    itsRefFreq(1.405e+09), itsOrder(0)
     {
     }
 
-    VisWeightsMultiFrequency::VisWeightsMultiFrequency(casacore::Double & reffreq)
+    VisWeightsMultiFrequency::VisWeightsMultiFrequency(const casacore::Double & reffreq) : itsRefFreq(reffreq), itsOrder(0)
     {
-	    itsRefFreq = reffreq;
             ASKAPDEBUGASSERT(itsRefFreq!=0.);
-	    itsOrder = 0;
     }
 
-    VisWeightsMultiFrequency::~VisWeightsMultiFrequency()
-    {
-    }
-    
     VisWeightsMultiFrequency::VisWeightsMultiFrequency(const VisWeightsMultiFrequency &other) :
 	    IVisWeights(other), itsRefFreq(other.itsRefFreq), itsOrder(other.itsOrder)
     {
       ASKAPDEBUGASSERT(itsRefFreq!=0.);
     }
     
-    IVisWeights::ShPtr VisWeightsMultiFrequency::clone()
+    IVisWeights::ShPtr VisWeightsMultiFrequency::clone() const
     {
-	    return IVisWeights::ShPtr(new VisWeightsMultiFrequency(*this));
+       return IVisWeights::ShPtr(new VisWeightsMultiFrequency(*this));
     }
     
     void VisWeightsMultiFrequency::setParameters(int order)
     {
-	    itsOrder = order;
+       itsOrder = order;
     }
 
-    float VisWeightsMultiFrequency::getWeight(int /*i*/,double freq,int /*pol*/)
+    float VisWeightsMultiFrequency::getWeight(double freq) const
     {
 	    // expensive..... choose fastest : if/else  or  'pow' operator.
-	    if(itsOrder==0)  {
-               return 1.0;
+	    if (itsOrder==0)  {
+                return 1.0;
 	    }
-            if(itsOrder == 1) {
-                return ((freq-itsRefFreq)/itsRefFreq);
-	    } 
             const double ratio = (freq-itsRefFreq)/itsRefFreq;
+            if (itsOrder == 1) {
+                return ratio;
+	    } 
+            if (itsOrder == 2) {
+                return ratio*ratio;
+            }
             return pow(ratio,itsOrder);
     }
     

@@ -248,7 +248,10 @@ namespace askap
                    "The use of the parameter solver.Clean.threshold is deprecated, use threshold.minorcycle instead");
 
         string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
-        casacore::Vector<float> scales=parset.getFloatVector("solver.Clean.scales", defaultScales);
+        // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
+        // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
+        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse 
+        const casacore::Vector<float> scales = casacore::Vector<float>(parset.getFloatVector("solver.Clean.scales", defaultScales));
 
         if (algorithm=="MultiScale") {
           ASKAPLOG_INFO_STR(logger, "Constructing MultiScale Clean solver (ASKAP version)" );

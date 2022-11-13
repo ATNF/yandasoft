@@ -233,6 +233,7 @@ class CcalApplyApp : public askap::Application
             calME->allowFlag(allowFlag);
             calME->beamIndependent(parset.getBool("calibrate.ignorebeam", false));
             calME->channelIndependent(parset.getBool("calibrate.ignorechannel",false));
+            calME->interpolateTime(parset.getBool("calibrate.interpolatetime",false));
             return calME;
         }
 

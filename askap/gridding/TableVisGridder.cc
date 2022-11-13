@@ -768,7 +768,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                            itsSamplesDegridded+=1.0;
                            itsNumberDegridded+=double((2*support+1)*(2*support+1));
                            if (itsVisWeight) {
-                               cVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
+                               cVis *= itsVisWeight->getWeight(frequencyList[chan]);
                            }
                            itsImagePolFrameVis[pol] = cVis*phasor;
                        } else {
@@ -796,7 +796,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                /// Gridding visibility data onto grid
                                casacore::Complex rVis = phasor*conj(itsImagePolFrameVis[pol])*visNoiseWt;
                                if (itsVisWeight) {
-                                   rVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
+                                   rVis *= itsVisWeight->getWeight(frequencyList[chan]);
                                }
                                GridKernel::grid(its2dGrid, convFunc, rVis, iuOffset, ivOffset, support);
 
@@ -813,7 +813,7 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                 casacore::Complex uVis(1.,0.);
                                 uVis *= visNoiseWt;
                                 if (itsVisWeight) {
-                                    uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
+                                    uVis *= itsVisWeight->getWeight(frequencyList[chan]);
                                 }
 
                                 GridKernel::grid(its2dGrid, convFunc, uVis, iuOffset, ivOffset, support);
@@ -828,8 +828,9 @@ void TableVisGridder::generic(accessors::IDataAccessor& acc, bool forward) {
                                 uVis *= visNoiseWt;
                                 // We don't want different preconditioning for different Taylor terms.
                                 //if (itsVisWeight) {
-                                //    uVis *= itsVisWeight->getWeight(i,frequencyList[chan],pol);
+                                //    uVis *= itsVisWeight->getWeight(frequencyList[chan]);
                                 //}
+                                // MV: probably it would be better not to setup the gridder with visWeight rather than duplicate code for PCFGridder - need to understand this part more
 
                                 // storing w information in the imaginary part of the PCF,
                                 // so make them add with conjugate symmetry.
@@ -1474,7 +1475,7 @@ void TableVisGridder::initialiseDegrid(const scimath::Axes& axes,
 
     if (casacore::max(casacore::abs(in))>0.0) {
         itsModelIsEmpty=false;
-        casacore::Array<imtype> scratch(itsShape,0.);
+        casacore::Array<imtype> scratch(itsShape,static_cast<imtype>(0.));
         scimath::PaddingUtils::extract(scratch, paddingFactor()) = in;
         correctConvolution(scratch);
         casacore::Array<imtypeComplex> scratch2(itsGrid[0].shape());

@@ -52,7 +52,7 @@ ASKAP_LOGGER(logger, ".adviseDI");
 #include <casacore/ms/MeasurementSets/MeasurementSet.h>
 #include <casacore/ms/MeasurementSets/MSColumns.h>
 #include <casacore/ms/MSOper/MSReader.h>
-#include <casacore/casa/Arrays/ArrayIO.h>
+#include <casacore/casa/IO/ArrayIO.h>
 #include <casacore/casa/iostream.h>
 #include <casacore/casa/namespace.h>
 #include <casacore/casa/Quanta/MVTime.h>
@@ -100,17 +100,17 @@ bool in_range(double end1, double end2, double test) {
 
 
     if (test >= end1 && test <= end2) {
-        ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
-        << " between " << end1 << " and " << end2);
+        //ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
+        //<< " between " << end1 << " and " << end2);
         return true;
     }
     if (test <= end1 && test >= end2) {
-        ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
-        << " between " << end1 << " and " << end2);
+        //ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
+        //<< " between " << end1 << " and " << end2);
         return true;
     }
-    ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
-    << " NOT between " << end1 << " and " << end2);
+    //ASKAPLOG_DEBUG_STR(logger,"Test frequency " << test \
+    //<< " NOT between " << end1 << " and " << end2);
     return false;
 }
 // actual AdviseDI implementation
@@ -130,6 +130,7 @@ AdviseDI::AdviseDI(askap::cp::CubeComms& comms, LOFAR::ParameterSet& parset) :
 {
     itsFreqRefFrame = casacore::MFrequency::Ref(casacore::MFrequency::TOPO);
     itsWorkUnitCount=0;
+    itsDetailedLog = parset.getBool("detailedlog",false);
 }
 
 /// @brief obtain metadata stats for one dataset
@@ -499,7 +500,9 @@ void AdviseDI::prepare() {
 
     for (unsigned int ch = 0; ch < itsRequestedFrequencies.size(); ++ch) {
 
-        ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
+        if (itsDetailedLog) {
+            ASKAPLOG_DEBUG_STR(logger,"Requested Channel " << ch << ":" << itsRequestedFrequencies[ch]);
+        }
         const unsigned int allocation_index = ch / nchanpercore;
 
         if (allocation_index < itsAllocatedFrequencies.size()) {
@@ -539,8 +542,10 @@ void AdviseDI::prepare() {
 
             // need to allocate the measurement sets for this channel to this allocation
             // this may require appending new work units.
-            ASKAPLOG_DEBUG_STR(logger,"Allocating " << thisAllocation[frequency] \
-            << "Global channel " << globalChannel);
+            if (itsDetailedLog) {
+                ASKAPLOG_DEBUG_STR(logger,"Allocating " << thisAllocation[frequency] \
+                << " Global channel " << globalChannel);
+            }
 
             bool allocated = false;
             for (unsigned int set=0;set < ms.size();++set){
@@ -675,7 +680,9 @@ void AdviseDI::prepare() {
 
         for (int unit = 0; unit < itsAllocatedWork[wrk].size(); unit++) {
                     itsAllocatedWork[wrk][unit].set_writer(mywriter+1); // plus 1 for rank
-                    ASKAPLOG_DEBUG_STR(logger,"Set rank " << wrk+1 << " writer to be rank " << mywriter+1);
+                    if (itsDetailedLog) {
+                        ASKAPLOG_DEBUG_STR(logger,"Set rank " << wrk+1 << " writer to be rank " << mywriter+1);
+                    }
         }
 
     }
@@ -722,9 +729,13 @@ casacore::MVFrequency oneEdge, casacore::MVFrequency otherEdge) const {
     /// return all the input channels in the range
     vector<int> matches;
     for (int ch=0 ; ch < itsChanFreq[ms_number].size(); ++ch) {
-            ASKAPLOG_DEBUG_STR(logger, "looking for " << itsChanFreq[ms_number][ch] << "Hz");
+            if (itsDetailedLog) {
+                ASKAPLOG_DEBUG_STR(logger, "looking for " << itsChanFreq[ms_number][ch] << "Hz");
+            }
             if (in_range(oneEdge.getValue(),otherEdge.getValue(),itsChanFreq[ms_number][ch])) {
-                ASKAPLOG_DEBUG_STR(logger, "Found");
+                if (itsDetailedLog) {
+                    ASKAPLOG_DEBUG_STR(logger, "Found");
+                }
                 matches.push_back(ch);
             }
     }

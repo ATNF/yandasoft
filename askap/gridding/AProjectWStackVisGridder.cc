@@ -53,20 +53,22 @@ namespace synthesis {
 AProjectWStackVisGridder::AProjectWStackVisGridder(const boost::shared_ptr<IBasicIllumination const> &illum,
         const double wmax, const int nwplanes, const double,
         const int overSample, const int maxSupport, const int limitSupport,
-        const int maxFeeds,
-        const int maxFields,
+        const int maxFeeds, const int maxFields,
         const double pointingTol, const double paTol,
-        const double freqTol,
-        const bool frequencyDependent, const std::string& name) :
+        const double freqTol, const bool frequencyDependent,
+        const bool spheroidalTaper, const double spheroidalWeightsCutoff,
+        const std::string& name) :
     AProjectGridderBase(maxFeeds,maxFields,pointingTol, paTol, freqTol),
     WStackVisGridder(wmax, nwplanes),
     itsReferenceFrequency(0.0),
     itsIllumination(illum),
     itsMaxFeeds(maxFeeds), itsMaxFields(maxFields),
-    itsFreqDep(frequencyDependent)
+    itsFreqDep(frequencyDependent),
+    itsSpheroidalTaper(spheroidalTaper)
 {
     ASKAPCHECK(overSample>0, "Oversampling must be greater than 0");
     ASKAPCHECK(maxSupport>0, "Maximum support must be greater than 0")
+    ASKAPCHECK(!itsSpheroidalTaper, "Spheroidal taper not currently availble for AProjectWStack");
     ASKAPDEBUGASSERT(itsIllumination);
     itsSupport=0;
     itsOverSample=overSample;

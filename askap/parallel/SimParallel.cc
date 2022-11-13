@@ -576,33 +576,33 @@ double SimParallel::getNoise(const LOFAR::ParameterSet& parset) const
        ASKAPCHECK(!parset.isDefined("rms") && !parset.isDefined("variance"),
           "If an automatic noise estimate is used, neither 'rms', nor 'variance' parset parameters should be given");
 
-       const casacore::Vector<double> tSysVector = parset.getDoubleVector("Tsys");
-       const casacore::Vector<double> effVector = parset.getDoubleVector("efficiency");
-       ASKAPCHECK(tSysVector.nelements()>=1, "At least one Tsys has to be defined");
-       ASKAPCHECK(effVector.nelements()>=1, "At least one efficiency has to be defined");
+       const std::vector<double> tSysVector = parset.getDoubleVector("Tsys");
+       const std::vector<double> effVector = parset.getDoubleVector("efficiency");
+       ASKAPCHECK(tSysVector.size()>=1u, "At least one Tsys has to be defined");
+       ASKAPCHECK(effVector.size()>=1u, "At least one efficiency has to be defined");
        ASKAPLOG_INFO_STR(logger, "Noise level is estimated automatically using Tsys="<<tSysVector<<
                                  " K and efficiency="<<effVector);
-       for (casacore::uInt ant = 0; ant<tSysVector.nelements(); ++ant) {
+       for (casacore::uInt ant = 0; ant<tSysVector.size(); ++ant) {
             ASKAPCHECK(tSysVector[ant]>0, "Tsys is supposed to be positive, you have "<<tSysVector<<" ant="<<ant);
        }
-       for (casacore::uInt ant = 0; ant<effVector.nelements(); ++ant) {
+       for (casacore::uInt ant = 0; ant<effVector.size(); ++ant) {
             ASKAPCHECK((effVector[ant] > 0) && (effVector[ant] <= 1.), "Efficiency is supposed to be from (0,1] interval, you have "<<
                         effVector<<" ant="<<ant);
        }
        double TsysOverEff = tSysVector[0] / effVector[0];
-       ASKAPCHECK((tSysVector.nelements() == effVector.nelements()) || (tSysVector.nelements() == 1) || (effVector.nelements() == 1),
+       ASKAPCHECK((tSysVector.size() == effVector.size()) || (tSysVector.size() == 1u) || (effVector.size() == 1u),
                   "If multiple Tsys and efficiencies are given, their numbers should be equal");
        ASKAPASSERT(itsSim);
-       if (tSysVector.nelements() * effVector.nelements() > 1) {
-           casacore::Vector<double> relWeights(tSysVector.nelements() != 1 ? tSysVector.nelements() : effVector.nelements(), 1.);
-           for (casacore::uInt ant=0; ant<relWeights.nelements(); ++ant) {
-                relWeights[ant] = tSysVector[ant < tSysVector.nelements() ? ant : 0] /
-                                  effVector[ant < effVector.nelements() ? ant : 0];
+       if (tSysVector.size() * effVector.size() > 1u) {
+           casacore::Vector<double> relWeights(tSysVector.size() != 1 ? tSysVector.size() : effVector.size(), 1.);
+           for (casacore::uInt ant=0; ant<relWeights.size(); ++ant) {
+                relWeights[ant] = tSysVector[ant < tSysVector.size() ? ant : 0] /
+                                  effVector[ant < effVector.size() ? ant : 0];
                 if (relWeights[ant] > TsysOverEff) {
                     TsysOverEff = relWeights[ant];
                 }
            }
-           for (casacore::uInt ant=0; ant<relWeights.nelements(); ++ant) {
+           for (casacore::uInt ant=0; ant<relWeights.size(); ++ant) {
                 relWeights[ant] /= TsysOverEff;
            }
            itsSim->setRelAntennaWeight(relWeights);
