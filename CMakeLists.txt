@@ -165,16 +165,16 @@ configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 # 
 set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
 
-option (CXX11 "Compile as C++11 if possible" YES)
-# Detect if the compiler supports C++11 if we want to use it.
-if (CXX11)
-    check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
-    if (HAS_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-      set(CXX11 ON)
+option (CXX17 "Compile as C++17 if possible" YES)
+# Detect if the compiler supports C++17 if we want to use it.
+if (CXX17)
+    check_cxx_compiler_flag(-std=c++17 HAS_CXX17)
+    if (HAS_CXX17)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1")
+      set(CXX17 ON)
     else()
-	    message(STATUS "CASA_BUILD requires a c++11 compatible compiler")
-      option(CXX11 "" NO)
+	    message(STATUS "CASA_BUILD requires a c++17 compatible compiler")
+      option(CXX17 "" NO)
     endif()
 endif()
 
@@ -249,8 +249,8 @@ if (ENABLE_OPENMP)
     endif (OPENMP_FOUND)
 endif()
 
-if (CASACORE3 OR CXX11)
-	set(CMAKE_CXX_STANDARD 11)
+if (CASACORE3 OR CXX17)
+	set(CMAKE_CXX_STANDARD 17)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
