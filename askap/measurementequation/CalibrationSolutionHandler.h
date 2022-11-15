@@ -1,5 +1,5 @@
 /// @file
-/// 
+///
 /// @brief helper class to manage calibration solution source
 /// @details We need a similar functionality in a number of places
 /// to update calibration solution accessor if new solution is
@@ -60,25 +60,64 @@ public:
   /// @details
   /// @param[in] css shared pointer to solution source
   explicit CalibrationSolutionHandler(const boost::shared_ptr<accessors::ICalSolutionConstSource> &css);
-  
-  /// @brief setup handler with the given solution source  
+
+  /// @brief setup handler with the given solution source
   /// @details
   /// @param[in] css shared pointer to solution source
   void setCalSolutionSource(const boost::shared_ptr<accessors::ICalSolutionConstSource> &css);
 
   /// @brief helper method to update accessor pointer if necessary
-  /// @details This method updates the accessor shared pointer if it is 
+  /// @details This method updates the accessor shared pointer if it is
   /// uninitialised, or if it has been updated for the given time.
   /// @param[in] time timestamp (seconds since 0 MJD)
   void updateAccessor(const double time) const;
-  
+
   /// @brief helper method to get current solution accessor
   /// @details This method returns a reference to the current solution
   /// accessor or throws an exception if it is uninitialised
   /// (this shouldn't happen if updateAccessor is called first)
   /// @return a const reference to the calibration solution accessor
   const accessors::ICalSolutionConstAccessor& calSolution() const;
-  
+
+  /// @brief helper method to get next solution accessor
+  /// @details This method returns a reference to the next solution
+  /// accessor or throws an exception if it is uninitialised
+  /// (this shouldn't happen if updateAccessor is called first)
+  /// @return a const reference to the calibration solution accessor
+  const accessors::ICalSolutionConstAccessor& nextCalSolution() const;
+
+  /// @brief return the timestamp for the current solution
+  /// @details This method returns the timestamp for the current solution.
+  /// @return solution timestamp
+  const double calSolutionTime() const
+  {
+      return itsCurrentSolutionTime;
+  }
+
+  /// @brief return the timestamp for the next solution
+  /// @details This method returns the timestamp for the next solution.
+  /// If there is no next solution it returns the current timestamp
+  /// @return next solution timestamp
+  const double nextCalSolutionTime() const
+  {
+      return itsNextSolutionTime;
+  }
+
+  /// @brief determines whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @param[in] flag, if true interpolate between solutions
+  void setInterpolateTime(bool flag) {
+      itsInterpolateTime = flag;
+  }
+
+  /// @brief determine whether time interpolation is used
+  /// @details Interpolating solutions in time improves dynamic range
+  /// @return if true interpolate between solutions
+  bool getInterpolateTime() const {
+      return itsInterpolateTime;
+  }
+
+
   /// @brief obtain change monitor
   /// @details This class is handy if one wants to track changes in the
   /// solution accessor without analysing its content in detail (i.e. for
@@ -90,16 +129,33 @@ public:
 private:
   /// @brief solution source to work with
   boost::shared_ptr<accessors::ICalSolutionConstSource> itsCalSolutionSource;
-  
-  /// @brief shared pointer to the current solution accessor 
+
+  /// @brief shared pointer to the current solution accessor
   /// @details It is updated every time the time changes.
-  mutable boost::shared_ptr<accessors::ICalSolutionConstAccessor> itsCalSolutionAccessor;  
-  
+  mutable boost::shared_ptr<accessors::ICalSolutionConstAccessor> itsCalSolutionAccessor;
+
+  /// @brief shared pointer to the next solution accessor
+  /// @details It is updated every time the time changes.
+  mutable boost::shared_ptr<accessors::ICalSolutionConstAccessor> itsNextCalSolutionAccessor;
+
   /// @brief solution ID corresponding to the current solution accessor
   mutable long itsCurrentSolutionID;
 
+  /// @brief solution ID corresponding to the next solution accessor
+  mutable long itsNextSolutionID;
+
+  /// @brief solution time corresponding to the current solution accessor
+  mutable double itsCurrentSolutionTime;
+
+  /// @brief solution time corresponding to the next solution accessor
+  mutable double itsNextSolutionTime;
+
   /// @brief change monitor (to track changes in the accessor returned by calSolution)
   mutable scimath::ChangeMonitor itsChangeMonitor;
+
+  /// @brief true, if time interpolation should be used
+  bool itsInterpolateTime;
+
 };
 
 } // namespace synthesis
@@ -107,4 +163,3 @@ private:
 } // namespace askap
 
 #endif // #ifndef CALIBRATION_SOLUTION_HANDLER_H
-

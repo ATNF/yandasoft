@@ -135,13 +135,13 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
                 updateAccessor(chunk.time());
             }
             const bool validSolution =  calSolution().jonesValid(antenna1[row],
-                     itsBeamIndependent ? 0 : beam1[row], chan) && 
+                     itsBeamIndependent ? 0 : beam1[row], chan) &&
                      calSolution().jonesValid(antenna2[row], itsBeamIndependent ? 0 : beam2[row], chan);
 
             //ASKAPLOG_DEBUG_STR(logger, "row = "<<row<<" chan = "<<chan<<" ant1 = "<<antenna1[row]<<" ant2 = "<<antenna2[row]<<
             //            " beam = "<<beam1[row]<<" allFlagged: "<<allFlagged<<" needFlag: "<<needFlag<<" validSolution: "<<validSolution);
             casacore::Complex det = 0.;
- 
+
             if (validSolution) {
                 casacore::SquareMatrix<casacore::Complex, 2> jones1 = calSolution().jones(antenna1[row],
                                   itsBeamIndependent ? 0 : beam1[row], chan);
@@ -283,6 +283,48 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
                 calSolution().jonesAndValidity(antenna2[row], b2, chan);
             validSolution = jv1.second && jv2.second;
             if (validSolution) {
+                if (getInterpolateTime()) {
+                    // get second lot of calibration parameters
+                    // a=after b=before 1=ant1 2=ant2
+                    std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1a =
+                        nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
+                    std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2a =
+                        nextCalSolution().jonesAndValidity(antenna2[row], b2, chan);
+                    const bool valid = jv1a.second && jv2a.second;
+                    if (valid) {
+                        casa::SquareMatrix<casa::Complex, 2>& j1b = jv1.first;
+                        casa::SquareMatrix<casa::Complex, 2>& j2b = jv2.first;
+                        casa::SquareMatrix<casa::Complex, 2>& j1a = jv1a.first;
+                        casa::SquareMatrix<casa::Complex, 2>& j2a = jv2a.first;
+                        const double tb = calSolutionTime();
+                        const double ta = nextCalSolutionTime();
+                        if (ta > tb) {
+                            const double t = chunk.time();
+                            const float factor = (t - tb) / (ta - tb);
+                            // simple interpolation scheme.. causes decorrelation
+                            //j1b += (j1a - j1b) * factor;
+                            //j2b += (j2a - j2b) * factor;
+                            // Interpolate ampl and phase separately
+                            // can only interpolate pure gain this way, not leakage
+                            for (int i=0; i<=1; i++) {
+                                casa::Complex g1b = j1b(i,i);
+                                casa::Complex g2b = j2b(i,i);
+                                casa::Complex g1a = j1a(i,i);
+                                casa::Complex g2a = j2a(i,i);
+                                if (abs(g1a) > 0 && abs(g1b) > 0) {
+                                    const casa::Complex g = g1a / g1b;
+                                    const float mag = abs(g);
+                                    j1b(i,i) = g1b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                }
+                                if (abs(g2a) > 0 && abs(g2b) > 0) {
+                                    const casa::Complex g = g2a / g2b;
+                                    const float mag = abs(g);
+                                    j2b(i,i) = g2b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                }
+                            }
+                        }
+                    }
+                }
                 const casa::SquareMatrix<casa::Complex, 2>& j1 = jv1.first;
                 const casa::SquareMatrix<casa::Complex, 2>& j2 = jv2.first;
                 const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
@@ -405,6 +447,21 @@ void CalibrationApplicatorME::channelIndependent(bool flag)
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply the same gain calibration solutions to all channels");
   } else {
       ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will apply bandpass calibration solutions");
+  }
+}
+
+/// @brief determines whether time interpolation is used or not
+/// @details when applying gains determined on a coarser time grid than the data
+/// interpolating the gains in time improves dynamic range
+/// @param[in] flag if true, interpolate the gains in time
+void CalibrationApplicatorME::interpolateTime(bool flag)
+{
+  // make sure the parent CalibrationSolutionHandler knows about this too
+  setInterpolateTime(flag);
+  if (getInterpolateTime()) {
+      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will interpolate the gains in time");
+  } else {
+      ASKAPLOG_INFO_STR(logger, "CalibrationApplicatorME will not interpolate the gains in time");
   }
 }
 
