@@ -77,12 +77,12 @@ ASKAP_LOGGER(logger, ".CalcCore");
 
 CalcCore::CalcCore(LOFAR::ParameterSet& parset,
                        askap::askapparallel::AskapParallel& comms,
-                       accessors::TableDataSource ds, int localChannel)
-    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsChannel(localChannel)
+                       accessors::TableDataSource ds, int localChannel, double frequency)
+    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsChannel(localChannel),itsFrequency(frequency)
 {
     /// We need to set the calibration info here
     /// the ImagerParallel constructor will do the work to
-    /// obtain the itsSolutionSource - but that is a provate member of
+    /// obtain the itsSolutionSource - but that is a private member of
     /// the parent class.
     /// Not sure whether to use it directly or copy it.
     const std::string solver_par = parset.getString("solver");
@@ -106,8 +106,9 @@ CalcCore::CalcCore(LOFAR::ParameterSet& parset,
 CalcCore::CalcCore(LOFAR::ParameterSet& parset,
                        askap::askapparallel::AskapParallel& comms,
                        accessors::TableDataSource ds, askap::synthesis::IVisGridder::ShPtr gdr,
-                       int localChannel)
-    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsGridder_p(gdr), itsChannel(localChannel)
+                       int localChannel, double frequency)
+    : ImagerParallel(comms,parset), itsComms(comms),itsData(ds),itsGridder_p(gdr), itsChannel(localChannel),
+      itsFrequency(frequency)
 {
   const std::string solver_par = parset.getString("solver");
   const std::string algorithm_par = parset.getString("solver.Clean.algorithm", "BasisfunctionMFS");
@@ -140,9 +141,15 @@ void CalcCore::doCalc()
         // This is the logic that switches on the combination of channels.
         // Earlier logic has updated the Channels parameter in the parset ....
         bool combineChannels = parset().getBool("combinechannels",false);
+        bool dopplerTracking = parset().getBool("dopplertracking",false);
 
         if (!combineChannels) {
-            sel->chooseChannels(1, itsChannel);
+            if (dopplerTracking) {
+                sel->chooseFrequencies(1, casacore::MVFrequency(itsFrequency), casacore::MVFrequency(0),
+                    casacore::MFrequency::castType(getFreqRefFrame().getType()));
+            } else {
+                sel->chooseChannels(1, itsChannel);
+            }
         }
 
         IDataConverterPtr conv = ds.createConverter();
@@ -190,7 +197,6 @@ void CalcCore::doCalc()
             fftEquation->setVisUpdateObject(GroupVisAggregator::create(itsComms));
             itsEquation = fftEquation;
         }
-
 
     }
     else {
