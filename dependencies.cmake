@@ -19,4 +19,4 @@ set ( BASE_IMAGEMATH_TAG           tags/1.9.0                               CACH
 set ( BASE_ASKAPPARRALLEL_TAG      tags/1.5.0                               CACHE  STRING    "base-askapparrallel version"      FORCE )
 set ( BASE_SCIMATH_TAG             tags/1.9.0                               CACHE  STRING    "base-scimath version"             FORCE )
 set ( BASE_COMPONENTS_TAG          tags/1.6.0                               CACHE  STRING    "base-components version"          FORCE )
-set ( BASE_ACCESSORS_TAG           tags/1.9.0                               CACHE  STRING    "base-accessors version"           FORCE )
+set ( BASE_ACCESSORS_TAG           09eedcf287441e8984c65c1012d5e605f429eda9 CACHE  STRING    "base-accessors version"           FORCE )

@@ -136,7 +136,7 @@ ContinuumWorker::ContinuumWorker(LOFAR::ParameterSet& parset,
     std::string GridderStr = itsParset.getString("gridder",std::string());
     ASKAPLOG_INFO_STR(logger, "Gridder is " << GridderStr);
 
-    if (GridderStr == "AWProject") {
+    if (GridderStr == "AWProject" || GridderStr == "AProjectWStack") {
       itsGridderCanMosaick = true;
       ASKAPLOG_INFO_STR(logger," Gridder <CAN> mosaick");
     }
@@ -849,6 +849,8 @@ void ContinuumWorker::processChannels()
         }
       }
 
+      double globalFrequency = workUnits[workUnitCount].get_channelFrequency();
+
       const string ms = workUnits[workUnitCount].get_dataset();
       globalChannel = workUnits[workUnitCount].get_globalChannel();
 
@@ -863,14 +865,14 @@ void ContinuumWorker::processChannels()
             // change gridder for initial calcNE in updateDir mode
             LOFAR::ParameterSet tmpParset = itsParset.makeSubset("");
             tmpParset.replace("gridder","SphFunc");
-            boost::shared_ptr<CalcCore> tempIm(new CalcCore(tmpParset,itsComms,ds,localChannel));
+            boost::shared_ptr<CalcCore> tempIm(new CalcCore(tmpParset,itsComms,ds,localChannel,globalFrequency));
             rootImagerPtr = tempIm;
       } else if (!gridder_initialized) {
-            boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,localChannel));
+            boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,localChannel,globalFrequency));
             rootImagerPtr = tempIm;
             gridder_initialized = true;
       } else {
-        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,rootImagerPtr->gridder(),localChannel));
+        boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,ds,rootImagerPtr->gridder(),localChannel,globalFrequency));
         rootImagerPtr = tempIm;
       }
 
@@ -984,6 +986,7 @@ void ContinuumWorker::processChannels()
             }
           }
           globalChannel = workUnits[tempWorkUnitCount].get_globalChannel();
+          double globalFrequency = workUnits[workUnitCount].get_channelFrequency();
 
           const string myMs = workUnits[tempWorkUnitCount].get_dataset();
           TableDataSource myDs(myMs, TableDataSource::MEMORY_BUFFERS, colName);
@@ -997,11 +1000,11 @@ void ContinuumWorker::processChannels()
               // in updateDir mode I cannot cache the gridders as they have a tangent point.
               // FIXED: by just having 2 possible working imagers depending on the mode. ... easy really
 
-              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,localChannel));
+              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,localChannel,globalFrequency));
               workingImagerPtr = tempIm;
             }
             else {
-              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,rootImager.gridder(),localChannel));
+              boost::shared_ptr<CalcCore> tempIm(new CalcCore(itsParset,itsComms,myDs,rootImager.gridder(),localChannel,globalFrequency));
               workingImagerPtr = tempIm;
             }
 

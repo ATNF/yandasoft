@@ -59,13 +59,13 @@ namespace cp {
         /// @brief Constructor
         CalcCore(LOFAR::ParameterSet& parset,
                    askap::askapparallel::AskapParallel& comms,
-                   accessors::TableDataSource ds, int localChannel=1);
+                   accessors::TableDataSource ds, int localChannel=1, double frequency=0);
 
         /// @brief Constructor that maintains the gridder
         CalcCore(LOFAR::ParameterSet& parset,
                 askap::askapparallel::AskapParallel& comms,
                 accessors::TableDataSource ds, askap::synthesis::IVisGridder::ShPtr gdr,
-                 int localChannel=1);
+                 int localChannel=1, double frequency=0);
 
         virtual ~CalcCore();
 
@@ -122,6 +122,9 @@ namespace cp {
 
         // Its channel in the dataset
         int itsChannel;
+
+        // Its frequency in the output cube
+        double itsFrequency;
 
         // No support for assignment
         CalcCore& operator=(const CalcCore& rhs);
