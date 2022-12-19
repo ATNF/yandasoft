@@ -185,14 +185,14 @@ namespace askap
       bool itsFreqDep;
       /// Should a spheroidal taper be applied to A functions during gridding?
       bool itsSpheroidalTaper;
+      /// If so, at what point should it be cutoff before errors boost the low-weight gains?
+      float itsSpheroidalWeightsCutoff;
       /// Maximum support to test
       int itsMaxSupport;
       /// Upper limit of support
       int itsLimitSupport;
       /// Mapping from row, pol, and channel to planes of convolution function
       casacore::Cube<int> itsCMap;
-      /// Cube of slopes
-      casacore::Cube<double> itsSlopes;
     };
 
   }

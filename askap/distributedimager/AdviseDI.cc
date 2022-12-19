@@ -581,7 +581,7 @@ void AdviseDI::prepare() {
                 if (lc.size() > 0) {
                     size_t limit = lc.size();
                     if (lc.size() > 1) {
-                        ASKAPLOG_WARN_STR(logger,"More that one channel has been found in this range. This is currently unsupported and will be ignored");
+                        ASKAPLOG_WARN_STR(logger,"More than one channel has been found in this range. This is currently unsupported and will be ignored");
                         limit = 1;
                     }
 

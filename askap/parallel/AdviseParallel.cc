@@ -42,6 +42,8 @@ ASKAP_LOGGER(logger, ".parallel");
 #include <askap/scimath/fitting/INormalEquations.h>
 #include <askap/scimath/fitting/Solver.h>
 
+#include <askap/scimath/utils/EstimatorAdapter.h>
+
 #include <casacore/casa/aips.h>
 #include <casacore/casa/OS/Timer.h>
 
@@ -59,92 +61,27 @@ ASKAP_LOGGER(logger, ".parallel");
 
 namespace askap {
 
+// put specialisation of EstimatorAdapterMonitor in the scimath namespace where all related definitions are
+namespace scimath {
+
+/// @brief specialisation of default monitor class for the type used here
+/// @details This monitor just prints appropriate messages to the log. If this specialisation is
+/// removed (e.g. commented out), the default template will be used resulting in void operation which may
+/// be even optimised by the compiler
+template<>
+struct EstimatorAdapterMonitor<EstimatorAdapter<synthesis::VisMetaDataStats> > {
+   inline static void aboutToMerge(const EstimatorAdapter<synthesis::VisMetaDataStats>& thisEstimator, 
+                                   const EstimatorAdapter<synthesis::VisMetaDataStats>& otherEstimator) {
+       ASKAPDEBUGASSERT(thisEstimator.get());
+       ASKAPLOG_DEBUG_STR(logger, "Merge This Largest residual W: "<<thisEstimator.get()->maxW()<<" wavelengths, percentile = "<<thisEstimator.get()->wPercentile());
+       ASKAPDEBUGASSERT(otherEstimator.get());
+       ASKAPLOG_DEBUG_STR(logger, "With other Largest residual W: "<<otherEstimator.get()->maxW()<<" wavelengths, percentile = "<<otherEstimator.get()->wPercentile());
+   }; 
+}; // struct EstimatorAdapterMonitor
+
+} // namespace scimath
+
 namespace synthesis {
-
-/// @brief a helper adapter to reuse the existing MW framework.
-/// @details We could've moved it to a separate file, but it is used
-/// only in this particular cc file at the moment.
-struct EstimatorAdapter : public scimath::INormalEquations {
-
-  /// @brief constructor
-  /// @details
-  /// @param[in] estimator statistics estimator to work with (reference semantics)
-  explicit EstimatorAdapter(const boost::shared_ptr<VisMetaDataStats> &estimator) :
-           itsEstimator(estimator) {ASKAPDEBUGASSERT(itsEstimator);}
-
-  /// @brief Clone this into a shared pointer
-  /// @details "Virtual constructor" - creates a copy of this object. Derived
-  /// classes must override this method to instantiate the object of a proper
-  /// type.
-  virtual INormalEquations::ShPtr clone() const
-  {
-    boost::shared_ptr<VisMetaDataStats> newEstimator(new VisMetaDataStats(*itsEstimator));
-    boost::shared_ptr<EstimatorAdapter> result(new EstimatorAdapter(newEstimator));
-    return result;
-  }
-
-  /// @brief reset the normal equation object
-  /// @details After a call to this method the object has the same pristine
-  /// state as immediately after creation with the default constructor
-  virtual void reset()
-      { itsEstimator->reset(); }
-
-  /// @brief Merge these normal equations with another
-  /// @details Combining two normal equations depends on the actual class type
-  /// (different work is required for a full matrix and for an approximation).
-  /// This method must be overriden in the derived classes for correct
-  /// implementation.
-  /// This means that we just add
-  /// @param[in] src an object to get the normal equations from
-  virtual void merge(const INormalEquations& src)  {
-    try {
-       const EstimatorAdapter& ea = dynamic_cast<const EstimatorAdapter&>(src);
-       ASKAPLOG_DEBUG_STR(logger, "Merge This Largest residual W: "<<itsEstimator->maxW()<<" wavelengths, percentile = "<<itsEstimator->wPercentile());
-       ASKAPLOG_DEBUG_STR(logger, "With other Largest residual W: "<<ea.itsEstimator->maxW()<<" wavelengths, percentile = "<<ea.itsEstimator->wPercentile());
-       itsEstimator->merge(*(ea.itsEstimator));
-    }
-    catch (const std::bad_cast &bc) {
-       ASKAPTHROW(AskapError, "Unsupported type of normal equations used with the estimator adapter: "<<bc.what());
-    }
-  }
-
-  /// @brief write the object to a blob stream
-  /// @param[in] os the output stream
-  virtual void writeToBlob(LOFAR::BlobOStream& os) const
-    { itsEstimator->writeToBlob(os); }
-
-  /// @brief read the object from a blob stream
-  /// @param[in] is the input stream
-  /// @note Not sure whether the parameter should be made const or not
-  virtual void readFromBlob(LOFAR::BlobIStream& is)
-    { itsEstimator->readFromBlob(is); }
-
-
-  /// @brief obtain shared pointer
-  /// @return shared pointer to the estimator
-  inline boost::shared_ptr<VisMetaDataStats> get() const { return itsEstimator;}
-
-
-  /// @brief stubbed method for this class
-  /// @return nothing, throws an exception
-  virtual const casacore::Matrix<double>& normalMatrix(const std::string &,
-                        const std::string &) const
-      { ASKAPTHROW(AskapError, "Method is not supported"); }
-
-  /// @brief stubbed method for this class
-  /// @return nothing, throws an exception
-  virtual const casacore::Vector<double>& dataVector(const std::string &) const
-      { ASKAPTHROW(AskapError, "Method is not supported"); }
-
-  /// @brief stubbed method for this class
-  /// @return nothing, throws an exception
-  virtual std::vector<std::string> unknowns() const
-      { ASKAPTHROW(AskapError, "Method is not supported"); }
-
-private:
-  /// @brief estimator to work with, reference semantics
-  boost::shared_ptr<VisMetaDataStats> itsEstimator;
-};
 
 // actual AdviseParallel implementation
 
@@ -317,7 +254,7 @@ void AdviseParallel::calcOne(const std::string &ms)
 void AdviseParallel::calcNE()
 {
    ASKAPDEBUGASSERT(itsEstimator);
-   itsNe.reset(new EstimatorAdapter(itsEstimator));
+   itsNe.reset(new scimath::EstimatorAdapter<VisMetaDataStats>(itsEstimator));
    // the following call avoids merging of normal equations inside the solver (which we don't use)
    // this is an artefact of reusing Master/Worker framework
    itsSolver.reset(new scimath::Solver);
@@ -348,7 +285,7 @@ void AdviseParallel::calcNE()
    // therefore, we update the shared pointer which would take care of the reference counting for us
    // and destroy the original object, if necessary.
    ASKAPDEBUGASSERT(itsNe);
-   boost::shared_ptr<EstimatorAdapter> ea = boost::dynamic_pointer_cast<EstimatorAdapter>(itsNe);
+   boost::shared_ptr<scimath::EstimatorAdapter<VisMetaDataStats> > ea = boost::dynamic_pointer_cast<scimath::EstimatorAdapter<VisMetaDataStats> >(itsNe);
    ASKAPASSERT(ea);
    itsEstimator = ea->get();
    // we don't need normal equation adapter any more
