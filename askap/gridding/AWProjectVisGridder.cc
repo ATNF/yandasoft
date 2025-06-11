@@ -30,7 +30,7 @@
 #include <askap/askap/AskapLogging.h>
 ASKAP_LOGGER(logger, ".gridding.awprojectvisgridder");
 #include <askap/gridding/AWProjectVisGridder.h>
-#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <casacore/casa/Arrays/ArrayIter.h>
 #include <casacore/casa/BasicSL/Complex.h>
@@ -347,7 +347,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
             const double nuy = std::abs(double(qiy) - double(qny / 2)) / double(qny / 2);
             ccfy(qiy) = grdsf(nuy);
         }
-        if (itsInterp) {
+        if (doInterpolation()) {
           // The spheroidal is undefined and set to zero at nu=1, but that
           // is not the numerical limit. Estimate it from its neighbours.
           interpolateEdgeValues(ccfx);
@@ -362,7 +362,8 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
     const casacore::Vector<casacore::Double> & chanFreq = acc.frequency();
 
     int nDone = 0;
-
+    // Limit number of fft threads to 8 (more is slower for our fft sizes)
+    scimath::FFT2DWrapper<imtypeComplex> fft2d(true,8);
     for (int row = 0; row < nSamples; ++row) {
         const int feed = acc.feed1()(row);
 
@@ -380,7 +381,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
                                             feed);
                 // If the pattern is in the Fourier domain, FFT to the image domain
                 if( !imageBasedPattern ) {
-                    scimath::fft2d(pattern.pattern(), false);
+                    fft2d(pattern.pattern(), false);
                 }
                 /// Calculate the total convolution function including
                 /// the w term and the antenna convolution function
@@ -425,7 +426,7 @@ void AWProjectVisGridder::initConvolutionFunction(const accessors::IConstDataAcc
 
                     // Now we have to calculate the Fourier transform to get the
                     // convolution function in uv space
-                    scimath::fft2d(thisPlane, true);
+                    fft2d(thisPlane, true);
 
                     // Now correct for normalization of FFT
                     thisPlane *= imtypeComplex(1.0 / (double(nx) * double(ny)));
@@ -656,7 +657,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
              ccfy(iy) = val > itsSpheroidalWeightsCutoff ? val : 0.;
         }
         // this isn't really needed unless itsSpheroidalWeightsCutoff==0. But shouldn't hurt
-        if (itsInterp) {
+        if (doInterpolation()) {
           // The spheroidal is undefined and set to zero at nu=1, but that
           // is not the numerical limit. Estimate it from its neighbours.
           interpolateEdgeValues(ccfx);
@@ -667,6 +668,8 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
     /// This is the output array before sinc padding
     casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
+    // Limit number of fft threads to 8 (more is slower for our fft sizes)
+    scimath::FFT2DWrapper<imtypeComplex> fft2d(true,8);
 
     // for debugging
     double totSumWt = 0.;
@@ -720,8 +723,7 @@ void AWProjectVisGridder::finaliseWeights(casacore::Array<imtype>& out)
                     thisPlane(xPos, yPos) = itsConvFunc[plane](ix + support, iy + support);
                 }
             }
-
-            scimath::fft2d(thisPlane, false);
+            fft2d(thisPlane, false);
             thisPlane *= imtypeComplex(cnx * cny);
 
             // Now we need to cut out only the part inside the field of view
@@ -784,72 +786,71 @@ void AWProjectVisGridder::correctConvolution(casacore::Array<imtype>& image)
     // into working order so far, so it is commented out (and grid-correction is
     // temporary disabled during the generation of CFs
 
-    /*
-
-    // unlike for plain spheroidal function gridder or w-projection we multuply
-    // by FT of the antialiasing filter rather than divide here. The reason is
-    // because the weight also computed from acutal CFs with the antialiasing filter
-    // applied (weight squared is in denominator). The alternative approach would be
-    // to grid-correct the weight as well, but then searching for maximum becomes difficult
-
-    ASKAPDEBUGASSERT(itsShape.nelements()>=2);
-    ASKAPDEBUGASSERT(image.shape() == itsShape);
-    const casacore::Int xHalfSize = itsShape(0)/2;
-    const casacore::Int yHalfSize = itsShape(1)/2;
-    const casacore::Int nx = itsShape(0);
-    const casacore::Int ny = itsShape(1);
-    casacore::Vector<double> ccfx(itsShape(0));
-    casacore::Vector<double> ccfy(itsShape(1));
-    ASKAPDEBUGASSERT(itsShape(0)>1);
-    ASKAPDEBUGASSERT(itsShape(1)>1);
-
-    // note grdsf(-1)=0.
-    for (int ix=0; ix<nx; ++ix) {
-         const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
-         ccfx(ix) = grdsf(nux);
-    }
-    for (int iy=0; iy<ny; ++iy) {
-         const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
-         ccfy(iy) = grdsf(nuy);
-    }
-    casacore::Matrix<imtypeComplex> buffer(nx,ny);
-    for (casacore::Int ix = 0; ix < nx; ++ix) {
-         for (casacore::Int iy = 0; iy < ny; ++iy) {
-              buffer(ix,iy) = ccfx(ix)*ccfy(iy);
-         }
-    }
-    scimath::fft2d(buffer, true);
-    buffer *= imtypeComplex(1./(double(nx)*double(ny)));
-    for (casacore::Int x = 0; x < nx; ++x) {
-         for (casacore::Int y = 0; y < ny; ++y) {
-              buffer(x,y) *= conj(buffer(x,y));
-         }
-    }
-    scimath::fft2d(buffer, false);
-    buffer *= imtypeComplex(double(nx)*double(ny));
-
-
-    for (casacore::ArrayIterator<double> it(image, 2); !it.pastEnd(); it.next()) {
-       casacore::Matrix<double> mat(it.array());
-       ASKAPDEBUGASSERT(int(mat.nrow()) == nx);
-       ASKAPDEBUGASSERT(int(mat.ncolumn()) == ny);
-       for (int ix=0; ix<nx; ++ix) {
-            for (int iy=0; iy<ny; ++iy) {
-                 const double val = ccfx(ix)*ccfy(iy);
-                 if (casacore::abs(val)<1e-20) {
-                     mat(ix,iy) = 0.;
-                 } else {
-                    mat(ix, iy) *= real(buffer(ix,iy))/val;
-                 }
-            }
-       }
-
-       //casacore::Array<float> img(mat.shape());
-       //casacore::convertArray<float, double>(img, mat);
-       //SynthesisParamsHelper::saveAsCasaImage("dbg.img",img);
-       //throw 1;
-    }
-    */
+    //
+    // // unlike for plain spheroidal function gridder or w-projection we multuply
+    // // by FT of the antialiasing filter rather than divide here. The reason is
+    // // because the weight also computed from acutal CFs with the antialiasing filter
+    // // applied (weight squared is in denominator). The alternative approach would be
+    // // to grid-correct the weight as well, but then searching for maximum becomes difficult
+    //
+    // ASKAPDEBUGASSERT(itsShape.nelements()>=2);
+    // ASKAPDEBUGASSERT(image.shape() == itsShape);
+    // const casacore::Int xHalfSize = itsShape(0)/2;
+    // const casacore::Int yHalfSize = itsShape(1)/2;
+    // const casacore::Int nx = itsShape(0);
+    // const casacore::Int ny = itsShape(1);
+    // casacore::Vector<double> ccfx(itsShape(0));
+    // casacore::Vector<double> ccfy(itsShape(1));
+    // ASKAPDEBUGASSERT(itsShape(0)>1);
+    // ASKAPDEBUGASSERT(itsShape(1)>1);
+    //
+    // // note grdsf(-1)=0.
+    // for (int ix=0; ix<nx; ++ix) {
+    //      const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
+    //      ccfx(ix) = grdsf(nux);
+    // }
+    // for (int iy=0; iy<ny; ++iy) {
+    //      const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
+    //      ccfy(iy) = grdsf(nuy);
+    // }
+    // casacore::Matrix<imtypeComplex> buffer(nx,ny);
+    // for (casacore::Int ix = 0; ix < nx; ++ix) {
+    //      for (casacore::Int iy = 0; iy < ny; ++iy) {
+    //           buffer(ix,iy) = ccfx(ix)*ccfy(iy);
+    //      }
+    // }
+    // //scimath::fft2d(buffer, true);
+    // buffer *= imtypeComplex(1./(double(nx)*double(ny)));
+    // for (casacore::Int x = 0; x < nx; ++x) {
+    //      for (casacore::Int y = 0; y < ny; ++y) {
+    //           buffer(x,y) *= conj(buffer(x,y));
+    //      }
+    // }
+    // //scimath::fft2d(buffer, false);
+    // buffer *= imtypeComplex(double(nx)*double(ny));
+    //
+    //
+    // for (casacore::ArrayIterator<double> it(image, 2); !it.pastEnd(); it.next()) {
+    //    casacore::Matrix<double> mat(it.array());
+    //    ASKAPDEBUGASSERT(int(mat.nrow()) == nx);
+    //    ASKAPDEBUGASSERT(int(mat.ncolumn()) == ny);
+    //    for (int ix=0; ix<nx; ++ix) {
+    //         for (int iy=0; iy<ny; ++iy) {
+    //              const double val = ccfx(ix)*ccfy(iy);
+    //              if (casacore::abs(val)<1e-20) {
+    //                  mat(ix,iy) = 0.;
+    //              } else {
+    //                 mat(ix, iy) *= real(buffer(ix,iy))/val;
+    //              }
+    //         }
+    //    }
+    //
+    //    //casacore::Array<float> img(mat.shape());
+    //    //casacore::convertArray<float, double>(img, mat);
+    //    //SynthesisParamsHelper::saveAsCasaImage("dbg.img",img);
+    //    //throw 1;
+    // }
+    //
 }
 
 int AWProjectVisGridder::cIndex(int row, int pol, int chan)

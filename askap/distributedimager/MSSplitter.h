@@ -1,4 +1,5 @@
 /// @file MSSplitter.h
+/// MV: Note, this file is not currently used (and excluded from cmake). It is left checked in just in case we need it in the future.
 ///
 /// @copyright (c) 2012 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -51,22 +52,45 @@ namespace cp {
 
 class MSSplitter {
     public:
-        /// Constructor
-        MSSplitter(LOFAR::ParameterSet& parset);
-        /// Entry point method
-        int split(const std::string& invis, const std::string& outvis,
+        /// @brief Constructor - setup tiling parameters and bucket size of the output MS
+        /// @param[in] bucketSize bucket size for the output measurement set
+        /// @param[in] tileNCorr number of correlations in the tile for the output measurement set
+        /// @param[in] tileNChan number of channels in the tile for the output measurement set
+        explicit MSSplitter(casacore::uInt bucketSize = 65536u, casacore::uInt tileNCorr = 4u, 
+                            casacore::uInt tileNChan = 1u);
+
+        /// @brief Entry point method
+        /// @param[in] invis input measurement set name
+        /// @param[in] outvis the name of the measurement set to write
+        /// @param[in] startChan start channel to extract from the input MS
+        /// @param[in] endChan end channel to extract from the input MS
+        /// @param[in] width number of consecutive channels to average
+        void split(const std::string& invis, const std::string& outvis,
               const uint32_t startChan,
               const uint32_t endChan,
-              const uint32_t width,
-              const LOFAR::ParameterSet& parset);
+              const uint32_t width);
+        
+        /// @brief set beam selection
+        /// @details By default, all beams are passed. This method can be used to narrow down the selection.
+        /// @param[in] beams set of beams to select
+        void chooseBeams(const std::set<uint32_t>& beams);
 
+        /// @brief set scan selection
+        /// @details By default, all scans are passed. This method can be used to narrow down the selection.
+        /// @param[in] scans set of scans to select
+        void chooseScans(const std::set<uint32_t>& scans);
+
+        /// @brief configure class from the parset
+        /// @deails This is the legacy interface configuring the class from the parset. It is not expected to be
+        /// used long term. All usage of the parset is confined to this method.
+        /// @param[in] parset configuration parameters
+        void configure(const LOFAR::ParameterSet& parset);
     
 
     private:
 
-        static boost::shared_ptr<casacore::MeasurementSet> create(
-            const std::string& filename, const casacore::Bool addSigmaSpec,
-            casacore::uInt bucketSize, casacore::uInt tileNcorr, casacore::uInt tileNchan);
+        boost::shared_ptr<casacore::MeasurementSet> create(
+            const std::string& filename, const casacore::Bool addSigmaSpec);
 
         static void copyAntenna(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest);
 
@@ -124,6 +148,11 @@ class MSSplitter {
         bool rowIsFiltered(uint32_t scanid, uint32_t fieldid, uint32_t feed1,
                            uint32_t feed2, double time) const;
 
+        /*
+        // MV - unused method. If we need something like this it should probably goes elsewhere. Otherwise,
+        // forces the dependency of this class on the parset (which is a technical debt causing problems elsewhere).
+        
+
         // Helper method for the configuration of the time range filters.
         // Parses the parset value associated with "key" (using MVTime::read()),
         // sets "var" to MVTime::second(), and logs a message "msg".
@@ -131,6 +160,7 @@ class MSSplitter {
         // MVTime::read()
         void configureTimeFilter(const std::string& key, const std::string& msg,
                                  double& var);
+        
 
         // Helper method for the configuration of the field name filters.
         // Parses the parset value associated with "fieldnames" and
@@ -139,6 +169,7 @@ class MSSplitter {
         std::vector<uint32_t>
             configureFieldNameFilter(const std::vector<std::string>& names,
                                      const std::string invis);
+        */
 
         /// Set of beam IDs to include in the new measurement set, or empty
         /// if all beams are to be included
@@ -160,8 +191,14 @@ class MSSplitter {
         // excluded
         double itsTimeEnd;
     
-        //Parset - this class came from the MsSplitApp - and needs a config
-    LOFAR::ParameterSet& itsParset;
+        /// @brief bucket size for the output measurement set
+        casacore::uInt itsBucketSize;
+
+        /// @brief number of correlations in the tile for the output measurement set
+        casacore::uInt itsTileNCorr;
+ 
+        /// @brief number of channels in the tile for the output measurement set
+        casacore::uInt itsTileNChan;
 };
 
 

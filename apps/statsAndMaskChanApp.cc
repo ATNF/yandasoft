@@ -67,7 +67,7 @@ using namespace askap;
 class StatsAndMaskChanApp : public askap::Application
 {
 public:
-    virtual int run(int argc, char* argv[])
+    int run(int argc, char* argv[]) final
     {
         // This class must have scope outside the main try/catch block
         askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
@@ -88,7 +88,7 @@ public:
             bool useNoise = subset.getBool("useNoise", true);
             float badMADFM = subset.getFloat("madfmThreshold", 1000.);
             bool maskBlank = subset.getBool("maskBlank", true);
-                
+
             boost::shared_ptr<accessors::IImageAccess<casacore::Float> > iacc = accessors::imageAccessFactory(subset);
             casa::IPosition shape = iacc->shape(image);
             casa::CoordinateSystem coo = iacc->coordSys(image);
@@ -109,9 +109,9 @@ public:
                     // ASKAPLOG_INFO_STR(logger,"rank: " << rank << " running on node: " << comms.nodeName());
                     ASKAPLOG_INFO_STR(logger,"rank: " << rank << ", channel: " << chan);
                     casacore::IPosition blc(4,0,0,0,chan);
-                    casacore::IPosition trc = shape - 1; 
+                    casacore::IPosition trc = shape - 1;
                     trc(3) = chan;
-                    statisticsAndMask.calculate(image,chan,blc,trc); 
+                    statisticsAndMask.calculate(blc,trc);
                 }
             }
             // waits for all ranks to get here
@@ -123,7 +123,7 @@ public:
                 ASKAPLOG_INFO_STR(logger,"size of itsStatsPerChannelMap: " << statisticsAndMask.statsPerChannelMap().size());
 
                 // do the masking
-                statisticsAndMask.maskBadChannels(image,threshold,badMADFM,maskBlank, useSignificance, 
+                statisticsAndMask.maskBadChannels(image,threshold,badMADFM,maskBlank, useSignificance,
                                                   useNoise, editStats, editImage, outputStats);
                 if ( editImage ) {
                     //write the stats to image table
@@ -148,7 +148,7 @@ public:
     }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }
@@ -162,4 +162,3 @@ int main(int argc, char *argv[])
     StatsAndMaskChanApp app;
     return app.main(argc, argv);
 }
-

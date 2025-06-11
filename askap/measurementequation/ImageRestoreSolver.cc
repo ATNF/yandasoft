@@ -379,7 +379,7 @@ namespace askap
                     casa::convertArray<float, double>(psfArray, planeIter.getPlane(slice));
                     #endif
 
-                    // send an anternative preconditioner function, if it isn't empty.
+                    // send an alternative preconditioner function, if it isn't empty.
                     // whether the psf or pcf is used, preconditioning needs to be the same for all Taylor terms
                     if (order == 0) {
                         if (nOrders > 0) {
@@ -501,7 +501,7 @@ namespace askap
                         ASKAPLOG_INFO_STR(logger, "Shape is " << dirtyArray.shape() << " position is " <<
                             planeIter.position());
                         saveArrayIntoParameter(ip,name,dirtyArray.shape(),"residual",
-                        dirtyArray,planeIter.position());
+                            dirtyArray,planeIter.position());
                     }
 
                     if (itsSavePsfImage) {

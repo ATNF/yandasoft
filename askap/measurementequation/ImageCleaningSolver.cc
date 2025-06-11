@@ -49,7 +49,8 @@ namespace synthesis {
 
 /// @brief default constructor
 ImageCleaningSolver::ImageCleaningSolver() :
-   itsFractionalThreshold(0.), itsDeepThreshold(0.), itsMaskingThreshold(-1.), itsPaddingFactor(1.) {}
+   itsFractionalThreshold(0.), itsDeepThreshold(0.), itsNoiseThreshold(0.),
+   itsDeepNoiseThreshold(0.), itsNoiseBoxSize(0), itsMaskingThreshold(-1.), itsPaddingFactor(1.) {}
 
 /// @brief access to a fractional threshold
 /// @return current fractional threshold

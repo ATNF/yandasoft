@@ -30,7 +30,10 @@ def checkExists(product, wantIt, spectral):
         print("INFO ouput "+filename+" absent as requested")
 
     if wantIt and not exists:
-        raise RuntimeError("Image "+filename+" requested, but does not exist")
+        if product == "mask":
+            print("INFO Image "+filename+" requested, but not found, this means it was 1.0 everywhere")
+        else:
+            raise RuntimeError("Image "+filename+" requested, but does not exist")
     if not wantIt and exists:
         raise RuntimeError("Image "+filename+" not requested, but does exist")
 

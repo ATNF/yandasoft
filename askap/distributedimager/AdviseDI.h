@@ -84,7 +84,7 @@ namespace askap {
             void addMissingParameters(bool extra=false);
 
             /// @brief Use workunit to set Image direction parameters in parset
-            void updateDirectionFromWorkUnit(askap::cp::ContinuumWorkUnit& wu);
+            void updateDirectionFromWorkUnit(const askap::cp::ContinuumWorkUnit& wu);
 
             /// @brief the datasets
             std::vector<std::string> getDatasets() const;
@@ -95,11 +95,8 @@ namespace askap {
             /// @brief get the frequencies
             std::vector<double> getFrequencies() const;
 
-            inline const casacore::MVDirection& getTangent(int ms=0) const {return itsTangent[ms];};
-
+            /// @brief get the epoch for each MS
             inline const casacore::MVEpoch& getEpoch(int ms=0) const {return itsEpoch[ms]; };
-
-            inline const casacore::MPosition& getPosition(int ms=0) const {return itsPosition[ms]; };
 
             inline const vector<casacore::MFrequency>& getTopoFrequencies() const {return itsInputFrequencies;};
 
@@ -158,7 +155,7 @@ namespace askap {
 
             std::vector<casacore::MVDirection> itsTangent;
 
-            std::vector<casacore::Vector<casacore::MDirection> > itsDirVec;
+            std::vector<casacore::MDirection> itsDirMeas;
 
             std::vector<casacore::MVEpoch> itsEpoch;
 
@@ -166,9 +163,6 @@ namespace askap {
 
             std::vector< std::vector<double> > itsChanFreq;
             std::vector< std::vector<double> > itsChanWidth;
-            std::vector< std::vector<double> > itsEffectiveBW;
-            std::vector< std::vector<double> > itsResolution;
-            std::vector< std::vector<double> > itsCentre;
 
             std::vector< std::vector<double> > itsAllocatedFrequencies;
             std::vector< std::vector<cp::ContinuumWorkUnit> > itsAllocatedWork;

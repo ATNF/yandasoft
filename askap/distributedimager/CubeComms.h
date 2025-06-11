@@ -33,6 +33,9 @@
 
 #include <map>
 #include <list>
+#ifdef HAVE_MPI
+#include "mpi.h"
+#endif
 ///ASKAP includes ...
 #include <askap/askapparallel/AskapParallel.h>
 #include "askap/messages/IMessage.h"
@@ -98,7 +101,10 @@ class CubeComms: public askapparallel::AskapParallel {
         /// @brief its communicator for its fellow workers
         size_t buildCommIndex();
         /// @brief its communicator for its fellow writers
-        size_t buildWriterIndex();
+        size_t buildWriterIndex(size_t comm = 0);
+
+        /// @brief translate vector of ranks from MPI_COMM_WORLD to specified comm
+        std::vector<int> translateRanks(std::vector<int> ranks, size_t comm);
       
         /// @brief sets the cubecreator to be the first writer
         void setSingleSink();

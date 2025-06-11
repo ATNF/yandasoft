@@ -16,3 +16,5 @@ print("msmfs test with the new imager")
 import testmsmfs
 print("imager outputs test with the new imager")
 import testimageroutputs
+print("delaysolver")
+import testdelaysolver

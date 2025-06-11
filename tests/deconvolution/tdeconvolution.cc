@@ -44,9 +44,9 @@ double MPI_Wtime() { return double(time(0)); }
 int main(int argc, char *argv[])
 {
 #ifdef __PGI
-    std::cout << "PGI BUILD" << std::endl; 
+    std::cout << "PGI BUILD" << std::endl;
 #endif
-    
+
     ASKAPLOG_INIT("askap.log_cfg") ;
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 

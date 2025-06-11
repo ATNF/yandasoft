@@ -33,6 +33,8 @@
 // ASKAPsoft includes
 #include <Common/ParameterSet.h>
 #include <askap/parallel/MEParallelApp.h>
+#include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/measurementequation/ICalibrationApplicator.h>
 
 namespace askap {
 
@@ -72,8 +74,9 @@ public:
    inline void readModels() const { SynParallel::readModels(itsModel); }
 
    /// @brief initialise measurement equation
+   /// @param[in] it the data iterator
    /// @details This method initialises measurement equation
-   void initMeasurementEquation();
+   void initMeasurementEquation(accessors::IDataSharedIter& it);
 
    /// @brief perform the subtraction for the given dataset
    /// @details This method iterates over the given dataset, predicts visibilities according to the
@@ -81,7 +84,8 @@ public:
    /// This is the core operation of the doSubtraction method, which manages the parallel aspect of it.
    /// All actual calculations are done inside this helper method.
    /// @param[in] ms measurement set name
-   void calcOne(const std::string &ms);
+   /// @param[in] distributeByTile set to true to do distribution by tiles if possible
+   void calcOne(const std::string &ms, bool distributeByTile = false);
 
    // stubs for pure virtual methods which we don't use
    /// @brief calculate normal equations
@@ -107,14 +111,27 @@ public:
    /// @param[in/out] vis the visibilities, will be modified on output
    /// @param[in] flag the associated flags
    void subtractContFit(casacore::Cube<casacore::Complex>& vis,
-            const casacore::Cube<casacore::Bool>& flag);
+            const casacore::Cube<casacore::Bool>& flag,
+            const casacore::Matrix<casacore::Complex>& phasor);
+
+   /// @brief Compute the phase rotation phasor for rotation of visibilities to new direction
+   void computePhasor(const accessors::IDataSharedIter& it,//const accessors::IConstDataAccessor& acc,
+            casacore::Matrix<casacore::Complex>& phasor);
+
+   /// @brief Load the subtables into memory
+   /// @details We load the subtables into memory before accessing the data in r/w mode
+   /// to avoid parallel IO errors
+   void loadSubtables(const accessors::IDataSharedIter& it);
 
    /// @brief model is read by the master and distributed?
    /// @details Depending on the model file name (containing %w or not), the model
    /// can either be read in the master and distributed across the workers or read
-   /// by workers directly. This data member is true, if the model is read by the master
+   /// by workers directly. If true, the model is read by the master
    bool itsModelReadByMaster;
-
+   /// @brief do continuum subtraction based on a component or image model
+   bool itsDoSubtraction;
+   /// @brief Instead of subtracting, replace the data by the model
+   bool itsDoReplaceByModel;
    /// @brief do 'uvlin' like fit and subtract of residual continuum emission
    bool itsDoUVlin;
    /// @brief order of 'uvlin' like fit and subtract of residual continuum emission
@@ -130,6 +147,25 @@ public:
    /// @brief threshold for rejection of channel from the fit, 0 mean no rejection
    /// @details reject channels if |value - median|>threshold*sigma_IQR (robust sigma estimate)
    float itsThreshold;
+   /// @brief rotate visibilities to new direction before uvlin fit/subtraction
+   casacore::MDirection itsUVlinDirection;
+   /// @brief are we rotating visibilities?
+   bool itsRotate;
+
+   /// @brief solution source to get calibration data from
+   /// @details This object is initialised by workers. It knows how to
+   /// retrieve calibration solutions (from a parset file, casa table or a database).
+   /// Uninitialised shared pointer means no calibration
+   boost::shared_ptr<accessors::ICalSolutionConstSource> itsSolutionSource;
+
+   /// @brief calibration applicator (if needed)
+   /// @details If the applicator method of calibration is selected
+   /// this stores the CalibrationApplicatorME object.
+   /// If uninitialised, we are using the CalibrationMEBase classes
+   boost::shared_ptr<ICalibrationApplicator> itsCalApplicator;
+
+   /// @brief number of beams/calibration directions
+   int itsNDir;
 };
 
 } // namespace synthesis

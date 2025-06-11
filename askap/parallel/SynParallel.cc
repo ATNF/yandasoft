@@ -114,6 +114,39 @@ namespace askap
       return itsModel;
     }
 
+    // sort the image names, so all Taylor 0 images come first, then 1, 2
+    // but only if all images have the same number of taylor terms
+    void sortTaylorTerms(std::vector<std::string>& names)
+    {
+        ASKAPLOG_DEBUG_STR(logger,"sortTaylorTerms: names= "<<names);
+        std::vector<std::string> sorted(names.size());
+        std::map<std::string, int> taylorMap;
+        SynthesisParamsHelper::listTaylor(names,taylorMap);
+        // check all taylor images have same order
+        int maxTaylor = 0;
+        bool allEqual = true;
+        for ( auto t : taylorMap) {
+            if (maxTaylor == 0) {
+                maxTaylor = t.second;
+            }
+            if (maxTaylor != t.second) {
+                allEqual = false;
+                break;
+            }
+        }
+        if (allEqual && maxTaylor > 1) {
+            const int n = taylorMap.size();
+            int i = 0;
+            for (int i = 0; i < n; i++) {
+                for (int taylor = 0; taylor < maxTaylor; taylor++) {
+                    sorted[i + taylor * n] = names[i * maxTaylor + taylor];
+                }
+            }
+            ASKAPLOG_DEBUG_STR(logger,"sortTaylorTerms: sorted= "<<sorted);
+            names = sorted;
+        }
+    }
+
     // Send the model to all workers
     void SynParallel::broadcastModel()
     {
@@ -152,7 +185,9 @@ namespace askap
                      names2keep.push_back(*ci);
                  }
             }
-            //
+            // re-sort to enable distribution by Taylor term for multiple images
+            sortTaylorTerms(names2distribute);
+
             ASKAPDEBUGASSERT(itsComms.nGroups() > 1);
             // number of parameters per group (note the last group can have more)
             const size_t nPerGroup = names2distribute.size() / itsComms.nGroups();
@@ -209,12 +244,19 @@ namespace askap
     void SynParallel::replaceModel(scimath::Params::ShPtr Model)
     {
         ASKAPTRACE("SynParallel::replaceModel");
-        if (itsComms.isParallel() && itsComms.isWorker())
-        {
-            ASKAPCHECK(itsModel, "Model not defined prior to receiving")
-            // copy over the model - not just the reference
-            *itsModel = *Model;
-        }
+        ASKAPCHECK(itsComms.isParallel() && itsComms.isWorker(),
+            "replaceModel should only be used from worker ranks");
+        ASKAPCHECK(itsModel, "Model not defined prior to copy");
+        // copy over the model - not just the reference
+        *itsModel = *Model;
+    }
+    // drop a new model in place (by reference)
+    void SynParallel::replaceModelByReference(const scimath::Params::ShPtr& Model)
+    {
+        ASKAPTRACE("SynParallel::replaceModelByReference");
+        ASKAPCHECK(itsComms.isParallel() && itsComms.isWorker(),
+            "replaceModelByReference should only be used from worker ranks");
+        itsModel = Model;
     }
     // Receive the model from the master
     void SynParallel::receiveModel()
@@ -335,16 +377,16 @@ namespace askap
        if (comms.isParallel()) {
            const int rankStoringCF = parset.getInt32("rankstoringcf", 1);
            if (comms.rank() == rankStoringCF) {
-               ASKAPLOG_INFO_STR(logger, "Rank "<<rankStoringCF<<
+               ASKAPLOG_DEBUG_STR(logger, "Rank "<<rankStoringCF<<
                        " will attempt to export convolution functions (if export is requested)");
            } else {
                boost::shared_ptr<TableVisGridder> tvg = boost::dynamic_pointer_cast<TableVisGridder>(gridder);
                if (tvg) {
-                   ASKAPLOG_INFO_STR(logger, "Export of convolution functions will be inhibited for rank "<<
+                   ASKAPLOG_DEBUG_STR(logger, "Export of convolution functions will be inhibited for rank "<<
                          comms.rank());
                    tvg->setTableName("");
                } else {
-                   ASKAPLOG_INFO_STR(logger, "Unable to inhibit export of CFs for rank "<<
+                   ASKAPLOG_DEBUG_STR(logger, "Unable to inhibit export of CFs for rank "<<
                          comms.rank()<<" - operation not supported by the chosen type of the gridder");
                }
            }

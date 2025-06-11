@@ -63,26 +63,37 @@ class SynthesisProgramRunner:
       '''
       os.system("echo \'%s\' >> %s" % (str, self.tmp_parset))
 
-   def runCommand(self,cmd):
+   def runCommand(self,cmd, timeout = None):
       '''
          Run given command on a current parset
 
          cmd - command
+         timeout - if not None, the command is prefixed with "timeout" command and the timeout value given in this parameter.
+                   This enables graceful termination in the case of deadlocks
       '''
-      res = os.system("%s -c %s" % (cmd, self.tmp_parset))
+      tmstring = ""
+      if not timeout is None:
+         tmstring = "timeout %s " % (timeout,)
+      res = os.system("%s%s -c %s" % (tmstring, cmd, self.tmp_parset))
       if res != 0:
          raise RuntimeError("Command %s failed with error %s" % (cmd,res))
 
-   def runMPICommand(self,cmd,np):
+   def runMPICommand(self,cmd,np, timeout = None):
       '''
          Run given command on a current parset
 
          cmd - command
+         np - number of ranks in the job
+         timeout - if not None, the command is prefixed with "timeout" command and the timeout value given in this parameter.
+                   This enables graceful termination in the case of deadlocks
       '''
-      print("INFO Command (via Popen): mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
-      #res = os.system("mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
+      tmstring = ""
+      if not timeout is None:
+         tmstring = "timeout %s " % (timeout,)
+      #print("INFO Command (via Popen): mpiexec -n %d %s -c %s" % (np, cmd, self.tmp_parset))
+      res = os.system("%smpiexec -n %d %s -c %s" % (tmstring, np, cmd, self.tmp_parset))
       #pipe = subprocess.Popen(("mpiexec  -n %d %s -c %s" % (np, cmd, self.tmp_parset)),shell=True,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
-      res = os.system("echo hello world")
+      #res = os.system("echo hello world")
       if res != 0:
          print("Error")
          raise RuntimeError("Command %s failed with error %s" % (cmd,res))
@@ -120,27 +131,38 @@ class SynthesisProgramRunner:
       mpirun = 'mpirun -np %d' % nProcs
       self.runCommand(mpirun + ' ' + self.calibrator)
 
-   def runNewImagerParallel(self, nProcs, args=''):
+   def runNewImagerParallel(self, nProcs, args='', timeout = None):
       '''
          Run new imager on a current parset in parallel
+
+         timeout - if not None, the command is prefixed with "timeout" command and the timeout value given in this parameter.
+                   This enables graceful termination in the case of deadlocks
       '''
+      tmstring = ""
+      if not timeout is None:
+         tmstring = "timeout %s " % (timeout,)
       # mpirun = 'mpirun %s --oversubscribe -np %d' % (args, nProcs)
-      mpirun = 'mpirun %s -np %d' % (args, nProcs)
+      mpirun = '%smpirun %s -np %d' % (tmstring, args, nProcs)
       self.runCommand(mpirun + ' ' + self.NewImager)
 
 
-   def runImager(self):
+   def runImager(self, timeout = None):
       '''
          Run cimager on a current parset
-      '''
-      self.runCommand(self.imager)
 
-   def runNewImager(self,nproc=2):
+         timeout - if not None, the command is prefixed with "timeout" command and the timeout value given in this parameter.
+                   This enables graceful termination in the case of deadlocks
+      '''
+      self.runCommand(self.imager, timeout)
+
+   def runNewImager(self,nproc=2, timeout = None):
       '''
          Run imager on a current parset
+         timeout - if not None, the command is prefixed with "timeout" command and the timeout value given in this parameter.
+                   This enables graceful termination in the case of deadlocks
       '''
       print("INFO Running %s via MPI" % self.NewImager)
-      self.runMPICommand(self.NewImager,nproc)
+      self.runMPICommand(self.NewImager,nproc,timeout)
       #self.runSRUNCommand(self.NewImager,2)
 
    def imageStats(self, name):

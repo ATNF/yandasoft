@@ -68,12 +68,12 @@ public:
    /// @param[in] ds data source
    /// @param[in] currentDelays a vector with fixed delays (per antenna) used for observations
    void process(const IConstDataSource &ds, const std::vector<double>& currentDelays);
-   
+
    /// @brief run application
    /// @param[in] argc number of parameters
    /// @param[in] argv parameter vector
    /// @return exit code
-   virtual int run(int argc, char *argv[]);
+   int run(int argc, char *argv[]) final;
 protected:
    /// @brief helper method to fill antenna names
    /// @details This method extracts antenna names from the supplied parset of ingest pipeline
@@ -88,14 +88,14 @@ protected:
    std::vector<double> getCurrentDelays(const LOFAR::ParameterSet &parset);
 
 private:
-    std::string getVersion() const override {
+    std::string getVersion() const final {
        const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
        return pkgVersion;
     }
    /// @brief vector with antenna names
    /// @details Note, indices correspond to that internally used by ingest. If empty, the output
    /// parset (in the fcm format) will be in the form of ingest-specific vector (used in some test
-   /// applications, although to be deprecated for normal operations). 
+   /// applications, although to be deprecated for normal operations).
    /// @note If not empty, the size of the vector should match that of the delay vector
    std::vector<std::string> itsAntennaNames;
 };
@@ -125,7 +125,7 @@ void DelaySolverApp::fillAntennaNames(const LOFAR::ParameterSet &parset)
         ingestName2ParsetNameMap[curName] = parsetNames[ant];
    }
 
-   
+
    itsAntennaNames.resize(antennas.size());
    for (size_t ant = 0; ant < itsAntennaNames.size(); ++ant) {
         const std::map<std::string, std::string>::const_iterator ci = ingestName2ParsetNameMap.find(antennas[ant]);
@@ -145,12 +145,12 @@ std::vector<double> DelaySolverApp::getCurrentDelays(const LOFAR::ParameterSet &
        ASKAPLOG_WARN_STR(logger, "Old-style fixed delay key ("<<ingestSpecificFixedDelayKey<<") is present in the ingest parset - ignoring");
        // uncomment the following line to use the old-style fixed delay key instead of the new way to specify fixed delays
        // (may be handy for some commissioning experiments)
-       //return parset.getDoubleVector("tasks.FringeRotationTask.params.fixeddelays");                                
-   } 
+       //return parset.getDoubleVector("tasks.FringeRotationTask.params.fixeddelays");
+   }
    ASKAPCHECK(itsAntennaNames.size() > 0, "No antennas seem to be defined in the ingest parset, unable to load initial delays");
    // default delay - we use this value if antenna-specific keyword is not defined
    const std::string defaultDelay = parset.getString("antenna.ant.delay", "0s");
-  
+
    std::vector<double> delays(itsAntennaNames.size(),0.);
    for (size_t ant=0; ant < delays.size(); ++ant) {
         const std::string delayKey = "antenna." + itsAntennaNames[ant] + ".delay";
@@ -174,13 +174,13 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       ASKAPLOG_DEBUG_STR(logger, "Process only scan "<<scan);
       sel->chooseUserDefinedIndex("SCAN_NUMBER",casa::uInt(scan));
   }
- 
-  IDataConverterPtr conv=ds.createConverter();  
+
+  IDataConverterPtr conv=ds.createConverter();
   conv->setFrequencyFrame(casa::MFrequency::Ref(casa::MFrequency::TOPO),"Hz");
   conv->setEpochFrame(casa::MEpoch(casa::Quantity(55913.0,"d"),
                       casa::MEpoch::Ref(casa::MEpoch::UTC)),"s");
-  conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));                    
- 
+  conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
+
   const double targetRes = config().getDouble("resolution",1e6);
   const std::string stokesStr = config().getString("stokes","XX");
   const casa::Vector<casa::Stokes::StokesTypes> stokesVector = scimath::PolConverter::fromString(stokesStr);
@@ -194,7 +194,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
       solver.excludeBaselines(casa::Vector<std::pair<casa::uInt,casa::uInt> >(1,std::pair<casa::uInt,
              casa::uInt>(1,2)));
   }
-  
+
   // if true, program will fail if the largest correction exceeds threshold by absolute value
   const bool checkUpdatesAreBelowThreshold = config().getBool("smallupdates", false);
 
@@ -204,7 +204,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
 
 
   const bool estimateViaLags = config().getBool("uselags", false);
-  
+
   if (estimateViaLags) {
       ASKAPLOG_INFO_STR(logger, "initial delay to be estimated via lags before averaging");
       const double qualityThresholdLag = config().getDouble("qualitythreshold.lag", -1.);
@@ -220,17 +220,17 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
 
       // the following means no averaging
       solver.setTargetResolution(1.);
-      
+
       // initial pass over data
       for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {
-           solver.process(*it);  
+           solver.process(*it);
       }
       // solve via FFT
       const casa::Vector<double> delayApprox = solver.solve(true);
       // use FFT-based estimate as an approximation before averaging
       solver.setApproximateDelays(delayApprox);
       solver.init();
-      solver.setTargetResolution(targetRes);      
+      solver.setTargetResolution(targetRes);
       // re-enable warning logging at high severity
       solver.setVerboseFlag(true);
   }
@@ -241,11 +241,11 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
   }
   // always set it to avoid situations when the threshold for lag-based method remains active
   solver.setQualityThreshold(qualityThresholdPhase);
-      
+
   for (IConstDataSharedIter it=ds.createConstIterator(sel,conv);it!=it.end();++it) {
-       solver.process(*it);  
+       solver.process(*it);
   }
-  
+
   // corrections have the opposite sign from determined delays, hence the minus
   // the units in the fcm are in ns
   casa::Vector<double> delays = -solver.solve(false) * 1e9;
@@ -257,7 +257,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
            delays[ant] += currentDelays[ant];
       }
       ASKAPLOG_DEBUG_STR(logger, "New delays (ns): "<< std::setprecision(9)<<delays);
-      const std::string outParset = "corrected_fixeddelay.parset"; 
+      const std::string outParset = "corrected_fixeddelay.parset";
       {
           std::ofstream os(outParset.c_str());
           // write the file in the format directly understood by fcm put to simplify operations
@@ -265,7 +265,7 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
               ASKAPLOG_WARN_STR(logger, "Exporting delays in the old FCM format - use at your own risk");
               os << "cp.ingest.tasks.FringeRotationTask.params.fixeddelays = " << std::setprecision(9)<<delays << std::endl;
           } else {
-              ASKAPCHECK(itsAntennaNames.size() == delays.size(), 
+              ASKAPCHECK(itsAntennaNames.size() == delays.size(),
                     "Number of antennas defined in the ingest parset is different from the number of antennas delays are solved for");
               double largestCorrection = 0.;
               casa::uInt largestCorrectionAnt = 0u;
@@ -286,10 +286,10 @@ void DelaySolverApp::process(const IConstDataSource &ds, const std::vector<doubl
               if (fabs(largestCorrection) > delayUpdatesThreshold) {
                   ASKAPCHECK(!checkUpdatesAreBelowThreshold, "Delay corrections are expected to be smaller than "<<delayUpdatesThreshold<<" ns!")
                   ASKAPLOG_WARN_STR(logger, "Delay corrections are expected to be smaller than "<<delayUpdatesThreshold<<" ns!");
-              } 
+              }
           }
       }
-      ASKAPLOG_DEBUG_STR(logger, "The new delays are now stored in "<<outParset);       
+      ASKAPLOG_DEBUG_STR(logger, "The new delays are now stored in "<<outParset);
   } else {
       ASKAPLOG_WARN_STR(logger, "No fixed delays specified in the parset -> no update");
   }
@@ -303,13 +303,13 @@ int DelaySolverApp::run(int, char **) {
      const std::string sbID = parameterExists("sb") ? parameter("sb") : "";
 
      // get current delays from the application's parset, this is only intended to be used if no scheduling block ID is given
-     std::vector<double> currentDelays = config().getDoubleVector("cp.ingest.tasks.FringeRotationTask.params.fixeddelays", 
+     std::vector<double> currentDelays = config().getDoubleVector("cp.ingest.tasks.FringeRotationTask.params.fixeddelays",
                                                std::vector<double>());
      if (config().isDefined("ms")) {
          ASKAPCHECK(msName == "", "Use either ms parset parameter or the command line argument, not both");
          msName = config().getString("ms");
      }
-     
+
      if (sbID != "") {
          casa::Path path2sb(parameterExists("sbdir") ? parameter("sbdir") : config().getString("sbpath","./"));
          path2sb.append(sbID);
@@ -342,7 +342,7 @@ int DelaySolverApp::run(int, char **) {
               } else {
                 fileIndex = 0;
               }
-             
+
               ASKAPASSERT((fileIndex >= 0) && (fileIndex < static_cast<int>(dirContent.nelements())));
               casa::Path path2ms(path2sb);
               path2ms.append(dirContent[fileIndex]);
@@ -358,7 +358,7 @@ int DelaySolverApp::run(int, char **) {
          const LOFAR::ParameterSet ingestParset(path2cpingest.absoluteName());
          ASKAPCHECK(currentDelays.size() == 0, "When the scheduling block ID is specified, the current fixed delays are taken "
                     "from the ingest pipeline parset stored with that SB. Remove it from the application's parset to continue.");
-         
+
          fillAntennaNames(ingestParset);
          // here we look at the actual ingest pipeline parset not the fcm, so there is no cp.ingest prefix
          currentDelays = getCurrentDelays(ingestParset);
@@ -366,7 +366,7 @@ int DelaySolverApp::run(int, char **) {
      timer.mark();
      ASKAPCHECK(msName != "", "Measurement set should be specified explicitly or the scheduling block should be given");
      ASKAPLOG_DEBUG_STR(logger, "Processing measurement set "<<msName);
-     TableDataSource ds(msName,TableDataSource::MEMORY_BUFFERS);     
+     TableDataSource ds(msName,TableDataSource::MEMORY_BUFFERS);
      ASKAPLOG_DEBUG_STR(logger, "Initialization: "<<timer.real());
      timer.mark();
      process(ds, currentDelays);
@@ -390,8 +390,7 @@ int DelaySolverApp::run(int, char **) {
 int main(int argc, char *argv[]) {
   DelaySolverApp app;
   app.addParameter("ms","f", "Measurement set name (optional)","");
-  app.addParameter("sb","s", "Scheduling block number (optional)","");  
-  app.addParameter("sbdir","d", "Directory where scheduling blocks are stored (optional)",""); 
+  app.addParameter("sb","s", "Scheduling block number (optional)","");
+  app.addParameter("sbdir","d", "Directory where scheduling blocks are stored (optional)","");
   return app.main(argc,argv);
 }
-

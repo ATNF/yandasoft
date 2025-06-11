@@ -70,13 +70,13 @@ namespace scimath {
 /// be even optimised by the compiler
 template<>
 struct EstimatorAdapterMonitor<EstimatorAdapter<synthesis::VisMetaDataStats> > {
-   inline static void aboutToMerge(const EstimatorAdapter<synthesis::VisMetaDataStats>& thisEstimator, 
+   inline static void aboutToMerge(const EstimatorAdapter<synthesis::VisMetaDataStats>& thisEstimator,
                                    const EstimatorAdapter<synthesis::VisMetaDataStats>& otherEstimator) {
        ASKAPDEBUGASSERT(thisEstimator.get());
        ASKAPLOG_DEBUG_STR(logger, "Merge This Largest residual W: "<<thisEstimator.get()->maxW()<<" wavelengths, percentile = "<<thisEstimator.get()->wPercentile());
        ASKAPDEBUGASSERT(otherEstimator.get());
        ASKAPLOG_DEBUG_STR(logger, "With other Largest residual W: "<<otherEstimator.get()->maxW()<<" wavelengths, percentile = "<<otherEstimator.get()->wPercentile());
-   }; 
+   };
 }; // struct EstimatorAdapterMonitor
 
 } // namespace scimath
@@ -107,10 +107,7 @@ void AdviseParallel::init(const LOFAR::ParameterSet& parset)
        const std::vector<std::string> direction = parset.getStringVector("tangent");
        ASKAPCHECK(direction.size() == 3, "Direction should have exactly 3 parameters, you have "<<direction.size());
        ASKAPCHECK(direction[2] == "J2000", "Only J2000 is implemented at the moment, you have requested "<<direction[2]);
-
-       const double ra = SynthesisParamsHelper::convertQuantity(direction[0],"rad");
-       const double dec = SynthesisParamsHelper::convertQuantity(direction[1],"rad");
-       itsTangent = casacore::MVDirection(ra,dec);
+       itsTangent = asMDirection(direction).getValue();
        itsTangentDefined = true;
    }
    // keep the historical default for now, taking the flags into account can be a lot slower
@@ -128,6 +125,8 @@ void AdviseParallel::init(const LOFAR::ParameterSet& parset)
 /// point and the second to obtain the stats
 void AdviseParallel::estimate()
 {
+    ASKAPTRACE("AdviseParallel::estimate");
+
    if (itsTangentDefined) {
        ASKAPLOG_INFO_STR(logger, "Using explicitly defined tangent point "<<printDirection(itsTangent)<<" (J2000)");
        itsEstimator.reset(new VisMetaDataStats(itsTangent, itsWTolerance, itsIncludeFlaggedData,itsWPercentile));
@@ -215,6 +214,8 @@ void AdviseParallel::broadcastStatistics()
 /// @param[in] ms measurement set name
 void AdviseParallel::calcOne(const std::string &ms)
 {
+   ASKAPTRACE("AdviseParallel::calcOne");
+
    casacore::Timer timer;
    timer.mark();
    ASKAPLOG_INFO_STR(logger, "Performing iteration to accumulate metadata statistics for " << ms);
@@ -238,9 +239,9 @@ void AdviseParallel::calcOne(const std::string &ms)
    conv->setFrequencyFrame(getFreqRefFrame(), "Hz");
    conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
    conv->setEpochFrame(); // time since 0 MJD
-   accessors::IDataSharedIter it=ds.createIterator(sel, conv);
-   ASKAPLOG_DEBUG_STR(logger, "Initialised iterator");
-   for (; it.hasMore(); it.next()) {
+
+   ASKAPLOG_DEBUG_STR(logger, "Initialise iterator");
+   for (accessors::IConstDataSharedIter it=ds.createConstIterator(sel, conv); it.hasMore(); it.next()) {
         // iteration over the dataset
         itsEstimator->process(*it);
 
@@ -254,6 +255,8 @@ void AdviseParallel::calcOne(const std::string &ms)
 void AdviseParallel::calcNE()
 {
    ASKAPDEBUGASSERT(itsEstimator);
+   ASKAPTRACE("AdviseParallel::calcNE");
+
    itsNe.reset(new scimath::EstimatorAdapter<VisMetaDataStats>(itsEstimator));
    // the following call avoids merging of normal equations inside the solver (which we don't use)
    // this is an artefact of reusing Master/Worker framework

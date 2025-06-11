@@ -102,21 +102,21 @@ namespace askap
         static void zeroAllModelImages(const askap::scimath::Params::ShPtr& params);
 
         /// @brief set up images according to the parset file
-		/// @param[in] params Images to be created here
-		/// @param[in] parset a parset object to read the parameters from
-		/// @note (MV)This method is probably a duplication of the one of
-		/// add methods - needs to be cleared
-		/// (MV, dec 2008) not any more. With faceting it is handy to have a separate method
-		static void setUpImages(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet &parset);
+        /// @param[in] params Images to be created here
+        /// @param[in] parset a parset object to read the parameters from
+        /// @note (MV)This method is probably a duplication of the one of
+        /// add methods - needs to be cleared
+        /// (MV, dec 2008) not any more. With faceting it is handy to have a separate method
+        static void setUpImages(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet &parset);
 
-		/// @brief load images according to the parset file
-		/// @details This method is somewhat analogous to setUpImages, but it loads the images
-		/// from the disk instead of setting them up from the scratch. Encapsulation of all loading
-		/// of multiple images in a single method is required to provide a seamless handling of
-		/// the faceted image.
-		/// @param[in] params Images to be created here
-		/// @param[in] parset a parset object to read the parameters from
-		static void loadImages(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet &parset);
+        /// @brief load images according to the parset file
+        /// @details This method is somewhat analogous to setUpImages, but it loads the images
+        /// from the disk instead of setting them up from the scratch. Encapsulation of all loading
+        /// of multiple images in a single method is required to provide a seamless handling of
+        /// the faceted image.
+        /// @param[in] params Images to be created here
+        /// @param[in] parset a parset object to read the parameters from
+        static void loadImages(const askap::scimath::Params::ShPtr& params, const LOFAR::ParameterSet &parset);
 
         /// @brief load component-related parameters from a parset file
         /// @details Parameter layout is different in scimath::Params and
@@ -298,12 +298,26 @@ namespace askap
           const std::string& baseKey);
 
         /// @brief Get a parameter from an image
+        /// @details This version reads the image from the imagename given using the image accessor
         /// @param ip Parameters
         /// @param name Name of parameter
         /// @param imagename Name of image file
         /// @param extraOversampleFactor factor to downsample image after loading
         static void loadImageParameter(askap::scimath::Params& ip, const string& name,
           const string& imagename, const boost::optional<float> extraOversampleFactor = boost::none);
+
+        /// @brief Get a parameter from an image, more general version
+        /// @brief In this version the imagepixels and coordinates are supplied, meaning it can be used to load
+        /// e.g., a plane from an image cube
+        /// @param ip Parameters
+        /// @param name Name of parameter
+        /// @param imagePixels Array with image pixels
+        /// @param imageCoords casacore imageCoordinateSystem
+        /// @param extraOversampleFactor factor to downsample image after loading
+        /// @param channel Specify -1 (default) to set coordinates for all channels, or select a specific channel
+        static void loadImageParameter(askap::scimath::Params& ip, const string& name,
+          casacore::Array<float>& imagePixels, const casacore::CoordinateSystem& imageCoords,
+          const boost::optional<float> extraOversampleFactor = boost::none, int channel = -1);
 
         /// @brief Get parameters corresponding to all facets from a CASA image
         /// @param[in] ip Parameters
@@ -324,20 +338,37 @@ namespace askap
           const std::vector<std::string>& historyLines = std::vector<std::string> {});
 
         /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+        /// @param[in] pixelArray the array to oversample
         /// @param[in] osfactor extra oversampling factor
+        /// @param[in] norm bool true if we want to renormalise the array (e.g., keep psf peak at 1)
         /// @todo add PaddingUtils support for N other than 2 (e.g. 2.5 for 5x syn beam os if gridding at Nyquist)
         /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
         static void oversample(casacore::Array<float> &pixelArray, const float osfactor=1., const bool norm=true);
 
         /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+        /// @param[in] pixelArray the array to downsample
         /// @param[in] osfactor extra oversampling factor
         /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()
-        static void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1.);
+        /// @param[in] norm bool true if we want to renormalise the array (e.g., keep psf peak at 1)
+        static void downsample(casacore::Array<float> &pixelArrayOS, const float osfactor=1., const bool norm=false);
 
         /// @brief determine sampling to use for nyquistgridding
         /// @param[in] advice VisMetaDataStats object used to get max U, V, W
         /// @param[in/out] parset to read and modify (setting extraoversampling and changing cellsize and shape/subshape)
         static void setNyquistSampling(const VisMetaDataStats& advice, LOFAR::ParameterSet& parset);
+
+        /// @brief change the cellsize of the input to match the output
+        /// @details Downsample the pixels array to make the input cellsize match the output cellsize if possible.
+        /// The input cellsize should be (equal or) smaller than the output. The array will be padded or cropped to
+        /// give a shape ratio that can be FFT'd and matches the cell size ratio. An exception will be thrown if this
+        /// is not possible
+        /// @param[inout] pixels image to resample
+        /// @param[in] inputInc input cellsize (pixels have to be square)
+        /// @param[in] outputInc output cellsize
+        /// @param[in] inputSize input image size (has to be square)
+        /// @param[in] outputSize output image size
+        static void adjustCellsize(casacore::Array<float> & pixels, double inputInc, double outputInc, 
+          casacore::uInt inSize, casacore::uInt outSize);
 
         /// @brief Copy a parameter to a CASA TempImage
         /// Note that this will be a reference if possible
@@ -373,10 +404,6 @@ namespace askap
         ///
         static void copyImageParameter(askap::scimath::Params& sourceParam,
           askap::scimath::Params& sinkParam, const string& name);
-
-        /// @brief as copyImageParameter but performed for all Image parameters in the Params()
-        static void copyImageParameters(askap::scimath::Params& sourceParam,
-          askap::scimath::Params& sinkParam);
 
         /// @brief Update a parameter from an image
         /// @param ip Parameters

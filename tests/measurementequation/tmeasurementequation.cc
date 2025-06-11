@@ -57,6 +57,7 @@ int main( int argc, char **argv)
     askapdev::testutils::AskapTestRunner runner(argv[0]);
 
     runner.addTest(askap::synthesis::VectorOperationsTest::suite());
+
     runner.addTest(askap::synthesis::ComponentEquationTest::suite());
     runner.addTest(askap::synthesis::ComponentEquationSpectralTest::suite());
     runner.addTest(askap::synthesis::Calibrator1934Test::suite());
@@ -64,7 +65,9 @@ int main( int argc, char **argv)
     runner.addTest(askap::synthesis::CalibrationMETest::suite());
     runner.addTest(askap::synthesis::CalibrationDDTest::suite());
     runner.addTest(askap::synthesis::CalibrationIonoTest::suite());
+
     // runner.addTest(askap::synthesis::ImageDFTEquationTest::suite());
+
     runner.addTest(askap::synthesis::ImageFFTEquationTest::suite());
     runner.addTest(askap::synthesis::PreconditionerTests::suite());
     runner.addTest(askap::synthesis::SynthesisParamsHelperTest::suite());

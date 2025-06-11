@@ -112,11 +112,11 @@ namespace askap
          stokes[3] = casacore::Stokes::YY;
 
          da.itsStokes.assign(stokes.copy());
-         da.itsVisibility.resize(da.nRow(), 8 ,4);
+         da.itsVisibility.resize(4,8,da.nRow());
          da.itsVisibility.set(casacore::Complex(1.0,-1.0));
-         da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsNoise.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsNoise.set(1.);
-         da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsFlag.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsFlag.set(casacore::False);
          da.itsFrequency.resize(da.nChannel());
          for (casacore::uInt ch = 0; ch < da.nChannel(); ++ch) {

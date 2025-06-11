@@ -327,13 +327,13 @@ bool PreAvgDDCalMEBase::hasDataAccumulated(casa::uInt ant, casa::uInt beam, casa
    const casa::Vector<casa::uInt> &antenna2 = itsBuffer.antenna2();
    const casa::Vector<casa::uInt> &beam1= itsBuffer.feed1();
    ASKAPDEBUGASSERT(chan < flag.ncolumn());
-   ASKAPDEBUGASSERT(pol < flag.nplane());
+   ASKAPDEBUGASSERT(pol < flag.nrow());
    ASKAPDEBUGASSERT(antenna1.nelements() == antenna2.nelements());
    ASKAPDEBUGASSERT(antenna1.nelements() == beam1.nelements());
-   ASKAPDEBUGASSERT(flag.nrow() == beam1.nelements());
-   for (casa::uInt row = 0; row < flag.nrow(); ++row)  {
+   ASKAPDEBUGASSERT(flag.nplane() == beam1.nelements());
+   for (casa::uInt row = 0; row < flag.nplane(); ++row)  {
         if (beam1[row] == beam  && (antenna1[row] == ant || antenna2[row] == ant)) {
-            if (!flag(row, chan, pol)) {
+            if (!flag(pol, chan, row)) {
                 return true;
             }
         }

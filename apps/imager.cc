@@ -58,7 +58,7 @@ ASKAP_LOGGER(logger, ".imager");
 class ImagerApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             // Instantiate the comms class
 
@@ -72,7 +72,9 @@ class ImagerApp : public askap::Application
                 // Create a subset
 
                 LOFAR::ParameterSet subset(config().makeSubset("Cimager."));
-
+                if (subset.empty()) {
+                    subset = config().makeSubset("imager.");
+                }
                 boost::scoped_ptr<askap::ProfileSingleton::Initialiser> profiler;
                 if (parameterExists("profile")) {
                     std::string profileFileName("profile.imager");
@@ -103,12 +105,14 @@ class ImagerApp : public askap::Application
                 } else {
                     ASKAPLOG_INFO_STR(logger, "All workers are treated as identical");
                 }
-                // Instantiate the Distributed Imager
-                // FIXME
-                // ASKAPLOG_WARN_STR(logger,"sleep added for debugging please remove before checkin");
-                // sleep(20);
-                // end sleep
 
+                // sleep to attach debugger / monitoring
+                if (subset.getBool("sleep",false)) {
+                    ASKAPLOG_WARN_STR(logger,"sleep added for debugging");
+                    sleep(20);
+                }
+
+                // Instantiate the Distributed Imager
                 ContinuumImager imager(subset, comms_p, stats);
 
                 // runit
@@ -135,7 +139,7 @@ class ImagerApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

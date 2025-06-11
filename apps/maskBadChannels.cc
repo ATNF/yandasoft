@@ -59,7 +59,7 @@ using namespace askap;
 class MaskChanApp : public askap::Application
 {
 public:
-    virtual int run(int argc, char* argv[])
+    int run(int argc, char* argv[]) final
         {
             // This class must have scope outside the main try/catch block
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
@@ -79,13 +79,13 @@ public:
                 bool useNoise = subset.getBool("useNoise", true);
                 float badMADFM = subset.getFloat("madfmThreshold", 1000.);
                 bool maskBlank = subset.getBool("maskBlank", true);
-                
+
                 std::ifstream fin(statsfile.c_str());
                 ASKAPCHECK(fin.is_open(), "Could not open statsFile " << statsfile);
-                    
+
                 std::string line, name;
                 unsigned int size=0;
-                
+
                 while (getline(fin, line),
                        !fin.eof()) {
                     if (line[0] != '#') {
@@ -130,7 +130,7 @@ public:
                 casa::Vector<double> significance=(ratio-med)/mad;
                 ASKAPLOG_INFO_STR(logger, "Ratio median = " << med << " and madfm = " << mad);
                 ASKAPLOG_INFO_STR(logger, "Acceptable channels have ratio values between "
-                                  << med - threshold * mad << " and " 
+                                  << med - threshold * mad << " and "
                                   << med + threshold * mad );
 
 
@@ -148,12 +148,12 @@ public:
                     casa::setNaN(datavec[i]);
                 }
                 casa::Array<float> data(chanShape,datavec.data());
-                                        
+
                 unsigned int numBad=0;
                 for(unsigned int i=0;i<size;i++){
-                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values " 
-                                      << onepc[i] << " and " 
-                                      << madfm[i] << " for ratio of " 
+                    ASKAPLOG_INFO_STR(logger, "Channel " << i << " has values "
+                                      << onepc[i] << " and "
+                                      << madfm[i] << " for ratio of "
                                       << ratio[i] << " and significance of "
                                       << significance[i]);
                     bool isBlank = !(madfm[i] > 0.);
@@ -169,9 +169,9 @@ public:
                         if (isBlank) {
                             ASKAPLOG_INFO_STR(logger, "Blank Channel #" << i << ": std = "<<std[i]);
                         } else {
-                            ASKAPLOG_INFO_STR(logger, "Bad Channel #" << i 
-                                              << ": MADFM = "<< madfm[i] 
-                                              << " 1%ile = " << onepc[i] 
+                            ASKAPLOG_INFO_STR(logger, "Bad Channel #" << i
+                                              << ": MADFM = "<< madfm[i]
+                                              << " 1%ile = " << onepc[i]
                                               << " 1%ile/MADFM = " << ratio[i]);
                         }
                         numBad++;
@@ -207,7 +207,7 @@ public:
                     }
                     fclose(fout);
                 }
-                
+
                 stats.logSummary();
             } catch (const askap::AskapError& x) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << x.what());
@@ -223,7 +223,7 @@ public:
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }
@@ -237,4 +237,3 @@ int main(int argc, char *argv[])
     MaskChanApp app;
     return app.main(argc, argv);
 }
-

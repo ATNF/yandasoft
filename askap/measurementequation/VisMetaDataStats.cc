@@ -286,7 +286,7 @@ void VisMetaDataStats::process(const accessors::IConstDataAccessor &acc)
   int unflaggedRows = 0;
   if (!itsUseFlagged) {
         for (casacore::uInt row = 0; row < acc.nRow(); row++) {
-            if (casacore::allEQ(flag(row,casacore::Slice(),casacore::Slice()),casacore::True)) {
+            if (casacore::allEQ(flag.xyPlane(row),casacore::True)) {
                 rowFlag(row) = casacore::True;
             } else {
                 unflaggedRows++;

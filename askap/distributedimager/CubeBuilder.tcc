@@ -185,8 +185,6 @@ CubeBuilder<T>::createUVCoordinateSystem(const LOFAR::ParameterSet& parset,
     return coordsys;
 }
 
-
-
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string& name) {
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by co-opting existing Complex cube");
@@ -209,6 +207,7 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,const std::string&
         ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
     }
 }
+
 template <> inline
 CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
                          const casacore::uInt nchan,
@@ -246,10 +245,24 @@ CubeBuilder<casacore::Complex>::CubeBuilder(const LOFAR::ParameterSet& parset,
     itsStokes = scimath::PolConverter::fromString(stokesStr);
     const casacore::uInt npol=itsStokes.size();
 
+    // Check whether image param is stored at a lower resolution
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
+    }
+
     // Get the image shape
     const vector<casacore::uInt> imageShapeVector = parset.getUintVector("Images.shape");
-    const casacore::uInt nx = imageShapeVector[0];
-    const casacore::uInt ny = imageShapeVector[1];
+    casacore::uInt nx = imageShapeVector[0];
+    casacore::uInt ny = imageShapeVector[1];
+    if (itsExtraOversamplingFactor) {
+        const casacore::IPosition fullShape =
+            scimath::PaddingUtils::paddedShape(casacore::IPosition(2,nx,ny),*itsExtraOversamplingFactor);
+        nx = fullShape[0];
+        ny = fullShape[1];
+    }
     const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
 
     const casacore::CoordinateSystem csys = createCoordinateSystem(parset, nx, ny, f0, inc);
@@ -287,6 +300,106 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
     itsFilename = makeImageName(parset, name);
     itsCube = accessors::imageAccessFactory(parset);
+
+    setupCube(parset, nchan, f0, inc, uvcoord);
+}
+
+template <class T>
+CubeBuilder<T>::CubeBuilder(askapparallel::AskapParallel& comm,
+                         size_t comm_index,
+                         const LOFAR::ParameterSet& parset,
+                         const casacore::uInt nchan,
+                         const casacore::Quantity& f0,
+                         const casacore::Quantity& inc,
+                         const std::string& name,
+                         const bool uvcoord)
+{
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
+    itsFilename = makeImageName(parset, name);
+
+    itsCube = accessors::imageAccessFactory(parset, comm, comm_index);
+
+    setupCube(parset, nchan, f0, inc, uvcoord);
+}
+
+template <class T>
+CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
+                            const casacore::IPosition& shape,
+                            const casacore::CoordinateSystem & coordSys,
+                            const std::string& name)
+{
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiating Cube Builder by creating cube");
+    itsFilename = makeImageName(parset, name);
+    itsCube = accessors::imageAccessFactory(parset);
+
+    // Check whether input image is stored at a lower resolution
+    if (parset.isDefined("Images.extraoversampling")) {
+        itsExtraOversamplingFactor = parset.getFloat("Images.extraoversampling");
+        // The parameter should only be defined if has a legitimate value (is set by the code). Check anyway.
+        ASKAPDEBUGASSERT(*itsExtraOversamplingFactor > 1.);
+        ASKAPLOG_INFO_STR(CubeBuilderLogger, "Using extraoversampling " << *itsExtraOversamplingFactor);
+    }
+
+    // Get the image shape
+    ASKAPDEBUGASSERT(shape.size()==4);
+    casacore::uInt nx = shape[0];
+    casacore::uInt ny = shape[1];
+    const casacore::uInt npol = shape[2];
+    const casacore::uInt nchan = shape[3];
+    if (itsExtraOversamplingFactor) {
+        const casacore::IPosition fullShape =
+            scimath::PaddingUtils::paddedShape(casacore::IPosition(2,nx,ny),*itsExtraOversamplingFactor);
+        nx = fullShape[0];
+        ny = fullShape[1];
+    }
+    const casacore::IPosition cubeShape(4, nx, ny, npol, nchan);
+
+    casacore::CoordinateSystem newCoordSys = coordSys;
+    casacore::DirectionCoordinate dirCoord = coordSys.directionCoordinate();
+    if (itsExtraOversamplingFactor) {
+        // fix increments and ref pixel
+        casacore::Vector<casacore::Double> inc = dirCoord.increment();
+        inc(0) /= *itsExtraOversamplingFactor;
+        inc(1) /= *itsExtraOversamplingFactor;
+        dirCoord.setIncrement(inc);
+        casacore::Vector<casacore::Double> refPix = dirCoord.referencePixel();
+        refPix(0) = nx / 2;
+        refPix(1) = ny / 2;
+        dirCoord.setReferencePixel(refPix);
+        newCoordSys.replaceCoordinate(dirCoord,coordSys.findCoordinate(casacore::Coordinate::DIRECTION));
+    }
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Creating Cube " << itsFilename <<
+                       " with shape [xsize:" << nx << " ysize:" << ny <<
+                       " npol:" << npol << " nchan:" << nchan <<"]");
+
+    itsCube->create(itsFilename, cubeShape, newCoordSys);
+
+    // default flux units are Jy/pixel. If we set the restoring beam
+    // later on, can set to Jy/beam
+    itsCube->setUnits(itsFilename,"Jy/pixel");
+
+    // set the header keywords
+    itsCube->setMetadataKeywords(itsFilename,parset.makeSubset("header."));
+
+    // set the image HISTORY keywords
+    const std::vector<std::string> historyLines = parset.getStringVector("imageHistory",std::vector<std::string> {});
+    itsCube->addHistory(itsFilename,historyLines);
+
+    ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
+}
+
+template < class T >
+CubeBuilder<T>::~CubeBuilder()
+{
+}
+
+template <class T>
+void CubeBuilder<T>::setupCube(const LOFAR::ParameterSet& parset, 
+                               const casacore::uInt nchan,
+                               const casacore::Quantity& f0,
+                               const casacore::Quantity& inc,
+                               const bool uvcoord) {
 
     const std::string restFreqString = parset.getString("Images.restFrequency", "-1.");
     if (restFreqString == "HI") {
@@ -358,10 +471,6 @@ CubeBuilder<T>::CubeBuilder(const LOFAR::ParameterSet& parset,
 
     ASKAPLOG_INFO_STR(CubeBuilderLogger, "Instantiated Cube Builder by creating cube " << itsFilename);
 }
-template < class T >
-CubeBuilder<T>::~CubeBuilder()
-{
-}
 
 template <class T>
 std::string CubeBuilder<T>::makeImageName(const LOFAR::ParameterSet& parset, const std:: string& name) {
@@ -388,12 +497,28 @@ std::string CubeBuilder<T>::makeImageName(const LOFAR::ParameterSet& parset, con
         } else {
             const string orig = "image";
             const size_t f = filename.find(orig);
-            filename.replace(f, orig.length(), name);
+            // if name has .real or .imag we want to move that to the end
+            const string real = ".real";
+            const string imag = ".imag";
+            const size_t realpos = name.find(real);
+            size_t imagpos = name.find(imag);
+            // we want to find .imag but not .image
+            if (name.length() > imagpos+5) imagpos = string::npos;
+            if (realpos == string::npos && imagpos == string::npos) {
+                filename.replace(f, orig.length(), name);
+            } else if (realpos != string::npos) {
+                string basename = name.substr(0,realpos);
+                filename.replace(f, orig.length(), basename);
+                filename.append(".real");
+            } else if (imagpos != string::npos) {
+                string basename = name.substr(0,imagpos);
+                filename.replace(f, orig.length(), basename);
+                filename.append(".imag");
+            }
         }
     }
     return filename;
 }
-
 
 template < class T >
 void CubeBuilder<T>::writeRigidSlice(const casacore::Array<T>& arr, const casacore::uInt chan)
@@ -403,20 +528,38 @@ void CubeBuilder<T>::writeRigidSlice(const casacore::Array<T>& arr, const casaco
 }
 
 template < class T >
-void CubeBuilder<T>::writeFlexibleSlice(const casacore::Array<float>& arr, const casacore::uInt chan)
+const casacore::Array<float> CubeBuilder<T>::createFlexibleSlice(const casacore::Array<float>& arr)
 {
-
     if (itsExtraOversamplingFactor) {
         // Image param is stored at a lower resolution, so increase to desired resolution before writing
         casacore::Array<float> fullresarr(scimath::PaddingUtils::paddedShape(arr.shape(),*itsExtraOversamplingFactor));
         scimath::PaddingUtils::fftPad(arr,fullresarr);
-        casacore::IPosition where(4, 0, 0, 0, chan);
-        itsCube->write(itsFilename, fullresarr, where);
+        return fullresarr;
     }
     else {
-        writeRigidSlice(arr, chan);
+        return arr;
     }
+}
 
+
+template < class T >
+const casacore::Array<float> CubeBuilder<T>::writeFlexibleSlice(const casacore::Array<float>& arr, const casacore::uInt chan)
+{
+    const Array<float> farr = createFlexibleSlice(arr);
+    casacore::IPosition where(4, 0, 0, 0, chan);
+    itsCube->write(itsFilename, farr, where);
+    return farr;
+}
+
+template < class T >
+const casacore::Array<float> CubeBuilder<T>::readRigidSlice(const casacore::uInt chan)
+{
+    const casacore::IPosition blc(4, 0, 0, 0, chan);
+    casacore::IPosition trc = itsCube->shape(itsFilename) - 1;
+    ASKAPDEBUGASSERT(chan >=0 && chan <=trc(3));
+    trc(3) = chan;
+    casacore::Array<float> arr = itsCube->read(itsFilename, blc, trc);
+    return arr;
 }
 
 template < class T >
@@ -446,8 +589,9 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
         Matrix<Double> xform(2, 2);
         xform = 0.0;
         xform.diagonal() = 1.0;
-        const Quantum<Double> ra = asQuantity(dirVector.at(0), "deg");
-        const Quantum<Double> dec = asQuantity(dirVector.at(1), "deg");
+        const MDirection dir = asMDirection(dirVector);
+        const Quantum<Double> ra = dir.getValue().getLong("deg");
+        const Quantum<Double> dec = dir.getValue().getLat("deg");
         ASKAPLOG_DEBUG_STR(CubeBuilderLogger, "Direction: " << ra.getValue() << " degrees, "
                            << dec.getValue() << " degrees");
 
@@ -526,6 +670,7 @@ CubeBuilder<T>::createCoordinateSystem(const LOFAR::ParameterSet& parset,
 
     return coordsys;
 }
+
 template <class T>
 void CubeBuilder<T>::addBeam(casacore::Vector<casacore::Quantum<double> > &beam)
 {
@@ -544,8 +689,6 @@ void CubeBuilder<T>::setInfo(const casacore::Record & info)
 {
     itsCube->setInfo(itsFilename, info);
 }
-
-
 
 template <class T>
 void CubeBuilder<T>::writeImageHistory(const std::vector<std::string>& historyLines)

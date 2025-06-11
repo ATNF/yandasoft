@@ -43,14 +43,13 @@ namespace askap
     SphFuncVisGridder::SphFuncVisGridder(const float alpha,
                                          const int support,
                                          const int oversample) :
-        itsSphFunc(casacore::C::pi*support, alpha), itsAlpha(static_cast<double>(alpha))
+        itsSphFunc(casacore::C::pi*support, alpha), itsInterp(true), itsAlpha(static_cast<double>(alpha))
     {
        ASKAPASSERT(support>=3);
        ASKAPASSERT(oversample>=1);
        ASKAPASSERT(alpha>=0. && alpha<=2.);
        itsOverSample = oversample;
        itsSupport = support;
-       itsInterp = true;
     }
 
     SphFuncVisGridder::~SphFuncVisGridder()
@@ -168,101 +167,112 @@ namespace askap
 
     }
 
+    void SphFuncVisGridder::correctConvolution(casacore::Array<imtype>& grid,
+        scimath::SpheroidalFunction& sf, int support, bool interpolate)
+    {
+        casacore::IPosition shape = grid.shape();
+        ASKAPDEBUGASSERT(shape.nelements()>=2);
+        ASKAPDEBUGASSERT(shape(0)>1);
+        ASKAPDEBUGASSERT(shape(1)>1);
+
+        const casacore::Int xHalfSize = shape(0)/2;
+        const casacore::Int yHalfSize = shape(1)/2;
+        casacore::Vector<double> ccfx(shape(0));
+        casacore::Vector<double> ccfy(shape(1));
+
+        // initialise buffers to enable a filtering of the correction
+        // function in Fourier space.
+        casacore::Vector<imtypeComplex> bufx(shape(0));
+        casacore::Vector<imtypeComplex> bufy(shape(1));
+
+        // note grdsf(1)=0.
+        for (int ix=0; ix<shape(0); ++ix)
+        {
+          const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
+          const double val = sf(nux);
+          bufx(ix) = imtypeComplex(val,0.0);
+        }
+
+        for (int iy=0; iy<shape(1); ++iy)
+        {
+          const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
+          const double val = sf(nuy);
+          bufy(iy) = imtypeComplex(val,0.0);
+        }
+
+        if (interpolate) {
+          // The spheroidal is undefined and set to zero at nu=1, but that
+          // is not the numerical limit. Estimate it from its neighbours.
+          interpolateEdgeValues(bufx);
+          interpolateEdgeValues(bufy);
+        }
+
+        // Fourier filter the spheroidal (crop in Fourier space in line with
+        // gridding kernel support size)
+        const bool doFiltering = true;
+        if (doFiltering) {
+           // Some more advanced gridders have support>3 (e.g. w-proj).
+           //
+           int support = 3;
+           const imtypeComplex maxBefore = bufx(shape(0)/2);
+           scimath::fft(bufx, true);
+           scimath::fft(bufy, true);
+           for (int ix=0; ix<shape(0)/2-support; ++ix) {
+             bufx(ix) = 0.0;
+           }
+           for (int ix=shape(0)/2+support+1; ix<shape(0); ++ix) {
+             bufx(ix) = 0.0;
+           }
+           for (int iy=0; iy<shape(1)/2-support; ++iy) {
+             bufy(iy) = 0.0;
+           }
+           for (int iy=shape(1)/2+support+1; iy<shape(1); ++iy) {
+             bufy(iy) = 0.0;
+           }
+           scimath::fft(bufx, false);
+           scimath::fft(bufy, false);
+           // Normalise after filtering.
+           const imtypeComplex normalisation = maxBefore / bufx(shape(0)/2);
+           bufx *= normalisation;
+           bufy *= normalisation;
+        }
+
+        for (int ix=0; ix<shape(0); ++ix) {
+          double val = real(bufx(ix));
+          ccfx(ix) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
+        }
+        for (int iy=0; iy<shape(1); ++iy) {
+          double val = real(bufy(iy));
+          ccfy(iy) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
+        }
+
+        casacore::ArrayIterator<imtype> it(grid, 2);
+        while (!it.pastEnd())
+        {
+            casacore::Matrix<imtype> mat(it.array());
+            ASKAPDEBUGASSERT(int(mat.nrow()) <= shape(0));
+            ASKAPDEBUGASSERT(int(mat.ncolumn()) <= shape(1));
+            for (int iy=0; iy<shape(1); iy++)
+            {
+                for (int ix=0; ix<shape(0); ix++)
+                {
+                    mat(ix, iy)*=ccfx(ix)*ccfy(iy);
+                }
+            }
+            it.next();
+        }
+
+      }
+
     void SphFuncVisGridder::correctConvolution(casacore::Array<imtype>& grid)
     {
       ASKAPTRACE("SphFuncVisGridder::correctConvolution");
+      if (isPCFGridder()) return;
       ASKAPDEBUGASSERT(itsShape.nelements()>=2);
-      const casacore::Int xHalfSize = itsShape(0)/2;
-      const casacore::Int yHalfSize = itsShape(1)/2;
-      casacore::Vector<double> ccfx(itsShape(0));
-      casacore::Vector<double> ccfy(itsShape(1));
       ASKAPDEBUGASSERT(itsShape(0)>1);
       ASKAPDEBUGASSERT(itsShape(1)>1);
-
-      if (isPCFGridder()) return;
-
-      // initialise buffers to enable a filtering of the correction
-      // function in Fourier space.
-      casacore::Vector<imtypeComplex> bufx(itsShape(0));
-      casacore::Vector<imtypeComplex> bufy(itsShape(1));
-
-      // note grdsf(1)=0.
-      for (int ix=0; ix<itsShape(0); ++ix)
-      {
-        const double nux=std::abs(double(ix-xHalfSize))/double(xHalfSize);
-        const double val = grdsf(nux);
-        bufx(ix) = imtypeComplex(val,0.0);
-      }
-
-      for (int iy=0; iy<itsShape(1); ++iy)
-      {
-        const double nuy=std::abs(double(iy-yHalfSize))/double(yHalfSize);
-        const double val = grdsf(nuy);
-        bufy(iy) = imtypeComplex(val,0.0);
-      }
-
-      if (itsInterp) {
-        // The spheroidal is undefined and set to zero at nu=1, but that
-        // is not the numerical limit. Estimate it from its neighbours.
-        interpolateEdgeValues(bufx);
-        interpolateEdgeValues(bufy);
-      }
-
-      // Fourier filter the spheroidal (crop in Fourier space in line with
-      // gridding kernel support size)
-      const bool doFiltering = true;
-      if (doFiltering) {
-         // Some more advanced gridders have support>3 (e.g. w-proj).
-         //
-         int support = 3;
-         const imtypeComplex maxBefore = bufx(itsShape(0)/2);
-         scimath::fft(bufx, true);
-         scimath::fft(bufy, true);
-         for (int ix=0; ix<itsShape(0)/2-support; ++ix) {
-           bufx(ix) = 0.0;
-         }
-         for (int ix=itsShape(0)/2+support+1; ix<itsShape(0); ++ix) {
-           bufx(ix) = 0.0;
-         }
-         for (int iy=0; iy<itsShape(1)/2-support; ++iy) {
-           bufy(iy) = 0.0;
-         }
-         for (int iy=itsShape(1)/2+support+1; iy<itsShape(1); ++iy) {
-           bufy(iy) = 0.0;
-         }
-         scimath::fft(bufx, false);
-         scimath::fft(bufy, false);
-         // Normalise after filtering.
-         const imtypeComplex normalisation = maxBefore / bufx(itsShape(0)/2);
-         bufx *= normalisation;
-         bufy *= normalisation;
-      }
-
-      for (int ix=0; ix<itsShape(0); ++ix) {
-        double val = real(bufx(ix));
-        ccfx(ix) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
-      }
-      for (int iy=0; iy<itsShape(1); ++iy) {
-        double val = real(bufy(iy));
-        ccfy(iy) = casacore::abs(val) > 1e-10 ? 1.0/val : 0.;
-      }
-
-      casacore::ArrayIterator<imtype> it(grid, 2);
-      while (!it.pastEnd())
-      {
-        casacore::Matrix<imtype> mat(it.array());
-        ASKAPDEBUGASSERT(int(mat.nrow()) <= itsShape(0));
-        ASKAPDEBUGASSERT(int(mat.ncolumn()) <= itsShape(1));
-        for (int ix=0; ix<itsShape(0); ix++)
-        {
-          for (int iy=0; iy<itsShape(1); iy++)
-          {
-            mat(ix, iy)*=ccfx(ix)*ccfy(iy);
-          }
-        }
-        it.next();
-      }
-
+      ASKAPDEBUGASSERT(itsShape==grid.shape());
+      correctConvolution(grid, itsSphFunc, itsSupport, doInterpolation());
     }
 
     /*

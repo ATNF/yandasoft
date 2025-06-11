@@ -36,7 +36,7 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/Arrays/ArrayMath.h>
 #include <casacore/casa/BasicSL/Constants.h>
-#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/profile/AskapProfiler.h>
 
 // Local package includes
@@ -455,6 +455,8 @@ void WProjectVisGridder::generate(int startPlane, int endPlane)
     casacore::Matrix<imtypeComplex> thisPlane(getCFBuffer());
     ASKAPDEBUGASSERT(thisPlane.nrow() == casacore::uInt(nx));
     ASKAPDEBUGASSERT(thisPlane.ncolumn() == casacore::uInt(ny));
+    // Limit number of fft threads to 8 (more is slower for our fft sizes)
+    scimath::FFT2DWrapper<imtypeComplex> fft2d(true,8);
 
     for (int iw = startPlane; iw < endPlane; ++iw) {
         thisPlane.set(0.0);
@@ -472,7 +474,7 @@ void WProjectVisGridder::generate(int startPlane, int endPlane)
 
         // Now we have to calculate the Fourier transform to get the
         // convolution function in uv space
-        scimath::fft2d(thisPlane, true);
+        fft2d(thisPlane, true);
 
         // Now thisPlane is filled with convolution function
         // sampled on a finer grid in u,v
@@ -586,7 +588,7 @@ WProjectVisGridder::CFSupport WProjectVisGridder::calcSupport(const casacore::Ma
 }
 
 void WProjectVisGridder::populateItsConvFunc(const casacore::Matrix<casacore::Complex> &cfPlane, const int iw,
-                         const int support, const CFSupport& cfSupport, const int cSize, 
+                         const int support, const CFSupport& cfSupport, const int cSize,
                          const int nx, const int ny)
 {
     //ASKAPLOG_INFO_STR(logger,"populateItsConvFunc()");
@@ -632,7 +634,7 @@ void WProjectVisGridder::normalise(std::vector<casacore::Matrix<casacore::Comple
 void WProjectVisGridder::populateThisPlane(casacore::Matrix<casacore::Complex> &thisPlane,
                                            const int qnx, const int qny, const int nx, const int ny,
                                            const double ccellx, const double ccelly, const double w,
-                                           const casacore::Vector<float>& ccfx, 
+                                           const casacore::Vector<float>& ccfx,
                                            const casacore::Vector<float>& ccfy)
 {
     //ASKAPLOG_INFO_STR(logger,"populateThisPlane()");
@@ -694,14 +696,14 @@ void WProjectVisGridder::setup(int& nx, int& ny, int& qnx, int& qny,
         float nuy = std::abs(float(iy - qny / 2)) / float(qny / 2);
         ccfy(iy) = grdsf(nuy) / float(qny);
     }
-    if (itsInterp) {
+    if (doInterpolation()) {
         // The spheroidal is undefined and set to zero at nu=1, but that
         // is not the numerical limit. Estimate it from its neighbours.
         interpolateEdgeValues(ccfx);
         interpolateEdgeValues(ccfy);
     }
 }
-void WProjectVisGridder::calcConvFuncOverflow(const int support, const CFSupport& cfSupport, 
+void WProjectVisGridder::calcConvFuncOverflow(const int support, const CFSupport& cfSupport,
                                               const int nx, const int ny, int& overflow)
 {
     //ASKAPLOG_INFO_STR(logger,"calcConvFuncOverflow()");

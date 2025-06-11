@@ -108,6 +108,8 @@ namespace askap
       configureForPSF(dopsf);
       configureForPCF(dopcf);
 
+      initialiseWeightBuilder();
+
       /// We need one grid for each plane
       itsGrid.resize(nWPlanes());
       for (int i=0; i<nWPlanes(); ++i)

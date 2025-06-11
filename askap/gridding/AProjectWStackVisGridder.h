@@ -102,12 +102,12 @@ namespace askap
       AProjectWStackVisGridder(const AProjectWStackVisGridder &other);
 
       /// Clone a copy of this Gridder
-      virtual IVisGridder::ShPtr clone();
+      virtual IVisGridder::ShPtr clone() override;
 
       /// Form the sum of the convolution function squared, multiplied by the weights for each
       /// different convolution function. This is used in the evaluation of the second derivative.
       /// @param out Output double precision grid
-      virtual void finaliseWeights(casacore::Array<imtype>& out);
+      virtual void finaliseWeights(casacore::Array<imtype>& out) override;
 
       /// @brief Initialise the gridding
       /// @param axes axes specifications
@@ -115,13 +115,13 @@ namespace askap
       /// @param dopsf Make the psf?
       virtual void initialiseGrid(const scimath::Axes& axes,
               const casacore::IPosition& shape, const bool dopsf=true,
-			  const bool dopcf=false);
+			  const bool dopcf=false) override;
 
       /// @brief Initialise the degridding
       /// @param axes axes specifications
       /// @param image Input image: cube: u,v,pol,chan
       virtual void initialiseDegrid(const scimath::Axes& axes,
-              const casacore::Array<imtype>& image);
+              const casacore::Array<imtype>& image) override;
 
       /// @brief static method to get the name of the gridder
       /// @details We specify parameters per gridder type in the parset file.
@@ -146,25 +146,40 @@ namespace askap
       /// to do gridder specific initialisation without overriding initialiseGrid.
       /// This method accepts no parameters as itsShape, itsNWPlanes, etc should have already
       /// been initialised by the time this method is called.
-      virtual void initialiseSumOfWeights();
+      virtual void initialiseSumOfWeights() override;
 
       /// @brief Initialise the indices
       /// @param[in] acc const accessor to work with
-      virtual void initIndices(const accessors::IConstDataAccessor& acc);
+      virtual void initIndices(const accessors::IConstDataAccessor& acc) override;
+
+      /// @brief obtain current field index
+      /// @details This method returns field index corresponding to the last call of initIndices
+      /// (i.e this method can only be called after initIndices is called, otherwise the result is undefined).
+      /// The meaning of the index and boundaries are determined in derived classes and only used here for
+      /// uv-weight selection purposes. Note, that the implementation and the current interface are somewhat deficient.
+      /// In principle, the measurement set standard (and data accessor implementation) do not require all entries in the
+      /// single accessor to correspond to the same field (or share the same beam footprint). But our code never writes MSs
+      /// which would result in different fields being in the same accessor. Therefore, we return a single index here
+      /// rather than a vector, one for each row; and this also allows us to have better caching. Also, we could've had
+      /// this method non-virtual and try to cast the type to AProjectGridderBase where the field index is obtained. But
+      /// doing it via a virtual function (at the right place of the class hierarchy, so it is not really a fat interface),
+      /// seems to be a cleaner way of doing it.
+      /// @return field index for the current accessor (passed to initIndices)
+      virtual casacore::uInt currentFieldIndex() const override final { return AProjectGridderBase::currentField(); }
 
       /// Index into convolution function
       /// @param row Row number
       /// @param pol Polarization id
       /// @param chan Channel number
-      virtual int cIndex(int row, int pol, int chan);
+      virtual int cIndex(int row, int pol, int chan) override;
 
       /// Initialize convolution function
       /// @param[in] acc const accessor to work with
-      virtual void initConvolutionFunction(const accessors::IConstDataAccessor& acc);
+      virtual void initConvolutionFunction(const accessors::IConstDataAccessor& acc) override;
 
       /// Correct for gridding convolution function
       /// @param image image to be corrected
-      virtual void correctConvolution(casacore::Array<imtype>& image);
+      virtual void correctConvolution(casacore::Array<imtype>& image) override;
 
   private:
       /// @brief assignment operator (not to be called)

@@ -21,7 +21,7 @@ fi
 
 BITBUCKET_API_ROOT="https://bitbucket.csiro.au/rest/build-status/1.0"
 BITBUCKET_STATUS_API="$BITBUCKET_API_ROOT/commits/$CI_COMMIT_SHA"
-BITBUCKET_KEY="ci/gitlab-ci/$CI_JOB_NAME"
+BITBUCKET_KEY="ci/gitlab-ci/result"
 
 case "$BUILD_STATUS" in
 running)

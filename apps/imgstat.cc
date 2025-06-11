@@ -30,6 +30,7 @@
 #include <casacore/casa/Arrays/IPosition.h>
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/SubImage.h>
+#include <casacore/images/Images/FITSImage.h>
 #include <casacore/images/Images/ImageStatistics.h>
 #include <askap/utils/CommandLineParser.h>
 #include <askap/askap/AskapError.h>
@@ -72,16 +73,21 @@ int main(int argc, const char** argv) {
      // I hope const_cast is temporary here
      parser.process(argc, const_cast<char**> (argv));
      if (!doComplexStats.defined()) {
-         casa::PagedImage<casa::Float> img(imgfile.getValue());
-         casa::ImageStatistics<casa::Float> imstat(img, casa::False);
+         std::shared_ptr<casa::ImageInterface<casa::Float>> img;
+         if (imgfile.getValue().find(".fits") != std::string::npos) {
+             img.reset(new casa::FITSImage(imgfile.getValue()));
+         } else {
+             img.reset(new casa::PagedImage<casa::Float>(imgfile.getValue()));
+         }
+         casa::ImageStatistics<casa::Float> imstat(*img, casa::False);
          float tmin,tmax;
          imstat.getFullMinMax(tmin,tmax);
          casa::IPosition minPos,maxPos;
          imstat.getMinMaxPos(minPos,maxPos);
-         casa::Int direction_coordinate = img.coordinates().findCoordinate(casa::Coordinate::DIRECTION);
+         casa::Int direction_coordinate = img->coordinates().findCoordinate(casa::Coordinate::DIRECTION);
          ASKAPASSERT(direction_coordinate>=0);
          ASKAPASSERT(maxPos.nelements()>=2);
-         const casa::DirectionCoordinate &dc = img.coordinates().directionCoordinate(direction_coordinate);
+         const casa::DirectionCoordinate &dc = img->coordinates().directionCoordinate(direction_coordinate);
          casa::Vector<casa::Double> pixel(2);
          pixel(0)=casa::Double(maxPos[0]);
          pixel(1)=casa::Double(maxPos[1]);
@@ -109,7 +115,7 @@ int main(int argc, const char** argv) {
          }
          if (doWtStats.defined()) {
              // making a slice to get inner quarter
-             const casa::IPosition shape = img.shape();
+             const casa::IPosition shape = img->shape();
              ASKAPCHECK(shape.nelements() >= 2, "Need 2D images for the '-w' option");
              casa::IPosition blc(shape.nelements(),0);
              casa::IPosition trc(shape);
@@ -126,7 +132,7 @@ int main(int argc, const char** argv) {
              ASKAPCHECK(blc[0]>=0 && blc[1]>=0, "BLC is negative: "<<blc<<", shape="<<shape);
              ASKAPCHECK(trc[1]<shape[1] && trc[0]<shape[0], "TRC extends beyond the edge: "<<trc<<", shape="<<shape<<" blc="<<blc);
              casa::Slicer slc(blc,trc,casa::IPosition(shape.nelements(),1),casa::Slicer::endIsLast);
-             casa::SubImage<casa::Float> si(img,slc,casa::AxesSpecifier(casa::True));
+             casa::SubImage<casa::Float> si(*img,slc,casa::AxesSpecifier(casa::True));
              casa::ImageStatistics<casa::Float> imStatWt(si, casa::False);
              imStatWt.getFullMinMax(tmin,tmax);
              std::cout<<tmax<<" "<<tmin<<" # MAX MIN in the inner quarter"<<std::endl;

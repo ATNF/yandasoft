@@ -48,11 +48,11 @@ class DeconvolverHogbomTest : public CppUnit::TestFixture
   CPPUNIT_TEST(testDeconvolveCenter);
   CPPUNIT_TEST(testDeconvolveCorner);
   CPPUNIT_TEST(testDeconvolveZero);
-  CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
+  CPPUNIT_TEST_EXCEPTION(testWrongShape, AskapError);
   CPPUNIT_TEST_EXCEPTION(testDeconvolveOffsetPSF, AskapError);
   CPPUNIT_TEST_SUITE_END();
 public:
-   
+
   void setUp() {
     IPosition dimensions(2,100,100);
     itsDirty.reset(new Array<Float>(dimensions));
@@ -121,7 +121,7 @@ public:
     CPPUNIT_ASSERT(itsDB->deconvolve());
     CPPUNIT_ASSERT(itsDB->control()->terminationCause()==DeconvolverControl<Float>::CONVERGED);
   }
-   
+
 private:
 
   boost::shared_ptr< Array<Float> > itsDirty;
@@ -131,8 +131,7 @@ private:
    /// @brief DeconvolutionHogbom class
   boost::shared_ptr<DeconvolverHogbom<Float, Complex> > itsDB;
 };
-    
+
 } // namespace synthesis
 
 } // namespace askap
-

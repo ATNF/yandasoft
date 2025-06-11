@@ -62,6 +62,7 @@ namespace askap
     {
 
       CPPUNIT_TEST_SUITE(ImageFFTEquationTest);
+      CPPUNIT_TEST(testCopyAndReference);
       CPPUNIT_TEST(testPredict);
       CPPUNIT_TEST(testSolveSphFun);
       CPPUNIT_TEST(testSolveAntIllum);
@@ -112,6 +113,28 @@ namespace askap
 
       }
 
+      void testCopyAndReference()
+      {
+          boost::shared_ptr<ImageFFTEquation> p3, p4;
+          boost::shared_ptr<Params> params3, params4;
+          params3.reset(new Params(*params1));
+          params4.reset(new Params(*params1));
+
+          IVisGridder::ShPtr gridder=IVisGridder::ShPtr(new SphFuncVisGridder());
+
+          // create using copied params
+          p3.reset(new ImageFFTEquation(*params3,idi, gridder));
+          *params3 = *params2;
+          casacore::IPosition pos(4, npix/2, npix/2, 0, 0);
+          // check values are not affected
+          CPPUNIT_ASSERT(abs(p3->parameters().valueT("image.i.cena")(pos)-1.0)<0.001);
+          // create using referenced params
+          p4.reset(new ImageFFTEquation(params4,idi, gridder));
+          *params4 = *params2;
+          // check values are affected (reference)
+          CPPUNIT_ASSERT(abs(p4->parameters().valueT("image.i.cena")(pos)-0.9)<0.001);
+      }
+
       void testPredict()
       {
         //        {
@@ -152,11 +175,14 @@ namespace askap
 
          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*idi);
          da.itsStokes.assign(stokes.copy());
-         da.itsVisibility.resize(da.nRow(), 2 ,4);
+         //da.itsVisibility.resize(da.nRow(), 2 ,4);
+         da.itsVisibility.resize(4,2,da.nRow());
          da.itsVisibility.set(casacore::Complex(-10.,15.));
-         da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+         //da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsNoise.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsNoise.set(1.);
-         da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+         //da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsFlag.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsFlag.set(casacore::False);
 
 
@@ -166,10 +192,15 @@ namespace askap
 
          for (casacore::uInt row=0; row<da.nRow(); ++row) {
               for (casacore::uInt ch=0; ch<da.nChannel(); ++ch) {
-                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(1.,0.) - casacore::DComplex(da.visibility()(row,ch,0)))<1e-5);
-                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.01,0.) - casacore::DComplex(da.visibility()(row,ch,1)))<1e-5);
-                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(-0.01,0.) - casacore::DComplex(da.visibility()(row,ch,2)))<1e-5);
-                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.9,0.) - casacore::DComplex(da.visibility()(row,ch,3)))<1e-5);
+                   //CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(1.,0.) - casacore::DComplex(da.visibility()(row,ch,0)))<1e-5);
+                   //CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.01,0.) - casacore::DComplex(da.visibility()(row,ch,1)))<1e-5);
+                   //CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(-0.01,0.) - casacore::DComplex(da.visibility()(row,ch,2)))<1e-5);
+                   //CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.9,0.) - casacore::DComplex(da.visibility()(row,ch,3)))<1e-5);
+
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(1.,0.) - casacore::DComplex(da.visibility()(0,ch,row)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.01,0.) - casacore::DComplex(da.visibility()(1,ch,row)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(-0.01,0.) - casacore::DComplex(da.visibility()(2,ch,row)))<1e-5);
+                   CPPUNIT_ASSERT(casacore::abs(casacore::DComplex(0.9,0.) - casacore::DComplex(da.visibility()(3,ch,row)))<1e-5);
               }
          }
       }

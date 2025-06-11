@@ -87,7 +87,7 @@ namespace askap {
                 std::string get_dataset(void) const;
                 unsigned int get_globalChannel(void) const;
                 unsigned int get_localChannel(void) const;
-                unsigned int get_numChan(void) const;
+                unsigned int get_nchan(void) const;
                 double get_channelFrequency(void) const;
                 double get_channelWidth(void) const;
                 unsigned int get_beam() const;

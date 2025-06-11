@@ -67,6 +67,28 @@ public:
    /// @note Assign 0. to switch this option off.
    void setDeepThreshold(double dThreshold);
 
+   /// @brief access to a noise threshold
+   /// @return current noise threshold
+   double noiseThreshold() const
+   { return itsNoiseThreshold; }
+
+   /// @brief set a new noise threshold
+   /// @param[in] sThreshold new noise threshold
+   /// @note Assign 0. to switch this option off.
+   void setNoiseThreshold(double sThreshold)
+   { itsNoiseThreshold = sThreshold; }
+
+   /// @brief access to a deep noise threshold
+   /// @return current deep noise threshold
+   double deepNoiseThreshold() const
+   { return itsDeepNoiseThreshold; }
+
+   /// @brief set a new deep noise threshold
+   /// @param[in] dsThreshold new deep noise threshold
+   /// @note Assign 0. to switch this option off.
+   void setDeepNoiseThreshold(double dsThreshold)
+   { itsDeepNoiseThreshold = dsThreshold; }
+
    /// @brief access to a masking threshold
    /// @return current masking threshold
    double maskingThreshold() const;
@@ -77,6 +99,35 @@ public:
    /// S/N based cleaning. The masking threshold value, which used to be hardcoded in
    /// the casacore when signal-based cleaning was the only available option, equals to 0.9.
    void setMaskingThreshold(double mThreshold);
+
+   /// @brief how to apply thresholds for multiple images
+   /// @details When cleaning multiple images, especially a main field and some offset fields
+   /// you can avoid overcleaning the offset fields by treating the clean thresholds as if it
+   /// is one combined image
+   /// @return current setting - true = use first image, false = independent
+   bool useFirstImageForThresholds() const {return itsUseFirstImageForThresholds;}
+
+   /// @brief set how to apply thresholds for multiple images
+   /// @details When cleaning multiple images, especially a main field and some offset fields
+   /// you can avoid overcleaning the offset fields by treating the clean thresholds as if it
+   /// is one combined image
+   /// @param[in] useFirst : true = use first image, false = independent
+   void setUseFirstImageForThresholds(bool useFirst)
+   { itsUseFirstImageForThresholds = useFirst;}
+
+   /// @brief use a noise map for a spatially varying noise cutoff?
+   /// @details When there are sources with dynamic range issues in the image
+   /// a noise map can keep clean from picking up sidelobes around strong sources while
+   /// still cleaning deeply in other areas of the image. If non-zero, use the specified
+   /// box size for the noise calculation
+   casacore::uInt noiseBoxSize() const { return itsNoiseBoxSize;}
+
+   /// @brief set the box size for the noise map for a spatially varying noise cutoff
+   /// @details When there are sources with dynamic range issues in the image
+   /// a noise map can keep clean from picking up sidelobes around strong sources while
+   /// still cleaning deeply in other areas of the image. 
+   /// @param[in] noiseBoxSize : 0 = no noise map, >0 : specifies box size
+   void setNoiseBoxSize(casacore::uInt noiseBoxSize) { itsNoiseBoxSize = noiseBoxSize;}
 
    /// @brief set padding factor for this solver
    /// @details Because cleaning usually utilises FFT for performance (to calculate convolution with PSF),
@@ -139,6 +190,21 @@ private:
   /// Assign zero (default) if you don't want any deep threshold applied.
   double itsDeepThreshold;
 
+  /// @brief noise cleaning threshold
+  /// @details Threshold defined as multiple of residual rms
+  /// Assign zero (default) if you don't want any noise threshold applied.
+  double itsNoiseThreshold;
+
+  /// @brief Deep noise cleaning threshold
+  /// @details noise threshold for a second level of deep cleaning with model as mask
+  /// Assign zero (default) if you don't want any deep threshold applied.
+  double itsDeepNoiseThreshold;
+
+  /// @brief specify the noise box size
+  /// @details specify the box size to use when calculating the 2d noise map, 
+  /// default (=0) is no noise map, just a single value for the image
+  casacore::uInt itsNoiseBoxSize;
+
    /// @brief threshold for cleaning mask
    /// @details This value is passed in the setMask call to the LatticeCleaner. Negative
    /// value (default) means that no thresholding is used to the mask and the mask array
@@ -147,6 +213,9 @@ private:
    /// If the mask value is lower than this threshold, the corresponding pixel is not cleaned.
    /// This is a classical signal-based cleaning.
    double itsMaskingThreshold;
+
+   /// @brief how to apply thresholds for multiple images
+   bool itsUseFirstImageForThresholds;
 
    /// @brief padding factor for solver
    /// @details Because cleaning usually utilises FFT for performance (to calculate convolution with PSF),

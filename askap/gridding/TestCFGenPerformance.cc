@@ -103,11 +103,14 @@ void TestCFGenPerformance::init()
   itsAccessor.itsDishPointing1.set(dishPointing);
   itsAccessor.itsDishPointing2.resize(nSamples);
   itsAccessor.itsDishPointing2.set(dishPointing);
-  itsAccessor.itsVisibility.resize(nSamples,1,1);
+  //itsAccessor.itsVisibility.resize(nSamples,1,1);
+  itsAccessor.itsVisibility.resize(1,1,nSamples);
   itsAccessor.itsVisibility.set(casacore::Complex(0.));
-  itsAccessor.itsFlag.resize(nSamples,1,1);
+  //itsAccessor.itsFlag.resize(nSamples,1,1);
+  itsAccessor.itsFlag.resize(1,1,nSamples);
   itsAccessor.itsFlag.set(false);
-  itsAccessor.itsNoise.resize(nSamples,1,1);
+  //itsAccessor.itsNoise.resize(nSamples,1,1);
+  itsAccessor.itsNoise.resize(1,1,nSamples);
   itsAccessor.itsNoise.set(casacore::Complex(1.,1.));
   itsAccessor.itsTime = 0.;
   itsAccessor.itsFrequency.resize(1);

@@ -13,6 +13,10 @@ MSMFS with channels gridded together
     [Tags]          combinedchannels    newimager
     [Template]      Run PythonTest ${thetest}
     testcombined
+MSMFS with reversed channels gridded together
+    [Tags]          combinedchannels    newimager
+    [Template]      Run PythonTest ${thetest}
+    testcombined-reversed
 SPECTRALLINE with new imager
     [Tags]          spectralline    newimager
     [Template]      Run PythonTest ${thetest}
@@ -53,7 +57,26 @@ leakagecalibtest: test of polarisation leakage calibration
     [Tags]          test1934  
     [Template]      Run PythonTest ${thetest}
     test1934  
-
+ddcal: test DDCal calibration application in imager
+    [Tags]          ddcal   newimager
+    [Template]      Run PythonTest ${thetest}
+    ddcal
+delaysolver: test delaysolver app on real ATCA data"
+    [Tags]          testdelaysolver
+    [Template]      Run PythonTest ${thetest}
+    testdelaysolver
+mfsmodel: start imager in spectral mode with mfs model
+    [Tags]          spectralline   newimager
+    [Template]      Run PythonTest ${thetest}
+    testmfsmodel
+restart: restart imager in spectral mode
+    [Tags]          spectralline   newimager
+    [Template]      Run PythonTest ${thetest}
+    testrestart
+extended: compare standard and pixellist clean on extended source
+    [Tags]          pixellist   newimager
+    [Template]      Run PythonTest ${thetest}
+    testcleanextended
 *** Keywords ***
 Run PythonTest ${thetest}
     ${start_time} =    Get Current Date

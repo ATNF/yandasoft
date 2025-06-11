@@ -179,16 +179,16 @@ void ScanStats::inspect(const std::string &name, const accessors::IConstDataShar
 /// @brief helper method to compact flags across frequency axis
 /// @details Each row each polarisation is considered flagged if all corresponding frequency channels
 /// are flagged
-/// @param[in] flags nRow x nChan x nPol cube as provided by the accessor
-/// @return nRow x nPol matrix with aggregated flags 
+/// @param[in] flags nPol x nChan x nRow cube as provided by the accessor
+/// @return nPol x nRow matrix with aggregated flags 
 casacore::Matrix<casacore::Bool> ScanStats::allChannelsFlagged(const casacore::Cube<casacore::Bool> &flags)
 {
    ASKAPDEBUGASSERT(flags.nelements() > 0);
-   casacore::Matrix<casacore::Bool> result(flags.nrow(), flags.nplane(), true);
-   for (casacore::uInt row = 0; row < flags.nrow(); ++row) {
-        for (casacore::uInt pol = 0; pol < flags.nplane(); ++pol) {
+   casacore::Matrix<casacore::Bool> result(flags.nplane(), flags.nrow(), true);
+   for (casacore::uInt row = 0; row < flags.nplane(); ++row) {
+        for (casacore::uInt pol = 0; pol < flags.nrow(); ++pol) {
              for (casacore::uInt chan = 0; chan < flags.ncolumn(); ++chan) {
-                  if (!flags(row,chan,pol)) {
+                  if (!flags(pol,chan,row)) {
                       result(row,pol) = false;
                       break;
                   }

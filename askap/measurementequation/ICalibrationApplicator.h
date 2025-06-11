@@ -55,13 +55,21 @@ struct ICalibrationApplicator {
   /// @brief virtual destructor to keep the compiler happy
   virtual ~ICalibrationApplicator() {}
 
-  /// @brief correct model visibilities for one accessor (chunk).
+  /// @brief correct visibilities for one accessor (chunk).
   /// @details This method corrects the data in the given accessor
   /// (accessed via rwVisibility) for the calibration errors
   /// represented by this measurement equation (i.e. an inversion of
   /// the matrix has been performed).
   /// @param[in] chunk a read-write accessor to work with
   virtual void correct(accessors::IDataAccessor &chunk) const = 0;
+
+  /// @brief predict visibilities for one accessor (chunk).
+  /// @details This method corrupts the data in the given accessor
+  /// (accessed via rwVisibility) with the calibration errors
+  /// represented by this measurement equation (i.e. an inversion of
+  /// the matrix has not been performed).
+  /// @param[in] chunk a read-write accessor to work with
+  virtual void predict(accessors::IDataAccessor &chunk) const = 0;
 
   /// @brief determines whether to scale the noise estimate
   /// @details This is one of the configuration methods, it controlls

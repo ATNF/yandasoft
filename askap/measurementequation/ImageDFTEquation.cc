@@ -156,7 +156,8 @@ namespace askap
           {
             for (uint i=0;i<nChan;i++)
             {
-              itsIdi->rwVisibility()(row,i,0) += casacore::Complex(vis(row,2*i), vis(row,2*i+1));
+              //itsIdi->rwVisibility()(row,i,0) += casacore::Complex(vis(row,2*i), vis(row,2*i+1));
+              itsIdi->rwVisibility()(0,i,row) += casacore::Complex(vis(row,2*i), vis(row,2*i+1));
             }
           }
         }
@@ -225,8 +226,10 @@ namespace askap
             {
               for (uint i=0;i<freq.nelements();i++)
               {
-                residual(nChan*row+2*i)=real(itsIdi->visibility()(row,i,0))-vis(row,2*i);
-                residual(nChan*row+2*i+1)=imag(itsIdi->visibility()(row,i,0))-vis(row,2*i+1);
+                //residual(nChan*row+2*i)=real(itsIdi->visibility()(row,i,0))-vis(row,2*i);
+                residual(nChan*row+2*i)=real(itsIdi->visibility()(0,i,row))-vis(row,2*i);
+                // residual(nChan*row+2*i+1)=imag(itsIdi->visibility()(row,i,0))-vis(row,2*i+1);
+                residual(nChan*row+2*i+1)=imag(itsIdi->visibility()(0,i,row))-vis(row,2*i+1);
               }
             }
   

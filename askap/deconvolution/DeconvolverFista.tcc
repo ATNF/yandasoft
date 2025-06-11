@@ -117,7 +117,8 @@ namespace askap {
                 // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
                 // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
                 // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
-                scimath::FFT2DWrapper<FT> fft2d(true);
+                // Limit number of fft threads to 8 (more is slower for our fft sizes)
+                scimath::FFT2DWrapper<FT> fft2d(true,8);
 
                 // do explicit loop over basis functions here (the original code relied on iterator in old
                 // fft2d and, therefore, low level representation of the basis function stack). This way
@@ -126,8 +127,6 @@ namespace askap {
                 for (uInt base = 0; base < nBases; ++base) {
                      casacore::Matrix<FT> fftBuffer = itsBasisFunctionTransform.xyPlane(base);
                      casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
-                     // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                     //scimath::fft2d(fftBuffer, true);
                      fft2d(fftBuffer, true);
                 }
             }
@@ -288,16 +287,13 @@ namespace askap {
                 // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
                 // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
                 // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
-                scimath::FFT2DWrapper<FT> fft2d(true);
+                // Limit number of fft threads to 8 (more is slower for our fft sizes)
+                scimath::FFT2DWrapper<FT> fft2d(true,8);
 
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(inTransform, true);
                 fft2d(inTransform, true);
                 const uInt nPlanes(itsBasisFunction->shape()(2));
                 for (uInt plane = 0; plane < nPlanes; plane++) {
                     outPlaneTransform = inTransform * itsBasisFunctionTransform.xyPlane(plane);
-                    // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                    //scimath::fft2d(outPlaneTransform, false);
                     fft2d(outPlaneTransform, false);
                     outCube.xyPlane(plane) = real(outPlaneTransform);
                 }
@@ -330,24 +326,19 @@ namespace askap {
                 // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
                 // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
                 // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
-                scimath::FFT2DWrapper<FT> fft2d(true);
+                // Limit number of fft threads to 8 (more is slower for our fft sizes)
+                scimath::FFT2DWrapper<FT> fft2d(true,8);
 
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(inPlaneTransform, true);
                 fft2d(inPlaneTransform, true);
                 outTransform = itsBasisFunctionTransform.xyPlane(nPlanes - 1) * (inPlaneTransform);
 
                 for (uInt plane = 1; plane < nPlanes; plane++) {
                     inPlaneTransform.set(0.);
                     casacore::setReal(inPlaneTransform, inCube.xyPlane(nPlanes - 1 - plane));
-                    // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                    //scimath::fft2d(inPlaneTransform, true);
                     fft2d(inPlaneTransform, true);
                     outTransform = outTransform
                                    + itsBasisFunctionTransform.xyPlane(nPlanes - 1 - plane) * (inPlaneTransform - outTransform);
                 }
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(outTransform, false);
                 fft2d(outTransform, false);
                 out.nonDegenerate(2) = real(outTransform);
             } else {

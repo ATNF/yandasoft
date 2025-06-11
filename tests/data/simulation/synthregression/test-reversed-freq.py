@@ -45,6 +45,11 @@ spr2 = SynthesisProgramRunner(template_parset = 'testspectral.in')
 
 spr.addToParset("Cimager.dataset = reversed.ms")
 
+# set OMP_NUM_THREADS to 1, otherwise there could be adverse interaction between OpenMP and MPI
+# (5 ranks is close to what we could have in CI or ordinary desktop environment, so no room for OpenMP).
+# See AXA-2881 for details.
+os.environ['OMP_NUM_THREADS']='1'
+
 if "CI" in os.environ:
     spr2.runNewImagerParallel(5)
 else:

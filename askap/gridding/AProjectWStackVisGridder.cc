@@ -42,7 +42,7 @@ ASKAP_LOGGER(logger, ".gridding.aprojectwstackgridder");
 #include <askap/profile/AskapProfiler.h>
 
 #include <askap/gridding/AProjectWStackVisGridder.h>
-#include <askap/scimath/fft/FFTWrapper.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/gridding/IBasicIllumination.h>
 
 #include <askap/scimath/utils/PaddingUtils.h>
@@ -272,7 +272,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
             const double nuy = std::abs(double(qiy) - double(qny / 2)) / double(qny / 2);
             ccfy(qiy) = grdsf(nuy);
         }
-        if (itsInterp) {
+        if (doInterpolation()) {
           // The spheroidal is undefined and set to zero at nu=1, but that
           // is not the numerical limit. Estimate it from its neighbours.
           interpolateEdgeValues(ccfx);
@@ -282,6 +282,8 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
 
 
     casacore::Matrix<imtypeComplex> cplane(pattern.pattern().shape());
+    // Limit number of fft threads to 8 (more is slower for our fft sizes)
+    scimath::FFT2DWrapper<imtypeComplex> fft2d(true,8);
     int nDone=0;
     for (int row=0; row<nSamples; ++row) {
         const int feed=acc.feed1()(row);
@@ -298,7 +300,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                                             out, offset, parallacticAngle, isPSFGridder() || isPCFGridder());
                 /// Now convolve the disk with itself using an FFT
                 if( !imageBasedPattern ) {
-                    scimath::fft2d(pattern.pattern(), false);
+                    fft2d(pattern.pattern(), false);
                 }
 
                 double peak=0.0;
@@ -322,7 +324,7 @@ void AProjectWStackVisGridder::initConvolutionFunction(const accessors::IConstDa
                 }
                 // The maximum will be 1.0
                 ASKAPLOG_DEBUG_STR(logger, "Max of FT of convolution function = " << casacore::max(cplane));
-                scimath::fft2d(cplane, true);
+                fft2d(cplane, true);
                 // Now correct for normalization of FFT
                 cplane *= imtypeComplex(1.0/(double(nx)*double(ny)));
                 ASKAPLOG_DEBUG_STR(logger, "Sum of convolution function before support extraction and decimation = " << casacore::sum(cplane));
@@ -441,7 +443,7 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
              ccfy(iy) = val > itsSpheroidalWeightsCutoff ? val : 0.;
         }
         // this isn't really needed unless itsSpheroidalWeightsCutoff==0. But shouldn't hurt
-        if (itsInterp) {
+        if (doInterpolation()) {
           // The spheroidal is undefined and set to zero at nu=1, but that
           // is not the numerical limit. Estimate it from its neighbours.
           interpolateEdgeValues(ccfx);
@@ -453,6 +455,8 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
     /// This is the output array before sinc padding
     casacore::Array<imtype> cOut(casacore::IPosition(4, cnx, cny, nPol, nChan));
     cOut.set(0.0);
+    // Limit number of fft threads to 8 (more is slower for our fft sizes)
+    scimath::FFT2DWrapper<imtypeComplex> fft2d(true,8);
 
     // for debugging
     double totSumWt = 0.;
@@ -500,7 +504,7 @@ void AProjectWStackVisGridder::finaliseWeights(casacore::Array<imtype>& out) {
             }
 
             //	  	  ASKAPLOG_DEBUG_STR(logger, "Convolution function["<< iz << "] peak = "<< peak);
-            scimath::fft2d(thisPlane, false);
+            fft2d(thisPlane, false);
             thisPlane*=imtypeComplex(nx*ny);
             const double peak=real(casacore::max(casacore::abs(thisPlane)));
             // ASKAPLOG_DEBUG_STR(logger, "Transform of convolution function["<< iz << "] peak = "<< peak);

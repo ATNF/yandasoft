@@ -44,11 +44,11 @@ class DeconvolverFistaTest : public CppUnit::TestFixture
 {
   CPPUNIT_TEST_SUITE(DeconvolverFistaTest);
   CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
+  CPPUNIT_TEST_EXCEPTION(testWrongShape, AskapError);
   //  CPPUNIT_TEST(testDeconvolve);
   CPPUNIT_TEST_SUITE_END();
 public:
-   
+
   void setUp() {
     itsDimensions=IPosition(2,100,100);
     itsDirty.reset(new Array<Float>(itsDimensions));
@@ -67,7 +67,7 @@ public:
     itsDB->state()->setCurrentIter(0);
     itsDB->control()->setTargetIter(10);
     itsDB->control()->setGain(1.0);
-    itsDB->control()->setTargetObjectiveFunction(0.000); 
+    itsDB->control()->setTargetObjectiveFunction(0.000);
     itsDB->control()->setLambda(0.00001);
   }
 
@@ -106,8 +106,7 @@ private:
    /// @brief DeconvolutionFista class
   boost::shared_ptr<DeconvolverFista<Float, Complex> > itsDB;
 };
-    
+
 } // namespace synthesis
 
 } // namespace askap
-

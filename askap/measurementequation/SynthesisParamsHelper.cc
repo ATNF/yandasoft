@@ -27,8 +27,10 @@
 #include <askap/scimath/utils/PolConverter.h>
 #include <askap/scimath/fitting/Axes.h>
 #include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
+#include <askap/imagemath/linmos/LinmosImageRegrid.h>
 #include <askap/scimath/utils/PaddingUtils.h>
 #include <askap/gridding/SupportSearcher.h>
+#include <askap/scimath/fft/FFTUtils.h>
 #include <casacore/lattices/LatticeMath/Fit2D.h>
 
 #include <askap/askap_synthesis.h>
@@ -46,7 +48,6 @@ ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 
 #include <casacore/images/Images/PagedImage.h>
 #include <casacore/images/Images/TempImage.h>
-#include <casacore/images/Images/ImageRegrid.h>
 #include <casacore/scimath/Mathematics/Interpolate2D.h>
 #include <casacore/lattices/Lattices/ArrayLattice.h>
 #include <casacore/coordinates/Coordinates/CoordinateSystem.h>
@@ -55,7 +56,7 @@ ASKAP_LOGGER(logger, ".measurementequation.synthesisparamshelper");
 #include <casacore/coordinates/Coordinates/SpectralCoordinate.h>
 #include <casacore/coordinates/Coordinates/DirectionCoordinate.h>
 
-#include <casacore/lattices/LatticeMath/LatticeFFT.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 
 #include <Common/ParameterSet.h>
 #include <Common/Exceptions.h>
@@ -287,8 +288,9 @@ namespace askap
                  "centreDir should have exactly 3 parameters or be empty, you have "<<centreDir.size());
       ASKAPCHECK(stokes.nelements()>=1, "At least one polarisation plane should be defined, you have defined none");
 
-      const double ra = convertQuantity(direction[0],"rad");
-      const double dec = convertQuantity(direction[1],"rad");
+      const MDirection radec = asMDirection(direction);
+      const double ra = radec.getValue().getLong();
+      const double dec = radec.getValue().getLat();
 
       const double xcellsize =-1.0*convertQuantity(cellsize[0],"rad");
       const double ycellsize = convertQuantity(cellsize[1],"rad");
@@ -303,9 +305,7 @@ namespace askap
       if (centreDir.size()) {
           ASKAPCHECK(centreDir[2] == "J2000", "Only J2000 is implemented at the moment, you have requested "<<centreDir[2]);
           ASKAPLOG_INFO_STR(logger, "Image parameter "<<name<<" have tangent point "<<direction<<" and image centre "<<centreDir);
-          const double raCentre = convertQuantity(centreDir[0],"rad");
-          const double decCentre = convertQuantity(centreDir[1],"rad");
-          const casacore::MVDirection centre(raCentre, decCentre);
+          const casacore::MVDirection centre = asMDirection(centreDir).getValue();
           casacore::Vector<casacore::Double> pix;
           dcTangent.toPixel(pix,centre);
           ASKAPDEBUGASSERT(pix.nelements() == 2);
@@ -357,8 +357,9 @@ namespace askap
       ASKAPCHECK(direction[2] == "J2000", "Only J2000 is implemented at the moment, you have requested "<<direction[2]);
       ASKAPCHECK(stokes.nelements()>=1, "At least one polarisation plane should be defined, you have defined none");
 
-      const double ra = convertQuantity(direction[0],"rad");
-      const double dec = convertQuantity(direction[1],"rad");
+      const MDirection radec = asMDirection(direction);
+      const double ra = radec.getValue().getLong();
+      const double dec = radec.getValue().getLat();
 
       const double xcellsize =-1.0*convertQuantity(cellsize[0],"rad");
       const double ycellsize = convertQuantity(cellsize[1],"rad");
@@ -409,7 +410,7 @@ namespace askap
                 iph.makeFacet(ix,iy);
                 ip.add(iph.paramName(), pixels, axes);
 
-                // for debigging
+                // for debugging
                 //if (ix!=0 || iy!=0) ip.fix(iph.paramName());
            }
       }
@@ -768,12 +769,18 @@ namespace askap
       ASKAPTRACE("SynthesisParamsHelper::loadImageParameter");
       casacore::Array<float> imagePixels = imageHandler().read(imagename);
       casacore::CoordinateSystem imageCoords = imageHandler().coordSys(imagename);
+      loadImageParameter(ip, name, imagePixels, imageCoords, extraOversampleFactor);
+    }
 
+    void SynthesisParamsHelper::loadImageParameter(askap::scimath::Params& ip, const string& name,
+		casacore::Array<float>& imagePixels, const casacore::CoordinateSystem& imageCoords,
+        const boost::optional<float> extraOversampleFactor, int channel)
+    {
       /// Fill in the axes information
       Axes axes;
       /// First do the direction
       int whichDir=imageCoords.findCoordinate(Coordinate::DIRECTION);
-      ASKAPCHECK(whichDir>-1, "No direction coordinate present in the image "<<imagename);
+      ASKAPCHECK(whichDir>-1, "No direction coordinate present in the supplied image coordinates");
       casacore::DirectionCoordinate radec(imageCoords.directionCoordinate(whichDir));
       casacore::Vector<casacore::Int> axesDir = imageCoords.pixelAxes(whichDir);
       ASKAPCHECK(axesDir.nelements() == 2, "Direction axis "<<whichDir<<
@@ -785,27 +792,6 @@ namespace askap
       casacore::Vector<casacore::String> units(2);
       units.set("rad");
       radec.setWorldAxisUnits(units);
-
-      /*
-	  casacore::Vector<double> start(2);
-      casacore::Vector<double> end(2);
-      casacore::Vector<double> pixelbuf(2);
-      const casacore::Vector<double> refPix(radec.referencePixel());
-
-      pixelbuf(0)=0;
-      pixelbuf(1)=refPix(1);
-      ASKAPCHECK(radec.toWorld(start,pixelbuf), "Pixel to world conversion error: "<<radec.errorMessage());
-      pixelbuf(0)=imagePixels.shape()[0]-1;
-      ASKAPCHECK(radec.toWorld(end,pixelbuf), "Pixel to world conversion error: "<<radec.errorMessage());
-      axes.add("RA", start(0), end(0));
-
-      pixelbuf(0)=refPix(0);
-      pixelbuf(1)=0;
-      ASKAPCHECK(radec.toWorld(start,pixelbuf), "Pixel to world conversion error: "<<radec.errorMessage());
-      pixelbuf(1)=imagePixels.shape()[1]-1;
-      ASKAPCHECK(radec.toWorld(end,pixelbuf), "Pixel to world conversion error: "<<radec.errorMessage());
-      axes.add("DEC", start(1), end(1));
-      */
       axes.addDirectionAxis(radec);
 
       int whichStokes = imageCoords.findCoordinate(Coordinate::STOKES);
@@ -836,11 +822,16 @@ namespace askap
       ASKAPCHECK(axesSpectral.nelements() == 1, "Spectral axis "<<whichSpectral<<
                  " is expected to correspond to just one pixel axes, you have "<<axesSpectral);
       ASKAPASSERT(casacore::uInt(axesSpectral[0])<imagePixels.shape().nelements());
-      const int nChan = imagePixels.shape()(axesSpectral[0]);
+      const int nChan = (channel < 0 ? imagePixels.shape()(axesSpectral[0]) : 1);
       casacore::SpectralCoordinate freq(imageCoords.spectralCoordinate(whichSpectral));
       double startFreq, endFreq;
-      freq.toWorld(startFreq, 0.0);
-      freq.toWorld(endFreq, double(nChan-1));
+      if (channel < 0) {
+        freq.toWorld(startFreq, 0.0);
+        freq.toWorld(endFreq, double(nChan-1));
+      } else {
+        freq.toWorld(startFreq, double(channel));
+        freq.toWorld(endFreq, double(channel));
+      }
       axes.add("FREQUENCY", startFreq, endFreq);
 
       casacore::IPosition targetShape(4, imagePixels.shape()(0), imagePixels.shape()(1), nPol, nChan);
@@ -859,9 +850,11 @@ namespace askap
 
           ASKAPLOG_INFO_STR(logger, "About to add new image parameters with name "<<fullresname<<
                       " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
-                                    "Hz, nChan="<<nChan);
-          ip.add(fullresname, imagePixels.reform(targetShape), axes);
+          if (!ip.has(fullresname)) {
+            ip.add(fullresname, imagePixels.reform(targetShape), axes);
+          } else {
+            ip.update(fullresname, imagePixels.reform(targetShape));
+          }
 
           // now downsample the input sky model to the working resolution
           /// @todo should this be done at higher precision ifndef ASKAP_FLOAT_IMAGE_PARAMS?
@@ -877,16 +870,25 @@ namespace askap
 
           ASKAPLOG_INFO_STR(logger, "Also adding downsampled image parameters with name "<<name<<
                       " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-          ip.add(name, imagePixels.reform(targetShape), axes);
+          if (!ip.has(name)) {
+            ip.add(name, imagePixels.reform(targetShape), axes);
+          } else {
+            ip.update(name, imagePixels.reform(targetShape));
+          }
 
       }
       else {
           ASKAPLOG_INFO_STR(logger, "About to add new image parameter with name "<<name<<
                       " reshaped to "<<targetShape<<" from original image shape "<<imagePixels.shape());
-          ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
-                                    "Hz, nChan="<<nChan);
-          ip.add(name, imagePixels.reform(targetShape), axes);
+          if (!ip.has(name)) {
+            ip.add(name, imagePixels.reform(targetShape), axes);
+          } else {
+            ip.update(name, imagePixels.reform(targetShape));
+          }
       }
+      ASKAPLOG_INFO_STR(logger, "Spectral axis will have startFreq="<<startFreq<<" Hz, endFreq="<<endFreq<<
+                        "Hz, nChan="<<nChan);
+
 
     }
 
@@ -911,98 +913,96 @@ namespace askap
       }
     }
 
-
     /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+    /// @param[in] image the array to oversample
     /// @param[in] osfactor extra oversampling factor
-    /// @param[in] image input image to be oversampled
+    /// @param[in] norm bool true if we want to renormalise the array (e.g., keep psf peak at 1)
     /// @return oversampled image
     /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
     /// @todo use scimath::PaddingUtils::fftPad? Works with imtype rather than float so template there or here?
     void SynthesisParamsHelper::oversample(casacore::Array<float> &image, const float osfactor, const bool norm)
     {
-
         ASKAPCHECK(osfactor >= 1.0,
             "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
         if (osfactor == 1.) return;
+        const uint ndim = image.ndim();
+        ASKAPASSERT(ndim>1);
+        const IPosition matShape = image.shape().nonDegenerate();
+        const IPosition osShape = scimath::PaddingUtils::paddedShape(matShape,osfactor);
+        // Limit number of fft threads to 8 (more is slower for our fft sizes)
+        scimath::FFT2DWrapper<casacore::Complex> fft2d(true,8);
 
-        casacore::Array<casacore::Complex> AgridOS(scimath::PaddingUtils::paddedShape(image.shape(),osfactor),casacore::Complex(0.));
-
-        // this is how it's done in SynthesisParamsHelper::saveImageParameter():
-        //imagePixels.resize(scimath::PaddingUtils::paddedShape(ip.shape(name),osfactor));
-        //scimath::PaddingUtils::fftPad(ip.valueF(name),imagePixels);
-
-        // destroy Agrid before resizing image. Small memory saving.
-        {
-            // Set up scratch arrays and lattices for changing resolution
-            casacore::Array<casacore::Complex> Agrid(image.shape());
-            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-
-            // copy image into a complex scratch space
-            casacore::convertArray<casacore::Complex,float>(Agrid, image);
-
-            // renormalise based on the imminent padding
-            if (norm) {
-                Agrid *= static_cast<float>(osfactor*osfactor);
-            }
-
-            // fft to uv
-            casacore::LatticeFFT::cfft2d(Lgrid, casacore::True);
-
-            // "extract" original Fourier grid into the central portion of the new Fourier grid
-            casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
-            subGrid = Agrid;
-
-            // ifft back to image and return the real part
-            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
-            casacore::LatticeFFT::cfft2d(LgridOS, casacore::False);
+        // renormalise based on the imminent padding
+        if (norm) {
+            image *= static_cast<float>(osfactor*osfactor);
         }
 
-        image.resize(AgridOS.shape());
-        image = real(AgridOS);
+        // Set up scratch array for changing resolution
+        casacore::Matrix<casacore::Complex> Agrid(matShape,casacore::Complex(0.f));
 
+        // copy image into complex scratch space & free memory
+        casacore::setReal(Agrid, image.nonDegenerate());
+        image.resize();
+
+        // fft to uv
+        fft2d(Agrid, true);
+
+        // "extract" original Fourier grid into the central portion of the new Fourier grid
+        casacore::Matrix<casacore::Complex> AgridOS(osShape,casacore::Complex(0.f));
+        casacore::Array<casacore::Complex> subGrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+        subGrid = Agrid;
+        Agrid.resize();
+
+        // ifft back to image and return the real part
+        fft2d(AgridOS,false);
+
+        image.reference(real(AgridOS).addDegenerate(ndim-2));
     }
 
     /// @brief remove Fourier zero-padding region to re-establish original resolution after cleaning
+    /// @brief zero-pad in the Fourier domain to increase resolution before cleaning
+    /// @param[in] image the array to oversample
     /// @param[in] osfactor extra oversampling factor
-    /// @param[in] image input oversampled image
+    /// @param[in] norm bool true if we want to renormalise the array (e.g., keep psf peak at 1)
     /// @return downsampled image
     /// @todo move osfactor to itsOsFactor to enforce consistency between oversample() & downsample()?
     /// @todo use scimath::PaddingUtils::fftPad? Downsampling may not be supported at this stage
-    void SynthesisParamsHelper::downsample(casacore::Array<float> &image, const float osfactor)
+    void SynthesisParamsHelper::downsample(casacore::Array<float> &image, const float osfactor, const bool norm)
     {
-
         ASKAPCHECK(osfactor >= 1.0,
             "Oversampling factor in the solver is supposed to be greater than or equal to 1.0, you have "<<osfactor);
         if (osfactor == 1.) return;
 
-        casacore::Array<casacore::Complex> Agrid;
+        // Limit number of fft threads to 8 (more is slower for our fft sizes)
+        scimath::FFT2DWrapper<casacore::Complex> fft2d(true,8);
+        const uint ndim = image.ndim();
+        ASKAPASSERT(ndim>1);
 
-        // destroy AgridOS before resizing image. Small memory saving.
-        {
-            // Set up scratch arrays and lattices for changing resolution
-            casacore::Array<casacore::Complex> AgridOS(image.shape());
-            casacore::ArrayLattice<casacore::Complex> LgridOS(AgridOS);
+        // Set up scratch arrays for changing resolution
+        casacore::Matrix<casacore::Complex> AgridOS(image.shape().nonDegenerate(),casacore::Complex(0.f));
 
-            // copy image into a complex scratch space
-            casacore::convertArray<casacore::Complex,float>(AgridOS, image);
+        // copy image into a complex scratch space & free memory
+        casacore::setReal(AgridOS, image.nonDegenerate());
+        image.resize();
 
-            // fft to uv. This is what we need to degrid from, so no need to renormalise
-            casacore::LatticeFFT::cfft2d(LgridOS, casacore::True);
+        // fft to uv. This is what we need to degrid from, so no need to renormalise
+        fft2d(AgridOS, true);
 
-            // extract the central portion of the Fourier grid
-            Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+        // extract the central portion of the Fourier grid
+        // We want Agrid to be contiguous, so force a copy by using separate assignment
+        casacore::Matrix<casacore::Complex> Agrid;
+        Agrid = scimath::PaddingUtils::extract(AgridOS,osfactor);
+        // free memory
+        AgridOS.resize();
 
-            // renormalise based on the imminent padding
-            //Agrid /= static_cast<float>(osfactor*osfactor);
-
-            // ifft back to image and return the real part
-            casacore::ArrayLattice<casacore::Complex> Lgrid(Agrid);
-            casacore::LatticeFFT::cfft2d(Lgrid, casacore::False);
+        if (norm) {
+            // renormalise based on unpadding
+            Agrid /= static_cast<float>(osfactor*osfactor);
         }
 
-        image.resize(Agrid.shape());
-        image = real(Agrid);
-
+        // ifft back to image and return the real part
+        fft2d(Agrid, false);
+        image.reference(real(Agrid).addDegenerate(ndim-2));
     }
 
     /// @brief determine sampling to use for nyquistgridding
@@ -1011,33 +1011,63 @@ namespace askap
     // @todo should probably throw an exception if individual cell or image sizes are given
     void SynthesisParamsHelper::setNyquistSampling(const VisMetaDataStats& advice, LOFAR::ParameterSet& parset) {
         // add Nyquist gridding parameters if needed. Wait until after doing others requiring VisMetaDataStats.
-        // @todo should probably throw an exception if individual cell or image sizes are given
         ASKAPCHECK(!parset.isDefined("Images.extraoversampling"), "Images.extraoversampling cannot be set by user");
         if (parset.getBool("Images.nyquistgridding",false) || parset.isDefined("Images.griddingcellsize")) {
 
-            ASKAPCHECK(parset.isDefined("Images.cellsize") && parset.isDefined("Images.shape"),
-            "The global image cellsize and shape are currently required with Nyquist gridding");
-
+            ASKAPCHECK(parset.isDefined("Images.cellsize"),
+            "The global image cellsize is currently required with Nyquist gridding");
             const std::vector<double> cellSize = convertQuantity(parset.getStringVector("Images.cellsize"),"arcsec");
-            std::vector<int> imSize = parset.getInt32Vector("Images.shape");
+            ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
+            ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
+
+            const std::vector<std::string> names = parset.getStringVector("Images.Names");
+            const int n = names.size();
+            ASKAPCHECK(n > 0,"At least one image name needs to be specified");
+            Vector<int> sizes(n);
+            int minSize;
+            if (parset.isDefined("Images.shape")) {
+                auto shape = parset.getInt32Vector("Images.shape");
+                ASKAPCHECK(shape.size()==2,"The image shape needs two dimensions");
+                ASKAPCHECK(shape[0]==shape[1],"The image shape needs to be square for Nyqyuist gridding");
+                sizes = shape[0];
+                minSize = sizes[0];
+            }
+            // check if we have image specific image shapes - use smallest one to set gridding cellsize
+            // and make sure image shapes only differ by integer factors from smallest image
+            // find smallest image and make sure size is sensible
+            for (int i=0; i<n; i++) {
+                if (parset.isDefined("Images."+names[i]+".shape")) {
+                    auto shape = parset.getInt32Vector("Images."+names[i]+".shape");
+                    ASKAPCHECK(shape.size()==2,"The image shape needs two dimensions");
+                    ASKAPCHECK(shape[0]==shape[1],"The image shape needs to be square for Nyqyuist gridding");
+                    sizes[i] = parset.getInt32Vector("Images."+names[i]+".shape")[0];
+                }
+            }
+            minSize = scimath::goodFFTSize(*std::min_element(sizes.begin(),sizes.end()));
+
+            // now make other images multiples of this
+            for (int i=0; i<n; i++) {
+                const int factor = static_cast<int>(ceil(static_cast<double>(sizes[i])/minSize));
+                if (sizes[i] % minSize != 0) {
+                    // adjust each size to be a multiple of minSize
+                    sizes[i] = minSize * factor;
+                    ASKAPLOG_INFO_STR(logger, "Adjusting image size for "<<names[i]<<
+                    " to be a multiple of smallest size ("<<minSize<<") - factor: "<<factor);
+                }
+            }
 
             // need to make sure that extraOsFactor results in an integer number of pixels,
             // which could get complicated for rectangular grids and pixels.
-            ASKAPCHECK(cellSize.size() == 2, "nyquistgridding requires a cellsize vector of length 2");
-            ASKAPCHECK(imSize.size() == 2, "nyquistgridding requires a shape vector of length 2");
-            ASKAPCHECK(cellSize[0] == cellSize[1], "nyquistgridding only set up for square pixels");
 
             std::vector<double> gCellSize(2);
             if (parset.isDefined("Images.griddingcellsize")) {
                 const std::vector<string> gParam = parset.getStringVector("Images.griddingcellsize");
                 ASKAPCHECK(gParam.size() == 2, "nyquistgridding requires a griddingcellsize vector of length 2");
                 gCellSize = SynthesisParamsHelper::convertQuantity(gParam,"arcsec");
-                ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
-                ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
             }
             else {
                 const double uv_max = casacore::max(advice.maxU(), advice.maxV());
-                const double fov = cellSize[0] * imSize[0] * casacore::C::arcsec;
+                const double fov = cellSize[0] * sizes[0] * casacore::C::arcsec;
                 const double wk_max = 6/fov + advice.maxW()*fov;
                 ASKAPASSERT(uv_max > 0);
                 // calculate the resolution in arcsec corresponding to the smallest grid that will fit all the data
@@ -1046,37 +1076,40 @@ namespace askap
                 gCellSize[0] = 0.5 / (uv_max + 2*wk_max) / casacore::C::arcsec;
                 gCellSize[1] = gCellSize[0];
             }
+            ASKAPCHECK(gCellSize[0]==gCellSize[1], "nyquistgridding only set up for square pixels");
+            ASKAPCHECK(gCellSize[0]>=cellSize[0], "griddingcellsize must not be less than cellsize");
 
             // nominal ratio between gridding resolution and cleaning resolution
             ASKAPDEBUGASSERT(cellSize[0] > 0);
             double extraOsFactor = gCellSize[0]/cellSize[0];
             // now tweak the ratio to result in an integer number of pixels and reset the gridding cell size
             ASKAPDEBUGASSERT(extraOsFactor >= 1);
-            int nPix = static_cast<int>(ceil(imSize[0]/extraOsFactor));
-            // also ensure that it is even
-            nPix += nPix % 2;
+            int nPix = static_cast<int>(ceil(minSize/extraOsFactor));
+            // ensure we only use factors of 2, 3, 5 and 7 to avoid slow FFT issues AXA-2430
+            nPix = scimath::goodFFTSize(nPix);
 
             int nSubPix = 0;
             if (parset.isDefined("Images.subshape")) {
+                ASKAPCHECK(sizes.size()==1,"Cannot specify subshape if you have multiple images");
                 const std::vector<int> subSize = parset.getInt32Vector("Images.subshape");
                 ASKAPCHECK(subSize.size() == 2, "nyquistgridding requires a subshape vector of length 2");
                 ASKAPCHECK(subSize[0] > 1, "subshape image size too small: "<<subSize[0]);
-                const int factor = static_cast<int>(ceil(static_cast<double>(imSize[0])/subSize[0]));
-                if (imSize[0] % subSize[0] != 0) {
-                    // adjust imSize to be a mulitple of subSize
-                    imSize[0] = subSize[0] * factor;
-                    ASKAPLOG_INFO_STR(logger, "Adjusting imsize to be a multiple of subsize - factor: "<<factor);
+                const int factor = static_cast<int>(ceil(static_cast<double>(sizes[0])/subSize[0]));
+                if (sizes[0] % subSize[0] != 0) {
+                    // adjust imSize to be a multiple of subSize
+                    sizes[0] = subSize[0] * factor;
+                    ASKAPLOG_INFO_STR(logger, "Adjusting image shape to be a multiple of subshape - factor: "<<factor);
                 }
                 nSubPix = static_cast<int>(ceil(subSize[0]/extraOsFactor));
                 ASKAPDEBUGASSERT(nSubPix > 1);
-                // ensure that it is even
-                nSubPix += nSubPix % 2;
+                // ensure we only use factors of 2, 3, 5 and 7 to avoid slow FFT issues AXA-2430
+                nSubPix = scimath::goodFFTSize(nSubPix);
                 // reset the extra multiplicative factor
                 extraOsFactor = static_cast<double>(subSize[0]) / nSubPix;
                 nPix = nSubPix * factor;
             } else {
                 // reset the extra multiplicative factor
-                extraOsFactor = static_cast<double>(imSize[0]) / nPix;
+                extraOsFactor = static_cast<double>(minSize) / nPix;
             }
 
             ASKAPDEBUGASSERT(extraOsFactor >= 1);
@@ -1088,13 +1121,29 @@ namespace askap
             //  - could require a minimum increase factor (20%, 50%, 100%, etc.)
             if (extraOsFactor > 1.) {
                 ASKAPLOG_INFO_STR(logger, "  Adding new parameter extraoversampling = "<<extraOsFactor);
+                parset.add("Images.extraoversampling", utility::toString(extraOsFactor));
                 ASKAPLOG_INFO_STR(logger, "  Changing cellsize from "<<parset.getStringVector("Images.cellsize")<<
                 " to "<<"["<<gCellSize[0]<<"arcsec,"<<gCellSize[1]<<"arcsec]");
-                ASKAPLOG_INFO_STR(logger, "  Changing shape from "<<parset.getInt32Vector("Images.shape")<<
-                " to "<<"["<<nPix<<","<<nPix<<"]");
-                parset.add("Images.extraoversampling", utility::toString(extraOsFactor));
                 parset.replace("Images.cellsize", "["+utility::toString(gCellSize[0])+"arcsec,"+utility::toString(gCellSize[1])+"arcsec]");
-                parset.replace("Images.shape", "["+utility::toString(nPix)+","+utility::toString(nPix)+"]");
+                const std::string imShape0("Images.shape");
+                bool first = true;
+                for (int i=0; i<n; i++) {
+                    const int factor = static_cast<int>(ceil(static_cast<double>(sizes[i])/minSize));
+                    sizes[i] = nPix * factor;
+                    const std::string imShape("Images."+names[i]+".shape");
+                    if (parset.isDefined(imShape)) {
+                        ASKAPLOG_INFO_STR(logger, "  Changing shape for "<<names[i]<<" from "<<parset.getInt32Vector(imShape)<<
+                        " to "<<"["<<sizes[i]<<","<<sizes[i]<<"]");
+                        parset.replace(imShape, "["+utility::toString(sizes[i])+","+utility::toString(sizes[i])+"]");
+                    } else {
+                        ASKAPLOG_INFO_STR(logger, "  Changing shape for "<<names[i]<<" from "<<parset.getInt32Vector(imShape0)<<
+                        " to "<<"["<<sizes[i]<<","<<sizes[i]<<"]");
+                        if (first) {
+                            parset.replace(imShape0, "["+utility::toString(sizes[i])+","+utility::toString(sizes[i])+"]");
+                            first = false;
+                        }
+                    }
+                }
                 if (nSubPix > 0) {
                     ASKAPLOG_INFO_STR(logger, "  Changing subshape from "<<parset.getInt32Vector("Images.subshape")<<
                     " to "<<"["<<nSubPix<<","<<nSubPix<<"]");
@@ -1103,6 +1152,66 @@ namespace askap
             }
         }
     }
+
+    void SynthesisParamsHelper::adjustCellsize(Array<float> & pixels, double inputInc, double outputInc, 
+        uInt inSize, uInt outSize)
+    {
+        const double tol = 1e-5;
+        ASKAPDEBUGASSERT(inputInc != 0);
+        const double fac = outputInc / inputInc;
+        ASKAPCHECK(fac > 1-tol,"Input cellsize should be smaller than or equal to output cellsize");
+        if (abs(fac-1) > tol) {
+            // try to downsample - need to use exact cellsize ratio but
+            // need to make sure image sizes are good FFT sizes for downsampling
+            // We try padding or cropping the input image
+            bool found = false;
+            uInt n1 = inSize;
+            for (int k = 0; k < inSize/2 && !found ; k++) {
+                // first try padding
+                n1 = scimath::goodFFTSize(inSize + 2 * k);
+                const uInt n2 = scimath::goodFFTSize(static_cast<int>(lround(n1/fac)));
+                found = abs(double(n1)/n2 - fac) < tol;
+                ASKAPLOG_DEBUG_STR(logger,"tried n1="<<n1<<", n2="<<n2<<", fac="<<fac<<", n1/n2="<<double(n1)/n2<<", match="<<found);
+                // try cropping if the input image covers a larger area than the output
+                if (!found && k > 0) {
+                    n1 = scimath::goodFFTSize(inSize - 2 * k);
+                    if (inputInc*n1 > outputInc*outSize) {
+                        const uInt n2 = scimath::goodFFTSize(static_cast<int>(lround(n1/fac)));
+                        found = abs(double(n1)/n2 - fac) < tol;
+                        ASKAPLOG_DEBUG_STR(logger,"tried n1="<<n1<<", n2="<<n2<<", fac="<<fac<<", n1/n2="<<double(n1)/n2<<", match="<<found);
+                    } 
+                }
+            }
+            ASKAPCHECK(found,"No valid pixel ratio found for given cell sizes "<<inputInc<<" and "<<outputInc);
+            // pad or crop the pixels array
+            if (n1 > inSize) {
+                // pad
+                Array<float> imagePixels(IPosition(4,n1,n1,1,1),0.0f);
+                // make reference to central area
+                IPosition blc(4, n1/2 - inSize/2, n1/2 - inSize/2, 0, 0);
+                IPosition trc(4, n1/2 + inSize/2 - 1, n1/2 + inSize/2 - 1, 0, 0);
+                Array<float> subImage = imagePixels(blc, trc);
+                // copy in the pixels
+                subImage = pixels;
+                SynthesisParamsHelper::downsample(imagePixels,fac,false);
+                // replace original array with the downsampled array
+                pixels.reference(imagePixels);
+            } else if (n1 < inSize) {
+                // crop
+                IPosition blc(4, inSize/2 - n1/2, inSize/2 - n1/2, 0, 0);
+                IPosition trc(4, inSize/2 + n1/2 - 1, inSize/2 + n1/2 - 1, 0, 0);
+                Array<float> imagePixels;
+                // make copy of central area
+                imagePixels = pixels(blc, trc);
+                SynthesisParamsHelper::downsample(imagePixels,fac,false);
+                // replace original array with the downsampled array
+                pixels.reference(imagePixels);
+            } else {
+                SynthesisParamsHelper::downsample(pixels,fac,true);
+            }
+        }
+    }
+
 
     boost::shared_ptr<casacore::TempImage<float> >
     SynthesisParamsHelper::tempImage(const askap::scimath::Params& ip,
@@ -1175,9 +1284,7 @@ namespace askap
       return axes.directionAxis();
 
     }
-    void SynthesisParamsHelper::copyImageParameters(askap::scimath::Params& sourceParam,  askap::scimath::Params& sinkParam) {
 
-    }
     void SynthesisParamsHelper::copyImageParameter(askap::scimath::Params& sourceParam,  askap::scimath::Params& sinkParam, const string& name) {
 
       ASKAPDEBUGTRACE("SynthesisParamsHelper::copyImageParameter");
@@ -1200,9 +1307,9 @@ namespace askap
       boost::shared_ptr<casacore::TempImage<float> > outRef = tempImage(sinkParam,name); // outRef
 
       // regridder
-      casacore::ImageRegrid<float> regridder;
+      askap::imagemath::LinmosImageRegrid<float> regridder;
 
-      const casacore::Interpolate2D::Method method = casacore::Interpolate2D::CUBIC;
+      const askap::imagemath::Interpolate2D::Method method = askap::imagemath::Interpolate2D::CUBIC;
       const casacore::uInt decimate = 1;
       casacore::IPosition itsAxes = IPosition::makeAxisPath(outRef->shape().nonDegenerate().nelements());
 
@@ -1210,7 +1317,7 @@ namespace askap
       // output array. I dont think it combines - I think it just replaces. The output can be empty.
 
       regridder.regrid(*outRef, method,
-                          itsAxes, *inRef, false, decimate,true,true,true);
+                          itsAxes, *inRef, false, decimate,true,true);
 
       // now we have to insert the regridded image into the pixels of the output ...
       update(sinkParam,name,*outRef);
@@ -1541,7 +1648,7 @@ namespace askap
            // we have to figure out the name
            psfName = findPSF(ip);
        }
-       ASKAPCHECK(psfName != "", "Unable to find psf paramter to fit, params="<<ip);
+       ASKAPCHECK(psfName != "", "Unable to find psf parameter to fit, params="<<ip);
        ASKAPLOG_INFO_STR(logger, "Fitting 2D Gaussian into PSF parameter "<<psfName);
 
        casacore::Array<imtype> psfArray = ip.valueT(psfName);
@@ -1796,7 +1903,7 @@ namespace askap
 
        // DDCALTAG COMPTAG -- link this component to its source ID
        //ASKAPLOG_INFO_STR(logger, "DDCALTAG linking component "<< compName<<
-       //    " to source "<<params->scalarValue("sourceID."+srcName));
+       //   " to source "<<params->scalarValue("sourceID."+srcName));
        params->add("source."+compName, params->scalarValue("sourceID."+srcName));
 
        // now iterate through all parameters

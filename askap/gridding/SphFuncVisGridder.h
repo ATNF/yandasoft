@@ -50,7 +50,7 @@ namespace askap
 		/// @ingroup gridding
 		class SphFuncVisGridder : public TableVisGridder
 		{
-			public:
+                      public:
 
 				/// @brief Standard two dimensional gridding
 				/// @param[in] alpha spheroidal function alpha value
@@ -82,6 +82,17 @@ namespace askap
 			    /// @return a shared pointer to the gridder instance
 			    static IVisGridder::ShPtr createGridder(const LOFAR::ParameterSet& parset);
 
+				/// @brief Correct for gridding convolution function
+				/// @details Doing the Spheroidal grid correction is used in
+				/// various places, this static function makes it more widely available
+				/// @param image image to be corrected
+				/// @param[in] sf spheroidal function to use
+				/// @param[in] support support size in pixels (spheroidal
+				/// function with m=2*support will be generated)
+				/// @param[in] interpolate if true, interpolate the edge values
+				static void correctConvolution(casacore::Array<imtype>& image,
+					scimath::SpheroidalFunction& sf, int support = 3,
+					bool interpolate = true);
 
 			protected:
 				/// @brief Initialize the convolution function
@@ -105,11 +116,6 @@ namespace askap
 				/// @brief calculator of spheroidal function
 				scimath::SpheroidalFunction itsSphFunc;
 
-				/// @brief whether to iterpolate the spheroidal function at nu=1
-                /// @details The function is undefined and set to zero at nu=1,
-                /// but that is not the numerical limit. Setting itsInterp true
-                /// will use neighbouring values to estimate it (to 2nd order).
-				bool itsInterp;
 
 				/// @brief iterpolate the spheroidal function at nu=1
                 /// @details The function is undefined and set to zero at nu=1,
@@ -117,14 +123,32 @@ namespace askap
                 /// will use neighbouring values to estimate it (to 2nd order).
                 /// @param[in] func vector to be interpolated
                 template<typename T>
-                void interpolateEdgeValues(casacore::Vector<T> &func);
+                static void interpolateEdgeValues(casacore::Vector<T> &func);
 
-			private:
+                /// @brief check whether to interpolate spheroidal function
+                /// @return the value of itsInterp
+                /// @note there is a bit of the technical debt around how the interpolation
+                /// is controlled. To limit the spread of the issue encapsulate all access in
+                /// this method to avoid accessing data member from derived classes.
+                /// The setter method can be written if needed, although I (MV) sense that
+                /// the logic should be moved upstream into scimath.
+                inline bool doInterpolation() const { return itsInterp;}
 
-				/// @brief prolate spheroidal alpha parameter
+          private:
+                /// @brief whether to iterpolate the spheroidal function at nu=1
+                /// @details The function is undefined and set to zero at nu=1,
+                /// but that is not the numerical limit. Setting itsInterp true
+                /// will use neighbouring values to estimate it (to 2nd order).
+                /// @note We probably can get rid of this data member as it is only set to true by the looks of it.
+                /// I (MV) will make it const to highlight the fact that we don't change it and channel all access to it
+                /// via doInterpolation method to make sure no important use case has been overlooked. We need to clear this
+                /// technical debt at some point.
+                const bool itsInterp;
+
+                /// @brief prolate spheroidal alpha parameter
                 double itsAlpha;
 
-		};
+          };
 
 	}
 }

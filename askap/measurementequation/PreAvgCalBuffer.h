@@ -143,7 +143,9 @@ public:
    virtual const casacore::Vector<casacore::uInt>& feed2() const;
 
    /// Cube of flags corresponding to the output of visibility() 
-   /// @return a reference to nRow x nChannel x nPol cube with flag 
+   /// @depreciated a reference to nRow x nChannel x nPol cube with flag 
+   ///         information. If True, the corresponding element is flagged bad.
+   /// @return a reference to nPol x nChannel x nRow cube with flag 
    ///         information. If True, the corresponding element is flagged bad.
    virtual const casacore::Cube<casacore::Bool>& flag() const;
 
@@ -222,7 +224,8 @@ private:
    /// @note beam cross-products are not supported here
    casacore::Vector<casacore::uInt> itsBeam;
    
-   /// @brief flags for all rows, channels and polarisations
+   /// @depreciated flags for all rows, channels and polarisations
+   /// @brief flags for all polarisations, channels and rows
    casacore::Cube<casacore::Bool> itsFlag;
    
    /// @brief types of polarisation products

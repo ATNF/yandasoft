@@ -158,13 +158,15 @@ namespace askap {
             itsDM->configure(parset);
 
             // Get the beam information
-            const std::vector<float> beam = parset.getFloatVector("beam");
-            ASKAPCHECK(beam.size() == 3u, "Need three elements for beam. You have " << beam);
-            ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam[0] <<
-                              " x " << beam[1] << " pixels at position angle " << beam[2] << " degrees");
-            itsBMaj = beam[0];
-            itsBMin = beam[1];
-            itsBPa = beam[2];
+            if (parset.isDefined("beam")) {
+                const std::vector<float> beam = parset.getFloatVector("beam");
+                ASKAPCHECK(beam.size() == 3u, "Need three elements for beam. You have " << beam);
+                ASKAPLOG_INFO_STR(decbaselogger, "Restore solver will convolve with the 2D gaussian: " << beam[0] <<
+                                  " x " << beam[1] << " pixels at position angle " << beam[2] << " degrees");
+                itsBMaj = beam[0];
+                itsBMin = beam[1];
+                itsBPa = beam[2];
+            }
         }
 
         template<class T, class FT>
@@ -193,10 +195,10 @@ namespace askap {
         template<class T, class FT>
         void DeconvolverBase<T, FT>::updateDirty(const Array<T>& newDirty, const uInt term)
         {
+            ASKAPLOG_DEBUG_STR(decbaselogger,"updateDirty(dirty,term)");
             ASKAPCHECK(term < nTerms(), "Term " << term << " greater than allowed " << nTerms());
-            if (!newDirty.shape().nonDegenerate().conform(dirty(term).shape())) {
-                throw(AskapError("Updated dirty image has different shape"));
-            }
+            ASKAPCHECK(dirty(term).nelements()==0 || newDirty.shape().nonDegenerate()==dirty(term).shape(),
+                "Updated dirty image has different shape from original");
             itsDirty(term) = newDirty.nonDegenerate();
             validateShapes();
         }
@@ -204,14 +206,12 @@ namespace askap {
         template<class T, class FT>
         void DeconvolverBase<T, FT>::updateDirty(const Vector<Array<T> >& dirtyVec)
         {
-            if (dirtyVec.nelements() != itsDirty.nelements()) {
-                throw(AskapError("Updated dirty image has different shape"));
-            }
-            itsDirty.resize(dirtyVec.nelements());
+            ASKAPLOG_DEBUG_STR(decbaselogger,"updateDirty(dirtyVec)");
+            ASKAPCHECK(dirtyVec.nelements() == itsDirty.nelements(),
+                "Number of taylor terms in updated dirty image differs from original");
             for (uInt term = 0; term < dirtyVec.nelements(); term++) {
-                if (!dirtyVec(term).nonDegenerate().shape().conform(itsDirty(term).nonDegenerate().shape())) {
-                    throw(AskapError("Updated dirty image has different shape from original"));
-                }
+                ASKAPCHECK(dirty(term).nelements()==0 || dirtyVec(term).shape().nonDegenerate()==dirty(term).shape(),
+                    "Updated dirty image has different shape from original");
                 itsDirty(term) = dirtyVec(term).nonDegenerate();
             }
             validateShapes();
@@ -351,27 +351,22 @@ namespace askap {
 
             // Don't reorder harmonics as with the original wrapper (hence, pass false to the wrapper), it seems possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
-            scimath::FFT2DWrapper<FT> fft2d(false);
+            // Limit number of fft threads to 8 (more is slower for our fft sizes)
+            scimath::FFT2DWrapper<FT> fft2d(true,8); // MHW changed to true - work image was shifted by half size, circularly in x and y
 
             for (uInt term = 0; term < nTerms(); ++term) {
                  const Array<T>& thisTermPSF = psf(term);
                  xfr.resize(thisTermPSF.shape());
                  xfr.set(0.);
                  casacore::setReal(xfr, thisTermPSF);
-                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                 //scimath::fft2d(xfr, true);
                  fft2d(xfr, true);
                  // Find residuals for current model model
                  const Array<T>& thisTermModel = model(term);
                  work.resize(thisTermModel.shape());
                  work.set(0.);
                  casacore::setReal(work, thisTermModel);
-                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                 //scimath::fft2d(work, true);
                  fft2d(work, true);
                  work *= xfr;
-                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                 //scimath::fft2d(work, false);
                  fft2d(work, false);
                  dirty(term) -= real(work);
             }
@@ -424,10 +419,9 @@ namespace askap {
 
             // Don't reorder harmonics as with the original wrapper (hence, pass false to the wrapper), it seems possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
-            scimath::FFT2DWrapper<FT> fft2d(false);
+            // Limit number of fft threads to 8 (more is slower for our fft sizes)
+            scimath::FFT2DWrapper<FT> fft2d(true,8); //MHW changed to true - components were restored in corners instead of centre
 
-            // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-            //scimath::fft2d(gaussian, true);
             fft2d(gaussian, true);
 
             ASKAPLOG_INFO_STR(decbaselogger, "Volume of PSF = " << volume << " pixels");
@@ -436,12 +430,8 @@ namespace askap {
                 Matrix<FT> vis(model(term).shape());
                 vis.set(FT(0.0));
                 casacore::setReal(vis, model(term));
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(vis, true);
                 fft2d(vis, true);
                 vis *= gaussian;
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(vis, false);
                 fft2d(vis, false);
                 restored(term).resize(model(term).shape());
                 restored(term) = dirty(term) + real(vis);
@@ -500,6 +490,18 @@ namespace askap {
             }
             return subPsfShape;
         }
+
+        template<class T, class FT>
+        void DeconvolverBase<T, FT>::releaseMemory()
+        {
+            uInt memory = 0;
+            for (uInt term = 0; term < nTerms(); term++) {
+                memory += sizeof(T) * itsDirty(term).nelements();
+                itsDirty(term).resize();
+            }
+            ASKAPLOG_DEBUG_STR(decbaselogger,"DeconvolverBase released "<<memory/1024/1024<<" MB");
+        }
+
     } // namespace synthesis
 
 } // namespace askap

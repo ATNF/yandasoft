@@ -227,6 +227,7 @@ IVisGridder::ShPtr VisGridderFactory::make(const LOFAR::ParameterSet &parset)
         }
         const bool clearGrids = parset.getBool("gridder.cleargrids",false);
         if (tvg && clearGrids) {
+          ASKAPLOG_INFO_STR(logger, "Will clear the grids each major cycle");
           tvg->doClearGrid(clearGrids);
         }
     }

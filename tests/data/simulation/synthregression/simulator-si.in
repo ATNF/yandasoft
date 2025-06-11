@@ -1,0 +1,54 @@
+Csimulator.sources.names                        =       [field1]
+Csimulator.sources.field1.direction             =       [19h39m25, -63.42.45.00, J2000]
+Csimulator.sources.field1.components            =       [src1,src2]
+Csimulator.sources.src1.flux.i                  = 1.0 
+Csimulator.sources.src1.flux.spectral_index     = 1.0 
+Csimulator.sources.src1.flux.ref_freq           = 1.2e9
+Csimulator.sources.src1.direction.ra            = 0.000970
+Csimulator.sources.src1.direction.dec           = 0.000000 
+Csimulator.sources.src2.flux.i                  = 1.0 
+Csimulator.sources.src2.flux.spectral_index     = -1.0 
+Csimulator.sources.src2.flux.ref_freq           = 1.2e9
+Csimulator.sources.src2.direction.ra            = -0.000970
+Csimulator.sources.src2.direction.dec           = 0.000000
+
+
+# 
+# Define the antenna locations, feed locations, and spectral window definitions
+# 
+Csimulator.antennas.definition                  =  A27CR3P6B.in
+Csimulator.feeds.names                          = [feed0] 
+Csimulator.feeds.feed0                          = [0.0, 0.0]
+ 
+Csimulator.spws.names                      =       [Wide0]
+Csimulator.spws.Wide0  =[ 5, 1.1GHz, 50MHz, "XX XY YX YY"]
+# 
+# Standard settings for the simulaton step
+# 
+Csimulator.simulation.blockage                  =       0.01 
+Csimulator.simulation.elevationlimit            =       8deg
+Csimulator.simulation.autocorrwt                =       0.0
+Csimulator.simulation.usehourangles             =       True
+Csimulator.simulation.referencetime             =       [2000Mar07, UTC]
+##
+Csimulator.simulation.integrationtime           =       10s
+#
+# Observe field1 for 5 minutes with a single channel spectral window
+#
+Csimulator.observe.number                       =       1
+Csimulator.observe.scan0                        =       [field1, Wide0, -0.0416667h, 0.0416667h]
+#
+#
+##
+Csimulator.gridder                                 = WProject
+Csimulator.gridder.WProject.wmax                   = 25000
+Csimulator.gridder.WProject.nwplanes               = 129
+Csimulator.gridder.WProject.oversample             = 16
+Csimulator.gridder.WProject.maxsupport             = 1024
+# optional corruption due to calibration effect
+Csimulator.corrupt                              = false
+# optional noise addition
+Csimulator.noise                                = true
+Csimulator.noise.variance = 0.1
+Csimulator.noise.seed1 = 11
+Csimulator.noise.seed2 = 101

@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 
-set (VERSION "1.9.0")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(VERSION "1.17.1")
 project(yandasoft VERSION ${VERSION} LANGUAGES C CXX)
+
 
 # ASKAP Integration (askapsoft)
 #
@@ -131,8 +135,8 @@ FetchContent_Declare(base-imagemath
 
 # -------- base-askapparallel --------
 FetchContent_Declare(base-askapparallel
-  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-askapparallel.git
-  GIT_TAG           ${BASE_ASKAPPARRALLEL_TAG}
+  GIT_REPOSITORY    git@github.com:alxndrwllmsn/base-askapparallel.git
+  GIT_TAG           ${BASE_ASKAPPARALLEL_TAG}
   SOURCE_DIR        base-askapparallel
 )
 
@@ -145,7 +149,7 @@ FetchContent_Declare(base-scimath
 
 # -------- base-accessors --------
 FetchContent_Declare(base-accessors
-  GIT_REPOSITORY    ${ASKAPSDP_GIT_URL}/base-accessors.git
+  GIT_REPOSITORY    git@github.com:alxndrwllmsn/base-accessors.git
   GIT_TAG           ${BASE_ACCESSORS_TAG}
   SOURCE_DIR        base-accessors
 )
@@ -153,7 +157,7 @@ FetchContent_Declare(base-accessors
 message (STATUS "Fetching sub repos")
 FetchContent_MakeAvailable(lofar-common lofar-blob
                            base-askap base-logfilters base-imagemath base-askapparallel base-scimath
-                           base-accessors 
+                           base-accessors
 )
 message (STATUS "Done - Fetching sub repos")
 
@@ -162,10 +166,10 @@ configure_file(askap_synthesis.cc.in askap/askap_synthesis.cc)
 # Required Version of ASKAP dependencies is the MAJOR and MINOR version
 # of this package. This allows the PATCH versions to change on everything
 # but the version number cannot be less or more than the current version
-# 
+#
 set(REQUIRED_VERSION "${VERSION_MAJOR}.${VERSION_MINOR}")
 
-option (CXX11 "Compile as C++11 if possible" YES)
+option (CXX11 "Compile as C++11 if possible" NO)
 # Detect if the compiler supports C++11 if we want to use it.
 if (CXX11)
     check_cxx_compiler_flag(-std=c++11 HAS_CXX11)
@@ -214,9 +218,9 @@ option (BUILD_SHARED_LIBS "" YES)
             # on OSX, the app/executable may not run because it can not find
             # the shared libraries (e.g: ICE and/or log4cxx libraries etc).
             # At least this is what I saw on my MacOS laptop when I tried to
-            # get this repo to build and run. I could be wrong but I assume 
+            # get this repo to build and run. I could be wrong but I assume
             # this is because of the way I installed log4cxx on my laptop.
-            # I got the old version of log4cxx (0.11.0) while brew install 
+            # I got the old version of log4cxx (0.11.0) while brew install
             # will install log4cxx (0.12.0).
             list(APPEND CMAKE_INSTALL_RPATH "${log4cxx_LIBRARY}" "${ICE_LIB}")
         endif()
@@ -249,7 +253,7 @@ if (ENABLE_OPENMP)
     endif (OPENMP_FOUND)
 endif()
 
-if (CASACORE3 OR CXX11)
+if (CXX11)
 	set(CMAKE_CXX_STANDARD 11)
 	set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
@@ -265,6 +269,7 @@ macro(add_sources_to_yandasoft)
 endmacro()
 add_subdirectory(askap/deconvolution)
 add_subdirectory(askap/distributedimager)
+add_subdirectory(askap/flagging)
 add_subdirectory(askap/gridding)
 add_subdirectory(askap/measurementequation)
 add_subdirectory(askap/messages)
@@ -280,18 +285,18 @@ set_target_properties(yandasoft PROPERTIES
 add_library(askap::yandasoft ALIAS yandasoft)
 
 target_link_libraries(yandasoft PUBLIC
-	lofar::Common
-	lofar::Blob
-	askap::askap
-	askap::scimath
-	askap::imagemath
-	askap::accessors
-	askap::parallel
-	${log4cxx_LIBRARY}
-	${CASACORE_LIBRARIES}
-	${COMPONENTS_LIBRARY}
-	${Boost_LIBRARIES}
-        ${GSL_LIBRARIES}
+  lofar::Common
+  lofar::Blob
+  askap::askap
+  askap::scimath
+  askap::imagemath
+  askap::accessors
+  askap::parallel
+  ${log4cxx_LIBRARY}
+  ${CASACORE_LIBRARIES}
+  ${COMPONENTS_LIBRARY}
+  ${Boost_LIBRARIES}
+  ${GSL_LIBRARIES}
 )
 
 target_compile_definitions(yandasoft PUBLIC
@@ -307,6 +312,7 @@ target_include_directories(yandasoft PUBLIC
   ${COMPONENTS_INCLUDE_DIRS}
   ${log4cxx_INCLUDE_DIRS}
   ${CASACORE_INCLUDE_DIRS}
+  ${GSL_INCLUDE_DIRS}
 )
 
 if (MPI_FOUND)
@@ -368,8 +374,10 @@ if (BUILD_TESTING)
 	endif()
 	enable_testing()
 	add_subdirectory(tests/deconvolution)
-	add_subdirectory(tests/gridding)
+    add_subdirectory(tests/flagging)
+    add_subdirectory(tests/gridding)
 	add_subdirectory(tests/measurementequation)
 	add_subdirectory(tests/opcal)
+	add_subdirectory(tests/distributedimager)
+	add_subdirectory(tests/utils)
 endif ()
-

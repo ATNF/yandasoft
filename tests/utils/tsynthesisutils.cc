@@ -1,8 +1,6 @@
-/// @file MSGroupInfo.h
+/// @file tsynthesisutils.cc
 ///
-/// Class to run the creation of a new cube
-///
-/// @copyright (c) 2013 CSIRO
+/// @copyright (c) 2013-2023 CSIRO
 /// Australia Telescope National Facility (ATNF)
 /// Commonwealth Scientific and Industrial Research Organisation (CSIRO)
 /// PO Box 76, Epping NSW 1710, Australia
@@ -24,48 +22,21 @@
 /// along with this program; if not, write to the Free Software
 /// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ///
-/// @author Ben Humphreys <Ben.Humphreys@csiro.au>
-///
-#ifndef ASKAP_CP_SIMAGER_MSGROUPINFO_H
-#define ASKAP_CP_SIMAGER_MSGROUPINFO_H
-
-// System includes
-#include <string>
-#include <vector>
+/// @author Ben Humphreys <ben.humphreys@csiro.au>
 
 // ASKAPsoft includes
-#include <casacore/casa/Quanta.h>
+#include "askap/askap/AskapTestRunner.h"
 
-namespace askap {
-namespace cp {
+// Test includes
+#include "CleanUtilsTest.h"
+#include "BandpassDelayHelperTest.h"
 
-class MSGroupInfo {
-    public:
-        /// Constructor
-        MSGroupInfo();
+int main(int argc, char *argv[])
+{
+    askapdev::testutils::AskapTestRunner runner(argv[0]);
+    runner.addTest(askap::utils::CleanUtilsTest::suite());
+    runner.addTest(askap::utils::BandpassDelayHelperTest::suite());
+    bool wasSucessful = runner.run();
 
-        /// Constructor
-        MSGroupInfo(const std::vector<std::string>& ms);
-
-        /// Destructor
-        ~MSGroupInfo();
-
-        casacore::uInt getNumChannels(const casacore::uInt n) const;
-
-        casacore::uInt getTotalNumChannels() const;
-
-        casacore::Quantity getFirstFreq() const;
-
-        casacore::Quantity getFreqInc() const;
-
-    private:
-        std::vector<casacore::uInt> itsNumChannels;
-        casacore::uInt itsTotalNumChannels;
-        casacore::Quantity itsFirstFreq;
-        casacore::Quantity itsFreqInc;
-};
-
+    return wasSucessful ? 0 : 1;
 }
-}
-
-#endif

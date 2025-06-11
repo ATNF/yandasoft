@@ -1,7 +1,7 @@
 # Override Cmake's default flags for release mode.
 # This is done because the default flags suppressed asserts.
-set ( CMAKE_CXX_FLAGS_RELEASE  "-O3"          CACHE  STRING  "Define flags for release"       FORCE )
-set ( CMAKE_C_FLAGS_RELEASE    "-O3"          CACHE  STRING  "Define flags for release"       FORCE )
+set ( CMAKE_CXX_FLAGS_RELEASE  "-O3 -DASKAP_DEBUG"          CACHE  STRING  "Define flags for release"       FORCE )
+set ( CMAKE_C_FLAGS_RELEASE    "-O3 -DASKAP_DEBUG"          CACHE  STRING  "Define flags for release"       FORCE )
 
 # The usual settings
 set ( CMAKE_BUILD_TYPE   Release              CACHE  STRING  "Specify the release type"       FORCE )

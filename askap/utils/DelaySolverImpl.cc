@@ -121,7 +121,8 @@ void DelaySolverImpl::process(const accessors::IConstDataAccessor &acc)
    }
    ASKAPCHECK(pol2use < stokes.nelements(), "Unable to find "<<casa::Stokes::name(itsPol)<<" polarisation product in the data");
    
-   const casa::Matrix<bool>& flags = acc.flag().xyPlane(pol2use);   
+   //const casa::Matrix<bool>& flags = acc.flag().xyPlane(pol2use);   
+   const casa::Matrix<bool>& flags = acc.flag().yzPlane(pol2use);   
    if (checkAllFlagged(flags)) {
        return;
    }
@@ -205,10 +206,10 @@ void DelaySolverImpl::process(const accessors::IConstDataAccessor &acc)
        }
    }
    
-   const casa::Matrix<casa::Complex> vis = acc.visibility().xyPlane(pol2use);
+   const casa::Matrix<casa::Complex> vis = acc.visibility().yzPlane(pol2use);
    for (casa::uInt row = 0; row < acc.nRow(); ++row) {
-        const casa::Vector<casa::Complex> thisRowVis = vis.row(row);
-        const casa::Vector<bool> thisRowFlags = flags.row(row);
+        const casa::Vector<casa::Complex> thisRowVis = vis.column(row);
+        const casa::Vector<bool> thisRowFlags = flags.column(row);
         ASKAPDEBUGASSERT(itsSpcBuffer.nrow() == acc.nRow());
         ASKAPDEBUGASSERT(itsAvgCounts.nrow() == acc.nRow());        
         casa::Vector<casa::Complex> thisBufRowVis = itsSpcBuffer.row(row);

@@ -438,6 +438,8 @@ static void merge(const LOFAR::ParameterSet &parset) {
         float itsCutoff = 0.01;
 
         if (parset.isDefined("cutoff")) itsCutoff = parset.getFloat("cutoff");
+        if (parset.isDefined("finalcutoff")) itsCutoff = parset.getFloat("finalcutoff");
+
 
         /// This logic is in addition to the mask in the accumulator
         /// which works on an individual beam weight
@@ -560,7 +562,7 @@ static void merge(const LOFAR::ParameterSet &parset) {
 class LinmosApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             StatReporter stats;
             LOFAR::ParameterSet subset(config().makeSubset("linmos."));
@@ -571,7 +573,7 @@ class LinmosApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

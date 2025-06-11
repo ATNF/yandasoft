@@ -54,6 +54,7 @@ namespace askap
       CPPUNIT_TEST(testPartialNames);
       CPPUNIT_TEST(testMakeFacet);
       CPPUNIT_TEST(testMakeTaylor);
+      CPPUNIT_TEST(testReplaceLeadingWordWith);
       CPPUNIT_TEST_SUITE_END();
     protected:
     
@@ -177,6 +178,13 @@ namespace askap
           CPPUNIT_ASSERT_EQUAL(std::string(".taylor.0"), iph2.suffix());          
           CPPUNIT_ASSERT(!iph2.isFacet());
           CPPUNIT_ASSERT(iph2.isTaylorTerm());
+       }
+
+       void testReplaceLeadingWordWith() {
+          CPPUNIT_ASSERT_EQUAL(std::string("uvweight.cena.taylor.0"), ImageParamsHelper::replaceLeadingWordWith("image.cena.taylor.0", "image.", "uvweight."));
+          CPPUNIT_ASSERT_EQUAL(std::string("replace"), ImageParamsHelper::replaceLeadingWordWith("image", "image", "replace"));
+          CPPUNIT_ASSERT_THROW(ImageParamsHelper::replaceLeadingWordWith("something","image", "replace"), AskapError);
+          CPPUNIT_ASSERT_THROW(ImageParamsHelper::replaceLeadingWordWith("notimage","image", "replace"), AskapError);
        }
        
 

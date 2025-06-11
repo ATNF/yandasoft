@@ -1,0 +1,83 @@
+# delay solver parameters
+
+# polarisation product to use
+stokes = XX
+
+# data are averaged down to the given resolution (in Hz), no change if the current 
+# resolution is already coarser than this value
+resolution = 37037.0370370370
+
+# if true, lags are used to estimate delays approximately before averaging data to the given resolution
+uselags = true
+
+# beam to work with
+beam = 0
+
+# spectral channels with the amplitude greater than this value in the original unsmoothed 
+# dataset are flagged
+cutoff = 5000
+
+# if true AK01-AK03 baseline is excluded from the solution
+exclude13 = false
+
+# path to scheduling blocks archive, can be overridden via command line parameter
+sbpath = .
+
+# the following parameters are allowed only if the scheduling block ID is not given as a command line parameter
+
+# measurement set name
+#ms = /scratch/askap/askapops/archive/askap-scheduling-blocks/199/2014-07-10_100857.ms
+
+# current fixed delay parameters 
+#cp.ingest.tasks.FringeRotationTask.params.fixeddelays = [-235.15394, 0, -367.101819, -233.903375, 227.404404, -639.975888]
+
+refant = 0
+
+# optional threshold for the delay update. The application can either give a warning or fail if the largest correction exceeds the
+# given threshold.
+delaythreshold = 100ns
+
+# optional parameter to control whether to fail the application if the largest delay update exceeds the given threshold. if true, the
+# application would fail and so the small updates would be assured (this is handy to have operationally, where no human in involved in the
+# decision making; on the other hand, various commissioning tasks may require to bypass this check) 
+#smallupdates = true
+
+common.antennas = [ant1,ant2,ant3,ant4,ant5,ant6,ant7,ant8,ant9,ant10,ant11,ant12,ant13,ant14,ant15,ant16,ant17,ant18,ant19,ant20,ant21,ant22,ant23,ant24,ant25,ant26,ant27,ant28,ant29,ant30,ant31,ant32,ant33,ant34,ant35,ant36]
+cp.ingest.baselinemap.antennaidx = [ak01,ak02,ak03,ak04,ak05,ak06,ak07,ak08,ak09,ak10,ak11,ak12,ak13,ak14,ak15,ak16,ak17,ak18,ak19,ak20,ak21,ak22,ak23,ak24,ak25,ak26,ak27,ak28,ak29,ak30,ak31,ak32,ak33,ak34,ak35,ak36]
+common.antenna.ant1.delay = -139.746018ns
+common.antenna.ant10.delay = 672.60769ns
+common.antenna.ant11.delay = -215.178991ns
+common.antenna.ant12.delay = -968.249265ns
+common.antenna.ant13.delay = -1043.17735ns
+common.antenna.ant14.delay = 2792.83157ns
+common.antenna.ant15.delay = 6010.0977ns
+common.antenna.ant16.delay = 3527.9516ns
+common.antenna.ant17.delay = 3656.39039ns
+common.antenna.ant18.delay = 945.509824ns
+common.antenna.ant19.delay = 385.317648ns
+common.antenna.ant2.delay = -148.137677ns
+common.antenna.ant20.delay = -1553.12052ns
+common.antenna.ant21.delay = -802.992131ns
+common.antenna.ant22.delay = 64.4611236ns
+common.antenna.ant23.delay = 3737.33767ns
+common.antenna.ant24.delay = 5449.71582ns
+common.antenna.ant25.delay = 4418.83592ns
+common.antenna.ant26.delay = 2886.27887ns
+common.antenna.ant27.delay = 7048.83692ns
+common.antenna.ant28.delay = 5153.50754ns
+common.antenna.ant29.delay = 2492.50358ns
+common.antenna.ant3.delay = -331.104399ns
+common.antenna.ant30.delay = 2921.04104ns
+common.antenna.ant31.delay = 7815.92928ns
+common.antenna.ant32.delay = 19428.878ns
+common.antenna.ant33.delay = 14950.6929ns
+common.antenna.ant34.delay = 25456.5259ns
+common.antenna.ant35.delay = 12569.3103ns
+common.antenna.ant36.delay = 14920.2194ns
+common.antenna.ant4.delay = 33.2619578ns
+common.antenna.ant5.delay = 309.449022ns
+common.antenna.ant6.delay = -941.032018ns
+common.antenna.ant7.delay = 415.167741ns
+common.antenna.ant8.delay = 1868.52407ns
+common.antenna.ant9.delay = 1179.81445ns
+

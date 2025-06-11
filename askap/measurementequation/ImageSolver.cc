@@ -115,9 +115,10 @@ namespace askap
 
         ASKAPCHECK(maxDiag>0., "Maximum diagonal element is supposed to be positive, check that at least some data were gridded, maxDiag="
                    <<maxDiag<<" sumDiag="<<sumDiag);
-	ASKAPLOG_INFO_STR(logger, "Solid angle = " << sumDiag/maxDiag << " pixels");
+    	ASKAPLOG_INFO_STR(logger, "Solid angle = " << sumDiag/maxDiag << " pixels");
 
         const double cutoff=tolerance*maxDiag;
+        const bool haveMask = mask && mask->nelements()>0;
 
 	    /// The PSF is just an approximation calculated from a subset of the data. So we
 	    /// we allowed to normalize the peak to unity.
@@ -146,7 +147,7 @@ namespace askap
         casacore::IPosition vecShape(1,diag.nelements());
         casacore::Vector<float> dirtyVector(dirty.reform(vecShape));
 
-        if(mask) {
+        if(haveMask) {
           ASKAPLOG_DEBUG_STR(logger, "Deconvolution will be based on signal to noise ratio");
         }
         else {
@@ -155,12 +156,14 @@ namespace askap
 
         ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector before normalisation "<<casacore::max(dirtyVector));
 
-        casacore::Vector<float> maskVector(mask ? mask->reform(vecShape) : casacore::Vector<float>());
+        casacore::Vector<float> maskVector(haveMask ? mask->reform(vecShape) : casacore::Vector<float>());
+        bool allOne = true;
         for (casacore::uInt elem=0; elem<diag.nelements(); ++elem) {
-             if(diag(elem)>cutoff) {
+             if (diag(elem)>cutoff) {
                 dirtyVector(elem)/=diag(elem);
-                if (mask) {
+                if (haveMask) {
                     maskVector(elem)=sqrt(diag(elem)/float(maxDiag));
+                    allOne &= (maskVector(elem)==1);
                 }
                 nAbove++;
              } else {
@@ -171,18 +174,25 @@ namespace askap
                 } else {
                     dirtyVector(elem)/=maxDiag;
                 }
-                if (mask) {
+                if (haveMask) {
                     if (zeroWeightCutoffMask()) {
                         maskVector(elem)=0.0;
                     } else {
                         maskVector(elem)=sqrt(tolerance);
                     }
+                    allOne = false;
                 } // if mask required
              }  // if element > cutoff
         } // loop over elements (image pixels)
         ASKAPLOG_INFO_STR(logger, "Normalized dirty image by truncated weights image");
-        if (mask) {
-            ASKAPLOG_INFO_STR(logger, "Converted truncated weights image to clean mask");
+        if (haveMask) {
+            if (allOne) {
+                // no need for a mask
+                ASKAPLOG_INFO_STR(logger, "Not using a clean mask");
+                mask->resize(casacore::IPosition(mask->ndim(),0));
+            } else {
+                ASKAPLOG_INFO_STR(logger, "Converted truncated weights image to clean mask");
+            }
         } // if mask required
         ASKAPLOG_INFO_STR(logger, 100.0*float(nAbove)/float(diag.nelements()) << "% of the pixels were above the cutoff " << cutoff);
         ASKAPLOG_DEBUG_STR(logger,"Peak of the dirty vector after normalisation "<<casacore::max(dirtyVector));
@@ -389,11 +399,12 @@ namespace askap
               const casacore::IPosition &pos)
     {
       ASKAPDEBUGTRACE("ImageSolver::saveArrayIntoParameter");
-
-      ASKAPDEBUGASSERT(imgName.find("image")==0);
-      ASKAPCHECK(imgName.size()>5,
-                 "Image parameter name should have something appended to word image")
-	  const string parName = prefix + imgName.substr(5);
+      const bool image = (imgName.find("image")==0);
+      const bool fullres = (imgName.find("fullres")==0);
+      ASKAPASSERT(image||fullres);
+      ASKAPCHECK((image && imgName.size()>5)||(fullres && imgName.size()>7),
+                 "Image parameter name should have something appended to word "<<(image ? "image" : "fullres"));
+	  const string parName = prefix + imgName.substr(image ? 5 : 7);
       #ifdef ASKAP_FLOAT_IMAGE_PARAMS
       casacore::Array<float> tmpArr(arr.shape());
       casacore::convertArray<float,double>(tmpArr,arr);
@@ -424,11 +435,12 @@ namespace askap
               const casacore::IPosition &pos)
     {
       ASKAPDEBUGTRACE("ImageSolver::saveArrayIntoParameter");
-
-      ASKAPDEBUGASSERT(imgName.find("image")==0);
-      ASKAPCHECK(imgName.size()>5,
-                 "Image parameter name should have something appended to word image")
-  	  const string parName = prefix + imgName.substr(5);
+      const bool image = (imgName.find("image")==0);
+      const bool fullres = (imgName.find("fullres")==0);
+      ASKAPASSERT(image||fullres);
+      ASKAPCHECK((image && imgName.size()>5)||(fullres && imgName.size()>7),
+                 "Image parameter name should have something appended to word "<<(image ? "image" : "fullres"));
+	  const string parName = prefix + imgName.substr(image ? 5 : 7);
       #ifdef ASKAP_FLOAT_IMAGE_PARAMS
   	  if (!ip.has(parName)) {
   	      // create an empty parameter with the full shape

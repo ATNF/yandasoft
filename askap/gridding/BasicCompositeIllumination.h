@@ -37,7 +37,7 @@
 #define BASIC_COMPOSITE_ILLUMINATION_H
 
 #include <askap/gridding/IBasicIllumination.h>
-#include <askap/dataaccess/IConstDataAccessor.h>
+//#include <askap/dataaccess/IConstDataAccessor.h>
 
 #include <casacore/scimath/Mathematics/RigidVector.h>
 #include <casacore/casa/Arrays/Vector.h>

@@ -40,6 +40,11 @@
 #include <askap/parallel/MEParallelApp.h>
 #include <askap/measurementequation/IMeasurementEquation.h>
 #include <askap/calibaccess/ICalSolutionConstSource.h>
+#include <askap/dataaccess/IDataSource.h>
+#include <askap/measurementequation/ImageFFTEquation.h>
+#include <askap/gridding/IUVWeightCalculator.h>
+#include <askap/gridding/GenericUVWeightBuilder.h>
+#include <askap/dataaccess/IConstDataIterator.h>
 
 namespace askap
 {
@@ -149,7 +154,101 @@ namespace askap
       /// @return if advice is needed, returns the name of the gridder. Otherwise, returns an empty string.
       static string wMaxAdviceNeeded(LOFAR::ParameterSet &parset);
 
+      // methods to setup traditional weighting. We probably should have a separate class to manage this, but I (MV) feel that not
+      // all the required details are fleshed out yet. Leave this here for now, although it is a bit of the technical debt
+
+      /// @brief factory method creating uv weight calculator based on the parset
+      /// @details The main parameter controlling the mode of traditional weighting is
+      /// Cimager.uvweight which either can take a keyword describing some special method
+      /// of getting the weights (which doesn't require iteration over data), e.g. reading from disk
+      /// or a list of "effects" which should be applied to the density of uv samples obtained via
+      /// iteration over data. This method acts as a factory for weight calculators (i.e. the second
+      /// case with the list of effects) or returns an empty pointer if no iteration over data is required
+      /// (i.e. either some special algorithm is in use or there is no uv-weighting)
+      /// @param[in] parset configuration parset to use
+      /// @return shared pointer to the uv-weight calculator object
+      static boost::shared_ptr<IUVWeightCalculator> createUVWeightCalculator(const LOFAR::ParameterSet &parset);
+
+      /// @brief factory method creating uv weight calculator based on the current parset
+      /// @details Unlike the static method which gets the parset as the parameter and returns the shared pointer to
+      /// the calculator object, this method uses the current parset passed to the imager in the constructor and assigns
+      /// the result to itsUVWeightCalculator. There is a bit of the technical debt here and it would probably be better to
+      /// factor out this factory into a separate class (and remove this code from the imager). For now, it seems to be the 
+      /// quicker way to be able to quiery the traditional weighting setup without configuring the imager.
+      /// @note This method updates itsUVWeightCalculator which will be either non-zero shared pointer to the weight
+      /// calculator object to be applied to the density of uv samples, or an empty shared pointer which implies that
+      /// there is no need obtaining the density because either no traditional weighting is done or
+      /// we're using some special algorithm which does not require iteration over data
+      void createUVWeightCalculator();
+
+      /// @brief set uv-weight calculator object explicitly
+      /// @details This method may be useful, if the weight calculator is created via the static createUVWeightCalculator method.
+      /// This ambiguity w.r.t. dealing with weight calculator objects is hopefully temporary (and is indicative of the technical debt
+      /// because we probably shouldn't have this functionality as part of the imager and/or have approach with two imagers during accumulation).
+      /// @param[in] calc shared pointer to the uv-weight calculator object to set
+      void setUVWeightCalculator(const boost::shared_ptr<IUVWeightCalculator> &calc) { itsUVWeightCalculator = calc; }
+
+      /// @brief check if sample density grid needs to be built
+      /// @details For now, use the shared pointer carrying uv weight calculator as a flag that we need to
+      /// build grid of weights (this is what uv weight calculator works with). It is a bit of the technical debt
+      /// to do it this way (as we don't need calculator on the ranks which don't compute weights), but allows us
+      /// to hide all parset interpretation to the createUVWeightCalculator factory method (for the price that it
+      /// needs to be called for all ranks for which we need the consistent picture). But these calculator objects are
+      /// very lightweight, so it is a lesser of possible evils. More pure design would involve interpretation of the parset in
+      /// one place handled by a separate class (which we either run on all ranks or just on a master and then distribute).
+      /// Therefore, it is expected that createUVWeightCalculator should be called before this method.
+      /// @return true if sample density grid needs to be built
+      bool inline isSampleDensityGridNeeded() const { return static_cast<bool>(itsUVWeightCalculator); }
+
+      /// @brief replace normal equations with an adapter handling uv weights
+      /// @details We use normal equations infrastructure to merge uv weights built in parallel
+      /// (via EstimatorAdapter). This method sets up the appropriate builder class based on the
+      /// parameters in the parset, wraps it in the adapter and assigns to itsNE in the base class.
+      /// @note An instance of appropriate normal equations class should be setup before normal major
+      /// cycles can resume. It can be done with a call to recereateNormalEquations or calcNE
+      void setupUVWeightBuilder();
+
+      /// @brief compute uv weights using data stored via adapter in the normal equations
+      /// @details This method gets access to the uv-weight builder handled via EstimatorAdapter and
+      /// stored instead of normal equations by shared pointer. It then runs the finalisation step using
+      /// the stored shared pointer to the uv-weight calculator object. The resulting weight is added as
+      /// a parameter to the existing model.
+      /// @note This method assumes that it is called from the right place (i.e. on the correct rank) and
+      /// all merging/reduction has already been done. In other words, it is agnostic of the parallelism.
+      void computeUVWeights() const;
+
+
+      /// @brief iterate over given data and accumulate samples for uv weights
+      /// @details This method is used to build the sample density in the uv-plane via the appropriate gridder
+      /// and weight builder class. It expects the builder already setup and accessible via the normal equations
+      /// shared pointer. The data iterator to work with is passed as a parameter. The image details are extracted from
+      /// the model (to initialise sample grid).
+      /// @param[in] iter shared pointer to the iterator to use (note it is advanced by this method to iterate over
+      /// all available data)
+      void accumulateUVWeights(const boost::shared_ptr<accessors::IConstDataIterator> &iter) const;
+
+      /// @brief recreate imaging normal equations object
+      /// @details If sample density grid is built, normal equations are setup with
+      /// an adapter which is an incompatible type. This method resets the object to a pristine
+      /// state similar to that before the first major cycle if no traditional weighting is done.
+      void recreateNormalEquations();
+
   protected:
+
+      /// @brief make calibration iterator if necessary, otherwise return unchanged interator
+      /// @details This method wraps the iterator passed as the input into into a calibration iterator adapter
+      /// if calibration is to be performed (i.e. if solution source is defined).
+      /// @param[in] origIt original iterator to uncalibrated data
+      /// @return shared pointer to the data iterator with on-the-fly calibration application, if necessary
+      /// or the original iterator otherwise
+      accessors::IDataSharedIter makeCalibratedDataIteratorIfNeeded(const accessors::IDataSharedIter &origIt) const;
+
+      /// @brief helper method to extract weight builder object out of normal equations
+      /// @details For traditional weighting with distributed data we use normal equation merging
+      /// mechanism to do the gather operation (and EstimatorAdapter). This method does required
+      /// casts and checks to get the required shared pointer (which is guaranteed to be non-empty)
+      /// @return shared pointer to the uv-weight builder object stored in the current normal equations
+      boost::shared_ptr<GenericUVWeightBuilder> getUVWeightBuilder() const;
 
       /// @brief a helper method to extract peak residual
       /// @details This object actually manipulates with the normal equations. We need
@@ -180,6 +279,24 @@ namespace askap
       /// @return the shared_ptr
       boost::shared_ptr<accessors::ICalSolutionConstSource> getSolutionSource() const {
           return itsSolutionSource; }
+
+      /// @brief obtain measurement equation cast to ImageFFTEquation
+      /// @details This helper method encapsulates operations common to a number of methods of this and derived classes to obtain the
+      /// current measurement equation with the original type as created (i.e. ImageFFTEquation) and
+      /// does the appropriate checks (so the return is guaranteed to be a non-null shared pointer).
+      /// @return shared pointer of the appropriate type to the current measurement equation
+      boost::shared_ptr<ImageFFTEquation> getMeasurementEquation() const;
+
+      /// @brief make data iterator
+      /// @details This helper method makes an iterator based on the configuration in the current parset and
+      /// given data source object
+      /// @param[in] ds datasource object to use
+      /// @return shared pointer to the iterator over data
+      accessors::IDataSharedIter makeDataIterator(const accessors::IDataSource &ds) const;
+
+      /// @brief map of image names to calibration directions
+      /// @return map  the map of image names to calibration directions
+      std::map<std::string, int> calDirMap() {return itsCalDirMap;}
 
   private:
 
@@ -230,6 +347,9 @@ namespace askap
       /// @brief write out the mask image
       bool itsWriteMaskImage;
 
+      /// @brief write out the scalemask image
+      bool itsWriteScaleMask;
+
       /// @brief write out the (clean) model image
       bool itsWriteModelImage;
 
@@ -247,6 +367,21 @@ namespace askap
       /// @brief write out the gridded data, pcf and psf
       bool itsWriteGrids;
 
+      /// @brief write out multiple images if there are more than 1
+      bool itsWriteMultiple;
+
+      /// @brief write out multiple (clean) model images if there are more than 1
+      bool itsWriteMultipleModels;
+
+      /// @brief number of directions to use for calibration
+      int itsNDir;
+
+      // @brief map of image names to calibration directions
+      std::map<std::string, int> itsCalDirMap;
+
+      /// @brief name of first image (after removing image prefix)
+      std::string itsFirstImageName;
+
       /// @brief solution source to get calibration data from
       /// @details This object is initialised by workers. It knows how to
       /// retrieve calibration solutions (from a parset file, casa table or a database).
@@ -260,6 +395,17 @@ namespace askap
       /// first use and then passed as the perfect MeasurementEquation, if
       /// required. We could have created a brand new object each time.
       boost::shared_ptr<IMeasurementEquation> itsVoidME;
+
+      /// @brief object calculating uv weights from sample density
+      /// @details This data member stores shared pointer to the calculator object
+      /// returned by the factory method. Note, technically this object only needs
+      /// to be created if we're going to use it (i.e. run computeUVWeights method on the
+      /// given rank), but for now it is handy to use the presence of this object as a flag
+      /// that we're doing traditional weighting and need to compute sample density. It is
+      /// a bit of the technical debt, but a small overhead (setting up calculators is cheap).
+      /// On the positive side, it allows us to avoid code duplication in parset interpretation.
+      /// (in the future, we can have a specialised class containing all the required operations)
+      boost::shared_ptr<IUVWeightCalculator> itsUVWeightCalculator;
 
     };
 

@@ -80,7 +80,8 @@ void correctDelays(const IDataSource &ds, const casa::Vector<double> &delays) {
        const casa::Vector<double> freqs = it->frequency();
        ASKAPDEBUGASSERT(freqs.nelements() == it->nChannel());
        for (casa::uInt row=0; row< it->nRow(); ++row) {
-            casa::Matrix<casa::Complex> thisRow = it->rwVisibility().yzPlane(row);
+            // casa::Matrix<casa::Complex> thisRow = it->rwVisibility().yzPlane(row);
+            casa::Matrix<casa::Complex> thisRow = it->rwVisibility().xyPlane(row);
             const casa::uInt ant1 = it->antenna1()[row];
             const casa::uInt ant2 = it->antenna2()[row];
             ASKAPCHECK((ant1 < delays.nelements()) && (ant2 < delays.nelements()), "Encountered antenna with underfined delay: baseline "<<

@@ -200,6 +200,11 @@ namespace askap {
                 /// @return the number of terms to solve for
                 inline casacore::uInt nTerms() const { return itsNumberTerms;}
 
+                /// @brief release working memory not needed between major cycles
+                /// @details Deconvolvers can use a lot of memory, try to release as
+                /// much as possible without losing essential state
+                virtual void releaseMemory();
+
             private:
 
                 // Number of terms in the expansion > 0
@@ -274,5 +279,3 @@ namespace askap {
 #include <askap/deconvolution/DeconvolverBase.tcc>
 
 #endif  // #ifndef I_DECONVOLVERBASE_H
-
-

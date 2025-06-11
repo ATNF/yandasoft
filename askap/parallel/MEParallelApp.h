@@ -100,6 +100,17 @@ protected:
    /// @param[in] ms vector with measurement sets
    inline void setMeasurementSets(const std::vector<std::string>& ms) { itsMs = ms;}
 
+   /// @brief does this rank (which may be rank 0) do distributed work?
+   /// @return bool true if this rank does work
+   inline bool doWork() { return (itsComms.isWorker() || itsMasterDoesWork);}
+
+   /// @brief number of ranks doing work (may include master)
+   /// @return uint number of ranks doing work
+   inline uint nWorkers() { return itsComms.nProcs() - (itsMasterDoesWork ? 0 : 1);}
+
+   /// @brief rank of worker (always starts at zero)
+   /// @return uint sequence number of worker (could include master with number 0)
+   inline uint workerRank() { return itsComms.rank() - (itsMasterDoesWork ? 0 : 1);}
 private:
 
    /// @brief name of the data column to use.
@@ -116,6 +127,9 @@ private:
 
    /// @brief gridder to be used
    IVisGridder::ShPtr itsGridder;
+
+   /// @brief does the master participate in the the work?
+   bool itsMasterDoesWork;
 };
 
 } // namespace synthesis

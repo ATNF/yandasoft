@@ -87,7 +87,7 @@ void MEParallel::sendNE()
         timer.mark();
         ASKAPLOG_DEBUG_STR(logger, "Reducing normal equations to the solver");
         reduceNE(itsNe);
-        ASKAPLOG_DEBUG_STR(logger, "Reduced normal equations to the solver in "
+        ASKAPLOG_DEBUG_STR(logger, "Reduced normal equations in "
                               << timer.real() << " seconds ");
     }
 }

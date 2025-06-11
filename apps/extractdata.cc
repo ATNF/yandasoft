@@ -206,9 +206,11 @@ void process(const IConstDataSource &ds, const LOFAR::ParameterSet &parset) {
        ASKAPASSERT(it->nPol() >= 1);
        ASKAPDEBUGASSERT(polIndex < it->nPol());
        if (replaceFlags) {
-           buf += flagOutliers(padSecond(replaceFlagsWithZeros(it->visibility().xyPlane(polIndex), it->flag().xyPlane(polIndex)),padding));
+           //buf += flagOutliers(padSecond(replaceFlagsWithZeros(it->visibility().xyPlane(polIndex), it->flag().xyPlane(polIndex)),padding));
+           buf += flagOutliers(padSecond(replaceFlagsWithZeros(it->visibility().yzPlane(polIndex), it->flag().yzPlane(polIndex)),padding));
        } else {
-           buf += flagOutliers(padSecond(it->visibility().xyPlane(polIndex),padding));
+           //buf += flagOutliers(padSecond(it->visibility().xyPlane(polIndex),padding));
+           buf += flagOutliers(padSecond(it->visibility().yzPlane(polIndex),padding));
        }
        avgTime += it->time();
        if (++counter == nAvg) {
@@ -330,7 +332,7 @@ void process(const IConstDataSource &ds, const LOFAR::ParameterSet &parset) {
       std::ofstream os("fringe.dat");
       for (casa::uInt chan=0; chan<imgBuf.nrow(); ++chan) {
            os<<chan<<" ";
-           for (casa::uInt baseline_beam = 0; baseline_beam < imgBuf.nplane(); ++baseline_beam) {
+           for (casa::uInt baseline_beam = 0; baseline_beam < imgBuf.nrow(); ++baseline_beam) {
                 os<<" "<<casa::abs(imgBuf(casa::IPosition(3,chan,row2export,baseline_beam)))<<" "<<casa::arg(imgBuf(casa::IPosition(3,chan,row2export,baseline_beam)))*180./casa::C::pi;
            }
            os<<std::endl;

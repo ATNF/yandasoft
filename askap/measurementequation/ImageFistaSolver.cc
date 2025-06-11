@@ -98,7 +98,7 @@ namespace askap
 
         // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
         // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
-        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse 
+        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse
 	itsBasisFunction = BasisFunction<Float>::ShPtr(new MultiScaleBasisFunction<Float>(casacore::Vector<casacore::Float>(scales),
                                                                                           orthogonal));
       }
@@ -209,9 +209,10 @@ namespace askap
 				   unpadImage(dirtyArray), planeIter.position());
 
 	    // uncomment the code below to save the mask
-	    saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
-				   planeIter.position());
-
+	    if (maskArray.nelements()) {
+            saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask",
+				   unpadImage(maskArray), planeIter.position());
+        }
 
 
 	    // Startup costs so little it's better to create a new

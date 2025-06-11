@@ -46,7 +46,6 @@
 #include <casacore/casa/Arrays/Array.h>
 #include <casacore/casa/IO.h>
 #include <casacore/coordinates/Coordinates/Coordinate.h>
-#include <casacore/images/Images/ImageRegrid.h>
 
 // Local packages includes
 #include <askap/measurementequation/SynthesisParamsHelper.h>

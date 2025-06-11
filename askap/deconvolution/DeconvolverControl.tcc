@@ -1,6 +1,6 @@
 /// @file DeconvolverControl.tcc
 /// @brief Base class for Control of Deconvolver
-/// @details All the Controling is delegated to this class so that
+/// @details All the Controlling is delegated to this class so that
 /// more control is possible.
 /// @ingroup Deconvolver
 ///
@@ -52,7 +52,8 @@ namespace askap {
                 itsTargetObjectiveFunction(T(0)),itsTargetObjectiveFunction2(T(0)),
                 itsTargetFlux(T(0.0)),itsGain(1.0), itsTolerance(1e-4),
                 itsFractionalThreshold(T(0.0)),itsAbsoluteThreshold(0.0),
-                itsPSFWidth(0), itsDetectDivergence(False), itsDeepCleanMode(False), itsLambda(T(100.0))
+                itsPSFWidth(0), itsDetectDivergence(False), itsDetectMildDivergence(False),
+                itsDivergenceLevels({1.1f,2.0f,2.0f,0.05f}), itsDeepCleanMode(False), itsLambda(T(100.0))
         {
             // Install a signal handler to count signals so receipt of a signal
             // can be used to terminate the minor-cycle loop
@@ -70,82 +71,92 @@ namespace askap {
         Bool DeconvolverControl<T>::terminate(const DeconvolverState<T>& state)
         {
             // Check for convergence
-            if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction) {
+            if (abs(state.objectiveFunction()) < targetObjectiveFunction()) {
                 // Now check if we want to enter deep cleaning mode
-                if (this->itsTargetObjectiveFunction2>0) {
-                    if (!itsDeepCleanMode) {
+                if (targetObjectiveFunction2()>0) {
+                    if (!deepCleanMode()) {
                         ASKAPLOG_INFO_STR(decctllogger, "Starting deep cleaning phase");
-                        itsDeepCleanMode = True;
-                        itsMaskNeedsResetting = True;
-                        //itsTerminationCause = CONVERGED;
-                        //return True;
+                        setDeepCleanMode();
                     }
-                    if (abs(state.objectiveFunction()) < this->itsTargetObjectiveFunction2) {
+                    if (abs(state.objectiveFunction()) < targetObjectiveFunction2()) {
                         ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
-                                            << " less than 2nd target " << itsTargetObjectiveFunction2);
-                        itsTerminationCause = CONVERGED;
+                                            << " less than 2nd target " << targetObjectiveFunction2());
+                        setTerminationCause(CONVERGED);
                         return True;
                     }
                 } else {
                     ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
-                                          << " less than target " << itsTargetObjectiveFunction);
-                    itsTerminationCause = CONVERGED;
+                                          << " less than target " << targetObjectiveFunction());
+                    setTerminationCause(CONVERGED);
                     return True;
                 }
             }
             //
-            if (abs(state.objectiveFunction()) < this->itsFractionalThreshold*state.initialObjectiveFunction()) {
+            if (abs(state.objectiveFunction()) < fractionalThreshold()*state.initialObjectiveFunction()) {
                 ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
-                                      << " less than fractional threshold " << itsFractionalThreshold
+                                      << " less than fractional threshold " << fractionalThreshold()
                                       << " * initialObjectiveFunction : " << state.initialObjectiveFunction());
-                itsTerminationCause = CONVERGED;
+                setTerminationCause(CONVERGED);
                 return True;
             }
-            if (abs(state.objectiveFunction()) < itsAbsoluteThreshold) {
+            if (abs(state.objectiveFunction()) < absoluteThreshold()) {
                 ASKAPLOG_INFO_STR(decctllogger, "Objective function " << state.objectiveFunction()
-                                      << " less than absolute threshold " << itsAbsoluteThreshold);
-                itsTerminationCause = CONVERGED;
+                                      << " less than absolute threshold " << absoluteThreshold());
+                setTerminationCause(CONVERGED);
                 return True;
             }
 
             // Terminate if the target number of iterations is not set
-            ASKAPCHECK(this->targetIter() > 0, "Target number of iterations not set");
+            ASKAPCHECK(targetIter() > 0, "Target number of iterations not set");
 
             // Check for too many iterations
-            if ((state.currentIter() > -1) && (this->targetIter() > 0) && (state.currentIter() >= this->targetIter())) {
-                itsTerminationCause = EXCEEDEDITERATIONS;
+            if ((state.currentIter() > -1) && (targetIter() > 0) && (state.currentIter() >= targetIter())) {
+                setTerminationCause(EXCEEDEDITERATIONS);
                 return True;
             }
 
             // Check if we have started to diverge
-            if (itsDetectDivergence) {
+            if (detectDivergence()) {
                 // Simplest check: next component > 2* initial residual
                 if ( state.initialObjectiveFunction() > 0 &&
-                     state.objectiveFunction() > 2 * state.initialObjectiveFunction() )
+                     state.objectiveFunction() > itsDivergenceLevels[1] * state.initialObjectiveFunction() )
                 {
                   ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Objective function " <<
-                  state.objectiveFunction() << " > 2 * initialObjectiveFunction = " <<
-                  2*state.initialObjectiveFunction());
-                  itsTerminationCause = DIVERGED;
+                  state.objectiveFunction() << " > "<<itsDivergenceLevels[1]<<" * initialObjectiveFunction = " <<
+                    itsDivergenceLevels[1] * state.initialObjectiveFunction());
+                  setTerminationCause(DIVERGED);
                   return True;
                 }
 
                 // Check for major cycle divergence
                 // (only need to check this once per major cycle but it fits here)
                 if ( state.previousInitialObjectiveFunction() > 0 &&
-                     state.initialObjectiveFunction() > 1.1 * state.previousInitialObjectiveFunction() )
+                     state.initialObjectiveFunction() > itsDivergenceLevels[2] * state.previousInitialObjectiveFunction() )
                 {
                   ASKAPLOG_INFO_STR(decctllogger, "Clean diverging - Initial Objective function " <<
-                  state.initialObjectiveFunction() << " > 1.1 * previous Initial ObjectiveFunction = " <<
-                  1.1*state.previousInitialObjectiveFunction());
-                  itsTerminationCause = DIVERGED;
+                  state.initialObjectiveFunction() << " > "<<itsDivergenceLevels[2]<<" * previous Initial ObjectiveFunction = " <<
+                    itsDivergenceLevels[2] * state.previousInitialObjectiveFunction());
+                  setTerminationCause(DIVERGED);
                   return True;
+                }
+            }
+
+            // Check for mild divergence - just go to next major cycle
+            if (detectMildDivergence()) {
+                // next component > 1.1x smallest component this cycle & have done >5% of iterations
+                if ( state.objectiveFunction() > itsDivergenceLevels[0] * state.smallestObjectiveFunction() &&
+                     state.currentIter() > itsDivergenceLevels[3] * targetIter())
+                {
+                    ASKAPLOG_INFO_STR(decctllogger, "Clean starting to diverge at "<<state.objectiveFunction()<<" > "
+                    << itsDivergenceLevels[0] << "*" << state.smallestObjectiveFunction() << " - stopping minor cycles");
+                    setTerminationCause(DIVERGING);
+                    return True;
                 }
             }
 
             // Check for external signal
             if (itsSignalCounter.getCount() > 0) {
-                itsTerminationCause = SIGNALED;
+                setTerminationCause(SIGNALED);
                 itsSignalCounter.resetCount(); // This signal has been actioned, so reset
                 return True;
             }
@@ -153,11 +164,29 @@ namespace askap {
         }
 
         template<class T>
+        T DeconvolverControl<T>::level(const DeconvolverState<T>& ds, T safetyMargin) const
+        {
+            T level = targetObjectiveFunction();
+            if (deepCleanMode()) {
+                level = targetObjectiveFunction2();
+            }
+            T level2 = fractionalThreshold() * ds.initialObjectiveFunction();
+            if (level2 > level) {
+                level = level2;
+            }
+            ASKAPCHECK(safetyMargin > 0 && safetyMargin < 1, "safetyMargin should be between 0 and 1");
+            return level * (1-safetyMargin);
+        }
+
+        template<class T>
         String DeconvolverControl<T>::terminationString() const
         {
-            switch (itsTerminationCause) {
+            switch (terminationCause()) {
                 case CONVERGED:
                     return String("Converged");
+                    break;
+                case DIVERGING:
+                    return String("Starting to diverge");
                     break;
                 case DIVERGED:
                     return String("Diverged");
@@ -183,16 +212,22 @@ namespace askap {
         template<class T>
         void DeconvolverControl<T>::configure(const LOFAR::ParameterSet& parset)
         {
-            this->setGain(parset.getFloat("gain", 0.1));
-            this->setTolerance(parset.getFloat("tolerance", 1e-3));
-            this->setTargetIter(parset.getInt32("niter", 100));
-            this->setTargetFlux(parset.getFloat("targetflux", 0));
-            this->setTargetObjectiveFunction(parset.getFloat("targetobjective", 0.0));
-            this->setFractionalThreshold(parset.getFloat("fractionalthreshold", 0.0));
-            this->setAbsoluteThreshold(parset.getFloat("absolutethreshold", 0.0));
-            this->setLambda(parset.getFloat("lambda", 0.0001));
-            this->setPSFWidth(parset.getInt32("psfwidth", 0));
-            this->setDetectDivergence(parset.getBool("detectdivergence",true));
+            setGain(parset.getFloat("gain", 0.1));
+            setTolerance(parset.getFloat("tolerance", 1e-3));
+            setTargetIter(parset.getInt32("niter", 100));
+            setTargetFlux(parset.getFloat("targetflux", 0));
+            setTargetObjectiveFunction(parset.getFloat("targetobjective", 0.0));
+            setTargetObjectiveFunction2(parset.getFloat("targetobjective2", 0.0));
+            setFractionalThreshold(parset.getFloat("fractionalthreshold", 0.0));
+            setAbsoluteThreshold(parset.getFloat("absolutethreshold", 0.0));
+            setLambda(parset.getFloat("lambda", 0.0001));
+            setPSFWidth(parset.getInt32("psfwidth", 0));
+            setDetectDivergence(parset.getBool("detectdivergence",true));
+            setDetectMildDivergence(parset.getBool("detectmilddivergence",false));
+            const std::vector<casa::Float> levels = parset.getFloatVector("divergencelevels",{1.1f,2.0f,2.0f,0.05f});
+            ASKAPCHECK(levels.size()==4 && levels[0]>1 && levels[1]>1 && levels[2]>1,
+                "divergencelevels parameter should have 4 entries, each first three > 1.0");
+            setDivergenceLevels(levels);
         }
 
     } // namespace synthesis

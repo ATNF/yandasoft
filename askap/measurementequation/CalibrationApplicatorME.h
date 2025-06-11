@@ -77,6 +77,14 @@ public:
   /// @param[in] chunk a read-write accessor to work with
   virtual void correct(accessors::IDataAccessor &chunk) const;
 
+  /// @brief predict visibilities for one accessor (chunk).
+  /// @details This method corrupts the data in the given accessor
+  /// (accessed via rwVisibility) with the calibration errors
+  /// represented by this measurement equation (i.e. an inversion of
+  /// the matrix has not been performed).
+  /// @param[in] chunk a read-write accessor to work with
+  virtual void predict(accessors::IDataAccessor &chunk) const;
+
   /// @brief determines whether to scale the noise estimate
   /// @details This is one of the configuration methods, it controlls
   /// whether the noise estimate is scaled aggording to applied calibration
@@ -110,14 +118,24 @@ public:
   virtual void interpolateTime(bool flag);
 
 private:
-  /// @brief correct model visibilities for one accessor
-  /// @details This method corrects the data in the given accessor
+  /// @brief correct or corrupt visibilities for one accessor
+  /// @details This method corrects or corrupts the data in the given accessor
   /// (accessed via rwVisibility) for the calibration errors
-  /// represented by this measurement equation (i.e. an inversion of
-  /// the matrix has been performed).
+  /// represented by this measurement equation (inversion of
+  /// the matrix is done if correct=true).
+  /// @param[in] chunk a read-write accessor to work with
+  /// @param[in] correct correct data if true, corrupt if false
+  void generic(accessors::IDataAccessor &chunk, bool correct) const;
+
+  /// @brief correct or corrupt visibilities for one accessor
+  /// @details This method corrects or corrupts the data in the given accessor
+  /// (accessed via rwVisibility) for the calibration errors
+  /// represented by this measurement equation (inversion of
+  /// the matrix is done if correct=true).
   /// This is an optimized version for data with exactly 4 polarizations
   /// @param[in] chunk a read-write accessor to work with
-  void correct4(accessors::IDataAccessor &chunk) const;
+  /// @param[in] correct correct data if true, corrupt if false
+  void generic4(accessors::IDataAccessor &chunk, bool correct) const;
 
   /// @brief true, if correct method is to scale the noise estimate
   bool itsScaleNoise;

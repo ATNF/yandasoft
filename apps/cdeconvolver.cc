@@ -55,7 +55,7 @@ using namespace askap::synthesis;
 class CdeconvolverApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             StatReporter stats;
 
@@ -70,9 +70,9 @@ class CdeconvolverApp : public askap::Application
                 boost::shared_ptr<DeconvolverBase<Float, Complex> > deconvolver(DeconvolverFactory::make(subset));
                 deconvolver->deconvolve();
 
-                // Now write the model and residual to disk using the names specified in the 
-                // parset. We simply copy the dirty image and then write the array into 
-                // the resulting image. 
+                // Now write the model and residual to disk using the names specified in the
+                // parset. We simply copy the dirty image and then write the array into
+                // the resulting image.
                 DeconvolverHelpers::putArrayToImage(deconvolver->model(), "model", "dirty", subset);
                 DeconvolverHelpers::putArrayToImage(deconvolver->dirty(), "residual", "dirty", subset);
 
@@ -93,7 +93,7 @@ class CdeconvolverApp : public askap::Application
             return 0;
         }
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:" + ASKAP_PACKAGE_VERSION);
             return pkgVersion;
         }

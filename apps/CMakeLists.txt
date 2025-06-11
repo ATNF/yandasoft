@@ -1,4 +1,5 @@
 set (_progs
+arrindexspeed
 delaysolver
 extractdata
 genoffsets
@@ -12,6 +13,7 @@ ccontsubtract
 cddcalibrator
 cdeconvolver
 cdeconvolver-mpi
+cflagger
 cimager
 cmpgains
 correctdelay
@@ -34,10 +36,11 @@ mslist
 msmerge
 mstabtest
 noiseadder
-opcal 
+opcal
 randomgains
 smear
 tCFGeneration
+tCompareMSData
 tConvolve
 tConvolveBLAS
 tConvolveCASA
@@ -57,6 +60,9 @@ tstuvw2
 statsAndMaskChanApp
 tWeightsLogGather
 tMajorCycleComms
+tClearMSCache
+tDeconvolveTimerUtils
+bpdelaytool
 )
 
 

@@ -1,17 +1,17 @@
 /// @file
-/// 
+///
 /// @brief Measurement equation adapter filling calibration parameters on demand
 /// @details This is an adapter intended to be used when calibration effects
 /// are simulated. It implements IMeasurementEquation interface, but only
-/// predict method is expected to be used. An exception is thrown if 
+/// predict method is expected to be used. An exception is thrown if
 /// one requests normal equations to be computed with this class. The predict
-/// method checks whether new antenna/beam combinations are present in the 
+/// method checks whether new antenna/beam combinations are present in the
 /// current visibility chunk. It then creates new parameters (this class follows
-/// the name convension enforced by accessors::CalParamNameHelper, but this 
+/// the name convension enforced by accessors::CalParamNameHelper, but this
 /// behavior can be overridden in derived classes, if necessary) and updates
 /// the existing ones using calibration solution source supplied at construction.
 /// After parameters are created, the predict method of the wrapped measurement
-/// equation is called to predict visibilities. 
+/// equation is called to predict visibilities.
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -55,16 +55,16 @@ namespace synthesis {
 
 /// @brief standard constructor
 /// @details initialises the class with the given solution source and iterator
-/// (if necessary). It also initialises the shared pointer to the slave measurement 
+/// (if necessary). It also initialises the shared pointer to the slave measurement
 /// equation which does the actual prediction of visibilities. Only accessor-based
 /// functionality of this slave measurement equation is used.
 /// @param[in] ime shared pointer to the slave measurement equation
 /// @param[in] css shared pointer to solution source
 /// @param[in] idi data iterator (if iterator-based interface is required)
 CalibParamsMEAdapter::CalibParamsMEAdapter(const boost::shared_ptr<IMeasurementEquation> &ime,
-                const boost::shared_ptr<accessors::ICalSolutionConstSource> &css, 
-                const accessors::IDataSharedIter& idi) :                 
-                MultiChunkEquation(idi), CalibrationSolutionHandler(css), itsSlaveME(ime) 
+                const boost::shared_ptr<accessors::ICalSolutionConstSource> &css,
+                const accessors::IDataSharedIter& idi) :
+                MultiChunkEquation(idi), CalibrationSolutionHandler(css), itsSlaveME(ime)
 {
   ASKAPCHECK(itsSlaveME, "An attempt to initialise CalibParamsMEAdapter with a void shared pointer to the slave ME");
   // deliberately reuse shared pointer between the slaved measurement equation and this adapter to
@@ -79,9 +79,9 @@ CalibParamsMEAdapter::CalibParamsMEAdapter(const boost::shared_ptr<IMeasurementE
 /// @brief copy constructor
 /// @details We need it because some data members have non-trivial types (shared pointers)
 /// @param[in] other other object to copy from
-CalibParamsMEAdapter::CalibParamsMEAdapter(const CalibParamsMEAdapter &other) : Equation(other), MultiChunkEquation(other), 
-       CalibrationSolutionHandler(other), 
-       itsCalSolutionCM(other.itsCalSolutionCM), itsAntBeamPairs(other.itsAntBeamPairs) 
+CalibParamsMEAdapter::CalibParamsMEAdapter(const CalibParamsMEAdapter &other) : Equation(other), MultiChunkEquation(other),
+       CalibrationSolutionHandler(other),
+       itsCalSolutionCM(other.itsCalSolutionCM), itsAntBeamPairs(other.itsAntBeamPairs)
 {
   ASKAPCHECK(other.itsSlaveME, "Slave ME is uninitialised in a call to the copy constructor");
   // deliberately reuse shared pointer between the slaved measurement equation and this adapter to
@@ -95,7 +95,7 @@ CalibParamsMEAdapter::CalibParamsMEAdapter(const CalibParamsMEAdapter &other) : 
   ASKAPDEBUGASSERT(eqn);
   reference(eqn->rwParameters());
   ASKAPASSERT(rwParameters());
-  // 
+  //
   ASKAPTHROW(AskapError, "This code has not been tested and technically we don't need it");
 }
 
@@ -121,16 +121,16 @@ const CalibParamsMEAdapter& CalibParamsMEAdapter::operator=(const CalibParamsMEA
       ASKAPDEBUGASSERT(eqn);
       reference(eqn->rwParameters());
       ASKAPASSERT(rwParameters());
-      // 
-      ASKAPTHROW(AskapError, "This code has not been tested and technically we don't need it");      
+      //
+      ASKAPTHROW(AskapError, "This code has not been tested and technically we don't need it");
   }
   return *this;
 }
 
-   
+
 /// @brief Predict model visibilities for one accessor (chunk).
 /// @details This prediction is done for single chunk of data only.
-/// This method overrides pure virtual method of the base class. 
+/// This method overrides pure virtual method of the base class.
 /// @param[in] chunk a read-write accessor to work with
 void CalibParamsMEAdapter::predict(accessors::IDataAccessor &chunk) const
 {
@@ -141,7 +141,7 @@ void CalibParamsMEAdapter::predict(accessors::IDataAccessor &chunk) const
       // method of the slave ME.
       ASKAPLOG_INFO_STR(logger, "CalibParamsMEAdapter - new calibration solution (time="<<chunk.time()<<
                         " seconds since 0 MJD), regenerating calibration parameters");
-      itsAntBeamPairs.clear();      
+      itsAntBeamPairs.clear();
   }
   // iterate over all rows as even if there is no change in calibration solution the new
   // visibility chunk may have antennas/beams not previously seen in the data.
@@ -161,34 +161,34 @@ void CalibParamsMEAdapter::predict(accessors::IDataAccessor &chunk) const
   // parameters are now ready, predict visibilities using the slave measurement equation
   itsSlaveME->predict(chunk);
 }
-   
+
 /// @brief Calculate the normal equation for one accessor (chunk).
 /// @details This method is not supposed to be used. It overrides
-/// pure virtual method of the base class and throws an exception if called 
+/// pure virtual method of the base class and throws an exception if called
 void CalibParamsMEAdapter::calcEquations(const accessors::IConstDataAccessor &,
                           askap::scimath::INormalEquations&) const
 {
   ASKAPTHROW(AskapError, "CalibParamsMEAdapter::calcEquations is not supposed to be used");
-}  
+}
 
 /// @brief manage update for a one antenna/beam
-/// @details This method manages cache and calls virtual 
+/// @details This method manages cache and calls virtual
 /// updateSingleAntBeam method if an update is necessary
-/// @param[in] ant antenna index   
+/// @param[in] ant antenna index
 /// @param[in] beam beam index
 void CalibParamsMEAdapter::processAntBeamPair(const casacore::uInt ant, const casacore::uInt beam) const
 {
    const accessors::JonesIndex index(ant, beam);
    if (itsAntBeamPairs.find(index) == itsAntBeamPairs.end()) {
        itsAntBeamPairs.insert(index);
-       updateSingleAntBeam(index);    
-   }   
+       updateSingleAntBeam(index);
+   }
 }
-                        
 
-/// @brief process parameters for a given antenna/beam   
-/// @details This method encapsulates update of the parameters 
-/// corresponding to the given antenna/beam pair according to 
+
+/// @brief process parameters for a given antenna/beam
+/// @details This method encapsulates update of the parameters
+/// corresponding to the given antenna/beam pair according to
 /// the current calibration solution accessor. Override this
 /// method for non-standard parameter names (use updateParameter
 /// for the actual update).
@@ -199,20 +199,20 @@ void CalibParamsMEAdapter::updateSingleAntBeam(const accessors::JonesIndex &inde
   // we could've also used the validity flag for calibration information to adjust the
   // flags for visibilities, but don't bother for now for simplicity (this code
   // is intended to be used with the simulator only anyway).
-  
-  const accessors::JonesJTerm gain = calSolution().gain(index);  
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XX), 
+
+  const accessors::JonesJTerm gain = calSolution().gain(index);
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XX),
                   gain.g1IsValid() ? gain.g1() : casacore::Complex(1.,0.));
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YY), 
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YY),
                   gain.g2IsValid() ? gain.g2() : casacore::Complex(1.,0.));
-                  
-  const accessors::JonesDTerm leakage = calSolution().leakage(index);    
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XY), 
+
+  const accessors::JonesDTerm leakage = calSolution().leakage(index);
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::XY),
                   leakage.d12IsValid() ? leakage.d12() : casacore::Complex(0.,0.));
-  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YX),  
+  updateParameter(accessors::CalParamNameHelper::paramName(index, casacore::Stokes::YX),
                   leakage.d21IsValid() ? leakage.d21() : casacore::Complex(0.,0.));
 }
-   
+
 /// @brief helper method to update a given parameter if necessary
 /// @details This method checks whether the parameter is new and
 /// adds or updates as required in the parameter class held by the
@@ -233,5 +233,3 @@ void CalibParamsMEAdapter::updateParameter(const std::string &name, const casaco
 } // namespace synthesis
 
 } // namespace askap
-
-

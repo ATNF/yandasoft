@@ -83,54 +83,102 @@ namespace askap
         bool absoluteThresholdDefined = false;
         bool relativeThresholdDefined = false;
         bool absoluteThreshold2Defined = false;
-        for (std::vector<std::string>::const_iterator ci = thresholds.begin();
-             ci != thresholds.end(); ++ci) {
-
+        bool noiseThresholdDefined = false;
+        bool noiseThreshold2Defined = false;
+        for (const string& t : thresholds) {
           casacore::Quantity cThreshold;
-          casacore::Quantity::read(cThreshold, *ci);
-          cThreshold.convert();
-          if (cThreshold.isConform("Jy")) {
-            ASKAPCHECK(!absoluteThreshold2Defined, "Parameter "<<parName<<
-                       " defines absolute threshold thrice ("<<*ci<<")");
-            if (absoluteThresholdDefined) {
-              absoluteThreshold2Defined = true;
-              boost::shared_ptr<ImageCleaningSolver> ics =
-                  boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
-              if (ics) {
-                ics->setDeepThreshold(cThreshold.getValue("Jy"));
-                ASKAPLOG_INFO_STR(logger, "Will stop deep minor cycle at the absolute threshold of "<<
-                                  cThreshold.getValue("mJy")<<" mJy");
-              } else {
-                ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
-                                  "a deep threshold, ignoring "<<*ci<<" in "<<parName);
-              }
-            } else {
-              absoluteThresholdDefined = true;
-              solver->setThreshold(cThreshold);
-              ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
-                                cThreshold.getValue("mJy")<<" mJy");
-            }
-          } else if (cThreshold.isConform("")) {
-            ASKAPCHECK(!relativeThresholdDefined, "Parameter "<<parName<<
-                       " defines relative threshold twice ("<<*ci<<")");
-            relativeThresholdDefined = true;
+          // check for noise thresholds
+          const string sigma("sigma");
+          const size_t pos = t.rfind(sigma);
+          // do we want spatially variant sigma thresholds?
+           const uInt boxSize = parset.getUint("solver.Clean.noiseboxsize",0);
 
-            boost::shared_ptr<ImageCleaningSolver> ics =
-              boost::dynamic_pointer_cast<ImageCleaningSolver>(solver);
-            if (ics) {
-              ics->setFractionalThreshold(cThreshold.getValue());
-              ASKAPLOG_INFO_STR(logger, "Will stop minor cycle at the relative threshold of "<<
-                                cThreshold.getValue()*100.<<"\%");
-            } else {
-              ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
-                                "a fractional threshold, ignoring "<<*ci<<" in "<<parName);
-            }
+          if (pos != std::string::npos && pos == t.size() - sigma.size()) {
+              ASKAPCHECK(!noiseThreshold2Defined, "Parameter "<<parName<<
+                         " defines noise threshold thrice ("<<t<<")");
+              ASKAPCHECK(!absoluteThresholdDefined,"Cannot mix "<<
+              "absolute and noise thresholds");
+              casacore::Quantity::read(cThreshold, t.substr(0,pos));
+              if (noiseThresholdDefined) {
+                  noiseThreshold2Defined = true;
+                  boost::shared_ptr<ImageCleaningSolver> ics =
+                      boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
+                  if (ics) {
+                    ics->setDeepNoiseThreshold(cThreshold.getValue());
+                    ASKAPLOG_INFO_STR(logger, "Will stop deep minor cycle at the noise threshold of "<<
+                                      cThreshold.getValue("")<<" sigma");
+                  } else {
+                    ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
+                                      "a deep noise threshold, ignoring "<<t<<" in "<<parName);
+                  }
+              } else {
+                  noiseThresholdDefined = true;
+                  boost::shared_ptr<ImageCleaningSolver> ics =
+                      boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
+                  if (ics) {
+                    ics->setNoiseThreshold(cThreshold.getValue());
+                    ASKAPLOG_INFO_STR(logger, "Will stop minor cycle at the noise threshold of "<<
+                                      cThreshold.getValue("")<<" sigma");
+                    if (boxSize > 0) {
+                      ics->setNoiseBoxSize(boxSize);
+                      ASKAPLOG_INFO_STR(logger, "Will use a spatially variant noise threshold with box size of "<<
+                                      boxSize<<" pixels");
+                    }
+                  } else {
+                    ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
+                                      "a noise threshold, ignoring "<<t<<" in "<<parName);
+                  }
+              }
           } else {
-            ASKAPTHROW(AskapError, "Unable to convert units in the quantity "<<
-                       cThreshold<<" to either Jy or a dimensionless quantity");
-          } // if - isConform
+              casacore::Quantity::read(cThreshold, t);
+              cThreshold.convert();
+              if (cThreshold.isConform("Jy")) {
+                ASKAPCHECK(!absoluteThreshold2Defined, "Parameter "<<parName<<
+                           " defines absolute threshold thrice ("<<t<<")");
+                ASKAPCHECK(!noiseThresholdDefined,"Cannot mix "<<
+                "absolute and noise thresholds");
+
+                if (absoluteThresholdDefined) {
+                  absoluteThreshold2Defined = true;
+                  boost::shared_ptr<ImageCleaningSolver> ics =
+                      boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
+                  if (ics) {
+                    ics->setDeepThreshold(cThreshold.getValue("Jy"));
+                    ASKAPLOG_INFO_STR(logger, "Will stop deep minor cycle at the absolute threshold of "<<
+                                      cThreshold.getValue("mJy")<<" mJy");
+                  } else {
+                    ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
+                                      "a deep threshold, ignoring "<<t<<" in "<<parName);
+                  }
+                } else {
+                  absoluteThresholdDefined = true;
+                  solver->setThreshold(cThreshold);
+                  ASKAPLOG_INFO_STR(logger, "Will stop the minor cycle at the absolute threshold of "<<
+                                    cThreshold.getValue("mJy")<<" mJy");
+                }
+              } else if (cThreshold.isConform("")) {
+                ASKAPCHECK(!relativeThresholdDefined, "Parameter "<<parName<<
+                           " defines relative threshold twice ("<<t<<")");
+                relativeThresholdDefined = true;
+
+                boost::shared_ptr<ImageCleaningSolver> ics =
+                  boost::dynamic_pointer_cast<ImageCleaningSolver>(solver);
+                if (ics) {
+                  ics->setFractionalThreshold(cThreshold.getValue());
+                  ASKAPLOG_INFO_STR(logger, "Will stop minor cycle at the relative threshold of "<<
+                                    cThreshold.getValue()*100.<<"\%");
+                } else {
+                  ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
+                                    "a fractional threshold, ignoring "<<t<<" in "<<parName);
+                }
+              } else {
+                ASKAPTHROW(AskapError, "Unable to convert units in the quantity "<<
+                           cThreshold<<" to either Jy or a dimensionless quantity");
+              } // if - isConform
+          } // if - noise threshold
         } // for - parameter loop
       } // if - parameter defined
+
       const std::string parName2 = "threshold.masking";
       if (parset.isDefined(parName2)) {
         boost::shared_ptr<ImageCleaningSolver> ics =
@@ -142,6 +190,17 @@ namespace askap
                             "masking threshold, ignoring "<<parName2);
         }
       } // if - parameter defined
+
+      const std::string parName3 = "threshold.firstimage";
+      boost::shared_ptr<ImageCleaningSolver> ics =
+            boost::dynamic_pointer_cast<ImageAMSMFSolver>(solver);
+      if (ics) {
+        ASKAPLOG_INFO_STR(logger, "Using the first image to set thresholds for the other images");
+        ics->setUseFirstImageForThresholds(parset.getBool(parName3, true));
+      } else {
+        ASKAPLOG_INFO_STR(logger, "The type of the image solver used does not allow to specify "
+            "to use thresholds from first image, ignoring "<<parName3);
+      }
     } // method
 
 
@@ -162,9 +221,9 @@ namespace askap
       const vector<string> preconditioners=parset.getStringVector("preconditioner.Names",std::vector<std::string>());
       for (vector<string>::const_iterator pc = preconditioners.begin(); pc != preconditioners.end(); ++pc) {
         if ( (*pc)=="Wiener" ) {
-          // if this is the restore solver, use the cached preconditioner function (if it exists).
+          // Use the cached preconditioner function (if it exists & size matches).
           solver->addPreconditioner(WienerPreconditioner::createPreconditioner(
-          parset.makeSubset("preconditioner.Wiener."), solver->getIsRestoreSolver()));
+              parset.makeSubset("preconditioner.Wiener."), true));
         } else if ( (*pc)=="NormWiener" ) {
           const float robustness = parset.getFloat("preconditioner.NormWiener.robustness",0.0);
           solver->addPreconditioner(IImagePreconditioner::ShPtr(new NormWienerPreconditioner(robustness)));
@@ -185,7 +244,7 @@ namespace askap
                      "preconditioner.GaussianTaper can have either single element or "
                      " a vector of 3 elements. You supplied a vector of "<<taper.size()<<" elements");
           ASKAPCHECK(parset.isDefined("Images.shape") && parset.isDefined("Images.cellsize"),
-                     "Imager.shape and Imager.cellsize should be defined to convert the taper fwhm specified in "
+                     "Images.shape and Images.cellsize should be defined to convert the taper fwhm specified in "
                      "angular units in the image plane into uv cells");
           const std::vector<double> cellsize =
               SynthesisParamsHelper::convertQuantity(parset.getStringVector("Images.cellsize"),"rad");
@@ -250,7 +309,7 @@ namespace askap
         string algorithm=parset.getString("solver.Clean.algorithm","MultiScale");
         // MV: a bit of technical debt highlighted by casacore's interface change. In principle, we could've
         // had scales as std::vector in the interface to avoid the explicit construction (in this particular case,
-        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse 
+        // there is no benefit of using casacore::Vector) + we have a similar code in a number of places, could've achieved a better reuse
         const casacore::Vector<float> scales = casacore::Vector<float>(parset.getFloatVector("solver.Clean.scales", defaultScales));
 
         if (algorithm=="MultiScale") {
@@ -277,7 +336,7 @@ namespace askap
           ASKAPCHECK(!parset.isDefined("solver.nterms"), "Specify nterms for each image instead of using solver.nterms");
           ASKAPCHECK(!parset.isDefined("solver.Clean.nterms"),
               "Specify nterms for each image instead of using solver.Clean.nterms");
-          solver.reset(new ImageAMSMFSolver(casacore::Vector<float>(scales)));
+          solver.reset(new ImageAMSMFSolver());
           ASKAPLOG_INFO_STR(logger, "Constructed basis function multi-frequency solver" );
         }
         else {

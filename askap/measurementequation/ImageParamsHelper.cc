@@ -236,10 +236,10 @@ void ImageParamsHelper::makeFacet(int xFacet, int yFacet)
   itsFacetY = yFacet;
 }
 
-/// @brief make this object a facet
+/// @brief make this object a Taylor term
 /// @details It is sometimes necessary to merge faceting suffixes and
-/// Taylor term suffix. This method makes the current image a facet with
-/// given indices. 
+/// Taylor term suffix. This method makes the current image a Taylor term with
+/// the given order. 
 /// @param[in] order order in the Taylor series
 void ImageParamsHelper::makeTaylorTerm(int order)
 {
@@ -248,6 +248,31 @@ void ImageParamsHelper::makeTaylorTerm(int order)
   itsOrder = order;
 }
 
+
+/// @brief replace the given text at the start of the string with another 
+/// @details This is a helper static method to replace the given text 
+/// usually the word 'image' at the start of the string with the given text.
+/// We name all image paramters in a consistent way starting with word 'image' with
+/// the actual name followed. Although this class is agnostic to the leading parts
+/// of the parameter name (i.e. it can have as many '.' in it as we like), it is handy
+/// to have a method simplifying turning an image parameter into say psf or weight.
+/// @param[in] str input string
+/// @param[in] pattern word to find at the start of the input string (usually "image")
+/// @param[in] replace the new pattern to have in the output
+/// @return the string with replacement
+/// @note An exception is thrown if the input string doesn't start with the text given by
+/// pattern parameter
+std::string ImageParamsHelper::replaceLeadingWordWith(const std::string &str, const std::string &pattern, const std::string &replace)
+{
+   const size_t pos = str.find(pattern);
+   // one check is redundant, but it is nice to be able to give a more descriptive message
+   ASKAPCHECK(pos != std::string::npos, "Substring '"<<pattern<<"' is not found in "<<str<<". Logic error is suspected");
+   ASKAPCHECK(pos == 0, "Parameter name '"<<str<<"' is expected to start with '"<<pattern<<"'");
+   if (str.size() == pattern.size()) {
+       return replace;
+   }
+   return replace + str.substr(pattern.size());
+}
 
 
 } // namespace synthesis

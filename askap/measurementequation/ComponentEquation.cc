@@ -177,17 +177,24 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
 {
   // DDCALTAG
   // ensure that any offset for multi-direction models is consistent with the buffer size
-  ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
-  ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
+  //ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
+  //ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
+  //ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
+  //ASKAPDEBUGASSERT(rwVis.nplane() == itsPolConverter.outputPolFrame().nelements());
+  ASKAPASSERT(rwVis.nplane() % uvw.nelements() == 0);
+  ASKAPASSERT(rwVis.nplane() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
-  ASKAPDEBUGASSERT(rwVis.nplane() == itsPolConverter.outputPolFrame().nelements());
+  ASKAPDEBUGASSERT(rwVis.nrow() == itsPolConverter.outputPolFrame().nelements());
+
 
   // flattened buffer for visibilities
   std::vector<double> vis(2*freq.nelements());
 
 
-  for (casacore::uInt row=0;row<rwVis.nrow();++row) {
-       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
+  //for (casacore::uInt row=0;row<rwVis.nrow();++row) {
+  for (casacore::uInt row=0;row<rwVis.nplane();++row) {
+       //casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
+       casacore::Matrix<casacore::Complex> thisRow = rwVis.xyPlane(rowOffset + row);
        for (casacore::Vector<casacore::Stokes::StokesTypes>::const_iterator polIt = itsPolConverter.inputPolFrame().begin();
             polIt != itsPolConverter.inputPolFrame().end(); ++polIt) {
             // model given input Stokes
@@ -201,12 +208,14 @@ void ComponentEquation::addModelToCube(const IParameterizedComponent& comp,
                  ci!=sparseTransform.end(); ++ci) {
 
                  const casacore::uInt pol = polIndex(ci->first);
-                 ASKAPDEBUGASSERT(pol < thisRow.ncolumn());
+                 //ASKAPDEBUGASSERT(pol < thisRow.ncolumn());
+                 ASKAPDEBUGASSERT(pol < thisRow.nrow());
 
                  /// next command adds model visibilities to the
                  /// appropriate slice of the visibility cube. Conversions
                  /// between complex and two doubles are handled automatically
-                 addScaledVector(vis,thisRow.column(pol),ci->second);
+                 //addScaledVector(vis,thisRow.column(pol),ci->second);
+                 addScaledVector(vis,thisRow.row(pol),ci->second);
             }
        }
   }
@@ -233,10 +242,14 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
   // DDCALTAG
   // ensure that any offset for multi-direction models is consistent with the buffer size
   //  - this will be updated as part of YAN-326, so leave for now
-  ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
-  ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
+  //ASKAPASSERT(rwVis.nrow() % uvw.nelements() == 0);
+  //ASKAPASSERT(rwVis.nrow() >= rowOffset + uvw.nelements());
+  //ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
+  //ASKAPDEBUGASSERT(rwVis.nplane() >= 1);
+  ASKAPASSERT(rwVis.nplane() % uvw.nelements() == 0);
+  ASKAPASSERT(rwVis.nplane() >= rowOffset + uvw.nelements());
   ASKAPDEBUGASSERT(rwVis.ncolumn() == freq.nelements());
-  ASKAPDEBUGASSERT(rwVis.nplane() >= 1);
+  ASKAPDEBUGASSERT(rwVis.nrow() >= 1);
 
   // flattened buffer for visibilities
   std::vector<double> vis(2*freq.nelements());
@@ -250,11 +263,15 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
        comp.calculate(uvw[row],freq,vis);
 
        //
-       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
+       //casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(rowOffset + row);
+       casacore::Matrix<casacore::Complex> thisRow = rwVis.xyPlane(rowOffset + row);
 
-       ASKAPDEBUGASSERT(thisRow.ncolumn() == itsPolConverter.outputPolFrame().nelements());
-
-       for (casacore::uInt pol = 0; pol < thisRow.ncolumn(); ++pol) {
+       //ASKAPDEBUGASSERT(thisRow.ncolumn() == itsPolConverter.outputPolFrame().nelements());
+       ASKAPDEBUGASSERT(thisRow.nrow() == itsPolConverter.outputPolFrame().nelements());
+       //std::cout << "This row: " << thisRow <<  std::endl;
+       //for (casacore::uInt pol = 0; pol < thisRow.ncolumn(); ++pol) {
+       for (casacore::uInt pol = 0; pol < thisRow.nrow(); ++pol) {
+            // std::cout << "thisRow.row(" << pol << ") = " << thisRow.row(pol) << std::endl;
             const std::map<casacore::Stokes::StokesTypes, casacore::Complex>::const_iterator ci =
                  sparseTransform.find(itsPolConverter.outputPolFrame()[pol]);
             if (ci != sparseTransform.end()) {
@@ -265,7 +282,9 @@ void ComponentEquation::addModelToCube(const IUnpolarizedComponent& comp,
                 //addScaledVector(vis,thisRow.column(pol), ci->second);
                 // writing it out is >2x faster though
                 for (casacore::uInt chan=0; chan<freq.nelements(); chan++) {
-                  thisRow(chan,pol) += ci->second * casacore::Complex(vis[2*chan],vis[2*chan+1]);
+                  //thisRow(chan,pol) += ci->second * casacore::Complex(vis[2*chan],vis[2*chan+1]);
+                  thisRow(pol,chan) += ci->second * casacore::Complex(vis[2*chan],vis[2*chan+1]);
+                  //std::cout << "thisRow(" << chan << "," << pol << ") = " << thisRow(chan,pol) << std::endl;
                 }
             }
        }
@@ -312,7 +331,9 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
       try {
           // set parameter for increased buffer size. Only possible in DDCalBufferDataAccessor, so cast first
           accessors::DDCalBufferDataAccessor& ndAcc = dynamic_cast<accessors::DDCalBufferDataAccessor&>(chunk);
-          ndAcc.setNDir(itsNDir);
+          if (ndAcc.getNDir() != itsNDir) {
+              ndAcc.setNDir(itsNDir);
+          }
       }
       catch (std::bad_cast&) {}
   }
@@ -371,6 +392,8 @@ void ComponentEquation::predict(accessors::IDataAccessor &chunk) const
             // DDCALTAG
             addModelToCube(curComp,uvw,freq,rwVis,rowOffset);
        }
+
+       //std::cout << rwVis << std::endl;
   }
 }
 
@@ -511,7 +534,8 @@ void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor
   const casacore::Cube<casacore::Complex> &visCube = chunk.visibility();
 
   const casacore::uInt nPol = chunk.nPol();
-  ASKAPDEBUGASSERT(nPol <= chunk.visibility().nplane());
+  //ASKAPDEBUGASSERT(nPol <= chunk.visibility().nplane());
+  ASKAPDEBUGASSERT(nPol <= chunk.visibility().nrow());
 
   // check whether the polarisation converter is valid
   if (!scimath::PolConverter::equal(itsPolConverter.outputPolFrame(),chunk.stokes())) {
@@ -533,8 +557,8 @@ void ComponentEquation::calcGenericEquations(const accessors::IConstDataAccessor
             // the following command copies visibility slice to the appropriate
             // residual slice converting complex to two doubles automatically
             // via templates
-            copyVector(visCube.xyPlane(pol).row(row),
-                  residual(casacore::Slice(offset,2*freq.nelements())));
+            //copyVector(visCube.xyPlane(pol).row(row), residual(casacore::Slice(offset,2*freq.nelements())));
+            copyVector(visCube.yzPlane(pol).column(row), residual(casacore::Slice(offset,2*freq.nelements())));
        }
   }
 

@@ -63,6 +63,7 @@
 #include <askap/measurementequation/CalibrationApplicatorME.h>
 #include <askap/measurementequation/CalibrationIterator.h>
 #include <askap/parallel/ParallelWriteIterator.h>
+#include <askap/utils/TilingUtils.h>
 
 // casacore includes
 #include <casacore/casa/OS/Timer.h>
@@ -79,7 +80,7 @@ using namespace askap::synthesis;
 class CcalApplyApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             // This class must have scope outside the main try/catch block
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
@@ -88,7 +89,9 @@ class CcalApplyApp : public askap::Application
                 StatReporter stats;
                 LOFAR::ParameterSet subset(config().makeSubset("Ccalapply."));
 
-                itsDistribute = comms.isParallel() ? subset.getBool("distribute", true) : false;
+                // distribute by channel with master writing if parallel except if
+                // we have specified Tile based distribution instead
+                itsDistribute = comms.isParallel() ? subset.getBool("distribute", !subset.isDefined("Tiles")) : false;
 
                 if (itsDistribute) {
                     ASKAPLOG_INFO_STR(logger, "Data will be distributed between "<<(comms.nProcs() - 1)<<" workers, master will write data");
@@ -138,7 +141,7 @@ class CcalApplyApp : public askap::Application
                         calculationTime += timer.real();
                     }
                     ASKAPLOG_INFO_STR(logger, "Time spent in calculation and data movement (but excluding I/O): "<<calculationTime<<" seconds");
-                } else {
+                } else if (itsDistribute) {
                     // server code. Note, noise is not propagated back (as for the serial case)
                     ParallelWriteIterator::masterIteration(comms, getDataIterator(subset, comms), ParallelWriteIterator::SYNCFLAG | ParallelWriteIterator::READ);
                 }
@@ -158,7 +161,7 @@ class CcalApplyApp : public askap::Application
 
     private:
 
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }
@@ -239,19 +242,33 @@ class CcalApplyApp : public askap::Application
 
         IDataSharedIter getDataIterator(const LOFAR::ParameterSet& parset, const askap::askapparallel::AskapParallel &comms) const
         {
-            const string ms = itsDistribute ? parset.getString("dataset") : comms.substitute(parset.getString("dataset"));
-            TableDataSource ds(ms);
+            // do substitutions
+            LOFAR::ParameterSet subset(parset.makeSubset(""));
+            if (subset.isDefined("Tiles")) {
+                subset.replace("Tiles",comms.substitute(subset.getString("Tiles")));
+            }
+            const string ms = itsDistribute ? subset.getString("dataset") : comms.substitute(subset.getString("dataset"));
 
+            TableDataSource ds(ms, TableDataSource::MEMORY_BUFFERS | TableDataSource::WRITE_DATA_ONLY);
             IDataSelectorPtr sel=ds.createSelector();
-            sel << parset;
+            sel << subset;
             IDataConverterPtr conv=ds.createConverter();
-            conv->setFrequencyFrame(getFreqRefFrame(parset), "Hz");
+            conv->setFrequencyFrame(getFreqRefFrame(subset), "Hz");
             conv->setDirectionFrame(casa::MDirection::Ref(casa::MDirection::J2000));
             // ensure that time is counted in seconds since 0 MJD
             conv->setEpochFrame();
 
-            if (parset.isDefined("maxchunkrows")) {
-                const casa::uInt maxChunkSize = parset.getUint32("maxchunkrows");
+            // do automatic distribution over tiles if requested and
+            //   if not distributing in other ways (by channel or ms)
+            const bool distributeByTile = !itsDistribute && comms.isParallel() && subset.isDefined("Tiles") &&
+                subset.getString("Tiles")=="auto" &&
+                subset.getString("dataset")==comms.substitute(subset.getString("dataset"));
+            if (distributeByTile) {
+                utils::distributeByTile(sel, "DATA", comms.nProcs(), comms.rank());
+            }
+
+            if (subset.isDefined("maxchunkrows")) {
+                const casa::uInt maxChunkSize = subset.getUint32("maxchunkrows");
                 ASKAPCHECK(maxChunkSize > 0, "maxchunkrows parameter should be positive");
                 ASKAPLOG_INFO_STR(logger, "Restricting the chunk size to at most "<<maxChunkSize<<" rows for each iteration");
                 ds.configureMaxChunkSize(maxChunkSize);

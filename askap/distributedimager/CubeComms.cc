@@ -82,21 +82,48 @@ size_t CubeComms::buildCommIndex()
     //ASKAPLOG_DEBUG_STR(logger, "Interworker communicator index is " << itsComrades);
     return itsComrades;
 }
-size_t CubeComms::buildWriterIndex()
+size_t CubeComms::buildWriterIndex(size_t comm)
 {
 
     std::map<int, int>::iterator it = writerMap.begin();
-    std::vector<int> ranks(writerCount);
+    std::vector<int> ranks(writerMap.size());
+    std::vector<int> comm_ranks(writerMap.size());
     int wrt = 0;
     while (it != writerMap.end()) {
         ranks[wrt] = it->first;
         it++;
         wrt++;
     }
-    itsWriters = createComm(ranks);
+    if (comm != 0){
+    comm_ranks = translateRanks(ranks, comm);
+    } else {
+        comm_ranks = ranks;
+    }
+    itsWriters = createComm(comm_ranks, comm);
     //ASKAPLOG_DEBUG_STR(logger, "Interwriter communicator index is " << itsComrades);
     return itsWriters;
 }
+#ifdef HAVE_MPI
+std::vector<int> CubeComms::translateRanks(std::vector<int> ranks, size_t comm)
+{
+    int n = ranks.size();
+    std::vector<int> ranksOut(n);
+
+    MPI_Group world_group;
+    MPI_Group comm_group;
+
+    MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+    MPI_Comm_group(this->getComm(comm), &comm_group);
+
+    MPI_Group_translate_ranks(world_group, n, ranks.data(), comm_group, ranksOut.data());
+    return ranksOut;
+}
+#else
+std::vector<int> CubeComms::translateRanks(std::vector<int> ranks, size_t comm)
+{
+    ASKAPTHROW(AskapError, "CubeComms::translateRanks() cannot be used - configured without MPI");
+}
+#endif
 
 void CubeComms::initWriters(int nwriters, int nchanpercore)
 {

@@ -37,19 +37,8 @@ ASKAP_LOGGER(logger, ".measurementequation.gaussiantaperpreconditioner");
 #include <askap/askap/AskapError.h>
 #include <askap/profile/AskapProfiler.h>
 
-#include <askap/gridding/SupportSearcher.h>
-#include <askap/scimath/utils/PaddingUtils.h>
+#include <askap/scimath/fft/FFT2DWrapper.h>
 #include <askap/measurementequation/SynthesisParamsHelper.h>
-
-#include <casacore/lattices/Lattices/ArrayLattice.h>
-#include <casacore/lattices/LatticeMath/LatticeFFT.h>
-#include <casacore/lattices/LEL/LatticeExpr.h>
-#include <casacore/lattices/LatticeMath/Fit2D.h>
-#include <casacore/casa/BasicSL/Constants.h>
-#include <casacore/casa/Arrays/ArrayMath.h>
-#include <casacore/scimath/Mathematics/SquareMatrix.h>
-#include <casacore/scimath/Mathematics/RigidVector.h>
-#include <askap/imagemath/utils/MultiDimArrayPlaneIter.h>
 
 namespace askap {
 
@@ -179,32 +168,24 @@ casacore::Vector<double> GaussianTaperPreconditioner::fitPsf(casacore::Array<flo
 /// @param[in] image an image to apply the taper to
 void GaussianTaperPreconditioner::applyTaper(casacore::Array<float> &image) const
 {
-  casacore::ArrayLattice<float> lattice(image);
+  // This will throw exception if there are !=2 non degenerate axes
+  casacore::Matrix<float> matImage(image.nonDegenerate());
+  // Limit number of fft threads to 8 (more is slower for our fft sizes)
+  scimath::FFT2DWrapper<casacore::Complex> fft2d(true,8);
+  casacore::Matrix<casacore::Complex> grid(matImage.shape(),casacore::Complex(0.f));
 
-  /*
-  casacore::IPosition paddedShape = image.shape();
-  ASKAPDEBUGASSERT(paddedShape.nelements()>=2);
-  paddedShape[0] *= 2;
-  paddedShape[1] *= 2;
-  */
+  // copy image into a complex scratch space
+  casacore::setReal(grid, matImage);
 
-  // Setup work arrays.
-  const casacore::IPosition shape = lattice.shape();
-  //const casacore::IPosition shape = paddedShape;
-  casacore::ArrayLattice<casacore::Complex> scratch(shape);
+  // fft to uv
+  fft2d(grid, true);
 
-  // fft to transform the image into uv-domain
-  scratch.copyData(casacore::LatticeExpr<casacore::Complex>(toComplex(lattice)));
-  casacore::LatticeFFT::cfft2d(scratch, true);
+  // multiply by taper
+  grid *= taper(matImage.shape());
 
-  // apply the taper
-  casacore::ArrayLattice<float> taperLattice(taper(shape));
-
-  scratch.copyData(casacore::LatticeExpr<casacore::Complex> (taperLattice * scratch));
-
-  // transform back to the image domain
-  casacore::LatticeFFT::cfft2d(scratch, false);
-  lattice.copyData(casacore::LatticeExpr<float> ( real(scratch) ));
+  // ifft back to image and return the real part
+  fft2d(grid, false);
+  casacore::real(matImage, grid);
 }
 
 } // namespace synthesis

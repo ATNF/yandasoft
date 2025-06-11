@@ -81,7 +81,7 @@ class WeightsLogGatherTestApp : public askap::Application
 
              // MV: note, the code was essentially taken from imager to emulate the same distribution/same communication pattern
              // However, the gathering operation doesn't happen if nwriters == 1 or singleoutputfile is false in the parset rendering the whole
-             // test useless. 
+             // test useless.
              if (nwriters > 1 && config().getBool("singleoutputfile",false)) {
                  std::list<int> creators = comms.getCubeCreators();
                  ASKAPASSERT(creators.size() == 1);
@@ -93,9 +93,9 @@ class WeightsLogGatherTestApp : public askap::Application
         }
 
         void prepareSomeWeightsList(askap::cp::CubeComms &comms) {
- 
-             // do the same math & logging as the imager worker 
-             // although we don't necessarily need this information, it may be handy 
+
+             // do the same math & logging as the imager worker
+             // although we don't necessarily need this information, it may be handy
              // to be able to fill the list to test depending on this info
              const int nchanpercore = config().getInt32("nchanpercore", 1);
 
@@ -129,7 +129,7 @@ class WeightsLogGatherTestApp : public askap::Application
              }
         }
 
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             // Instantiate the comms class
 
@@ -178,7 +178,7 @@ class WeightsLogGatherTestApp : public askap::Application
                 }
 
                 ASKAPLOG_INFO_STR(logger, "Reached the barrier at the end (not sure if it is needed, but the imager has it)");
-                comms.barrier(); 
+                comms.barrier();
                 ASKAPLOG_INFO_STR(logger, "Passed the barrier at the end (not sure if it is needed, but the imager has it)");
             } catch (const askap::AskapError& e) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << e.what());
@@ -196,7 +196,7 @@ class WeightsLogGatherTestApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

@@ -40,7 +40,7 @@ namespace askap
 {
     namespace synthesis
     {
-        /// @brief Visibility gridder using W projection by utilising MPI 
+        /// @brief Visibility gridder using W projection by utilising MPI
         ///        shared memory to reduce memory footprint.
         /// @details The visibilities are gridded using a convolution
         /// function that implements a Fresnel transform. This corrects
@@ -54,7 +54,7 @@ namespace askap
         ///
         /// The scaling is slow in data points, fast in w planes.
         ///
-        /// NOTE: At the moment, this class only works for the imager 
+        /// NOTE: At the moment, this class only works for the imager
         ///       but not cimager because it is setup in a way that rank
         ///       0 of the first node does not have the gridder.
         ///
@@ -80,8 +80,19 @@ namespace askap
                         const float alpha=1.,
                         const bool shareCF=false,
                         const int  cfRank = 1,
+                        const bool masterDoesWork = false,
                         const bool mpipresetup = false);
 
+                /// @brief dont allow default constructor
+                MPIWProjectVisGridder() = delete;
+                /// @brief assignment operator
+                /// @details Defined as private, so it can't be called (to enforce usage of the
+                /// copy constructor
+                /// @param[in] other input object
+                /// @return reference to itself
+                MPIWProjectVisGridder& operator=(const MPIWProjectVisGridder &other) = delete;
+
+                /// @brief destructor
                 virtual ~MPIWProjectVisGridder();
 
                 /// @brief copy constructor
@@ -91,7 +102,7 @@ namespace askap
                 MPIWProjectVisGridder(const MPIWProjectVisGridder &other);
 
                 /// Clone a copy of this Gridder
-                virtual IVisGridder::ShPtr clone();
+                IVisGridder::ShPtr clone() override;
 
                 /// @brief static method to get the name of the gridder
                 /// @details We specify parameters per gridder type in the parset file.
@@ -115,11 +126,11 @@ namespace askap
                 /// used in derived classes to avoid too much duplication of the code. For this
                 /// particular class it configures variable/offset support and cutoff behavior.
                 /// @param[in] parset input parset file
-                void configureGridder(const LOFAR::ParameterSet& parset);
+                void configureGridder(const LOFAR::ParameterSet& parset) override;
 
                 /// Initialize convolution function
                 /// @param[in] acc const data accessor to work with
-                virtual void initConvolutionFunction(const accessors::IConstDataAccessor& acc);
+                void initConvolutionFunction(const accessors::IConstDataAccessor& acc) override;
 
             private:
 
@@ -128,13 +139,7 @@ namespace askap
                 void copyFromSharedMemory(const std::vector<std::pair<int,int> >& itsConvFuncMatSize);
                 void copyConvFuncOffset();
 
-                /// @brief assignment operator
-                /// @details Defined as private, so it can't be called (to enforce usage of the
-                /// copy constructor
-                /// @param[in] other input object
-                /// @return reference to itself
-                MPIWProjectVisGridder& operator=(const MPIWProjectVisGridder &other);
-
+#ifdef HAVE_MPI
                 /// @brief MPI variables used to setup MPI shared memory
 		        /// @details - MPI_Win_get_attr(itsWindowTable,MPI_WIN_SIZE,&val,&flag)
 		        ///            should return a val which is the size of the shared memory segment.
@@ -144,12 +149,14 @@ namespace askap
 		        /// @brief - get the group associated with the COMM_WORLD communicator
 		        static MPI_Group itsWorldGroup;
 		        /// @brief this communicator contains all the ranks except rank 0 of COMM_WORLD
+                ///        if itsMasterDoesWork flag is false otherwise it is the same as COMM_WORLD
                 static MPI_Comm itsNonRankZeroComms;
 		        /// @details - get the group associated with the itsNonRankZeroComms communicator.
 		        ///            This group does not contain rank 0
 		        static MPI_Group itsGridderGroup;
 		        /// @brief - communicator for a given node
 		        static MPI_Comm itsNodeComms;
+#endif
 
                 /// @brief number of ranks within a node
                 static int     itsNodeSize;
@@ -160,17 +167,20 @@ namespace askap
                 static imtypeComplex* itsMpiSharedMemory;
 
 		        /// @details - These are used to synchronise and keep track of how many
-		        ///            gridder objects are instantiated. The ObjCount member is 
+		        ///            gridder objects are instantiated. The ObjCount member is
 		        ///            employed to determined when the process should cleanup the
 		        ///            shared memory segment. This is done when ObjCount is 0.
                 static std::mutex ObjCountMutex;
                 static unsigned int ObjCount;
                 static bool     itsMpiMemSetup;
-                /// mpi shared memory on startup 
+                /// mpi shared memory on startup
                 bool itsMpiMemPreSetup;
 
                 /// number of ranks to do the CF calculation
-                int itsCFRank; 
+                int itsCFRank;
+
+                bool itsSerial;
+                bool itsMasterDoesWork;
         };
     }
 }

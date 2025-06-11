@@ -44,7 +44,6 @@
 #include "askap/distributedimager/CalcCore.h"
 #include "askap/distributedimager/CubeBuilder.h"
 #include "askap/distributedimager/CubeComms.h"
-#include "askap/distributedimager/MSGroupInfo.h"
 
 namespace askap {
 namespace cp {
@@ -93,8 +92,6 @@ class ContinuumMaster {
 
         /// statistics
         StatReporter& itsStats;
-
-        MSGroupInfo isMSGroupInfo;
 
         std::map<unsigned int, casacore::Vector<casacore::Quantum<double> > > itsBeamList;
 

@@ -129,7 +129,7 @@ namespace askap
       /// CalibrationME template.
       /// @param[in] dsi data shared iterator
       /// @param[in] perfectME uncorrupted measurement equation
-      void createCalibrationME(const accessors::IDataSharedIter &dsi,
+      void createCalibrationME(const accessors::IConstDataSharedIter &dsi,
                 const boost::shared_ptr<IMeasurementEquation const> &perfectME);
 
       /// @brief helper method to rotate all phases
@@ -148,7 +148,7 @@ namespace askap
       /// equations. This method extracts start time from NE. Because NEs are not
       /// shipped to the master for bp-calibrator, if called on master the method looks
       /// for a different fixed keyword in the model (which should be created on the worker
-      /// before the model is sent to master). 
+      /// before the model is sent to master).
       /// @return solution time (seconds since 0 MJD)
       /// @note if no start/stop time metadata are present in the normal equations or model
       /// this method returns 0. In addition, if itsSolutionTimeOverride field is defined,
@@ -281,7 +281,7 @@ namespace askap
       /// @brief flag enabling writing bandpass solution (otherwise it is only solved for)
       bool itsStoreBandpass;
 
-      /// @brief if true, gain thresholding will be performed 
+      /// @brief if true, gain thresholding will be performed
       /// @details Solutions will be flagged as invalid for antennas with bandpass gains outside the given tolerance
       bool itsPerformGainThresholding;
 
@@ -291,7 +291,7 @@ namespace askap
       /// @brief tolerance for bandpass gain amplitude (only used if gain thresholding is enabled)
       double itsGainAmplitudeTolerance;
 
-      /// @brief if true, leakage thresholding will be performed 
+      /// @brief if true, leakage thresholding will be performed
       /// @details Solutions will be flagged as invalid for antennas with bandpass leakages outside the given tolerance.
       bool itsPerformLeakageThresholding;
 

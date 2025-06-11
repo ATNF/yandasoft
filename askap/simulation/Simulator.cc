@@ -103,7 +103,7 @@ struct MSFeedParameterExtractor : protected MSIter {
     /// @brief constructor
     /// @param[in] ms measurement set
     MSFeedParameterExtractor(const casacore::MeasurementSet &ms) {
-        msc_p = new ROMSColumns(ms);
+        msc_p.reset(new ROMSColumns(ms));
         msc_p->antenna().mount().getColumn(antennaMounts_p, True);
         checkFeed_p = True;
         setFeedInfo();

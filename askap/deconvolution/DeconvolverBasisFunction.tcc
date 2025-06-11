@@ -58,7 +58,7 @@ namespace askap {
         /// The template argument T is the type, and FT is the transform
         /// e.g. DeconvolverBasisFunction<Double, DComplex>
         /// @ingroup Deconvolver
- 
+
         template<class T, class FT>
         DeconvolverBasisFunction<T, FT>::DeconvolverBasisFunction(Vector<Array<T> >& dirty,
                                                                   Vector<Array<T> >& psf)
@@ -252,7 +252,8 @@ namespace askap {
             // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
             // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
-            scimath::FFT2DWrapper<FT> fft2d(true);
+            // Limit number of fft threads to 8 (more is slower for our fft sizes)
+            scimath::FFT2DWrapper<FT> fft2d(true,8);
 
             // do explicit loop over basis functions here (the original code relied on iterator in old
             // fft2d and, therefore, low level representation of the basis function stack). This way
@@ -261,15 +262,11 @@ namespace askap {
             for (uInt base = 0; base < nBases; ++base) {
                  casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
-                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                 //scimath::fft2d(fftBuffer, true);
                  fft2d(fftBuffer, true);
             }
 
             Matrix<FT> residualFFT(this->dirty().shape().nonDegenerate(2), static_cast<FT>(0.));
             casacore::setReal(residualFFT, this->dirty().nonDegenerate(2));
-            // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-            //scimath::fft2d(residualFFT, true);
             fft2d(residualFFT, true);
 
             // there is no bypass of complex initialisation in casacore-3.4
@@ -281,8 +278,6 @@ namespace askap {
 
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).shape().conform(residualFFT.shape()));
                 work = conj(basisFunctionFFT.xyPlane(term)) * residualFFT;
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(work, false);
                 fft2d(work, false);
 
                 // basis function * residual
@@ -324,7 +319,8 @@ namespace askap {
             // Do harmonic reorder as with the original wrapper (hence, pass true to the wrapper), it may be possible to
             // skip it here as we use FFT to do convolutions and don't care about particular harmonic placement in the Fourier space
             // but one has to generate basis functions with the right order (or reorder them in a separate routine - leave it for the future)
-            scimath::FFT2DWrapper<FT> fft2d(true);
+            // Limit number of fft threads to 8 (more is slower for our fft sizes)
+            scimath::FFT2DWrapper<FT> fft2d(true,8);
 
             // do explicit loop over basis functions here (the original code relied on iterator in old
             // fft2d and, therefore, low level representation of the basis function stack). This way
@@ -333,8 +329,6 @@ namespace askap {
             for (uInt base = 0; base < nBases; ++base) {
                  casacore::Matrix<FT> fftBuffer = basisFunctionFFT.xyPlane(base);
                  casacore::setReal(fftBuffer, this->itsBasisFunction->basisFunction(base));
-                 // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                 //scimath::fft2d(fftBuffer, true);
                  fft2d(fftBuffer, true);
             }
 
@@ -361,8 +355,6 @@ namespace askap {
             ASKAPLOG_DEBUG_STR(decbflogger, "Shape of PSF subsection is " << subPsfShape);
 
             casacore::setReal(subXFR, this->psf().nonDegenerate(2)(subPsfSlicer));
-            // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-            //scimath::fft2d(subXFR, true);
             fft2d(subXFR, true);
 
             // Now we have all the ingredients to calculate the convolutions
@@ -374,8 +366,6 @@ namespace askap {
                 // basis function * psf
                 ASKAPASSERT(basisFunctionFFT.xyPlane(term).nonDegenerate().shape().conform(subXFR.shape()));
                 work = conj(basisFunctionFFT.xyPlane(term).nonDegenerate()) * subXFR;
-                // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-                //scimath::fft2d(work, false);
                 fft2d(work, false);
                 Cube<T>(this->itsPSFBasisFunction).xyPlane(term) = real(work);
 
@@ -409,7 +399,7 @@ namespace askap {
                         basisFunctionFFT.xyPlane(term) * conj(basisFunctionFFT.xyPlane(term1)) * subXFR;
                     // MV: now FFT has to be done explicitly per plane. In principle, it is possible to parallelise but leave it for the future
                     // use reference semantics of casacore arrays to get the right interface
-                    casacore::Matrix<FT> tempMatrix(crossTermsPSFFFT(crossTermsSlicer));
+                    casacore::Matrix<FT> tempMatrix(crossTermsPSFFFT(crossTermsSlicer).nonDegenerate(0));
                     fft2d(tempMatrix, true);
                 }
 
@@ -417,11 +407,11 @@ namespace askap {
 
             this->itsCouplingMatrix.resize(itsBasisFunction->numberBases(), itsBasisFunction->numberBases());
             // the original wrapper is a method in scimath namespace, new wrapper is a local variable with the same name
-            // it also could do explicit iteration over extra dimensions. Now it has to be done explicitly - do it inside the 
-            // nested for-loop above 
+            // it also could do explicit iteration over extra dimensions. Now it has to be done explicitly - do it inside the
+            // nested for-loop above
             // It was probably a bug for a while that we passed the whole array here, the iteration over extra dimensions was made explicit
             // long time ago, but the problem wasn't triggered because this code is actually unused - need to clear this technical debt if we magically
-            // have some spare time 
+            // have some spare time
             //scimath::fft2d(crossTermsPSFFFT, true);
 
             this->itsPSFCrossTerms = real(crossTermsPSFFFT) / T(crossTermsShape(0) * crossTermsShape(1));

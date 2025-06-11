@@ -31,7 +31,7 @@
 #define SKA_LOW_ILLUMINATION_H
 
 #include <askap/gridding/IBasicIllumination.h>
-#include <askap/dataaccess/IConstDataAccessor.h>
+//#include <askap/dataaccess/IConstDataAccessor.h>
 
 namespace askap {
 

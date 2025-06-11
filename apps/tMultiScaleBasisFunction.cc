@@ -67,25 +67,25 @@ public:
 
    /// @brief test spheroidal function calculator
    void doSphFuncTest();
-   
+
    /// @brief run application
    /// @param[in] argc number of parameters
    /// @param[in] argv parameter vector
    /// @return exit code
-   virtual int run(int argc, char *argv[]);
+   int run(int argc, char *argv[]) final;
 
 protected:
    // test class to access protected method without making the whole app class a friend
    class SphFuncTestClass : public MultiScaleBasisFunction<float> {
    public:
-       SphFuncTestClass() : MultiScaleBasisFunction<float>(casacore::Vector<float>()) {}; 
+       SphFuncTestClass() : MultiScaleBasisFunction<float>(casacore::Vector<float>()) {};
 
        using MultiScaleBasisFunction<float>::spheroidal;
        using MultiScaleBasisFunction<float>::spheroidalOld;
    };
 
 private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

@@ -33,7 +33,7 @@
 #include <askap/gridding/WDependentGridderBase.h>
 
 // Local package includes
-#include <askap/dataaccess/IConstDataAccessor.h>
+//#include <askap/dataaccess/IConstDataAccessor.h>
 
 namespace askap
 {

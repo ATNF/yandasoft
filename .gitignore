@@ -28,6 +28,7 @@ tests/data/simulation/stdtest/stdtest.miranda.out
 tests/data/simulation/stdtest/stdtest.simulator.in
 tests/data/simulation/stdtest/weights.i.10uJy_dirty_stdtest/
 tests/data/simulation/synthregression/.tmp.imgstat
+tests/data/simulation/synthregression/40chan.ms
 tests/data/simulation/synthregression/field1.ms/
 tests/data/simulation/synthregression/image.field1.restored/
 tests/data/simulation/synthregression/image.field1/
@@ -42,3 +43,6 @@ tests/data/simulation/synthregression/temp_parset.in
 tests/data/simulation/synthregression/weights.field1/
 tests/data/simulation/synthregression/wtermtest.pyc
 tests/data/simulation/synthregression/__pycache__/
+tests/data/simulation/synthregression/1934pt0.ms/
+tests/data/simulation/synthregression/1934pt1.ms/
+tests/data/simulation/synthregression/avgspectrum.dat

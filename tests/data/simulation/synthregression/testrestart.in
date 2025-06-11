@@ -1,0 +1,50 @@
+Cimager.imagetype                               = fits
+Cimager.memorybuffers                           = true
+Cimager.barycentre                              = false
+Cimager.solverpercore                           = true
+Cimager.nchanpercore                            = 4
+Cimager.nwriters                                = 4
+Cimager.combinechannels                         = false
+Cimager.Images.Names                            = [image.cont2]
+Cimager.Images.shape                            = [128,128]
+Cimager.Images.cellsize                         = [5arcsec, 5arcsec]
+Cimager.Channels                                 = [16,0]
+#Cimager.Images.image.cont.nchan                  = 16
+Cimager.singleoutputfile                         = true
+
+Cimager.gridder                                 = WProject
+Cimager.gridder.WProject.wmax                   = 20000
+Cimager.gridder.WProject.nwplanes               = 51
+Cimager.gridder.WProject.oversample             = 8
+Cimager.gridder.WProject.maxsupport             = 1024
+Cimager.gridder.WProject.cutoff                 = 0.001
+Cimager.gridder.WProject.variablesupport        = true
+Cimager.gridder.WProject.offsetsupport          = true
+
+Cimager.ncycles                                 = 2
+Cimager.Images.writeAtMajorCycle                = true
+
+# Use a multiscale Clean solver
+Cimager.solver                                  = Clean
+Cimager.solver.Clean.solutiontype               = MAXBASE
+Cimager.solver.Clean.decoupled			        = True
+Cimager.solver.Clean.algorithm                  = BasisfunctionMFS
+Cimager.solver.Clean.scales                     = [0]
+Cimager.solver.Clean.niter                      = 1000
+Cimager.solver.Clean.gain                       = 0.3
+Cimager.solver.Clean.logevery                   = 1000
+Cimager.threshold.minorcycle                    = [40%,2mJy,0.18mJy]
+Cimager.threshold.majorcycle                    = 0.2mJy
+
+Cimager.solver.Clean.verbose                    = false
+
+Cimager.preconditioner.preservecf               = true
+Cimager.preconditioner.Names                    = [Wiener]
+Cimager.preconditioner.Wiener.robustness        = 2.0
+
+Cimager.restore                                 = true
+Cimager.restore.beam                            = fit
+
+Cimager.write.modelimage                        = true
+Cimager.write.residualimage                     = true
+Cimager.write.beamlog                           = false

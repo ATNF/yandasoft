@@ -401,7 +401,7 @@ void DDCalibratorParallel::calcOne(const std::string& ms, bool discard)
       ASKAPLOG_INFO_STR(logger, "Creating measurement equation" );
       if (!itsIteratorAdapter) {
           ASKAPLOG_INFO_STR(logger, "Creating iterator over data" );
-          TableDataSource ds(ms, TableDataSource::DEFAULT, dataColumn());
+          TableDataSource ds(ms, TableDataSource::MEMORY_BUFFERS, dataColumn());
           ds.configureUVWMachineCache(uvwMachineCacheSize(),uvwMachineCacheTolerance());
           IDataSelectorPtr sel=ds.createSelector();
           if (itsChannelsPerWorker > 0) {
@@ -415,8 +415,7 @@ void DDCalibratorParallel::calcOne(const std::string& ms, bool discard)
           conv->setDirectionFrame(casacore::MDirection::Ref(casacore::MDirection::J2000));
           // ensure that time is counted in seconds since 0 MJD
           conv->setEpochFrame();
-          //IDataSharedIter it=ds.createIterator(sel, conv);
-          itsIteratorAdapter.reset(new accessors::TimeChunkIteratorAdapter(ds.createIterator(sel, conv), itsSolutionInterval));
+          itsIteratorAdapter.reset(new accessors::TimeChunkIteratorAdapter(ds.createConstIterator(sel, conv), itsSolutionInterval));
           if (itsSolutionInterval >= 0) {
               ASKAPLOG_INFO_STR(logger, "Iterator has been created, solution interval = "<<itsSolutionInterval<<" s");
           } else {

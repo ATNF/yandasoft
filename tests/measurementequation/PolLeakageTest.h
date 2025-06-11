@@ -86,11 +86,14 @@ namespace askap
           stokes[3] = casacore::Stokes::YY;         
           
           da.itsStokes.assign(stokes.copy());
-          da.itsVisibility.resize(da.nRow(), 2 ,4);
+          //da.itsVisibility.resize(da.nRow(), 2 ,4);
+          da.itsVisibility.resize(4,2,da.nRow());
           da.itsVisibility.set(casacore::Complex(-10.,15.));
-          da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+          //da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsNoise.resize(da.nPol(),da.nChannel(),da.nRow());
           da.itsNoise.set(1.);
-          da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+          //da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsFlag.resize(da.nPol(),da.nChannel(),da.nRow());
           da.itsFlag.set(casacore::False);
           da.itsFrequency.resize(da.nChannel());
           for (casacore::uInt ch = 0; ch < da.nChannel(); ++ch) {
@@ -198,14 +201,14 @@ namespace askap
           da.itsStokes.assign(stokes.copy());
           const casacore::uInt nAnt = 6;
           const casacore::uInt nBaselines = nAnt * (nAnt - 1) / 2;
-          da.itsVisibility.resize(nBaselines, 1 , stokes.nelements());
+          da.itsVisibility.resize(stokes.nelements(), 1 , nBaselines);
           da.itsVisibility.set(casacore::Complex(-10.,15.));
           CPPUNIT_ASSERT_EQUAL(nBaselines, da.nRow());
           CPPUNIT_ASSERT_EQUAL(1u, da.nChannel());
           CPPUNIT_ASSERT_EQUAL(4u, da.nPol());
-          da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsNoise.resize(da.nPol(),da.nChannel(),da.nRow());
           da.itsNoise.set(1.);
-          da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+          da.itsFlag.resize(da.nPol(),da.nChannel(),da.nRow());
           da.itsFlag.set(casacore::False);
           da.itsFrequency.resize(da.nChannel());
           da.itsFrequency.set(1.4e9);
@@ -351,8 +354,10 @@ namespace askap
           for (casacore::uInt row = 0; row < da.nRow(); ++row) {
                for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
                     for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(pol,chan,row)),1e-6);
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(pol,chan,row)),1e-6);                         
                     }
                }
           }
@@ -424,8 +429,10 @@ namespace askap
           for (casacore::uInt row = 0; row < da.nRow(); ++row) {
                for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
                     for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(row,chan,pol)),1e-6);
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(row,chan,pol)),1e-6);                         
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(pol % 3 == 0 ? 0.5 : 0., real(vis(pol,chan,row)),1e-6);
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0., imag(vis(pol,chan,row)),1e-6);                         
                     }
                }
           }
@@ -438,8 +445,10 @@ namespace askap
           for (casacore::uInt row = 0; row < da.nRow(); ++row) {
                for (casacore::uInt chan = 0; chan < da.nChannel(); ++chan) {
                     for (casacore::uInt pol = 0; pol < da.nPol(); ++pol) {
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(real(vis(row,chan,pol)),real(corruptedVis(row,chan,pol)),1e-6);
-                         CPPUNIT_ASSERT_DOUBLES_EQUAL(imag(vis(row,chan,pol)),imag(corruptedVis(row,chan,pol)),1e-6);                         
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(real(vis(row,chan,pol)),real(corruptedVis(row,chan,pol)),1e-6);
+                         //CPPUNIT_ASSERT_DOUBLES_EQUAL(imag(vis(row,chan,pol)),imag(corruptedVis(row,chan,pol)),1e-6);                         
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(real(vis(pol,chan,row)),real(corruptedVis(pol,chan,row)),1e-6);
+                         CPPUNIT_ASSERT_DOUBLES_EQUAL(imag(vis(pol,chan,row)),imag(corruptedVis(pol,chan,row)),1e-6);                         
                     }
                }
           }           

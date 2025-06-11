@@ -212,8 +212,10 @@ namespace askap
 				   unpadImage(dirtyArray), planeIter.position());
 
 	    // uncomment the code below to save the mask
-	    saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
+        if (maskArray.nelements()) {
+            saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
 				   planeIter.position());
+        }
 
 	    // Startup now costs so little it's better to create a new
 	    // deconvolver each time we need it

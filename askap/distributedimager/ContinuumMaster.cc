@@ -36,11 +36,13 @@
 // ASKAPsoft includes
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
+#include <askap/profile/AskapProfiler.h>
 #include <askap/askapparallel/AskapParallel.h>
 
 #include <Common/ParameterSet.h>
 #include <askap/scimath/fitting/Params.h>
 #include <askap/scimath/fitting/Axes.h>
+/*
 #include <askap/dataaccess/IConstDataSource.h>
 #include <askap/dataaccess/TableConstDataSource.h>
 #include <askap/dataaccess/IConstDataIterator.h>
@@ -49,6 +51,7 @@
 #include <askap/dataaccess/IDataIterator.h>
 #include <askap/dataaccess/SharedIter.h>
 #include <askap/dataaccess/TableInfoAccessor.h>
+*/
 #include <casacore/casa/Quanta.h>
 #include <askap/imageaccess/BeamLogger.h>
 #include <askap/parallel/ImagerParallel.h>
@@ -84,6 +87,7 @@ ContinuumMaster::~ContinuumMaster()
 
 void ContinuumMaster::run(void)
 {
+    ASKAPTRACE("ContinuumMaster::run");
     // print out the parset
     ASKAPLOG_INFO_STR(logger,"Parset: \n"<<itsParset);
     // Read from the configuration the list of datasets to process
@@ -166,14 +170,37 @@ void ContinuumMaster::run(void)
         ASKAPLOG_INFO_STR(logger, "Master no longer required");
         return;
     }
-    ASKAPLOG_DEBUG_STR(logger, "Master is about to broadcast first <empty> model");
-
     // this parset need to know direction and frequency for the final maps/models
     // But I dont want to run Cadvise as it is too specific to the old imaging requirements
 
+    synthesis::ImagerParallel imager(itsComms, itsParset);
+    // do a separate loop to build weights (in workers) if we are doing traditional weighting and build new weight grid
+    imager.createUVWeightCalculator();
+    if (imager.isSampleDensityGridNeeded()) {
+        // MV: a bit of technical debt / waste of resources here. Technically we don't need the initial model for weight calculation
+        // what we need is just the appropriate image names, their coordinate systems and shapes. Perhaps, in the future another communication
+        // pattern can be added to send just the required information and don't bother with broadcasting the pixel array
+        ASKAPLOG_DEBUG_STR(logger, "Master is about to broadcast initial model for uv-weight calculation");
+        imager.broadcastModel();
+        ASKAPLOG_DEBUG_STR(logger, "Master will merge weight grids from workers and compute final weights");
+        imager.setupUVWeightBuilder();
+        // cannot use receiveNE below, because it automatically assigns NE to the solver and this causes issues later
+        // (wrong type of NE will be stuck inside the solver - caused by some technical debt in the design, we should've
+        //  separated receiving NE and assigning it to the solver)
+        imager.reduceNE(imager.getNE());
+        // this will compute weights and add them to the model (which is distributed back to workers later on)
+        imager.computeUVWeights();
+        ASKAPLOG_DEBUG_STR(logger, "uv-weight has been added to the model");
+        // reset normal equations back to the state suitable for imaging
+        // (this is actually redundant in the case of the master, because calcNE later on would do this, but the code is
+        // cleaner this way when we do it explicitly)
+        imager.recreateNormalEquations();
+        ASKAPLOG_DEBUG_STR(logger, "Master is about to broadcast the first model with uv-weights");
+    } else {
+        ASKAPLOG_DEBUG_STR(logger, "Master is about to broadcast the first <empty> model");
+    }
 
     if (nCycles == 0) { // no solve if ncycles is 0
-        synthesis::ImagerParallel imager(itsComms, itsParset);
         ASKAPLOG_DEBUG_STR(logger, "Master beginning single - empty model");
         imager.broadcastModel(); // initially empty model
 
@@ -184,12 +211,11 @@ void ContinuumMaster::run(void)
 
     }
     else {
-        synthesis::ImagerParallel imager(itsComms, itsParset);
         for (int cycle = 0; cycle < nCycles; ++cycle) {
-            ASKAPLOG_DEBUG_STR(logger, "Master beginning major cycle ** " << cycle);
+            ASKAPLOG_DEBUG_STR(logger, "Master beginning major cycle ** " << cycle+1);
 
             if (cycle==0) {
-                imager.broadcastModel(); // initially empty model
+                imager.broadcastModel(); // initially empty model (with or without uv-weights)
             }
             /// Minor Cycle
 
@@ -200,7 +226,7 @@ void ContinuumMaster::run(void)
 
             if (imager.params()->has("peak_residual")) {
                 const double peak_residual = imager.params()->scalarValue("peak_residual");
-                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle << " Reached peak residual of " << abs(peak_residual) << " after solve");
+                ASKAPLOG_INFO_STR(logger, "Major Cycle " << cycle+1 << " Reached peak residual of " << abs(peak_residual) << " after solve");
 
                 if (peak_residual < targetPeakResidual) {
 
@@ -223,8 +249,17 @@ void ContinuumMaster::run(void)
                     if (targetPeakResidual < 0) {
                         ASKAPLOG_INFO_STR(logger, "Major cycle flux threshold is not used.");
                     } else {
+                        if (imager.params()->has("noise_threshold_reached") &&
+                            imager.params()->scalarValue("noise_threshold_reached")>0) {
+                            ASKAPLOG_INFO_STR(logger, "It is below the noise threshold. Stopping.");
+                            ASKAPLOG_INFO_STR(logger, "Broadcasting final model");
+                            imager.broadcastModel();
+                            ASKAPLOG_INFO_STR(logger, "Broadcasting final model - done");
+                            break;
+                        } else {
                         ASKAPLOG_INFO_STR(logger, "It is above the major cycle threshold of "
                                           << targetPeakResidual << " Jy. Continuing.");
+                        }
                     }
                 }
             }

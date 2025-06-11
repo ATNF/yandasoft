@@ -67,10 +67,10 @@ using namespace casa;
 
 namespace askap {
 
-boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa::uInt tileNcorr = 4,
-    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
+boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, const casacore::StorageOption & option,
+    casa::uInt tileNcorr = 4, casa::uInt tileNchan = 1, casa::uInt tileNrow = 0)
 {
-    casa::uInt bucketSize =  1024*1024;
+    casa::uInt bucketSize = 1024*1024;
 
     if (tileNcorr < 1) {
         tileNcorr = 1;
@@ -90,7 +90,7 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
     // Add the DATA column.
     MS::addColumnToDesc(msDesc, MS::DATA, 2);
 
-    SetupNewTable newMS(filename, msDesc, Table::New);
+    SetupNewTable newMS(filename, msDesc, Table::New, option);
 
     // Set the default Storage Manager to be the Incr one
     {
@@ -115,8 +115,12 @@ boost::shared_ptr<casa::MeasurementSet> create(const std::string& filename, casa
                 IPosition(3, tileNcorr, tileNchan, tileNrow));
         newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::DATA),
                 dataMan);
+
+        // Avoid storing less than 8 flag bits per row, it is slow
+        casa::uInt tileNchanFlag = tileNchan;
+        if (tileNcorr*tileNchanFlag<8) tileNchanFlag = 8 / tileNcorr;
         TiledShapeStMan dataManF("TiledFlag",
-                        IPosition(3, tileNcorr, tileNchan, tileNrow));
+                IPosition(3, tileNcorr, tileNchanFlag, tileNrow));
         newMS.bindColumn(MeasurementSet::columnName(MeasurementSet::FLAG),
                 dataManF);
     }
@@ -245,7 +249,19 @@ void copyObservation(const casa::MeasurementSet& source, casa::MeasurementSet& d
     dc.scheduleType().putColumn(sc.scheduleType());
 }
 
-void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
+void addNonStandardPointingColumn(const std::string &name,
+                                    const MSPointing &srcPointing,
+                                    MSPointing &destPointing,
+                                    ROScalarColumn<casacore::Float> &src,
+                                    ScalarColumn<casacore::Float> &dest)
+{
+    ASKAPDEBUGASSERT(!destPointing.actualTableDesc().isColumn(name));
+    destPointing.addColumn(srcPointing.actualTableDesc().columnDesc(name));
+    dest = casacore::ScalarColumn<casacore::Float>(destPointing, name);
+    src = casacore::ROScalarColumn<casacore::Float>(srcPointing, name);
+}
+
+void copyPointing(const casacore::MeasurementSet& source, casacore::MeasurementSet& dest)
 {
     const ROMSColumns srcMsc(source);
     const ROMSPointingColumns& sc = srcMsc.pointing();
@@ -253,29 +269,46 @@ void copyPointing(const casa::MeasurementSet& source, casa::MeasurementSet& dest
     MSColumns destMsc(dest);
     MSPointingColumns& dc = destMsc.pointing();
 
-    // Add new rows to the destination and copy the data
-    dest.pointing().addRow(sc.nrow());
+    // Create and copy non-standard columns, if they exist.
+    // dest row order is different to src when copes come after required columns, so do them first.
+    const Bool doAz = source.pointing().actualTableDesc().isColumn("AZIMUTH");
+    const Bool doEl = source.pointing().actualTableDesc().isColumn("ELEVATION");
+    const Bool doPolAng = source.pointing().actualTableDesc().isColumn("POLANGLE");
+    ScalarColumn<casacore::Float> dAz, dEl, dPolAng;
+    ROScalarColumn<casacore::Float> sAz, sEl, sPolAng;
+    if (doAz) {
+        addNonStandardPointingColumn("AZIMUTH", source.pointing(), dest.pointing(), sAz, dAz);
+    }
+    if (doEl) {
+        addNonStandardPointingColumn("ELEVATION", source.pointing(), dest.pointing(), sEl, dEl);
+    }
+    if (doPolAng) {
+        addNonStandardPointingColumn("POLANGLE", source.pointing(), dest.pointing(), sPolAng, dPolAng);
+    }
 
-    // Improved way of copying the target & direction arrays
-    // Need to copy the entire column (not just the first row), but
-    // doing it with a single putColumn was found to be too slow (not
-    // hanging, just taking a long time with the second call).
-    ASKAPLOG_DEBUG_STR(logger, "Starting copy of direction & target columns");
+    // Copy required columns
+
     ASKAPCHECK(sc.direction().nrow()==sc.target().nrow(),
                "Different numbers of rows for POINTING table's DIRECTION & TARGET columns. Exiting.");
-    for(unsigned int i=0;i<sc.direction().nrow();i++){
-        dc.direction().put(i,sc.direction().get(i));
-        dc.target().put(i,sc.target().get(i));
-    }
-    ASKAPLOG_DEBUG_STR(logger, "Finished copy of direction & target columns");
 
-    dc.antennaId().putColumn(sc.antennaId());
-    dc.interval().putColumn(sc.interval());
-    dc.name().putColumn(sc.name());
-    dc.numPoly().putColumn(sc.numPoly());
-    dc.time().putColumn(sc.time());
-    dc.timeOrigin().putColumn(sc.timeOrigin());
-    dc.tracking().putColumn(sc.tracking());
+    // Pointing tables can get large. Doing whole column operations seems very slow (maybe due to
+    // storage manager used). So doing row by row copy instead (finished in 6s vs >1h)
+    const casacore::rownr_t nRow = sc.nrow();
+    for(casacore::rownr_t i=0;i<nRow;i++){
+        dest.pointing().addRow();
+        dc.direction().put(i,sc.direction()(i));
+        dc.target().put(i,sc.target()(i));
+        dc.antennaId().put(i,sc.antennaId()(i));
+        dc.interval().put(i,sc.interval()(i));
+        dc.name().put(i,sc.name()(i));
+        dc.numPoly().put(i,sc.numPoly()(i));
+        dc.time().put(i,sc.time()(i));
+        dc.timeOrigin().put(i,sc.timeOrigin()(i));
+        dc.tracking().put(i,sc.tracking()(i));
+        if (doAz) dAz.put(i,sAz(i));
+        if (doEl) dEl.put(i,sEl(i));
+        if (doPolAng) dPolAng.put(i,sPolAng(i));
+    }
 }
 
 void copyPolarization(const casa::MeasurementSet& source, casa::MeasurementSet& dest)
@@ -576,8 +609,9 @@ void mergeMainTable(const std::vector< boost::shared_ptr<const ROMSColumns> >& s
     }
 }
 
-void merge(const std::vector<std::string>& inFiles, const std::string& outFile, casa::uInt tileNcorr = 4,
-    casa::uInt tileNchan = 1, casa::uInt tileNrow = 0, bool dryRun = false)
+void merge(const std::vector<std::string>& inFiles, const std::string& outFile,
+    casacore::StorageOption& option, casa::uInt tileNcorr,
+    casa::uInt tileNchan, casa::uInt tileNrow, bool dryRun, casa::uInt maxBuf)
 {
     // Open the input measurement sets
     std::vector< boost::shared_ptr<const casa::MeasurementSet> > in;
@@ -588,8 +622,11 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
     uInt nRow = 0;
     bool sameSize = true;
     casa::String telescope;
+
+    ASKAPASSERT(inFiles.size()>0);
     for (it = inFiles.begin(); it != inFiles.end(); ++it) {
         const boost::shared_ptr<const casa::MeasurementSet> p(new casa::MeasurementSet(*it));
+        ASKAPCHECK(p->nrow(),"One of the input files has zero rows: "<<*it);
         in.push_back(p);
         inColumns.push_back(boost::shared_ptr<const ROMSColumns>(new ROMSColumns(*p)));
         nChanOut += inColumns.back()->data().shape(0)(1);
@@ -612,11 +649,11 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
 
     if (tileNcorr < 1) tileNcorr = 1;
     if (tileNchan < 1) tileNchan = 1;
-    // Set tileNrow large, but not so large that caching takes > 1GB
+    // Set tileNrow large, but not so large that caching uses more than maxBuf
     bool detectMissingIntegrations = false;
     if (tileNrow==0) {
         const casa::uInt nTilesPerRow = (nChanOut-1)/tileNchan+1;
-        const casa::uInt bucketSize = std::max(8192u,1024*1024*1024/nTilesPerRow);
+        const casa::uInt bucketSize = std::max(8192u,maxBuf/nTilesPerRow);
         tileNrow = std::min(nRow,std::max(1u,bucketSize / (8 * tileNcorr * tileNchan)));
         // make it a multiple of the number of rows per integration for ASKAP
         if (nBaselines > 0 && telescope == "ASKAP") {
@@ -641,7 +678,10 @@ void merge(const std::vector<std::string>& inFiles, const std::string& outFile, 
             << outFile << " already exists!");
     boost::shared_ptr<casa::MeasurementSet> out;
     if (!dryRun) {
-        out = boost::shared_ptr<casa::MeasurementSet>(create(outFile,tileNcorr,tileNchan,tileNrow));
+        out = create(outFile,option,tileNcorr,tileNchan,tileNrow);
+
+        ASKAPDEBUGASSERT(in.begin() != in.end());
+        ASKAPDEBUGASSERT(out);
 
         ASKAPLOG_INFO_STR(logger,  "First copy " << inFiles[0]<< " into " << outFile);
 
@@ -713,18 +753,31 @@ int main(int argc, const char** argv)
         int tileNcorr;
         int tileNchan;
         int tileNrow;
+        int blockSize;
+        uint maxBuf;
+        std::string fileFormat;
+        bool useODirect;
         bool dryRun;
         std::string outName;
+        std::string paramFile;
         std::vector<std::string> inNamesVec;
         std::vector<std::string> inNames;
         namespace po = boost::program_options;
         // Declare the supported options.
-        po::options_description desc("Allowed options");
-        desc.add_options()
+        po::options_description command("Command line only options");
+        command.add_options()
         ("help,h", "produce help message")
+        ("parameter-file,p",po::value<std::string>(&paramFile),"Parameter file");
+
+        po::options_description generic("Generic options");
+        generic.add_options()
         ("tileNcorr,x", po::value<int>(&tileNcorr)->default_value(4), "Number of correlations per tile")
         ("tileNchan,c", po::value<int>(&tileNchan)->default_value(1), "Number of channels per tile")
         ("tileNrow,r", po::value<int>(&tileNrow)->default_value(0), "Number of rows per tile")
+        ("blocksize,b", po::value<int>(&blockSize)->default_value(4*1024*1024), "Blocksize")
+        ("bufferMB,B", po::value<uint>(&maxBuf)->default_value(2000u), "Max. buffer size in MB")
+        ("format,f", po::value<string>(&fileFormat)->default_value("separate"),"File storage format (separate, combined, hdf5)")
+        ("odirect", po::value<bool>(&useODirect)->default_value(false),"Use direct (unbuffered) IO if possible")
         ("dryrun,d", po::value<bool>(&dryRun)->default_value(false),"Don't produce any output")
         ("input-file,i", po::value< vector<string> >(&inNames), "Input file(s) - you can also just list them after the other options")
         ("output-file,o",po::value<std::string>(&outName)->default_value("out.ms"),"Output filename");
@@ -732,8 +785,21 @@ int main(int argc, const char** argv)
         po::positional_options_description p;
         p.add("input-file", -1);
 
+        po::options_description desc("Program options");
+        desc.add(command).add(generic);
+
         po::variables_map vm;
         po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
+
+        po::notify(vm);
+        if (vm.count("parameter-file")) {
+            std::ifstream config_file(paramFile.c_str());
+            if (config_file) {
+                ASKAPLOG_INFO_STR(logger,"Reading parameter file: "<< paramFile);
+                po::store(po::parse_config_file(config_file, generic), vm);
+            }
+        }
+
         po::notify(vm);
 
         if (vm.count("help")) {
@@ -741,42 +807,39 @@ int main(int argc, const char** argv)
             return 1;
         }
 
-        if (vm.count("tileNcorr")) {
-            cout << "Number of correlations per tile was set to "
-            << vm["tileNcorr"].as<int>() << ".\n";
-        }
-        else
-        {
-            cout << "tileNcorr was not setr, using default: " << tileNcorr << "\n";
-        }
-
-        if (vm.count("tileNchan")) {
-            cout << "Number of channels per tile  was set to "
-            << vm["tileNchan"].as<int>() << ".\n";
-        }
-        else
-        {
-            cout << "tileNchan was not set, using default: " << tileNchan << "\n";
-        }
-
-        if (vm.count("tileNrow")) {
-            cout << "Number of rows per tile  was set to "
-            << vm["tileNrow"].as<int>() << ".\n";
-        }
 
         if (dryRun) {
-            cout << "Dry run only - not producing output\n";
+            ASKAPLOG_INFO_STR(logger,"Dry run only - not producing output");
         }
 
         if (vm.count("input-file"))
         {
-            cout << "Input files are: "
-            << vm["input-file"].as< vector<string> >() << "\n";
+            ASKAPLOG_INFO_STR(logger,"Input files are: "
+            << vm["input-file"].as< vector<string> >());
         }
 
         ASKAPLOG_INFO_STR(logger,
                 "This program merges given measurement sets and writes the output into `"
                 << outName << "`" << "with a tiling: " << tileNcorr << "," << tileNchan);
+        if (tileNrow > 0) {
+            ASKAPLOG_INFO_STR(logger,"Number of rows per tile is set to "<< tileNrow);
+        }
+        // convert to bytes
+        maxBuf *= 1024*1024;
+
+        casacore::StorageOption option;
+        if (fileFormat == "separate") {
+            ASKAPLOG_INFO_STR(logger, "Setting up storage managers to write separate files");
+            ASKAPCHECK(!useODirect, "ODirect option is not supported for storage managers using separate files");
+            option = casacore::StorageOption(casacore::StorageOption::SepFile, static_cast<casacore::Int>(blockSize), 0);
+        } else if (fileFormat == "combined") {
+            ASKAPLOG_INFO_STR(logger, "Setting up storage managers to write combined file with "<<float(blockSize)/1024./1024.<<" Mb blocks and ODirect = "<<useODirect);
+            option = casacore::StorageOption(casacore::StorageOption::MultiFile, static_cast<casacore::Int>(blockSize), useODirect ? 1 : 0);
+        } else if (fileFormat == "hdf5") {
+            ASKAPLOG_INFO_STR(logger, "Setting up storage managers to write combined HDF5 file with "<<float(blockSize)/1024./1024.<<" Mb blocks");
+            ASKAPCHECK(!useODirect, "ODirect option is not supported for storage managers set up to write into an HDF5 file");
+            option = casacore::StorageOption(casacore::StorageOption::MultiHDF5, static_cast<casacore::Int>(blockSize), 0);
+        }
 
         // Turns inNames into vector<string>
         std::vector<std::string>::iterator it;
@@ -787,8 +850,11 @@ int main(int argc, const char** argv)
                 inNamesVec.push_back(*it);
         }
 
-        merge(inNamesVec, outName, tileNcorr, tileNchan, tileNrow, dryRun);
-
+        if (inNamesVec.size() > 0) {
+            merge(inNamesVec, outName, option, tileNcorr, tileNchan, tileNrow, dryRun, maxBuf);
+        } else {
+            ASKAPLOG_WARN_STR(logger,"No input files could be found");
+        }
         stats.logSummary();
         ///==============================================================================
     } catch (boost::exception &ex) {

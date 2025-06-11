@@ -37,9 +37,7 @@ namespace askap
     template<typename T>
     void SphFuncVisGridder::interpolateEdgeValues(casacore::Vector<T> &func)
     {
-      ASKAPDEBUGASSERT(itsInterp);
-
-      int length = func.shape()[0];
+      const int length = func.shape()[0];
       ASKAPASSERT(length>3);
 
       //func(0) = func(1) + (func(1)-func(2)) + (func(1)-2.0*func(2)+func(3));

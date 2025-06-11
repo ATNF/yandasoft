@@ -82,6 +82,8 @@ void doReadWriteTest(askap::askapparallel::AskapParallel &comms, const std::stri
            it->feed1();
            it->uvw();
            for (casa::uInt chan=0; chan<it->nChannel(); ++chan) {
+                // it->rwVisibility().xzPlane(chan).set(casa::Complex(it->frequency()[chan]-1420.,0.));
+                // no change here
                 it->rwVisibility().xzPlane(chan).set(casa::Complex(it->frequency()[chan]-1420.,0.));
            }
            const double l=0., m=0.003975472185;
@@ -89,7 +91,8 @@ void doReadWriteTest(askap::askapparallel::AskapParallel &comms, const std::stri
                 for (casa::uInt chan=0; chan<it->nChannel(); ++chan) {
                      const double phase = 2.*casa::C::pi*(it->uvw()(row)(0)*l+it->uvw()(row)(1)*m)/casa::C::c*it->frequency()[chan]*1e6;
                      const casa::Complex phasor(cos(phase),sin(phase));
-                     casa::Array<casa::Complex> tmp = it->rwVisibility().yzPlane(row).row(chan);
+                     // casa::Array<casa::Complex> tmp = it->rwVisibility().yzPlane(row).row(chan);
+                     casa::Array<casa::Complex> tmp = it->rwVisibility().xyPlane(row).row(chan);
                      tmp *= phasor;
                 }
            }

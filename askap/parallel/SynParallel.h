@@ -80,7 +80,12 @@ namespace askap
       void receiveModel();
 
       /// @brief Locally replace the current model with the argument
+      /// @param[in] Model the model
       void replaceModel(scimath::Params::ShPtr Model);
+
+      /// @brief Locally replace the current model with the argument by reference
+      /// @param[in] Model the model
+      void replaceModelByReference(const scimath::Params::ShPtr& Model);
 
       /// Substitute %w by worker number, and %n by number of workers (one less than the number
       // of nodes). This allows workers to do different work! This just calls

@@ -1,7 +1,7 @@
 /// @file
 ///
-/// Application to adivse parameters for synthesis imaging and calibration 
-/// Control parameters are passed in from a LOFAR ParameterSet file. 
+/// Application to adivse parameters for synthesis imaging and calibration
+/// Control parameters are passed in from a LOFAR ParameterSet file.
 /// At least the measurement set (given by the dataset keyword) should be
 /// defined. There is also an option to choose a user defined tangent point
 /// as well as to enable snap-shot imaging by providing w-plane fitting threshold
@@ -54,7 +54,7 @@ using namespace askap::synthesis;
 class CAdviseApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             StatReporter stats;
 
@@ -62,7 +62,7 @@ class CAdviseApp : public askap::Application
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
 
             try {
-                
+
                 // We cannot issue log messages until MPI is initialized!
                 AdviseParallel cadvise(comms, config());
 
@@ -88,7 +88,7 @@ class CAdviseApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

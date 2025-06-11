@@ -83,6 +83,9 @@ namespace askap {
                     if (itsInitialObjectiveFunction <= T(0.0)) {
                         itsInitialObjectiveFunction = objectiveFunction;
                     }
+                    if (itsObjectiveFunction < itsSmallestObjectiveFunction || itsSmallestObjectiveFunction ==T(0)) {
+                        itsSmallestObjectiveFunction = itsObjectiveFunction;
+                    }
                 }
 
                 T objectiveFunction() const {
@@ -96,6 +99,7 @@ namespace askap {
                 void resetInitialObjectiveFunction() {
                     itsPreviousInitialObjectiveFunction = itsInitialObjectiveFunction;
                     itsInitialObjectiveFunction = T(0.0);
+                    itsSmallestObjectiveFunction = T(0);
                 }
 
                 T initialObjectiveFunction() const {
@@ -105,6 +109,10 @@ namespace askap {
                 // The peak residual at the start of the previous major cycle
                 T previousInitialObjectiveFunction() const {
                     return itsPreviousInitialObjectiveFunction;
+                }
+
+                T smallestObjectiveFunction() const {
+                    return itsSmallestObjectiveFunction;
                 }
 
                 void setCurrentIter(casacore::Int currentIter) {
@@ -136,6 +144,7 @@ namespace askap {
                 T itsObjectiveFunction;
                 T itsInitialObjectiveFunction;
                 T itsPreviousInitialObjectiveFunction;
+                T itsSmallestObjectiveFunction;
         };
 
     } // namespace synthesis

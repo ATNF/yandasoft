@@ -50,10 +50,13 @@ using namespace askap::accessors;
 /// @param[in] comms - MPI comms
 /// @param[in] cubeName - name of image cube
 /// @param[in] imageCube - a boost shared pointer to the image access instance
-StatsAndMask::StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName, 
+StatsAndMask::StatsAndMask(askapparallel::AskapParallel &comms, const std::string& cubeName,
                            boost::shared_ptr<askap::accessors::IImageAccess<>> imageCube)
     : itsComms(comms), itsImageName(cubeName), itsImageCube(imageCube)
 {
+#ifndef HAVE_MPI
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief - set the scaling factor
@@ -71,14 +74,13 @@ void StatsAndMask::setUnits(const std::string& unit)
 }
 
 /// @brief calculates the per plane statistics of the image cube
-/// @param[in] name - name of image cube
-/// @param[in] channel - chanel of the image where the statistics are to be calculated
 /// @param[in] blc - bottom left corner of the image plane
 /// @param[in] trc - top right corner of the image plane
-void StatsAndMask::calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc)
+void StatsAndMask::calculate(const casacore::IPosition& blc, const casacore::IPosition& trc)
 {
+#ifdef HAVE_MPI
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
-        casacore::Array<float> imgPerPlane = imageCube->read(name,blc,trc);    
+        casacore::Array<float> imgPerPlane = imageCube->read(itsImageName,blc,trc);
         // remove all the NaN from the imgPerPlane because it messes it the calculation
         // of the statistics
         casacore::Vector<float> nonMaskArray(imgPerPlane.size());
@@ -90,28 +92,34 @@ void StatsAndMask::calculate(const std::string& name, Channel channel,const casa
             }
         }
         nonMaskArray.resize(index,true);
-        ASKAPLOG_INFO_STR(logger,"Channel: " << channel << ", imgPerPlane size: " << imgPerPlane.size() << ", nonMaskArray size: "
-                              << nonMaskArray.size() << ", index: " << index);
-
-        //Stats stats = calculateImpl(channel,imgPerPlane);
-        Stats stats;
-        if ( nonMaskArray.size() > 0 ) {
-          stats = calculateImpl(channel,nonMaskArray);
-        } else { 
-            // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
-            // in this case, dont use nonMaskArray 
-            stats = calculateImpl(channel,imgPerPlane);
+        // The client code that uses this method normally wants to collect the 
+        // statistics of one particular channel. However, the code here is generic
+        // enough that it is able to collect statistics for a range of channels.
+        auto startChan = trc(3);
+        auto endChan = blc(3);
+        for(auto channel = startChan; channel <= endChan; channel++) {
+            Stats stats;
+            if ( nonMaskArray.size() > 0 ) {
+                stats = calculateImpl(channel,nonMaskArray);
+            } else {
+                // nonMaskArray.size() == 0 if the image plane is masked or contains NaN pixels
+                // in this case, dont use nonMaskArray
+                stats = calculateImpl(channel,imgPerPlane);
+            }
+            itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
         }
-        itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief calculates the per plane statistics
-/// @param[in] name - name of image cube
 /// @param[in] channel - chanel of the image where the statistics are to be calculated
 /// @param[in] arr - the channel image where the statistics are calculated
-void StatsAndMask::calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr)
+void StatsAndMask::calculate(Channel channel, const casacore::Array<float>& arr)
 {
+#ifdef HAVE_MPI
     // remove all the NaN from the input arr because it messes it the calculation
     // of the statistics
     casacore::Vector<float> nonMaskArray(arr.size());
@@ -122,7 +130,7 @@ void StatsAndMask::calculate(const std::string& name, Channel channel, const cas
             index += 1;
         }
     }
-    nonMaskArray.resize(index);
+    nonMaskArray.resize(index,true);
 
     Stats stats;
     if ( nonMaskArray.size() > 0 ) {
@@ -140,11 +148,14 @@ void StatsAndMask::calculate(const std::string& name, Channel channel, const cas
         itsStatsPerChannelMap.erase(search);
     }
     itsStatsPerChannelMap.insert(std::make_pair(channel,stats));
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>& imgPerPlane)
 {
-
+#ifdef HAVE_MPI
     updateParams();
 
     Stats stats;
@@ -189,9 +200,14 @@ Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>&
         ASKAPLOG_INFO_STR(logger,"channel: " << stats.channel << ", rms: " << stats.rms << ", std: " << stats.std
                             << ", mean: " << stats.mean << ", median: " << stats.median << ", madfm: " << stats.madfm
                             << ", maxval: " << stats.maxval << ", stats.minval: " << stats.minval
-                            << ", onepc: " << stats.onepc);
+                            << ", onepc: " << stats.onepc << ", #points: "<<imgPerPlane.size());
     }
     return stats;
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+    Stats stats;
+    return stats;
+#endif
 }
 
 /// @brief returns the image cube's statistics
@@ -200,6 +216,7 @@ Stats StatsAndMask::calculateImpl(Channel channel, const casacore::Array<float>&
 ///         contains the iimage statistics of the channel.
 void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
 {
+#ifdef HAVE_MPI
     MPI_Status status;
     // this method is called by the master i.e rank = 0
     // number of workers not including the master
@@ -211,13 +228,13 @@ void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
             continue;
         }
         int source = rank;
-        // first read the message size    
+        // first read the message size
         unsigned char* msgSizebuffer[sizeof(unsigned long)];
         itsComms.receive(msgSizebuffer,sizeof(unsigned long),source);
         unsigned long msgSize;
         std::memcpy(reinterpret_cast<void *>(&msgSize),msgSizebuffer,sizeof(unsigned long));
         // check that msgSize is a multiple of sizeof(Stats)
-        ASKAPCHECK((msgSize % sizeof(Stats)) == 0, 
+        ASKAPCHECK((msgSize % sizeof(Stats)) == 0,
                     "StatsAndMask::receiveStats: msgSize is a multiple of sizeof(Stats)");
         // ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() << " - number of stats objects received: " << msgSize/sizeof(Stats));
         // now read the stats but nothing to read if msgSize == 0
@@ -231,7 +248,7 @@ void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
                 Stats s;
                 //std::memcpy(reinterpret_cast<void *>(&s),buffer.get(),sizeof(Stats));
                 std::memcpy(reinterpret_cast<void *>(&s),ptr,sizeof(Stats));
-                ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank() 
+                ASKAPLOG_INFO_STR(logger,"node: " << itsComms.nodeName() << ", rank: " << itsComms.rank()
                                 << " - Received stats from channel: " << s.channel);
 
                 itsStatsPerChannelMap.insert(std::make_pair(s.channel,s));
@@ -239,6 +256,9 @@ void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
             }
         }
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief This method sends the statistics of the channels that it collects back
@@ -249,15 +269,16 @@ void StatsAndMask::receiveStats(const std::set<unsigned int>& excludedRanks)
 /// @param[in] destRank - process (master rank) that receives the statistics.
 void StatsAndMask::sendStats(int destRank)
 {
+#ifdef HAVE_MPI
     auto mapSize = itsStatsPerChannelMap.size();
-    auto msgSize = static_cast<unsigned long> (mapSize * sizeof(Stats)); 
-    
+    auto msgSize = static_cast<unsigned long> (mapSize * sizeof(Stats));
+
     // send the message size
     unsigned char* msgSizebuffer[sizeof(unsigned long)];
     std::memcpy(msgSizebuffer,reinterpret_cast<void *>(&msgSize),sizeof(unsigned long));
     itsComms.send(msgSizebuffer,sizeof(unsigned long),destRank);
 
-    ASKAPLOG_INFO_STR(logger,"rank: " << itsComms.rank() << " sends  " 
+    ASKAPLOG_INFO_STR(logger,"rank: " << itsComms.rank() << " sends  "
                         << msgSize << " bytes to rank " << destRank);
     // if the map is empty then got nothing to send
     if ( msgSize > 0 ) {
@@ -272,6 +293,9 @@ void StatsAndMask::sendStats(int destRank)
         // now send the stats back to the destRank
         itsComms.send(buffer.get(),msgSize,destRank);
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 void StatsAndMask::print() const
@@ -296,6 +320,7 @@ void StatsAndMask::print() const
 /// @param[in] catalogue - name of the file to be written to
 void StatsAndMask::writeStatsToImageTable(const std::string& name)
 {
+#ifdef HAVE_MPI
     ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - name: " << name);
     casacore::Record statsRecord;
     casacore::Record statsTable;
@@ -315,12 +340,12 @@ void StatsAndMask::writeStatsToImageTable(const std::string& name)
     casacore::Vector<casacore::Float> maxvalVect(rows);
     casacore::Vector<casacore::Float> minvalVect(rows);
     auto index = static_cast<unsigned long> (0);
-    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - rows: " << rows);
+    ASKAPLOG_DEBUG_STR(logger,"writeStatsToImageTable - rows: " << rows);
     for ( const auto& kvp : itsStatsPerChannelMap ) {
         const auto& statsPerChan = kvp.second;
         chanVect[index] = statsPerChan.channel;
         freqVect[index] = statsPerChan.freq;
-        
+
         rmsVect[index] = statsPerChan.rms;
         stdVect[index] = statsPerChan.std;
         meanVect[index] = statsPerChan.mean;
@@ -355,20 +380,24 @@ void StatsAndMask::writeStatsToImageTable(const std::string& name)
     units[7] = "mJy/beam";
     units[8] = "mJy/beam";
     units[9] = "mJy/beam";
-    statsTable.define("Units",units); 
+    statsTable.define("Units",units);
 
     statsRecord.defineRecord("ImgStats",statsTable);
 
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
         imageCube->setInfo(name,statsRecord);
     }
-    ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable - exit: " << rows);
+    ASKAPLOG_DEBUG_STR(logger,"writeStatsToImageTable - exit: " << rows);
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats written to table as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief This method writes the statistics to the image cube
 /// @param[in] catalogue - name of the file to be written to
 void StatsAndMask::writeStatsToFile(const std::string& catalogue)
 {
+#ifdef HAVE_MPI
     std::ofstream ofile;
 
     ofile.setf(std::ios::left);
@@ -401,29 +430,32 @@ void StatsAndMask::writeStatsToFile(const std::string& catalogue)
         for ( const auto& kvp : itsStatsPerChannelMap ) {
             const auto& statsPerChan = kvp.second;
             ofile << std::setw(10) << statsPerChan.channel;
-            ofile << std::setw(15) << std::fixed <<  std::setprecision(5) << statsPerChan.freq;
-
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.mean;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.std;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.median;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.madfm;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.onepc;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.minval;
-            ofile << std::setw(10) << std::fixed << std::setprecision(5) << statsPerChan.maxval;
+            ofile << std::setw(15) << std::fixed <<  std::setprecision(6) << statsPerChan.freq;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.mean;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.std;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.median;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.madfm;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.onepc;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.minval;
+            ofile << std::setw(10) << std::fixed << std::setprecision(3) << statsPerChan.maxval;
             ofile << std::endl;
         }
-        
+
         ofile.close();
-    }    
+    }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats written to file as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief this method masks the channels in the image cube if they dont meet the user
 ///        defined thresholds. It is based very much on the code in the maskBadChannels.cc
-void StatsAndMask::maskBadChannels(const std::string& image, float threshold, float badMADFM, 
-                                   bool maskBlank, bool useSignificance, bool useNoise, 
-                                   bool editStats, bool editImage, 
+void StatsAndMask::maskBadChannels(const std::string& image, float threshold, float badMADFM,
+                                   bool maskBlank, bool useSignificance, bool useNoise,
+                                   bool editStats, bool editImage,
                                    const std::string& outputStats, int master)
 {
+#ifdef HAVE_MPI
     // only do the masking on the master rank
     // this code is more or less copied from the maskBadChannels.cc in yandasoft package
     if ( itsComms.rank() == master ) {
@@ -477,7 +509,7 @@ void StatsAndMask::maskBadChannels(const std::string& image, float threshold, fl
                 maskChannel = maskChannel || (maskBlank && isBlank);
                 maskChannel = maskChannel || (useSignificance && isHighSig);
                 maskChannel = maskChannel || (useNoise && isBadNoise);
-                
+
                 if ( maskChannel ) {
                     if (isBlank) {
                         ASKAPLOG_INFO_STR(logger, "Blank Channel #" << statsPerChan.channel << ": std = "<<statsPerChan.std);
@@ -522,10 +554,14 @@ void StatsAndMask::maskBadChannels(const std::string& image, float threshold, fl
             }
         }
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 void StatsAndMask::updateParams()
 {
+#ifdef HAVE_MPI
     if ( boost::shared_ptr<IImageAccess<>> imageCube = itsImageCube.lock() ) {
         // NOTE: dont put these statements in the constructor because in some cases, the imager which
         // uses this class for statistics collection passes in the IImageAccess to the constructor without calling the create()
@@ -553,6 +589,9 @@ void StatsAndMask::updateParams()
         }
         // END NOTE
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }
 
 /// @brief This static function  writes the statistics to the image cube
@@ -571,6 +610,7 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
                                           const std::string& imgName,
                                           const LOFAR::ParameterSet& parset)
 {
+#ifdef HAVE_MPI
     ASKAPLOG_INFO_STR(logger,"writeStatsToImageTable using static method. imgName: " << imgName);
     //const bool singleoutputfile = parset.getBool("singleoutputfile", false);
     const std::string statsFile = parset.getString("outputStats","");
@@ -580,8 +620,8 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
         return;
     }
 
-    if ( (imgName.find("taylor.0") != std::string::npos) || 
-         (imgName.find("taylor") == std::string::npos) ) { 
+    if ( (imgName.find("taylor.0") != std::string::npos) ||
+         (imgName.find("taylor") == std::string::npos) ) {
         // Stats is only done for taylor.0 image if nterms > 1
         // the iacc is created on the stack so we dont want iaccPtr to delete it when
         // it goes out of scope and hence contruct it with NullDeleter
@@ -597,11 +637,14 @@ void StatsAndMask::writeStatsToImageTable(askapparallel::AskapParallel &comms,
             casacore::IPosition trc = cubeShape - 1;
             trc(3) = chan;
             casacore::Array<float> imagePerPlane = iaccPtr->read(imgName,blc,trc);
-            stats.calculate(imgName,chan,imagePerPlane);
+            stats.calculate(chan,imagePerPlane);
         }
         stats.writeStatsToImageTable(imgName);
         if ( statsFile != "" ) {
-           stats.writeStatsToFile(imgName+"_"+statsFile); 
+           stats.writeStatsToFile(imgName+"_"+statsFile);
         }
     }
+#else
+    ASKAPLOG_WARN_STR(logger,"No image stats calculated as StatsAndMask class requires MPI library which is not installed");
+#endif
 }

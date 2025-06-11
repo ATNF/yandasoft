@@ -1,0 +1,16 @@
+# fake ingest pipeline parset slice used for delaysolver test (with ATCA 1934-638 data)
+antennas = [ant1,ant2,ant3,ant4,ant5,ant6]
+baselinemap.antennaidx = [ak01,ak02,ak03,ak04,ak05,ak06]
+antenna.ant1.delay = 0ns
+antenna.ant2.delay = 0ns
+antenna.ant3.delay = 0ns
+antenna.ant4.delay = 0ns
+antenna.ant5.delay = 0ns
+antenna.ant6.delay = 0ns
+
+antenna.ant1.name = ak01
+antenna.ant2.name = ak02
+antenna.ant3.name = ak03
+antenna.ant4.name = ak04
+antenna.ant5.name = ak05
+antenna.ant6.name = ak06

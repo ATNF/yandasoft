@@ -92,32 +92,47 @@ void CalibrationMEBase::predict(IDataAccessor &chunk) const
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
   ASKAPDEBUGASSERT(rwVis.nelements());
   ASKAPCHECK(itsPerfectVisME, "Perfect ME should be defined before calling CalibrationMEBase::predict");
-
   itsPerfectVisME->predict(chunk);
   if (isFrequencyDependent()) {
       for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
            ComplexDiffMatrix calCDM = buildComplexDiffMatrix(chunk, row);
-           casacore::Matrix<casacore::Complex> thisRow = chunk.visibility().yzPlane(row);
+           //casacore::Matrix<casacore::Complex> thisRow = chunk.visibility().yzPlane(row);
+           // because the visibility is in the new order (pol,chan,row), taking the 
+           // xyPlane() is the same as yzPlane() in the old order (row,chan,pol). However
+           // the order (row,col)  of the Matrix is reversed
+           casacore::Matrix<casacore::Complex> thisRow = chunk.visibility().xyPlane(row);
            ASKAPDEBUGASSERT(calCDM.nColumn() == thisRow.nrow() * thisRow.ncolumn());
-           ASKAPDEBUGASSERT(calCDM.nRow() == thisRow.ncolumn());
-           for (casacore::uInt chan=0; chan < thisRow.nrow(); ++chan) {
+           ASKAPDEBUGASSERT(calCDM.nRow() == thisRow.nrow());
+           //for (casacore::uInt chan=0; chan < thisRow.nrow(); ++chan) {
+           for (casacore::uInt chan=0; chan < thisRow.ncolumn(); ++chan) {
                 ComplexDiffMatrix thisChanCDM = calCDM.extractBlock(chan * calCDM.nRow(),calCDM.nRow());
-                ComplexDiffMatrix cdm = thisChanCDM * ComplexDiffMatrix(thisRow.row(chan));
+                //ComplexDiffMatrix cdm = thisChanCDM * ComplexDiffMatrix(thisRow.row(chan));
+                ComplexDiffMatrix cdm = thisChanCDM * ComplexDiffMatrix(thisRow.column(chan));
                 for (casacore::uInt pol = 0; pol < chunk.nPol(); ++pol) {
-                     rwVis(row, chan, pol) = cdm[pol].value();
+                      //rwVis(row, chan, pol) = cdm[pol].value();
+                      rwVis(pol, chan, row) = cdm[pol].value();
                 }
            }
       } 
   } else {
      for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
-         ComplexDiffMatrix cdm = buildComplexDiffMatrix(chunk, row) *
-              ComplexDiffMatrix(casacore::transpose(chunk.visibility().yzPlane(row)));
+         //ComplexDiffMatrix cdm = buildComplexDiffMatrix(chunk, row) *
+         //     ComplexDiffMatrix(casacore::transpose(chunk.visibility().yzPlane(row)));
 
+         // with the new order (pol,chan,row), the xyPlane(row) is the same as the yzPlane(row)
+         // in the older order (row,chan,pol) except that the (row,col) is reversed and hence
+         // the statement below does not need the transpose() function call
+
+         ComplexDiffMatrix cdm = buildComplexDiffMatrix(chunk, row) *
+              ComplexDiffMatrix(chunk.visibility().xyPlane(row));
          for (casacore::uInt chan = 0; chan < chunk.nChannel(); ++chan) {
              for (casacore::uInt pol = 0; pol < chunk.nPol(); ++pol) {
                 // cdm is transposed! because we need a vector for
                 // each spectral channel for a proper matrix multiplication
-                rwVis(row, chan, pol) = cdm(pol, chan).value();
+                //rwVis(row, chan, pol) = cdm(pol, chan).value();
+                rwVis(pol, chan, row) = cdm(pol, chan).value();
+                //std::cout << "rwVis(" << pol << "," << chan << "," << row << ") = "
+                //          << rwVis(pol, chan, row) << std::endl;
              }
          }
      }
@@ -169,10 +184,14 @@ void CalibrationMEBase::correct(IDataAccessor &chunk) const
   if (isFrequencyDependent()) {
       for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
            ComplexDiffMatrix thisRowCDM = buildComplexDiffMatrix(chunk, row);
-           casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);       
-           for (casacore::uInt chan=0; chan < thisRow.nrow(); ++chan) {
-                ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRow.ncolumn(), thisRow.ncolumn());
-                casacore::Vector<casacore::Complex> visPolVector = thisRow.row(chan);
+           //casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);       
+           casacore::Matrix<casacore::Complex> thisRow = rwVis.xyPlane(row);       
+           //for (casacore::uInt chan=0; chan < thisRow.nrow(); ++chan) {
+           for (casacore::uInt chan=0; chan < thisRow.ncolumn(); ++chan) {
+                //ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRow.ncolumn(), thisRow.ncolumn());
+                ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRow.nrow(), thisRow.nrow());
+                //casacore::Vector<casacore::Complex> visPolVector = thisRow.row(chan);
+                casacore::Vector<casacore::Complex> visPolVector = thisRow.column(chan);
                 // no need to transpose here because we deal with vectors
                 casacore::Matrix<casacore::Complex> correctedPolVector = getCorrectionMatrix(thisRowCDM) * visPolVector;
                 visPolVector = correctedPolVector;
@@ -187,14 +206,18 @@ void CalibrationMEBase::correct(IDataAccessor &chunk) const
            // channels which are presented in a cube slice which is nchan x npol matrix 
           casacore::Matrix<casacore::Complex> reciprocal = transpose(getCorrectionMatrix(cdm));
               
-          casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);       
-          casacore::Matrix<casacore::Complex> temp(thisRow.nrow(),reciprocal.ncolumn(),
+          //casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);       
+          casacore::Matrix<casacore::Complex> thisRow = rwVis.xyPlane(row);       
+          //casacore::Matrix<casacore::Complex> temp(thisRow.nrow(),reciprocal.ncolumn(),
+          //                           casacore::Complex(0.,0.)); // = thisRow*reciprocal;
+          casacore::Matrix<casacore::Complex> temp(thisRow.ncolumn(),reciprocal.nrow(),
                                      casacore::Complex(0.,0.)); // = thisRow*reciprocal;
                                      
           // the code below is just a matrix multiplication doing on-the-fly transpose
           for (casacore::uInt i = 0; i < temp.nrow(); ++i) {
                for (casacore::uInt j = 0; j < temp.ncolumn(); ++j) {
-                    for (casacore::uInt k = 0; k < thisRow.ncolumn(); ++k) {
+                    //for (casacore::uInt k = 0; k < thisRow.ncolumn(); ++k) {
+                    for (casacore::uInt k = 0; k < thisRow.nrow(); ++k) {
                          temp(i,j) += thisRow(i,k)*reciprocal(k,j);
                     }  
                }
@@ -228,13 +251,19 @@ void CalibrationMEBase::calcGenericEquations(const IConstDataAccessor &chunk,
   if (isFrequencyDependent()) {
       for (casacore::uInt row = 0; row < buffChunk.nRow(); ++row) {
           ComplexDiffMatrix thisRowCDM = buildComplexDiffMatrix(buffChunk, row);
-          casacore::Matrix<casacore::Complex> thisRowPerfectVis = buffChunk.visibility().yzPlane(row);
-          casacore::Matrix<casacore::Complex> thisRowMeasuredVis = measuredVis.yzPlane(row);
+          //casacore::Matrix<casacore::Complex> thisRowPerfectVis = buffChunk.visibility().yzPlane(row);
+          casacore::Matrix<casacore::Complex> thisRowPerfectVis = buffChunk.visibility().xyPlane(row);
+          //casacore::Matrix<casacore::Complex> thisRowMeasuredVis = measuredVis.yzPlane(row);
+          casacore::Matrix<casacore::Complex> thisRowMeasuredVis = measuredVis.xyPlane(row);
           ASKAPDEBUGASSERT(thisRowCDM.nColumn() == thisRowPerfectVis.nrow() * thisRowPerfectVis.ncolumn());
-          for (casacore::uInt chan=0; chan < thisRowPerfectVis.nrow(); ++chan) {
-               ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRowPerfectVis.ncolumn(),thisRowPerfectVis.ncolumn());
-               casacore::Vector<casacore::Complex> perfectVisPolVector = thisRowPerfectVis.row(chan);
-               casacore::Vector<casacore::Complex> measuredVisPolVector = thisRowMeasuredVis.row(chan); 
+          //for (casacore::uInt chan=0; chan < thisRowPerfectVis.nrow(); ++chan) {
+          for (casacore::uInt chan=0; chan < thisRowPerfectVis.ncolumn(); ++chan) {
+               //ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRowPerfectVis.ncolumn(),thisRowPerfectVis.ncolumn());
+               ComplexDiffMatrix thisChanCDM = thisRowCDM.extractBlock(chan * thisRowPerfectVis.nrow(),thisRowPerfectVis.nrow());
+               //casacore::Vector<casacore::Complex> perfectVisPolVector = thisRowPerfectVis.row(chan);
+               casacore::Vector<casacore::Complex> perfectVisPolVector = thisRowPerfectVis.column(chan);
+               //casacore::Vector<casacore::Complex> measuredVisPolVector = thisRowMeasuredVis.row(chan); 
+               casacore::Vector<casacore::Complex> measuredVisPolVector = thisRowMeasuredVis.column(chan); 
                ComplexDiffMatrix cdm = thisChanCDM * ComplexDiffMatrix(perfectVisPolVector);
                
                DesignMatrix designmatrix;
@@ -256,15 +285,19 @@ void CalibrationMEBase::calcGenericEquations(const IConstDataAccessor &chunk,
   } else {
      // process all frequency channels at once as the effect ComplexDiffMatrix is the same for all of them
      for (casacore::uInt row = 0; row < buffChunk.nRow(); ++row) { 
-          ComplexDiffMatrix cdm = buildComplexDiffMatrix(buffChunk, row) * 
-               ComplexDiffMatrix(casacore::transpose(buffChunk.visibility().yzPlane(row)));
-          casacore::Matrix<casacore::Complex> measuredSlice = transpose(measuredVis.yzPlane(row));
+          //ComplexDiffMatrix cdm = buildComplexDiffMatrix(buffChunk, row) * 
+               //ComplexDiffMatrix(casacore::transpose(buffChunk.visibility().yzPlane(row)));
+          ComplexDiffMatrix cdm = buildComplexDiffMatrix(buffChunk, row) * ComplexDiffMatrix(buffChunk.visibility().xyPlane(row));
+          //casacore::Matrix<casacore::Complex> measuredSlice = transpose(measuredVis.yzPlane(row));
+          casacore::Matrix<casacore::Complex> measuredSlice = measuredVis.xyPlane(row);
        
           DesignMatrix designmatrix;
           // we can probably add below actual weights taken from the data accessor
+          //designmatrix.addModel(cdm, measuredSlice, 
+          //          casacore::Matrix<double>(measuredSlice.nrow(),
+          //          measuredSlice.ncolumn(),1.));
           designmatrix.addModel(cdm, measuredSlice, 
-                    casacore::Matrix<double>(measuredSlice.nrow(),
-                    measuredSlice.ncolumn(),1.));
+                    casacore::Matrix<double>(measuredSlice.nrow(), measuredSlice.ncolumn(),1.));
       
           ne.add(designmatrix);
      }

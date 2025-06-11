@@ -127,7 +127,7 @@ namespace askap
                 /// used in derived classes to avoid too much duplication of the code. For this
                 /// particular class it configures variable/offset support and cutoff behavior.
                 /// @param[in] parset input parset file
-                void configureGridder(const LOFAR::ParameterSet& parset);
+                virtual void configureGridder(const LOFAR::ParameterSet& parset);
 
                 /// @brief obtain buffer used to create convolution functions
                 /// @return a reference to the buffer held as a shared pointer

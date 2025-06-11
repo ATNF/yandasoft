@@ -46,7 +46,7 @@
 using namespace askap::cp;
 
 ContinuumWorkUnit::ContinuumWorkUnit()
-    : itsGlobalChannel(-1), itsLocalChannel(-1), itsChannelFrequency(0.)
+    : itsGlobalChannel(-1), itsLocalChannel(-1), itsNumContiguousChannels(1u), itsChannelFrequency(0.)
 {
 }
 
@@ -139,6 +139,11 @@ double ContinuumWorkUnit::get_channelWidth(void) const
 unsigned int ContinuumWorkUnit::get_writer(void) const
 {
     return itsWriter;
+}
+
+unsigned int ContinuumWorkUnit::get_nchan(void) const
+{
+    return itsNumContiguousChannels;
 }
 
 /////////////////////////////////////////////////////////////////////

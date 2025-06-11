@@ -38,7 +38,6 @@
 #include <askap/imagemath/primarybeam/PrimaryBeam.h>
 #include <askap/imagemath/primarybeam/PrimaryBeamFactory.h>
 #include <askap/imagemath/primarybeam/ASKAP_PB.h>
-#include <askap/scimath/fft/FFTWrapper.h>
 
 ASKAP_LOGGER(logger, ".gridding.askapillumination");
 

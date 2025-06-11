@@ -74,12 +74,12 @@ public:
       for (casacore::uInt ch = 0; ch<acc.nChannel(); ++ch) {
            const casacore::Matrix<casacore::Complex> vis = acc.itsVisibility.xzPlane(ch);
            const double expectedFlux = fluxes[ch];
-           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
-           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.ncolumn()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.nrow()));
            
-           for (casacore::uInt row = 0; row<vis.nrow(); ++row) {
-                for (casacore::uInt col = 0; col<vis.ncolumn(); ++col) {
-                     const casacore::Complex simFlux = vis(row,col); 
+           for (casacore::uInt row = 0; row<vis.ncolumn(); ++row) {
+                for (casacore::uInt col = 0; col<vis.nrow(); ++col) {
+                     const casacore::Complex simFlux = vis(col,row); 
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(expectedFlux, static_cast<double>(real(simFlux)), 1e-3);
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(0., static_cast<double>(imag(simFlux)), 1e-3);                     
                 }
@@ -100,11 +100,14 @@ public:
       stokes[3] = casacore::Stokes::YY;         
           
       acc.itsStokes.assign(stokes.copy());
-      acc.itsVisibility.resize(acc.nRow(), acc.nChannel() ,4);
+      //acc.itsVisibility.resize(acc.nRow(), acc.nChannel() ,4);
+      acc.itsVisibility.resize(4, acc.nChannel() ,acc.nRow());
       acc.itsVisibility.set(casacore::Complex(-10.,15.));
-      acc.itsNoise.resize(acc.nRow(),acc.nChannel(),acc.nPol());
+      //acc.itsNoise.resize(acc.nRow(),acc.nChannel(),acc.nPol());
+      acc.itsNoise.resize(acc.nPol(),acc.nChannel(),acc.nRow());
       acc.itsNoise.set(1.);
-      acc.itsFlag.resize(acc.nRow(),acc.nChannel(),acc.nPol());
+      //acc.itsFlag.resize(acc.nRow(),acc.nChannel(),acc.nPol());
+      acc.itsFlag.resize(acc.nPol(),acc.nChannel(),acc.nRow());
       acc.itsFlag.set(casacore::False);
 
       // fill frequency axis with some points for which we know the flux of 1934-638 from miriad's calplot task
@@ -119,14 +122,18 @@ public:
       const double fluxes[] = {10.631, 13.181, 14.292, 14.768, 15.055, 15.138, 14.926, 14.389};
       for (casacore::uInt ch = 0; ch<acc.nChannel(); ++ch) {
            const casacore::Matrix<casacore::Complex> vis = acc.itsVisibility.xzPlane(ch);
-           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
-           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
+           //CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.nrow()));
+           //CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.ncolumn()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nRow()), size_t(vis.ncolumn()));
+           CPPUNIT_ASSERT_EQUAL(size_t(acc.nPol()), size_t(vis.nrow()));
            for (casacore::uInt pol = 0; pol<acc.nPol(); ++pol) {
                 // we simulate XX and YY; x-pols should all be zeros 
                 const double expectedFlux = (pol % 3 == 0) ? fluxes[ch] * 0.5 : 0.;
            
-                for (casacore::uInt row = 0; row<vis.nrow(); ++row) {
-                     const casacore::Complex simFlux = vis(row,pol); 
+                //for (casacore::uInt row = 0; row<vis.nrow(); ++row) {
+                for (casacore::uInt row = 0; row<vis.ncolumn(); ++row) {
+                     //const casacore::Complex simFlux = vis(row,pol); 
+                     const casacore::Complex simFlux = vis(pol,row); 
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(expectedFlux, static_cast<double>(real(simFlux)), 1e-3);
                      CPPUNIT_ASSERT_DOUBLES_EQUAL(0., static_cast<double>(imag(simFlux)), 1e-3);                     
                 }

@@ -30,23 +30,18 @@
 #ifndef SYNIMAGEAMSMFSSOLVER_H_
 #define SYNIMAGEAMSMFSSOLVER_H_
 
-#include <askap/askap/AskapUtil.h>
-
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
-
-#include <askap/deconvolution/BasisFunction.h>
-
-#include <askap/deconvolution/DeconvolverMultiTermBasisFunction.h>
-
-#include <askap/measurementequation/ImageCleaningSolver.h>
-
 #include <map>
+#include <askap/measurementequation/ImageCleaningSolver.h>
 
 namespace askap
 {
   namespace synthesis
   {
+    // forward declaration
+    template<class T, class FT> class DeconvolverMultiTermBasisFunction;
+
     /// @brief Multiscale solver for images.
     ///
     /// @details This solver performs multi-scale clean using the
@@ -59,10 +54,6 @@ namespace askap
 
       /// @brief default constructor
       ImageAMSMFSolver();
-
-      /// @brief Constructor from scales
-      /// @param[in] scales Scales to be solved in pixels
-      explicit ImageAMSMFSolver(const casacore::Vector<float>& scales);
 
       /// @brief Initialize this solver
       virtual void init();
@@ -82,9 +73,6 @@ namespace askap
       /// @brief Clone this object
       virtual askap::scimath::Solver::ShPtr clone() const;
 
-      /// Set the scales
-      void setScales(const casacore::Vector<float>& scales);
-
       /// @brief set extra oversampling during cleaning and image output if needed
       /// @param[in] factor extra oversampling factor
       inline void setExtraOversampling(float factor) { itsExtraOversamplingFactor = factor; }
@@ -94,43 +82,25 @@ namespace askap
       /// @param[in] parset parset's subset (should have solver.Clean or solver.Dirty removed)
       virtual void configure(const LOFAR::ParameterSet &parset);
 
-      virtual void setBasisFunction(BasisFunction<Float>::ShPtr bf);
-
-      BasisFunction<Float>::ShPtr basisFunction();
-
     protected:
-
-      /// Parse the image parameter name to get out the Stokes information
-      inline std::string getStokes(const std::string& paramstring){return paramstring.substr(6,1);};
-      /// Parse the image parameter name to get out the Order information
-      /// Order == enumeration index (e.x. second-order Taylor coefficient)
-      inline int getOrder(const std::string& paramstring){return atoi(paramstring.substr(8,1).data());};
-      /// Create an image parameter string, from stokes and order parameters
-      inline std::string makeImageString(const std::string& samplestring, const std::string& stokes, const int& order){std::string newstring(samplestring);newstring.replace(6,1,stokes);newstring.replace(8,1,(utility::toString<int>(order)).data());return newstring;};
-
-      /// Scales in pixels
-      casacore::Vector<float> itsScales;
 
       uInt itsNumberTaylor;
 
-      /// Map of Cleaners - one for each polarisation index
-      std::map<std::string, boost::shared_ptr<DeconvolverMultiTermBasisFunction<Float, Complex> > > itsCleaners;
+      /// Map of Cleaners - one for each polarisation index or for main and offset fields
+      std::map<std::string, boost::shared_ptr<DeconvolverMultiTermBasisFunction<float, Complex>>> itsCleaners;
 
-      boost::shared_ptr<DeconvolverControl<Float> > itsControl;
+      boost::shared_ptr<DeconvolverControl<float>> itsControl;
 
-      boost::shared_ptr<DeconvolverMonitor<Float> > itsMonitor;
+      boost::shared_ptr<DeconvolverMonitor<float>> itsMonitor;
 
-      BasisFunction<Float>::ShPtr itsBasisFunction;
+      LOFAR::ParameterSet itsDeconvolverParset;
 
-      String itsSolutionType;
+      bool itsWriteScaleMask;
+      bool itsUseOverlapMask;
 
-      Bool itsDecoupled;
+      casacore::Array<float> itsPSFZeroArray;
 
-      casacore::Array<Float> itsPSFZeroArray;
-
-      Float itsPSFZeroCentre;
-
-      Bool itsOrthogonal;
+      float itsPSFZeroCentre;
 
     private:
 

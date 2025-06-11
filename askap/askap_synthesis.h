@@ -3,8 +3,8 @@
 // std include
 #include <string>
 
-#ifndef ASKAP_ACCESSORS_H
-#define ASKAP_ACCESSORS_H
+#ifndef ASKAP_SYNTHESIS_H
+#define ASKAP_SYNTHESIS_H
 
   /// The name of the package
 #define ASKAP_PACKAGE_NAME "synthesis"

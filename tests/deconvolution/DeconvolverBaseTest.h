@@ -46,10 +46,10 @@ class DeconvolverBaseTest : public CppUnit::TestFixture
   CPPUNIT_TEST(testCasacoreAssumptions);
   CPPUNIT_TEST(testCasacoreAssumptions2);
   CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST_EXCEPTION(testWrongShape, casa::ArrayShapeError);
+  CPPUNIT_TEST_EXCEPTION(testWrongShape, AskapError);
   CPPUNIT_TEST_SUITE_END();
 public:
-   
+
   void setUp() {
     IPosition dimensions(2,100,100);
     itsDirty.reset(new Array<Float>(dimensions));
@@ -74,7 +74,7 @@ public:
       itsPsf.reset();
       itsDirty.reset();
   }
-  
+
   void testCasacoreAssumptions() {
      // MV: this test is not about DeconvolverBase, but rather about assumptions
      // about casacore methods used throughout the deconvolve package which were not documented well
@@ -96,7 +96,7 @@ public:
           CPPUNIT_ASSERT_DOUBLES_EQUAL(1., real(*ci), 1e-10);
           CPPUNIT_ASSERT_DOUBLES_EQUAL(3., imag(*ci), 1e-10);
      }
-     // this method just sets all values to the constant 
+     // this method just sets all values to the constant
      realArr.set(5.);
      for (Array<Float>::const_iterator ci = realArr.begin(); ci != realArr.end(); ++ci) {
           CPPUNIT_ASSERT_DOUBLES_EQUAL(5., *ci, 1e-10);
@@ -118,13 +118,13 @@ public:
      }
 
      // this method packs real array of double length into a complex array
-     // we also effectively test that 
+     // we also effectively test that
      RealToComplex(complexArr, realArr2);
      for (Array<Complex>::const_iterator ci = complexArr.begin(); ci != complexArr.end(); ++ci) {
           CPPUNIT_ASSERT_DOUBLES_EQUAL(10., real(*ci), 1e-10);
           CPPUNIT_ASSERT_DOUBLES_EQUAL(5., imag(*ci), 1e-10);
      }
-     
+
   }
 
   void testCasacoreAssumptions2() {
@@ -147,7 +147,7 @@ public:
      for (uInt row=0; row < size; ++row) {
           for (uInt column=0; column < size; ++column) {
                for (uInt plane=0; plane < nplanes; ++plane) {
-                    const Float expected = column == 0 ? static_cast<Float>(plane) * plane : static_cast<Float>(plane); 
+                    const Float expected = column == 0 ? static_cast<Float>(plane) * plane : static_cast<Float>(plane);
                     CPPUNIT_ASSERT_DOUBLES_EQUAL(expected, tmp(row, column, plane), 1e-6);
                }
           }
@@ -156,7 +156,7 @@ public:
 
   void testCreate() {
     Array<Float> newDirty(IPosition(4,100,100,1,1));
-    itsDB->updateDirty(newDirty); 
+    itsDB->updateDirty(newDirty);
   }
   void testWrongShape() {
     Array<Float> newDirty(IPosition(4,200,200,1,1));
@@ -172,8 +172,7 @@ private:
    /// @brief DeconvolutionBase class
   boost::shared_ptr<DeconvolverBase<Float, Complex> > itsDB;
 };
-    
+
 } // namespace synthesis
 
 } // namespace askap
-

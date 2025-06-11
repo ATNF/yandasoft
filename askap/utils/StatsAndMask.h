@@ -50,9 +50,9 @@ namespace askap {
 namespace utils {
 using Channel = unsigned int;
 
-/// @brief a structure to store the statistics 
+/// @brief a structure to store the statistics
 struct Stats {
-    Channel channel;    
+    Channel channel;
     double freq;
     float rms;
     float std;
@@ -94,19 +94,16 @@ class StatsAndMask {
         void setScaleFactor(float scaleFactor);
         /// @brief - set the unit
         /// @param[in] unit - unit to be set
-        void setUnits(const std::string& unit); 
+        void setUnits(const std::string& unit);
 
         /// @brief calculates the per plane statistics of the image cube
-        /// @param[in] name - name of image cube
-        /// @param[in] channel - chanel of the image where the statistics are to be calculated
         /// @param[in] blc - bottom left corner of the image plane
         /// @param[in] trc - top right corner of the image plane
-        void calculate(const std::string& name, Channel channel,const casacore::IPosition& blc, const casacore::IPosition& trc);
+        void calculate(const casacore::IPosition& blc, const casacore::IPosition& trc);
         /// @brief calculates the per plane statistics
-        /// @param[in] name - name of image cube
-        /// @param[in] channel - chanel of the image where the statistics are to be calculated
+        /// @param[in] channel - channel of the image where the statistics are to be calculated
         /// @param[in] arr - the channel image where the statistics are calculated
-        void calculate(const std::string& name, Channel channel, const casacore::Array<float>& arr);
+        void calculate(Channel channel, const casacore::Array<float>& arr);
 
         /// @brief returns the image cube's statistics
         /// @return A map of the per plane statistics of the image cube.
@@ -122,18 +119,18 @@ class StatsAndMask {
         /// @param[in] image - name of the image
         /// @param[in] threshold - user defined threshold (significanceLevel) in the parset.
         /// @param[in] badMADFM - user defined  madfm threshold (madfmThreshold) in the parset.
-        /// @param[in] maskBlank - a boolean defined in the parset to indicate (with other flags) 
+        /// @param[in] maskBlank - a boolean defined in the parset to indicate (with other flags)
         ///                        if the channel is masked.
         /// @param[in] useSignificance - a boolean defined in the parset
         /// @param[in] useNoise - a boolean defined in the parset. If set and the channel has considered
         ///                       to have bad noise then the channel is masked
         /// @param[in] editStats - a boolean defined in the parset. If set, the statistics are written to
         ///                        to a file (see outputStats)
-        /// @param[in] editImage - a boolean defined in the parset. If set and the channel is 
+        /// @param[in] editImage - a boolean defined in the parset. If set and the channel is
         ///                        considered "bad" then the image plane for that channel is masked.
-        /// @param[in] outputStats - the file name that contains the image cube's  statistics 
+        /// @param[in] outputStats - the file name that contains the image cube's  statistics
         void maskBadChannels(const std::string& image, float threshold, float badMADFM, bool maskBlank,
-                             bool useSignificance, bool useNoise, bool editStats, bool editImage, 
+                             bool useSignificance, bool useNoise, bool editStats, bool editImage,
                              const std::string& outputStats, int master = 0);
 
         /// @brief This method writes the statistics to the image cube
@@ -168,7 +165,7 @@ class StatsAndMask {
         /// @detail This static function writes the statistics to the image cube.
         ///         In the imager.cc code, it is called by the ImagerParallel object
         ///         after the image cube is created/saved i.e ( after SynthesisParamsHelper::saveImageParameter)
-        ///         is invoked. The caller can stop the statistics collection/calculation by 
+        ///         is invoked. The caller can stop the statistics collection/calculation by
         ///         setting the Cimager.calcstats = false
         /// @param[in] name - name of the image
         /// @param[in] comms - MPI comms

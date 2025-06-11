@@ -62,13 +62,19 @@ CalibrationApplicatorME::CalibrationApplicatorME(const boost::shared_ptr<accesso
      itsChannelIndependent(false)
 {}
 
-/// @brief correct model visibilities for one accessor (chunk).
-/// @details This method corrects the data in the given accessor
-/// (accessed via rwVisibility) for the calibration errors
-/// represented by this measurement equation (i.e. an inversion of
-/// the matrix has been performed).
-/// @param[in] chunk a read-write accessor to work with
 void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
+{
+    generic(chunk,true);
+}
+
+// Note that the CalibrationME class can also be used to do predict, but not (yet) DDCal type predict
+// This predict method was created to allow the DDCal path to be implemented more easily
+void CalibrationApplicatorME::predict(accessors::IDataAccessor &chunk) const
+{
+    generic(chunk,false);
+}
+
+void CalibrationApplicatorME::generic(accessors::IDataAccessor &chunk, bool correct) const
 {
   const casacore::uInt nPol = chunk.nPol();
   casacore::RigidVector<casacore::uInt, 4> indices(0u);
@@ -80,7 +86,7 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
  // Use the optimized version if we can: 4 pols in canonical order
   // MV: this seems like a hack/not the C++ way of doing it. Code duplication/technical dept
   if (nPol==4 && indices(0)==0 && indices(1)==1 && indices(2)==2 && indices(3)==3) {
-      correct4(chunk);
+      generic4(chunk, correct);
       return;
   }
 
@@ -111,13 +117,16 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
   const casacore::Cube<casacore::Bool> &flag = noiseAndFlagDA ? noiseAndFlagDA->rwFlag() : chunk.flag();
 
   for (casacore::uInt row = 0; row < chunk.nRow(); ++row) {
-       casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);
-       casacore::Matrix<casacore::Bool> thisRowFlag = flag.yzPlane(row);
+       //casacore::Matrix<casacore::Complex> thisRow = rwVis.yzPlane(row);
+       casacore::Matrix<casacore::Complex> thisRow = rwVis.xyPlane(row);
+       //casacore::Matrix<casacore::Bool> thisRowFlag = flag.yzPlane(row);
+       casacore::Matrix<casacore::Bool> thisRowFlag = flag.xyPlane(row);
        for (casacore::uInt chan = 0; chan < chunk.nChannel(); ++chan) {
             bool allFlagged = true;
             // we don't really support partial polarisation flagging, but to avoid nasty surprises it is better to flag such samples completely.
             bool needFlag = false;
-            ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
+            //ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
+            ASKAPDEBUGASSERT(thisRowFlag.nrow() == nPol);
             for (casacore::uInt pol = 0; pol < nPol; ++pol) {
                  if (thisRowFlag(chan,pol)) {
                      needFlag = true;
@@ -155,17 +164,23 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
                      }
                 }
 
-                invert(reciprocal, det, mueller);
+                if (correct) {
+                    invert(reciprocal, det, mueller);
+                } else {
+                    reciprocal = mueller;
+                    det = 1.0;
+                }
             }
 
             // mv: this is actually known to be slow (casacore slice from slice), need to change this to access given channel as matrix
-            casacore::Vector<casacore::Complex> thisChan = thisRow.row(chan);
+            //casacore::Vector<casacore::Complex> thisChan = thisRow.row(chan);
+            casacore::Vector<casacore::Complex> thisChan = thisRow.column(chan);
 
             const float detThreshold = 1e-25;
             if (itsFlagAllowed) {
                 if (casacore::abs(det)<detThreshold || !validSolution || needFlag) {
                     ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
-                    noiseAndFlagDA->rwFlag().yzPlane(row).row(chan).set(true);
+                    noiseAndFlagDA->rwFlag().xyPlane(row).column(chan).set(true);
                     thisChan.set(0.);
                     continue;
                 }
@@ -188,7 +203,8 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
             }
             if (itsScaleNoise) {
                 ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of the noise estimate");
-                casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
+                //casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
+                casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().xyPlane(row).column(chan);
                 const casacore::Vector<casacore::Complex> origNoise = thisChanNoise.copy();
                 ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
                 // propagating noise estimate through the matrix multiplication
@@ -207,14 +223,7 @@ void CalibrationApplicatorME::correct(accessors::IDataAccessor &chunk) const
   }
 }
 
-/// @brief correct model visibilities for one accessor
-/// @details This method corrects the data in the given accessor
-/// (accessed via rwVisibility) for the calibration errors
-/// represented by this measurement equation (i.e. an inversion of
-/// the matrix has been performed).
-/// This is an optimized version for data with exactly 4 polarizations
-/// @param[in] chunk a read-write accessor to work with
-void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
+void CalibrationApplicatorME::generic4(accessors::IDataAccessor &chunk, bool correct) const
 {
   const casacore::uInt nPol = chunk.nPol();
   ASKAPDEBUGASSERT(nPol == 4);
@@ -234,6 +243,7 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
       boost::shared_ptr<accessors::IDataAccessor> chunkPtr(&chunk, utility::NullDeleter());
       ASKAPDEBUGASSERT(chunkPtr);
       noiseAndFlagDA = boost::dynamic_pointer_cast<accessors::IFlagAndNoiseDataAccessor>(chunkPtr);
+      ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
       rwFlag.reference(noiseAndFlagDA->rwFlag());
   }
   // MV: we can do something more clever, but accessing original read-only flags is not too bad
@@ -243,155 +253,168 @@ void CalibrationApplicatorME::correct4(accessors::IDataAccessor &chunk) const
   casa::SquareMatrix<casa::Complex, 4> mueller;
   const float detThreshold = 1e-25;
 
-  casa::uInt nChan = chunk.nChannel();
-  casa::uInt nRow = chunk.nRow();
+  const casa::uInt nChan = chunk.nChannel();
+  const casa::uInt nRow = chunk.nRow();
   casa::RigidVector<casa::Complex,4> vis;
+  const casa::uInt nVisRow = rwVis.nplane();
+  ASKAPDEBUGASSERT(nRow > 0);
+  ASKAPCHECK(nVisRow % nRow == 0,"#visibility rows should be multiple of # rows in chunk");
 
-  for (casa::uInt row = 0; row < nRow; ++row) {
-    bool needMueller = true;
-    bool validSolution = false;
-    casa::Float det = 0.;
-    for (casa::uInt chan = 0; chan < nChan; ++chan) {
-        bool allFlagged = true;
-        // we don't really support partial polarisation flagging, but to avoid nasty surprises it is better to flag such samples completely.
-        bool needFlag = false;
-        //ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
-        for (casa::uInt pol = 0; pol < nPol; ++pol) {
-             if (flag(row,chan,pol)) {
-                 needFlag = true;
-             } else {
-                 allFlagged = false;
-             }
-        }
-        // don't bother with the rest of processing if the sample is flagged anyway in its entirety
-        if (allFlagged) {
-            continue;
-        }
-
-        if (!itsChannelIndependent || needMueller) {
-            // we only need to fill the mueller matrix once in the non bandpass case
-            needMueller = false;
-            const int b1 = itsBeamIndependent ? 0 : beam1[row];
-            const int b2 = itsBeamIndependent ? 0 : beam2[row];
-            if (solutionAccessorNeedsTime) {
-                solutionAccessorNeedsTime = false;
-                updateAccessor(chunk.time());
+  casa::uInt nDir = nVisRow / nRow;
+  for (casa::uInt dir = 0; dir < nDir; ++dir) {
+      for (casa::uInt row = 0; row < nRow; ++row) {
+        const casa::uInt visRow =  row + dir * nRow;
+        bool needMueller = true;
+        bool validSolution = false;
+        casa::Float det = 0.;
+        for (casa::uInt chan = 0; chan < nChan; ++chan) {
+            bool allFlagged = true;
+            // we don't really support partial polarisation flagging, but to avoid nasty surprises it is better to flag such samples completely.
+            bool needFlag = false;
+            //ASKAPDEBUGASSERT(thisRowFlag.ncolumn() == nPol);
+            for (casa::uInt pol = 0; pol < nPol; ++pol) {
+                 if (flag(pol,chan,row)) {
+                     needFlag = true;
+                 } else {
+                     allFlagged = false;
+                 }
             }
-            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1 =
-                calSolution().jonesAndValidity(antenna1[row], b1, chan);
-            std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2 =
-                calSolution().jonesAndValidity(antenna2[row], b2, chan);
-            validSolution = jv1.second && jv2.second;
-            if (validSolution) {
-                if (getInterpolateTime()) {
-                    // get second lot of calibration parameters
-                    // a=after b=before 1=ant1 2=ant2
-                    std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1a =
-                        nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
-                    std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2a =
-                        nextCalSolution().jonesAndValidity(antenna2[row], b2, chan);
-                    const bool valid = jv1a.second && jv2a.second;
-                    if (valid) {
-                        casa::SquareMatrix<casa::Complex, 2>& j1b = jv1.first;
-                        casa::SquareMatrix<casa::Complex, 2>& j2b = jv2.first;
-                        casa::SquareMatrix<casa::Complex, 2>& j1a = jv1a.first;
-                        casa::SquareMatrix<casa::Complex, 2>& j2a = jv2a.first;
-                        const double tb = calSolutionTime();
-                        const double ta = nextCalSolutionTime();
-                        if (ta > tb) {
-                            const double t = chunk.time();
-                            const float factor = (t - tb) / (ta - tb);
-                            // simple interpolation scheme.. causes decorrelation
-                            //j1b += (j1a - j1b) * factor;
-                            //j2b += (j2a - j2b) * factor;
-                            // Interpolate ampl and phase separately
-                            // can only interpolate pure gain this way, not leakage
-                            for (int i=0; i<=1; i++) {
-                                casa::Complex g1b = j1b(i,i);
-                                casa::Complex g2b = j2b(i,i);
-                                casa::Complex g1a = j1a(i,i);
-                                casa::Complex g2a = j2a(i,i);
-                                if (abs(g1a) > 0 && abs(g1b) > 0) {
-                                    const casa::Complex g = g1a / g1b;
-                                    const float mag = abs(g);
-                                    j1b(i,i) = g1b * (1 + (mag-1)*factor) * pow(g/mag,factor);
-                                }
-                                if (abs(g2a) > 0 && abs(g2b) > 0) {
-                                    const casa::Complex g = g2a / g2b;
-                                    const float mag = abs(g);
-                                    j2b(i,i) = g2b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+            // don't bother with the rest of processing if the sample is flagged anyway in its entirety
+            if (allFlagged) {
+                continue;
+            }
+
+            if (!itsChannelIndependent || needMueller) {
+                // we only need to fill the mueller matrix once in the non bandpass case
+                needMueller = false;
+                const int b1 = itsBeamIndependent ? 0 : (nDir > 1 ? dir : beam1[row]);
+                const int b2 = itsBeamIndependent ? 0 : (nDir > 1 ? dir : beam2[row]);
+                if (solutionAccessorNeedsTime) {
+                    solutionAccessorNeedsTime = false;
+                    updateAccessor(chunk.time());
+                }
+                std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1 =
+                    calSolution().jonesAndValidity(antenna1[row], b1, chan);
+                std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2 =
+                    calSolution().jonesAndValidity(antenna2[row], b2, chan);
+
+                validSolution = jv1.second && jv2.second;
+                if (validSolution) {
+                    if (getInterpolateTime()) {
+                        // get second lot of calibration parameters
+                        // a=after b=before 1=ant1 2=ant2
+                        std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv1a =
+                            nextCalSolution().jonesAndValidity(antenna1[row], b1, chan);
+                        std::pair<casa::SquareMatrix<casa::Complex, 2>, bool> jv2a =
+                            nextCalSolution().jonesAndValidity(antenna2[row], b2, chan);
+                        const bool valid = jv1a.second && jv2a.second;
+                        if (valid) {
+                            casa::SquareMatrix<casa::Complex, 2>& j1b = jv1.first;
+                            casa::SquareMatrix<casa::Complex, 2>& j2b = jv2.first;
+                            casa::SquareMatrix<casa::Complex, 2>& j1a = jv1a.first;
+                            casa::SquareMatrix<casa::Complex, 2>& j2a = jv2a.first;
+                            const double tb = calSolutionTime();
+                            const double ta = nextCalSolutionTime();
+                            if (ta > tb) {
+                                const double t = chunk.time();
+                                const float factor = (t - tb) / (ta - tb);
+                                // simple interpolation scheme.. causes decorrelation
+                                //j1b += (j1a - j1b) * factor;
+                                //j2b += (j2a - j2b) * factor;
+                                // Interpolate ampl and phase separately
+                                // can only interpolate pure gain this way, not leakage
+                                for (int i=0; i<=1; i++) {
+                                    casa::Complex g1b = j1b(i,i);
+                                    casa::Complex g2b = j2b(i,i);
+                                    casa::Complex g1a = j1a(i,i);
+                                    casa::Complex g2a = j2a(i,i);
+                                    if (abs(g1a) > 0 && abs(g1b) > 0) {
+                                        const casa::Complex g = g1a / g1b;
+                                        const float mag = abs(g);
+                                        j1b(i,i) = g1b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                    }
+                                    if (abs(g2a) > 0 && abs(g2b) > 0) {
+                                        const casa::Complex g = g2a / g2b;
+                                        const float mag = abs(g);
+                                        j2b(i,i) = g2b * (1 + (mag-1)*factor) * pow(g/mag,factor);
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                const casa::SquareMatrix<casa::Complex, 2>& j1 = jv1.first;
-                const casa::SquareMatrix<casa::Complex, 2>& j2 = jv2.first;
-                const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
-                const casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
-                det = casa::real(det1*conj(det1))*casa::real(det2*conj(det2));
-                // Inverse of 4x4 mueller is directProduct of 2x2 jones inverses
-                if (det > detThreshold) {
-                    directProduct(mueller, j1.inverse(),conj(j2).inverse());
+                    const casa::SquareMatrix<casa::Complex, 2>& j1 = jv1.first;
+                    const casa::SquareMatrix<casa::Complex, 2>& j2 = jv2.first;
+                    const casa::Complex det1 = j1(0,0)*j1(1,1)-j1(0,1)*j1(1,0);
+                    const casa::Complex det2 = j2(0,0)*j2(1,1)-j2(0,1)*j2(1,0);
+                    det = casa::real(det1*conj(det1))*casa::real(det2*conj(det2));
+                    // Inverse of 4x4 mueller is directProduct of 2x2 jones inverses
+                    if (det > detThreshold) {
+                        if (correct) {
+                            directProduct(mueller, j1.inverse(),conj(j2).inverse());
+                        } else {
+                            directProduct(mueller, j1,conj(j2));
+                        }
+                    }
                 }
             }
-        }
-        if (validSolution) {
-            for (casa::uInt pol = 0; pol < nPol; ++pol) {
-                vis(pol) = rwVis(row,chan,pol);
-            }
-        }
-
-        if (itsFlagAllowed) {
-            if (det <= detThreshold || !validSolution || needFlag) {
-                ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
+            if (validSolution) {
                 for (casa::uInt pol = 0; pol < nPol; ++pol) {
-                    rwFlag(row,chan,pol)=true;
-                    rwVis(row,chan,pol)=0.;
+                    //vis(pol) = rwVis(row,chan,pol);
+                    vis(pol) = rwVis(pol,chan,visRow);
                 }
-                continue;
             }
-        } else {
-          ASKAPCHECK(validSolution && !needFlag, "Encountered unflagged data and invalid solution, but flagging samples has not been allowed");
-          ASKAPCHECK(det>detThreshold, "Unable to apply calibration for (antenna1,beam1)=("<<antenna1[row]<<","<<beam1[row]<<") and (antenna2,beam2)=("<<antenna2[row]<<
-                           ","<<beam2[row]<<"), time="<<chunk.time()/86400.-55000<<" determinant is too close to 0. D="<<det<<" matrix="<<mueller.matrix()
-                   //<<" jones1="<<jones1.matrix()<<" jones2="<<jones2.matrix()
-                   <<" dir="<<askap::printDirection(chunk.pointingDir1()[row]));
-        }
 
-        // do the actual calibration
-        vis*=mueller;
+            if (itsFlagAllowed) {
+                if (det <= detThreshold || !validSolution || needFlag) {
+                    ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of flags");
+                    for (casa::uInt pol = 0; pol < nPol; ++pol) {
+                        rwFlag(pol,chan,row)=true;
+                        rwVis(pol,chan,visRow)=0.;
+                    }
+                    // go to next channel
+                    continue;
+                }
+            } else {
+              ASKAPCHECK(validSolution && !needFlag, "Encountered unflagged data and invalid solution, but flagging samples has not been allowed");
+              ASKAPCHECK(det>detThreshold, "Unable to apply calibration for (antenna1,beam1)=("<<antenna1[row]<<","<<beam1[row]<<") and (antenna2,beam2)=("<<antenna2[row]<<
+                               ","<<beam2[row]<<"), time="<<chunk.time()/86400.-55000<<" determinant is too close to 0. D="<<det<<" matrix="<<mueller.matrix()
+                       //<<" jones1="<<jones1.matrix()<<" jones2="<<jones2.matrix()
+                       <<" dir="<<askap::printDirection(chunk.pointingDir1()[row]));
+            }
 
-        // write back to chunk
-        for (casacore::uInt pol = 0; pol < nPol; ++pol) {
-            rwVis(row,chan,pol) = vis(pol);
-        }
-
-        if (itsScaleNoise) {
-            ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of the noise estimate");
-            casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
-            ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
-            // propagating noise estimate through the matrix multiplication
-            casa::RigidVector<casa::Complex,4> noise = thisChanNoise;
-            // Somehow the indexing below calls the non const version and throws
-            // an exception for a diagonal matrix. Avoid this with explicitly const version
-            const casa::SquareMatrix<casa::Complex,4>& cmueller = mueller;
-
+            // do the actual calibration - we have a valid invertable solution
+            vis*=mueller;
+            // write back to chunk
             for (casacore::uInt pol = 0; pol < nPol; ++pol) {
-                float tempRe = 0., tempIm = 0.;
-                for (casa::uInt k = 0; k < nPol; ++k) {
-                    tempRe += casa::square(casa::real(cmueller(pol,k)) * casa::real(noise(k))) +
-                              casa::square(casa::imag(cmueller(pol,k)) * casa::imag(noise(k)));
-                    tempIm += casa::square(casa::real(cmueller(pol,k)) * casa::imag(noise(k))) +
-                              casa::square(casa::imag(cmueller(pol,k)) * casa::real(noise(k)));
-                }
-                thisChanNoise(pol) = casacore::Complex(sqrt(tempRe),sqrt(tempIm));
+                rwVis(pol,chan,visRow) = vis(pol);
             }
+
+            if (itsScaleNoise) {
+                ASKAPCHECK(noiseAndFlagDA, "Accessor type passed to CalibrationApplicatorME does not support change of the noise estimate");
+                //casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().yzPlane(row).row(chan);
+                casacore::Vector<casacore::Complex> thisChanNoise = noiseAndFlagDA->rwNoise().xyPlane(row).column(chan);
+                ASKAPDEBUGASSERT(thisChanNoise.nelements() == nPol);
+                // propagating noise estimate through the matrix multiplication
+                casa::RigidVector<casa::Complex,4> noise = thisChanNoise;
+                // Somehow the indexing below calls the non const version and throws
+                // an exception for a diagonal matrix. Avoid this with explicitly const version
+                const casa::SquareMatrix<casa::Complex,4>& cmueller = mueller;
+
+                for (casacore::uInt pol = 0; pol < nPol; ++pol) {
+                    float tempRe = 0., tempIm = 0.;
+                    for (casa::uInt k = 0; k < nPol; ++k) {
+                        tempRe += casa::square(casa::real(cmueller(pol,k)) * casa::real(noise(k))) +
+                                casa::square(casa::imag(cmueller(pol,k)) * casa::imag(noise(k)));
+                        tempIm += casa::square(casa::real(cmueller(pol,k)) * casa::imag(noise(k))) +
+                               casa::square(casa::imag(cmueller(pol,k)) * casa::real(noise(k)));
+                    }
+                    thisChanNoise(pol) = casacore::Complex(sqrt(tempRe),sqrt(tempIm));
+                }
+            }
+          }
         }
     }
-  }
 }
-
 /// @brief determines whether to scale the noise estimate
 /// @details This is one of the configuration methods, it controlls
 /// whether the noise estimate is scaled aggording to applied calibration

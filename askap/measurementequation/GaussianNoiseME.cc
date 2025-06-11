@@ -73,7 +73,8 @@ void GaussianNoiseME::predict(IDataAccessor &chunk) const
 {
   casacore::Cube<casacore::Complex> &rwVis = chunk.rwVisibility();
   const casacore::Cube<casacore::Complex> &noise = chunk.noise();
-  for (casacore::uInt row = 0; row<rwVis.nrow(); ++row) {
+  //for (casacore::uInt row = 0; row<rwVis.nrow(); ++row) {
+  for (casacore::uInt row = 0; row<rwVis.nplane(); ++row) {
        bool isAutoCorrelation = false;
        if (chunk.antenna1()(row) == chunk.antenna2()(row)) {
            if (chunk.feed1()(row) == chunk.feed2()(row)) {
@@ -81,12 +82,16 @@ void GaussianNoiseME::predict(IDataAccessor &chunk) const
            }
        }
        for (casacore::uInt chan = 0; chan<rwVis.ncolumn(); ++chan) {
-            for (casacore::uInt pol = 0; pol<rwVis.nplane(); ++pol) {
-                 const casacore::Float scale = itsExplicitVariance ? 1. : std::real(noise(row,chan,pol));
+            //for (casacore::uInt pol = 0; pol<rwVis.nplane(); ++pol) {
+            for (casacore::uInt pol = 0; pol<rwVis.nrow(); ++pol) {
+                 //const casacore::Float scale = itsExplicitVariance ? 1. : std::real(noise(row,chan,pol));
+                 const casacore::Float scale = itsExplicitVariance ? 1. : std::real(noise(pol,chan,row));
                  if (isAutoCorrelation) {
-                     rwVis(row,chan,pol) = scale * std::real(getRandomComplexNumber());
+                     //rwVis(row,chan,pol) = scale * std::real(getRandomComplexNumber());
+                     rwVis(pol,chan,row) = scale * std::real(getRandomComplexNumber());
                  } else {
-                     rwVis(row,chan,pol) = scale * getRandomComplexNumber();
+                     //rwVis(row,chan,pol) = scale * getRandomComplexNumber();
+                     rwVis(pol,chan,row) = scale * getRandomComplexNumber();
                  }
             }
        }

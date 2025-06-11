@@ -7,7 +7,7 @@
 /// master and worker as well as override them for a chosen rank or multiple ranks.
 ///
 /// Control parameters are passed in from a LOFAR ParameterSet file in a standard way for all yandasoft apps.
-/// This tool doesn't write or read anything but does understand some generic parameters because it reuses 
+/// This tool doesn't write or read anything but does understand some generic parameters because it reuses
 /// low level imager code.
 ///
 /// @copyright (c) 2007 CSIRO
@@ -65,7 +65,7 @@ using namespace askap::synthesis;
 using namespace askap::scimath;
 
 /// @brief class pretending to be imager but doing nothing except initialising the structures
-/// @details It is derived from MEParallel rather than MEParallelApp to avoid the need to define 
+/// @details It is derived from MEParallel rather than MEParallelApp to avoid the need to define
 /// gridders and other stuff.
 class FakeImager : public askap::synthesis::MEParallel {
 public:
@@ -201,7 +201,7 @@ private:
 class MajorCycleCommsTestApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             // This class must have scope outside the main try/catch block
             askap::askapparallel::AskapParallel comms(argc, const_cast<const char**>(argv));
@@ -301,7 +301,7 @@ class MajorCycleCommsTestApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }

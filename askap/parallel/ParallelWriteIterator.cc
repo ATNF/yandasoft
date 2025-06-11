@@ -273,9 +273,9 @@ void ParallelWriteIterator::advance()
             itsAccessor.itsVisibility.set(0.);    
         }
         // consistency checks
-        ASKAPASSERT(itsAccessor.nRow() == itsAccessor.itsVisibility.nrow());
+        ASKAPASSERT(itsAccessor.nRow() == itsAccessor.itsVisibility.nplane());
         ASKAPASSERT(itsAccessor.nChannel() == itsAccessor.itsVisibility.ncolumn());
-        ASKAPASSERT(itsAccessor.nPol() == itsAccessor.itsVisibility.nplane());
+        ASKAPASSERT(itsAccessor.nPol() == itsAccessor.itsVisibility.nrow());
         ASKAPASSERT(itsAccessor.nChannel() == itsAccessor.itsFrequency.nelements());            
       }
   }
@@ -367,7 +367,8 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
 
              utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
 
-             casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             //casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             casacore::IPosition end(3,int(it->nPol()) - 1, static_cast<int>(rp.last(worker)), int(it->nRow()) - 1);
              start(1) = static_cast<int>(rp.first(worker));
              ASKAPASSERT(end(1) < int(it->nChannel()));
              ASKAPDEBUGASSERT(start(1)<=end(1));
@@ -403,7 +404,8 @@ void ParallelWriteIterator::masterIteration(askap::askapparallel::AskapParallel&
 
              utility::RangePartition rp(it->nChannel(), static_cast<unsigned int>(comms.nProcs()) - 1u);
 
-             casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             //casacore::IPosition end(3,int(it->nRow()) - 1, static_cast<int>(rp.last(worker)), int(it->nPol()) - 1);
+             casacore::IPosition end(3,int(it->nPol()) - 1, static_cast<int>(rp.last(worker)), int(it->nRow()) - 1);
              start(1) = static_cast<int>(rp.first(worker));
              ASKAPASSERT(end(1) < int(it->nChannel()));
 

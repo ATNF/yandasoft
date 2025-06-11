@@ -237,7 +237,7 @@ namespace askap
           saveArrayIntoParameter(ip, indit->first, planeIter.shape(), "mask", unpadImage(maskArray),
                                  planeIter.position());
             */
-  
+
           // We need lattice equivalents. We can use ArrayLattice which involves
           // no copying
 
@@ -247,7 +247,9 @@ namespace askap
                 "Oversampling by an extra factor of "<<*itsExtraOversamplingFactor<<" before cleaning");
             SynthesisParamsHelper::oversample(dirtyArray,*itsExtraOversamplingFactor);
             SynthesisParamsHelper::oversample(psfArray,*itsExtraOversamplingFactor);
-            SynthesisParamsHelper::oversample(maskArray,*itsExtraOversamplingFactor);
+            if (maskArray.nelements()) {
+                SynthesisParamsHelper::oversample(maskArray,*itsExtraOversamplingFactor);
+            }
             if (importModelFromNE) {
                 SynthesisParamsHelper::oversample(cleanArray,*itsExtraOversamplingFactor,false);
             } else {
@@ -281,7 +283,7 @@ namespace askap
             if (itsDoSpeedUp) {
               lc->speedup(itsSpeedUpFactor);
             }
-            lc->setMask(mask,maskingThreshold());
+            if (mask.nelements()) lc->setMask(mask,maskingThreshold());
 
             if(algorithm()=="Hogbom") {
               casacore::Vector<float> scales(1);

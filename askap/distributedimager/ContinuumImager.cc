@@ -36,6 +36,7 @@
 // ASKAPsoft includes
 #include <askap/askap/AskapLogging.h>
 #include <askap/askap/AskapError.h>
+#include <askap/profile/AskapProfiler.h>
 #include <Common/ParameterSet.h>
 
 // Local includes
@@ -64,6 +65,7 @@ ContinuumImager::~ContinuumImager()
 }
 
 void ContinuumImager::run(void) {
+    ASKAPTRACE("ContinuumImager::run");
 
     if (isMaster()) {
         ContinuumMaster master(itsParset,itsComms,itsStats);

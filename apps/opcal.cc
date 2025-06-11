@@ -1,11 +1,11 @@
 /// @file
 ///
 /// @brief Generic operations-specific calibration
-/// @details This application is intended for the types of calibration which 
-/// cannot follow ASKAP's predict-forward approach, i.e. which require 
+/// @details This application is intended for the types of calibration which
+/// cannot follow ASKAP's predict-forward approach, i.e. which require
 /// observations of various fields done in some special way. It is intended
 /// for experimentation with calibration as well as some operation-specific
-/// tasks like baseline and pointing refinements.  
+/// tasks like baseline and pointing refinements.
 ///
 /// @copyright (c) 2007 CSIRO
 /// Australia Telescope National Facility (ATNF)
@@ -54,7 +54,7 @@ using namespace askap::synthesis;
 class OpCalApp : public askap::Application
 {
     public:
-        virtual int run(int argc, char* argv[])
+        int run(int argc, char* argv[]) final
         {
             StatReporter stats;
 
@@ -64,11 +64,11 @@ class OpCalApp : public askap::Application
             try {
 
                  ASKAPLOG_INFO_STR(logger, "ASKAP synthesis opcal application " << ASKAP_PACKAGE_VERSION);
-               
+
                  if (comms.isMaster()) {
                    ASKAPLOG_INFO_STR(logger, "Parset file contents:\n" << config());
                  }
-                 
+
                  OpCalImpl impl(comms,config());
                  // we'll eventually get a proper factory method here; for now create explicitly
                  const std::string hlSolver = config().getString("solver","");
@@ -84,9 +84,9 @@ class OpCalApp : public askap::Application
                  } else {
                      ASKAPLOG_INFO_STR(logger, "High-level solver has not been defined, raw calibration results will be printed in the log");
                  }
-                 
-                 impl.run();                 
-                 
+
+                 impl.run();
+
             } catch (const askap::AskapError& e) {
                 ASKAPLOG_FATAL_STR(logger, "Askap error in " << argv[0] << ": " << e.what());
                 std::cerr << "Askap error in " << argv[0] << ": " << e.what() << std::endl;
@@ -101,7 +101,7 @@ class OpCalApp : public askap::Application
         }
 
     private:
-        std::string getVersion() const override {
+        std::string getVersion() const final {
             const std::string pkgVersion = std::string("yandasoft:") + ASKAP_PACKAGE_VERSION;
             return pkgVersion;
         }
@@ -113,4 +113,3 @@ int main(int argc, char* argv[])
     OpCalApp app;
     return app.main(argc, argv);
 }
-            

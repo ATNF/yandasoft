@@ -96,8 +96,10 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(itsIter->nRow(),pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(itsIter->nPol(),pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(1u,casacore::uInt(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(1u,casacore::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT_EQUAL(casacore::Stokes::I, pacBuf.stokes()[0]);
@@ -108,7 +110,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
               CPPUNIT_ASSERT_EQUAL(itsIter->feed1()[row],pacBuf.feed1()[row]);
               CPPUNIT_ASSERT_EQUAL(itsIter->feed2()[row],pacBuf.feed2()[row]);
               for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
-                   CPPUNIT_ASSERT_EQUAL(true,pacBuf.flag()(row,0,pol));
+                   //CPPUNIT_ASSERT_EQUAL(true,pacBuf.flag()(row,0,pol));
+                   CPPUNIT_ASSERT_EQUAL(true,pacBuf.flag()(pol,0,row));
               }              
          }
      }
@@ -136,8 +139,12 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(4u,casacore::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
@@ -174,7 +181,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
               for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    if ((pol == 0) && (pacBuf.feed1()[row] == 0)) {
-                       CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
+                       //CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
+                       CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(pol,0,row));                       
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,0,pol,pol))),
                                               double(real(pxp.getModelMeasProduct(row,0,pol,pol))),1e-2);
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelMeasProduct(row,0,pol,pol))),1e-5);
@@ -183,7 +191,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(80000., double(real(pxp.getModelProduct(row,0,pol,pol))),1e-2);
                    } else {
                        // nothing should be found in the accessor, so the appropriate samples should be flagged
-                       CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(row,0,pol));
+                       //CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(row,0,pol));
+                       CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(pol,0,row));
                    }
               }
          }
@@ -201,8 +210,10 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(190u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(1u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         //CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
          CPPUNIT_ASSERT_EQUAL(4u,casacore::uInt(pacBuf.stokes().nelements()));
          CPPUNIT_ASSERT(scimath::PolConverter::isLinear(pacBuf.stokes()));
@@ -239,7 +250,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
               for (casacore::uInt pol=0; pol<pacBuf.nPol(); ++pol) {
                    if ((pol == 0) && (pacBuf.feed1()[row] == 0)) {
-                       CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
+                       //CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(row,0,pol));                       
+                       CPPUNIT_ASSERT_EQUAL(false, pacBuf.flag()(pol,0,row));                       
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(double(real(pxp.getModelProduct(row,0,pol,pol))),
                                               double(real(pxp.getModelMeasProduct(row,0,pol,pol))),1e-2);
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelMeasProduct(row,0,pol,pol))),1e-5);
@@ -248,7 +260,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                        CPPUNIT_ASSERT_DOUBLES_EQUAL(160000., double(real(pxp.getModelProduct(row,0,pol,pol))),1e-2);
                    } else {
                        // nothing should be found in the accessor, so the appropriate samples should be flagged
-                       CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(row,0,pol));
+                       //CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(row,0,pol));
+                       CPPUNIT_ASSERT_EQUAL(true, pacBuf.flag()(pol,0,row));
                    }
               }
          }
@@ -395,8 +408,8 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(8u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));     
          CPPUNIT_ASSERT(itsME);
          CPPUNIT_ASSERT(itsIter);
@@ -414,11 +427,10 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT_EQUAL(380u,pacBuf.nRow());
          CPPUNIT_ASSERT_EQUAL(8u,pacBuf.nChannel());
          CPPUNIT_ASSERT_EQUAL(4u,pacBuf.nPol());
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nrow()));
-         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nRow()),size_t(pacBuf.flag().nplane()));
+         CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nPol()),size_t(pacBuf.flag().nrow()));
          CPPUNIT_ASSERT_EQUAL(size_t(pacBuf.nChannel()),size_t(pacBuf.flag().ncolumn()));
 
-         //
          const scimath::PolXProducts &pxp = pacBuf.polXProducts();                            
          for (casacore::uInt row=0; row<pacBuf.nRow(); ++row) {
               CPPUNIT_ASSERT_EQUAL(pacBuf.feed1()[row], pacBuf.feed2()[row]);
@@ -434,7 +446,7 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(0,double(imag(pxp.getModelProduct(row,chan,pol,pol))),1e-5);
                         // 1 channel and 100 Jy source give sums of 10000 per accessor summed in
                         CPPUNIT_ASSERT_DOUBLES_EQUAL(dataExpected && (pol == 0) ? 10000. : 0., double(real(pxp.getModelProduct(row,chan,pol,pol))),1e-2);
-                        CPPUNIT_ASSERT_EQUAL(!dataExpected || (pol > 0), pacBuf.flag()(row,chan,pol));                                     
+                        CPPUNIT_ASSERT_EQUAL(!dataExpected || (pol > 0), pacBuf.flag()(pol,chan,row));                                     
     
                         // checking cross-pol terms, if any
                         for (casacore::uInt pol2 = 0; pol2<pol; ++pol2) {
@@ -460,11 +472,14 @@ class PreAvgCalBufferTest : public CppUnit::TestFixture
          CPPUNIT_ASSERT(itsIter);       
          accessors::DataAccessorStub &da = dynamic_cast<accessors::DataAccessorStub&>(*itsIter);          
          da.itsStokes.assign(stokes.copy());
-         da.itsVisibility.resize(da.nRow(), da.nChannel() ,4);
+         //da.itsVisibility.resize(da.nRow(), da.nChannel() ,4);
+         da.itsVisibility.resize(4, da.nChannel() ,da.nRow());
          da.itsVisibility.set(casacore::Complex(-10.,15.));
-         da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+         //da.itsNoise.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsNoise.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsNoise.set(1.);
-         da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+         //da.itsFlag.resize(da.nRow(),da.nChannel(),da.nPol());
+         da.itsFlag.resize(da.nPol(),da.nChannel(),da.nRow());
          da.itsFlag.set(casacore::False);
 
          CPPUNIT_ASSERT(itsParams);

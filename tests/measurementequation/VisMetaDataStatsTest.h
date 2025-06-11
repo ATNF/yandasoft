@@ -169,8 +169,8 @@ namespace askap
          accessors::DataAccessorStub acc(true);
          // modify the flags - flag first row and first channel
          casacore::Cube<casacore::Bool> flags = acc.flag();
-         flags(0,casacore::Slice(),casacore::Slice()) = casacore::True;
-         flags(casacore::Slice(),0,casacore::Slice()) = casacore::True;
+         flags.xyPlane(0).set(casacore::True);
+         flags.xzPlane(0).set(casacore::True);
          // switch on the flagged data processing - results should be unchanged
          VisMetaDataStats stats(true);
          CPPUNIT_ASSERT_EQUAL(0ul, stats.nVis());
